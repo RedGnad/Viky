@@ -1,7 +1,7 @@
 import "../src/load-env";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { createPublicClient, createWalletClient, encodeAbiParameters, encodeFunctionData, formatEther, getAddress, getContractAddress, http, isAddress, keccak256, parseEther, type Abi, type Hex } from "viem";
+import { createPublicClient, createWalletClient, encodeAbiParameters, encodeFunctionData, formatEther, getAddress, getContractAddress, isAddress, keccak256, parseEther, type Abi, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { DAILY_GOALS } from "../src/daily-goals";
 import { giftEscrowAbi } from "../src/gift-escrow-abi";
@@ -9,7 +9,7 @@ import { milestoneGiftAbi } from "../src/milestone-gift-abi";
 import { MILESTONE_GOALS } from "../src/milestone-goals";
 import { MILESTONE_FIRST_ID } from "../src/milestone-protocol";
 import { addMonadGasBuffer } from "../src/monad-gas";
-import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadChain, monadRpcUrl, monadTransport, waitForFinality } from "../src/monad/chain";
+import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadChain, monadRpcUrl, scriptTransport, waitForFinality } from "../src/monad/chain";
 import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT } from "../src/viky-contracts";
 
 /**
@@ -21,18 +21,35 @@ import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT } from "../src/viky-co
  * Nothing of this can be undone once sent, and on these contracts a goal is added and never changed. So everything
  * that can be checked is checked first, and the whole plan is printed with DRY_RUN before anybody approves it.
  *
- * Refuses to run when: the chain is not Monad mainnet; OWNER_ADDRESS is missing or is the deploying key; the evidence
- * signer named is not the key the app signs with; AUSD has no code or not six decimals; a compiled artifact was not
- * built from the contract in this repository; a goal of the register is not what the contract in service holds for
- * the same number; **creation is still open on a contract being replaced**, because a gift made there after the
- * numbering was read would take a number the new contract gives out too; or the deployer cannot pay for the whole
- * sequence and keep the 10 MON reserve.
+ * Refuses to run when: the chain is not Monad mainnet; the node is a local one and this is not a rehearsal;
+ * OWNER_ADDRESS is missing, is the deploying key, or is not the owner of the contracts in service; the evidence signer
+ * named is not the one those contracts hold; AUSD has no code or not six decimals; a compiled artifact was not built
+ * from the contract in this repository; a goal of the register is not what the contract in service holds for the same
+ * number; **creation is still open on a contract being replaced**, because a gift made there after the numbering was
+ * read would take a number the new contract gives out too; or the deployer cannot pay for the whole sequence and keep
+ * the 10 MON reserve.
  *
- * Inputs (.env.local): DEPLOYER_PRIVATE_KEY, OWNER_ADDRESS (the Safe), EVIDENCE_SIGNER_ADDRESS,
- * EVIDENCE_SIGNER_PRIVATE_KEY, RELAYER_ADDRESS (the anchorer of ConsentAnchor), optional MONAD_RPC_URL.
+ * Inputs (.env.local): DEPLOYER_PRIVATE_KEY, OWNER_ADDRESS (the Safe), EVIDENCE_SIGNER_ADDRESS, RELAYER_ADDRESS (the
+ * anchorer of ConsentAnchor), optional MONAD_RPC_URL. The evidence signer's private key is never asked for (the review
+ * of 2 Oct 2026, R-10): the machine that deploys has no use for it, and its address is checked against the chain.
  * DRY_RUN=1 stops before the first transaction; with DEPLOYER_ADDRESS and no key it reads only, so the plan can be
  * printed from a machine that holds no key at all. REHEARSAL=1 is accepted only against a local node (anvil forking
- * mainnet) and runs the whole sequence there.
+ * mainnet) and runs the whole sequence there; a local node without it is refused. Never rehearse with the real
+ * deploying key: a rehearsal moves its count of transactions, and the addresses are worked out from that count.
+ *
+ * **If it stops in the middle**, do not run it again as it is: it would deploy everything at other addresses. Each
+ * address is printed the moment it exists. Close creation on whatever was made (`setCreationPaused(true)`, which the
+ * deploying key can still send, being its owner), never set those addresses in the app, and start over with a new
+ * deploying key. A contract's ownership cannot be given up, so what was made stays the deploying key's.
+ *
+ * **After it ends**, in this order, and nothing in the app before the last step:
+ *   1. read on each of the three what the script prints: the deploying key is the owner, the Safe is offered it;
+ *   2. the Safe accepts the three, with `pnpm safe:action` (ACTION=accept-ownership, TARGET=escrow-v2, milestone-v2
+ *      and anchor, each with TARGET_ADDRESS as printed here);
+ *   3. `pnpm check:v2-handover` reads `owner()` on the three and that no signer is waiting on the two gift contracts,
+ *      and only then prints the three settings;
+ *   4. the three settings are set in the app together, and the app is built again. From the first gift made on the
+ *      second version they are never changed, and creation is never reopened on a contract it replaced.
  *
  * Usage: forge build && DRY_RUN=1 pnpm deploy:v2
  */
@@ -75,7 +92,9 @@ async function main() {
   const rpc = monadRpcUrl();
   const rehearsal = Boolean(process.env.REHEARSAL);
   const dryRun = Boolean(process.env.DRY_RUN);
-  if (rehearsal && !/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(rpc)) throw new Error("Refusing: REHEARSAL runs only against a local node");
+  // A rehearsal speaks to the local node and to nothing else: the ordinary transport falls back to the public endpoint
+  // when its first provider fails, which for a rehearsal would be mainnet. And a local node is nothing but a rehearsal.
+  const transport = scriptTransport(rpc, rehearsal);
 
   const deployerKey = process.env.DEPLOYER_PRIVATE_KEY?.trim();
   if (!deployerKey && !(dryRun && process.env.DEPLOYER_ADDRESS)) throw new Error("Missing DEPLOYER_PRIVATE_KEY in .env.local (a dry run takes DEPLOYER_ADDRESS instead)");
@@ -86,22 +105,12 @@ async function main() {
   const owner = getAddress(ownerRaw);
   if (owner === deployer) throw new Error(`Refusing to deploy: OWNER_ADDRESS is the deployer ${deployer}, so ownership would stay on the deployment key`);
   const evidenceSigner = getAddress(required("EVIDENCE_SIGNER_ADDRESS"));
-  const signingKey = process.env.EVIDENCE_SIGNER_PRIVATE_KEY?.trim();
-  if (signingKey) {
-    const signingAddress = privateKeyToAccount((signingKey.startsWith("0x") ? signingKey : `0x${signingKey}`) as Hex).address;
-    if (signingAddress !== evidenceSigner) throw new Error(`Refusing to deploy: EVIDENCE_SIGNER_ADDRESS is ${evidenceSigner}, but the app signs with ${signingAddress}, so no proof would ever be accepted`);
-  } else if (!dryRun) {
-    throw new Error("Missing EVIDENCE_SIGNER_PRIVATE_KEY in .env.local: the signer named must be the key the app signs with");
-  }
   const anchorer = getAddress(required("RELAYER_ADDRESS"));
 
   const daily = artifactOf("GiftEscrowV2");
   const milestone = artifactOf("MilestoneGiftV2");
   const anchor = artifactOf("ConsentAnchor");
 
-  // A rehearsal speaks to the local node and to nothing else: the ordinary transport falls back to the public endpoint
-  // when its first provider fails, which for a rehearsal would be mainnet.
-  const transport = rehearsal ? http(rpc) : monadTransport(rpc);
   const publicClient = createPublicClient({ chain: monadChain, transport });
   const chainId = await publicClient.getChainId();
   if (chainId !== MONAD_CHAIN_ID) throw new Error(`Refusing to deploy: chain id ${chainId} is not Monad mainnet (${MONAD_CHAIN_ID})`);
@@ -114,6 +123,17 @@ async function main() {
   const firstMilestoneAbi = milestoneGiftAbi as unknown as Abi;
   const readDaily = (address: Hex, functionName: string, args: readonly unknown[] = []) => publicClient.readContract({ address, abi: firstDailyAbi, functionName, args });
   const readMilestone = (functionName: string, args: readonly unknown[] = []) => publicClient.readContract({ address: MILESTONE_GIFT, abi: firstMilestoneAbi, functionName, args });
+
+  // The owner named is the one the contracts in service already answer to, and the evidence signer named is the one
+  // they already take readings from: both read on the chain, neither taken on anybody's word. The signer's private key
+  // is not asked for: what must be true is that the app's signer is this address, and the contracts in service hold
+  // the address the app signs with, since their readings are accepted every day.
+  for (const [name, address, abi] of [["the daily contract", GIFT_ESCROW, firstDailyAbi], ["the earlier daily contract", EARLIER_GIFT_ESCROW, firstDailyAbi], ["the milestone contract", MILESTONE_GIFT, firstMilestoneAbi]] as const) {
+    const ownedBy = getAddress(String(await publicClient.readContract({ address, abi, functionName: "owner" })));
+    if (ownedBy !== owner) throw new Error(`Refusing to deploy: OWNER_ADDRESS is ${owner}, and ${name} ${address} is owned by ${ownedBy}`);
+    const signedBy = getAddress(String(await publicClient.readContract({ address, abi, functionName: "evidenceSigner" })));
+    if (signedBy !== evidenceSigner) throw new Error(`Refusing to deploy: EVIDENCE_SIGNER_ADDRESS is ${evidenceSigner}, and ${name} ${address} takes its readings from ${signedBy}, so no reading the app signs would be accepted`);
+  }
 
   // Creation must be closed on every contract being replaced before its numbering is read: a gift made there afterwards
   // would take a number the new contract gives out too, and a gift's record is keyed by its number alone (D35).
@@ -218,6 +238,9 @@ async function main() {
     const receipt = await waitForFinality(publicClient, hash);
     const address = receipt.contractAddress;
     if (!address) throw new Error(`${name}: the deployment produced no contract address`);
+    // Said the moment it exists, before any check can stop the run: if anything below fails, this is the address to
+    // close creation on, and never to set in the app.
+    console.log(`WRITE DOWN: ${name} is at ${getAddress(address)} (transaction ${hash})`);
     if (getAddress(address) !== expected) throw new Error(`${name} deployed at ${address}, not at the expected ${expected}. Stop and read the chain before anything else`);
     const code = await publicClient.getCode({ address });
     if (!code || keccak256(withoutImmutables(code, artifact.deployedBytecode.immutableReferences)) !== codeHashOf(artifact)) throw new Error(`The code at ${address} is not ${name}'s artifact`);
@@ -259,10 +282,20 @@ async function main() {
   if (getAddress(String(await read(anchorAt, anchor.abi, "anchorer"))) !== anchorer) throw new Error("ConsentAnchor: the anchorer is not the relayer named");
   console.log(JSON.stringify({ step: "read back", dailyGoals: DAILY_GOALS.length, milestoneGoals: MILESTONE_GOALS.length, pendingOwner: owner }));
 
-  console.log("\nThe owner now accepts the three (acceptOwnership on each). Then, in the Vercel environment and in .env.local:");
+  // Read by the rehearsal and by `pnpm check:v2-handover`. Not to be set in the app yet: the deploying key still owns
+  // the three, and a signer it announced now would have stood a day later on the first version of this hand-over.
+  console.log(`\nDEPLOYED (not yet the Safe's, and not to be set in the app yet):`);
   console.log(`NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS=${dailyAt}`);
   console.log(`NEXT_PUBLIC_MILESTONE_GIFT_V2_ADDRESS=${milestoneAt}`);
   console.log(`NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS=${anchorAt}`);
+  console.log("\nNext, in this order:");
+  console.log(`  1. The Safe accepts the three:`);
+  console.log(`       ACTION=accept-ownership TARGET=escrow-v2 TARGET_ADDRESS=${dailyAt} pnpm safe:action`);
+  console.log(`       ACTION=accept-ownership TARGET=milestone-v2 TARGET_ADDRESS=${milestoneAt} pnpm safe:action`);
+  console.log(`       ACTION=accept-ownership TARGET=anchor TARGET_ADDRESS=${anchorAt} pnpm safe:action`);
+  console.log(`  2. DAILY_V2=${dailyAt} MILESTONE_V2=${milestoneAt} ANCHOR=${anchorAt} OWNER_ADDRESS=${owner} EVIDENCE_SIGNER_ADDRESS=${evidenceSigner} pnpm check:v2-handover`);
+  console.log("     It reads owner() on the three and that no signer is waiting, and only then prints the three settings to set.");
+  console.log("  3. Set the three in the app together, and build it again. Empty the deploying key.");
 }
 
 main().catch((error) => {

@@ -52,6 +52,25 @@ export function monadTransport(rpcUrl = monadRpcUrl()): Transport {
   return fallback([http(rpcUrl), http(PUBLIC_RPC_URL)]);
 }
 
+/** Whether an endpoint is a node on this machine: a rehearsal's fork of the network, never the network itself. */
+export function isLocalRpc(rpcUrl: string): boolean {
+  return /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?(\/|$)/.test(rpcUrl);
+}
+
+/**
+ * The transport of a script that sends for an operator: a deployment, an action of the Safe (the review of 2 Oct 2026,
+ * R-10). A rehearsal speaks to its local node and to nothing else: the ordinary transport falls back to the public
+ * endpoint when its first provider fails, so a rehearsal whose node stopped answering went on against mainnet without a
+ * word. And a local node is taken for nothing but a rehearsal: without REHEARSAL=1 it is refused, so a setting left
+ * over from one cannot send a real run to a fork that vanishes.
+ */
+export function scriptTransport(rpcUrl: string, rehearsal: boolean): Transport {
+  const local = isLocalRpc(rpcUrl);
+  if (rehearsal && !local) throw new Error("Refusing: REHEARSAL runs only against a local node");
+  if (local && !rehearsal) throw new Error(`Refusing: ${rpcUrl} is a local node, and this is not a rehearsal. Set REHEARSAL=1 to rehearse, or unset MONAD_RPC_URL to speak to Monad`);
+  return rehearsal ? http(rpcUrl) : monadTransport(rpcUrl);
+}
+
 export function createMonadPublicClient(rpcUrl = monadRpcUrl()): PublicClient {
   return createPublicClient({ chain: monadChain, transport: monadTransport(rpcUrl) });
 }

@@ -2,7 +2,7 @@ import "../src/load-env";
 import { execSync } from "node:child_process";
 import { PGlite } from "@electric-sql/pglite";
 import { createEd25519SigningSession } from "@category-labs/mera";
-import { createPublicClient, createTestClient, encodeFunctionData, getAddress, http, keccak256, parseEther, toHex, type Abi, type Hex } from "viem";
+import { createPublicClient, createTestClient, encodeAbiParameters, encodeFunctionData, getAddress, http, keccak256, padHex, parseEther, toHex, type Abi, type Hex } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { POST as bindRoute } from "../app/api/gift/[id]/bind/route";
 import { GET as consentRoute, POST as consentPostRoute } from "../app/api/gift/[id]/consent/route";
@@ -54,21 +54,26 @@ import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT } from "../src/viky-co
  *
  * What it walks, in order:
  *   1. the owner closes creation on the three contracts in service (the Safe, impersonated on the fork);
- *   2. `scripts/deploy-v2.ts` deploys the three new contracts, registers every goal, opens them and hands them over;
- *   3. the owner accepts the three;
+ *   2. `scripts/deploy-v2.ts` deploys the three new contracts, registers every goal, opens them and hands them over,
+ *      with no private key of the evidence signer: its address is checked against the contracts in service;
+ *   3. the Safe accepts the three through `scripts/safe-action.ts` itself, built, signed by two keys and sent, and
+ *      `scripts/check-v2-handover.ts` says the three are the Safe's before the app is told where they are;
  *   4. a daily gift: made with a link the funder's code makes, found again as on another device, refused to the
  *      evidence key, opened with the link's key, its first reading refused to the evidence key alone and taken with
  *      the recipient's own signature, read, paid out, then ended by the person it is for;
  *   5. a milestone gift: made, opened with the link's key, its start read, held, signed by the recipient's account
  *      and sent by the route, then ended; and a second one reached and paid;
- *   5b. the owner's pause on the second version: sent once, refused a second time, and refused again for the week
- *      that follows its end (the review of 2 Oct 2026);
+ *   5b. the owner's pause on the second version, through `scripts/safe-action.ts`: sent once, and a second one
+ *      refused by the tool before anybody signs it, while it runs and in the week that follows its end;
  *   6. the recipient's yes and stop, written on the anchor by the consent route with no step of its own, and then
  *      `pnpm verify:consent`'s own check over the whole fork: the gift read under a yes passes, and a gift read with
  *      no yes anchored before it is named, even once a yes is anchored after the fact.
  *
  * No key of production is used: the relayer, the evidence signer, the deployer, the funder and the recipient are all
- * made here. It refuses any node but the local fork.
+ * made here. So are the two keys that sign for the Safe: on the fork, and nowhere else, the Safe's own list of owners
+ * is rewritten to those two, so the tool that signs for it can be run for real. The evidence signer of the three
+ * contracts in service is set to the one made here, as the Safe would, so the deployment's own check of it is walked.
+ * It refuses any node but the local fork.
  *
  * Usage:
  *   anvil --fork-url https://rpc.monad.xyz --network monad --port 8547 --block-time 0.1
@@ -80,6 +85,8 @@ const ORIGIN = "https://viky.test";
 const AUSD = "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a" as const;
 const POOL = "0x942644106B073E30D72c2C5D7529D5C296ea91ab" as const;
 const SAFE = "0xE08D926c148A5065F4Df2892702785a183de86F9" as const;
+/** Lock-In's Safe, which lives on Monad mainnet too: a real Safe that owns nothing of Viky's and is offered nothing. */
+const SAFE_OF_ANOTHER = "0xf1be884698B9Ba4438f529699eC92320427b4dA1" as const;
 const DAY = 86_400;
 type Account = ReturnType<typeof privateKeyToAccount>;
 
@@ -151,41 +158,108 @@ async function main() {
   const ausdOf = (who: Hex) => publicClient.readContract({ address: AUSD, abi: erc20, functionName: "balanceOf", args: [who] });
   for (const account of [relayer, deployer]) await test.setBalance({ address: account.address, value: parseEther("100") });
 
+  // The Safe of the fork answers to two keys made here: its owners are a linked list in its own storage (slot 2, from
+  // the sentinel 0x1), with their number in slot 3 and the threshold in slot 4 (Safe 1.4.1).
+  /** An address nobody here answers to: named where an owner or a signer that is not the right one is tried. */
+  const thiefOfOwnership = privateKeyToAccount(generatePrivateKey()).address;
+  const safeKeys = [generatePrivateKey(), generatePrivateKey()] as const;
+  const [safeOne, safeTwo] = safeKeys.map((key) => privateKeyToAccount(key));
+  const ownerSlot = (owner: Hex) => keccak256(encodeAbiParameters([{ type: "address" }, { type: "uint256" }], [owner, 2n]));
+  const word = (value: Hex | bigint) => padHex(typeof value === "bigint" ? toHex(value) : value, { size: 32 });
+  const SENTINEL = "0x0000000000000000000000000000000000000001" as const;
+  for (const [index, value] of [
+    [ownerSlot(SENTINEL), word(safeOne.address)],
+    [ownerSlot(safeOne.address), word(safeTwo.address)],
+    [ownerSlot(safeTwo.address), word(SENTINEL)],
+    [word(3n), word(2n)],
+    [word(4n), word(2n)],
+  ] as const) {
+    await test.setStorageAt({ address: SAFE, index, value });
+  }
+  await test.setBalance({ address: safeOne.address, value: parseEther("100") });
+  /** One action of the Safe through the tool itself: built, signed by each key where it lives, then sent. */
+  const safeAction = (env: Record<string, string>, more: Record<string, string> = {}) => {
+    try {
+      return { ok: true, out: execSync("npx tsx scripts/safe-action.ts", { env: { ...process.env, REHEARSAL: "1", SAFE_ADDRESS: SAFE, MONAD_RPC_URL: RPC, NEXT_PUBLIC_MONAD_RPC_URL: RPC, SIGN: "", SEND: "", SIGNATURES: "", SIGNER_PRIVATE_KEY: "", NONCE: "", ...env, ...more }, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }) };
+    } catch (error) {
+      const failed = error as { stdout?: string; stderr?: string };
+      return { ok: false, out: `${failed.stdout ?? ""}${failed.stderr ?? ""}` };
+    }
+  };
+  const bySafe = (env: Record<string, string>) => {
+    const built = safeAction(env);
+    if (!built.ok) return built;
+    const nonce = String(/"nonce": "(\d+)"/.exec(built.out)?.[1]);
+    const signatures = safeKeys.map((key) => String(/"signature": "(0x[0-9a-f]+)"/.exec(safeAction(env, { SIGN: "1", SIGNER_PRIVATE_KEY: key, NONCE: nonce }).out)?.[1]));
+    return safeAction(env, { SIGNATURES: signatures.join(","), SEND: "1", EXECUTOR_PRIVATE_KEY: safeKeys[0], NONCE: nonce });
+  };
+
   console.log("STEP 1: the owner closes creation on the three contracts in service");
   for (const [address, abi] of [[GIFT_ESCROW, giftEscrowAbi], [EARLIER_GIFT_ESCROW, giftEscrowAbi], [MILESTONE_GIFT, milestoneGiftAbi]] as const) {
     await as(SAFE, address, encodeFunctionData({ abi: abi as unknown as Abi, functionName: "setCreationPaused", args: [true] }));
   }
   expect(await publicClient.readContract({ address: GIFT_ESCROW, abi: giftEscrowAbi as unknown as Abi, functionName: "creationPaused" }), "creation is closed on the daily contract in service");
+  // The deployment reads the evidence signer on the contracts in service and takes nobody's word for it. The one made
+  // here is not theirs, so it is refused; then the fork's contracts are given it, as the Safe would, and it passes.
+  const deployEnv = { ...process.env, REHEARSAL: "1", DRY_RUN: "", DEPLOYER_PRIVATE_KEY: deployerKey, OWNER_ADDRESS: SAFE, EVIDENCE_SIGNER_ADDRESS: evidence.address, EVIDENCE_SIGNER_PRIVATE_KEY: "", RELAYER_ADDRESS: relayer.address, MONAD_RPC_URL: RPC, NEXT_PUBLIC_MONAD_RPC_URL: RPC };
+  const deploy = (env: NodeJS.ProcessEnv) => {
+    try {
+      return { ok: true, out: execSync("npx tsx scripts/deploy-v2.ts", { env, encoding: "utf8", maxBuffer: 16 * 1_024 * 1_024, stdio: ["ignore", "pipe", "pipe"] }) };
+    } catch (error) {
+      const failed = error as { stdout?: string; stderr?: string };
+      return { ok: false, out: `${failed.stdout ?? ""}${failed.stderr ?? ""}` };
+    }
+  };
+  const otherSigner = deploy(deployEnv);
+  expect(!otherSigner.ok && otherSigner.out.includes("takes its readings from"), "the deployment refuses a signer that is not the one the contracts in service hold, read on the chain");
+  for (const [address, abi] of [[GIFT_ESCROW, giftEscrowAbi], [EARLIER_GIFT_ESCROW, giftEscrowAbi], [MILESTONE_GIFT, milestoneGiftAbi]] as const) {
+    await as(SAFE, address, encodeFunctionData({ abi: abi as unknown as Abi, functionName: "setEvidenceSigner", args: [evidence.address] }));
+  }
+  const otherOwner = deploy({ ...deployEnv, OWNER_ADDRESS: thiefOfOwnership });
+  expect(!otherOwner.ok && otherOwner.out.includes("is owned by"), "and an owner that is not the one they answer to");
+  const notRehearsal = deploy({ ...deployEnv, REHEARSAL: "" });
+  expect(!notRehearsal.ok && notRehearsal.out.includes("is a local node, and this is not a rehearsal"), "and a local node when it is not told this is a rehearsal");
 
   console.log("STEP 2: deploy the second version (scripts/deploy-v2.ts, REHEARSAL)");
-  const deployed = execSync("npx tsx scripts/deploy-v2.ts", {
-    env: {
-      ...process.env,
-      REHEARSAL: "1",
-      DRY_RUN: "",
-      DEPLOYER_PRIVATE_KEY: deployerKey,
-      OWNER_ADDRESS: SAFE,
-      EVIDENCE_SIGNER_ADDRESS: evidence.address,
-      EVIDENCE_SIGNER_PRIVATE_KEY: evidenceKey,
-      RELAYER_ADDRESS: relayer.address,
-      MONAD_RPC_URL: RPC,
-      NEXT_PUBLIC_MONAD_RPC_URL: RPC,
-    },
-    encoding: "utf8",
-    maxBuffer: 16 * 1_024 * 1_024,
-  });
+  const ran = deploy(deployEnv);
+  if (!ran.ok) throw new Error(`the deployment failed: ${ran.out.slice(-600)}`);
+  const deployed = ran.out;
   const addressOf = (name: string) => getAddress(String(new RegExp(`${name}=(0x[0-9a-fA-F]{40})`).exec(deployed)?.[1]));
   const daily = addressOf("NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS");
   const milestone = addressOf("NEXT_PUBLIC_MILESTONE_GIFT_V2_ADDRESS");
   const anchor = addressOf("NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS");
   console.log(`  deployed: daily ${daily}, milestone ${milestone}, anchor ${anchor}`);
   expect((deployed.match(/"step":"(daily|milestone): register goal/g) ?? []).length === 37, "37 goals were registered: 4 daily and 33 milestone");
+  expect((deployed.match(/WRITE DOWN: (GiftEscrowV2|MilestoneGiftV2|ConsentAnchor) is at 0x[0-9a-fA-F]{40}/g) ?? []).length === 3, "each address was printed the moment it existed");
+  expect(!/open (check-ins|proofs)/.test(deployed), "no pause was spent at deployment: readings need no opening");
 
-  console.log("STEP 3: the owner accepts the three");
-  for (const address of [daily, milestone, anchor]) {
-    await as(SAFE, address, encodeFunctionData({ abi: ownable, functionName: "acceptOwnership" }));
-    expect(getAddress(String(await publicClient.readContract({ address, abi: ownable, functionName: "owner" }))) === SAFE, `${address} is owned by the Safe`);
+  console.log("STEP 3: the Safe accepts the three, with its own tool, and the hand-over is read before the app is told");
+  const handover = (ownerSaid: string = SAFE) => {
+    try {
+      return { ok: true, out: execSync("npx tsx scripts/check-v2-handover.ts", { env: { ...process.env, REHEARSAL: "1", MONAD_RPC_URL: RPC, NEXT_PUBLIC_MONAD_RPC_URL: RPC, DAILY_V2: daily, MILESTONE_V2: milestone, ANCHOR: anchor, OWNER_ADDRESS: ownerSaid, EVIDENCE_SIGNER_ADDRESS: evidence.address }, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }) };
+    } catch (error) {
+      const failed = error as { stdout?: string; stderr?: string };
+      return { ok: false, out: `${failed.stdout ?? ""}${failed.stderr ?? ""}` };
+    }
+  };
+  const early = handover();
+  expect(!early.ok && early.out.includes("The Safe has not accepted it yet") && !early.out.includes("NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS="), "before the Safe accepts, the hand-over check prints no setting");
+  // The review of 2 Oct 2026, R-05: the deploying key is still the owner here. A signer it announces now is called off
+  // by the acceptance itself.
+  const announce = [{ type: "function", name: "setEvidenceSigner", stateMutability: "nonpayable", inputs: [{ type: "address" }], outputs: [] }] as const;
+  await test.impersonateAccount({ address: deployer.address });
+  await publicClient.waitForTransactionReceipt({ hash: await test.sendUnsignedTransaction({ from: deployer.address, to: daily, data: encodeFunctionData({ abi: announce, functionName: "setEvidenceSigner", args: [thiefOfOwnership] }) }) });
+  await test.stopImpersonatingAccount({ address: deployer.address });
+  const offeredElsewhere = safeAction({ ACTION: "accept-ownership", TARGET: "escrow-v2", TARGET_ADDRESS: daily }, { SAFE_ADDRESS: SAFE_OF_ANOTHER });
+  expect(!offeredElsewhere.ok, "the tool builds no acceptance for a Safe the ownership was not offered to");
+  for (const [target, address] of [["escrow-v2", daily], ["milestone-v2", milestone], ["anchor", anchor]] as const) {
+    const accepted = bySafe({ ACTION: "accept-ownership", TARGET: target, TARGET_ADDRESS: address });
+    expect(accepted.ok && accepted.out.includes('"step": "read back"') && getAddress(String(await publicClient.readContract({ address, abi: ownable, functionName: "owner" }))) === SAFE, `${target}: accepted by the Safe through pnpm safe:action, signed by its two keys`);
   }
+  const twice = safeAction({ ACTION: "accept-ownership", TARGET: "anchor", TARGET_ADDRESS: anchor });
+  expect(!twice.ok && twice.out.includes("Nothing to accept"), "and an ownership already accepted is not asked for again");
+  const handed = handover();
+  expect(handed.ok && handed.out.includes(`NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS=${daily}`) && handed.out.includes(`NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS=${anchor}`), "the hand-over check passes: the Safe owns the three, no signer is waiting, and only now are the three settings printed");
 
   // From here the app is told where the second version is, as the three settings will tell it.
   process.env.NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS = daily;
@@ -458,16 +532,17 @@ async function main() {
     { type: "function", name: "proofPaused", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
     { type: "function", name: "pendingEvidenceSigner", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
   ] as const;
-  for (const [name, address, set, paused] of [["daily", daily, "setCheckInPaused", "checkInPaused"], ["milestone", milestone, "setProofPaused", "proofPaused"]] as const) {
+  for (const [name, address, target, action, paused] of [["daily", daily, "escrow-v2", "checkin-paused", "checkInPaused"], ["milestone", milestone, "milestone-v2", "proof-paused", "proofPaused"]] as const) {
     expect(/^0x0{40}$/.test(String(await publicClient.readContract({ address, abi: pauseAbi, functionName: "pendingEvidenceSigner" }))), `${name}: no signer is waiting after the hand-over`);
     expect(!(await publicClient.readContract({ address, abi: pauseAbi, functionName: paused })), `${name}: a new contract is not paused, so its pause is unspent`);
-    await as(SAFE, address, encodeFunctionData({ abi: pauseAbi, functionName: set, args: [true] }));
-    expect(await publicClient.readContract({ address, abi: pauseAbi, functionName: paused }), `${name}: the owner pauses it`);
-    const again = await as(SAFE, address, encodeFunctionData({ abi: pauseAbi, functionName: set, args: [true] })).then(() => null, (error: unknown) => error);
-    expect(again !== null, `${name}: the pause cannot be sent again while it runs`);
-    await as(SAFE, address, encodeFunctionData({ abi: pauseAbi, functionName: set, args: [false] }));
-    const soon = await as(SAFE, address, encodeFunctionData({ abi: pauseAbi, functionName: set, args: [true] })).then(() => null, (error: unknown) => error);
-    expect(soon !== null && !(await publicClient.readContract({ address, abi: pauseAbi, functionName: paused })), `${name}: nor in the week that follows its end`);
+    // The emergency brake, as the Safe would pull it: the tool knows the contract by its name, and the app's setting.
+    const pause = bySafe({ ACTION: action, TARGET: target, PAUSED: "true" });
+    expect(pause.ok && (await publicClient.readContract({ address, abi: pauseAbi, functionName: paused })), `${name}: the Safe pauses it through pnpm safe:action`);
+    const again = safeAction({ ACTION: action, TARGET: target, PAUSED: "true" });
+    expect(!again.ok && again.out.includes("PauseTooSoon"), `${name}: a second pause while it runs is refused by the tool before anybody signs: PauseTooSoon`);
+    expect(bySafe({ ACTION: action, TARGET: target, PAUSED: "false" }).ok && !(await publicClient.readContract({ address, abi: pauseAbi, functionName: paused })), `${name}: the Safe reopens it`);
+    const soon = safeAction({ ACTION: action, TARGET: target, PAUSED: "true" });
+    expect(!soon.ok && soon.out.includes("PauseTooSoon"), `${name}: and a pause in the week that follows its end is refused the same way`);
   }
 
   console.log("STEP 6: the yes and the stop on the anchor, checked from the chain alone");
