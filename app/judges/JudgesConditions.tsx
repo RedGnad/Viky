@@ -3,7 +3,7 @@ import { conditionsWithProof } from "@/src/condition-proof";
 import { FAMILIES, stateOf } from "@/src/conditions";
 import { realProofCounts } from "@/src/proof-counts";
 import { CATALOGUE } from "@/src/sentences";
-import { TITLE } from "../components/ui";
+import { Fold } from "./Fold";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
@@ -23,8 +23,7 @@ export async function JudgesConditions() {
   // The count of real proofs per condition (D184): a number read from the rows when the page is served, or nothing.
   const counts = await realProofCounts();
   return (
-    <section className="space-y-[var(--space-md)]">
-      <h2 className={TITLE}>What each condition proves</h2>
+    <Fold id="conditions" title="What each condition proves" space="md">
       <p className={HELP}>
         Four questions, asked of every condition, answered in the register the product itself reads. Where something is
         not known, the answer says so: none of these proves who did the activity, and that is written here rather than
@@ -62,6 +61,6 @@ export async function JudgesConditions() {
           ))}
         </div>
       ))}
-    </section>
+    </Fold>
   );
 }

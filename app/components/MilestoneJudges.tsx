@@ -3,7 +3,7 @@ import { MILESTONE_EVIDENCE as E } from "@/src/milestone-evidence";
 import { PUBLIC_RPC_URL } from "@/src/monad/chain";
 import { PINNED_RECLAIM_WITNESS } from "@/src/reclaim-proof-set";
 import { milestoneGiftV2Address } from "@/src/v2";
-import { TITLE } from "./ui";
+import { Fold } from "../judges/Fold";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
@@ -27,8 +27,7 @@ export function MilestoneJudges() {
   // Where a milestone gift is made today, once the second version is set: what follows is the first version's record.
   const second = milestoneGiftV2Address();
   return (
-    <section className="space-y-[var(--space-sm)]">
-      <h2 className={TITLE}>A milestone: a Chess.com rating</h2>
+    <Fold id="milestone" title="A milestone: a Chess.com rating">
       <p className={HELP}>
         MilestoneGift holds a gift for one thing rather than a habit: the whole amount becomes the recipient&apos;s the first time an
         attested reading shows the rating reached, or all of it goes back when the time runs out. Contract{" "}
@@ -162,6 +161,6 @@ export function MilestoneJudges() {
         </li>
         <li>Chess.com publishes no rule for what its name field accepts; the code is six letters so that any name field takes it.</li>
       </ul>
-    </section>
+    </Fold>
   );
 }

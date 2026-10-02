@@ -3,7 +3,7 @@ import { BLOCK_TIME, creditedDayMon, dailyGiftMon, dollarsOf, FINALITY_GAP, miss
 import { AUSD_ADDRESS } from "@/src/monad/chain";
 import { feeSentence, waysIn } from "@/src/rails";
 import { giftEscrowV2Address, milestoneGiftV2Address } from "@/src/v2";
-import { TITLE } from "../components/ui";
+import { Fold, SubFold } from "./Fold";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
@@ -35,13 +35,18 @@ export async function JudgesAgora() {
   const frozen = facts ? facts.holders.filter((one) => one.frozen) : [];
   const sends = RELAYER_FEES.steps.find((one) => one.step === "transferWithAuthorization");
   return (
-    <section className="space-y-[var(--space-sm)]" id="agora">
-      <h2 className={TITLE}>AUSD, Agora&apos;s dollar: who issues it, what a gift costs, how fast it settles</h2>
+    <Fold id="agora" title="AUSD, Agora's dollar: who issues it, what a gift costs, how fast it settles">
       <p className={HELP}>
         Every gift is held and paid in AUSD (<span className="[overflow-wrap:anywhere]">{AUSD_ADDRESS}</span>) and in nothing else. AUSD is issued by
         Agora Bermuda Limited, which Agora&apos;s site says is licensed by the Bermuda Monetary Authority (
         <a className="underline" href="https://www.agora.finance/">agora.finance</a>, read 2 Oct 2026). Viky is not affiliated with Agora.
       </p>
+      <p className={HELP} data-ausd={facts ? "read" : "unread"}>
+        {facts
+          ? `Asked of the token as this page is served: transfers are ${facts.transfersPaused ? "suspended" : "not suspended"}, signed transfers are ${facts.signedTransfersPaused ? "suspended" : "not suspended"}, the account that can replace its code is ${facts.proxyAdmin}, and of the ${held.length} contracts that hold gifts ${frozen.length === 0 ? "none is frozen" : `${frozen.map((one) => one.address).join(", ")} ${frozen.length === 1 ? "is" : "are"} frozen`}.`
+          : "Whether transfers are suspended, and whether a contract that holds gifts is frozen, could not be asked of the token just now, so nothing is said of it here rather than something out of date."}
+      </p>
+      <SubFold title="What its issuer can do to a gift">
       <p className={HELP}>
         What its issuer can do is in the token&apos;s own source, verified on Monad through Sourcify, and in Agora&apos;s
         documentation (<a className="underline" href="https://docs.agora.finance/developer/rbac">Role Based Access Control</a>), both read 2 Oct
@@ -53,12 +58,8 @@ export async function JudgesAgora() {
         money out; and a gift contract frozen, or transfers suspended, stops everything in and out of it until Agora lifts
         it. Nobody else gains by any of these: the money stays where it is.
       </p>
-      <p className={HELP} data-ausd={facts ? "read" : "unread"}>
-        {facts
-          ? `Asked of the token as this page is served: transfers are ${facts.transfersPaused ? "suspended" : "not suspended"}, signed transfers are ${facts.signedTransfersPaused ? "suspended" : "not suspended"}, the account that can replace its code is ${facts.proxyAdmin}, and of the ${held.length} contracts that hold gifts ${frozen.length === 0 ? "none is frozen" : `${frozen.map((one) => one.address).join(", ")} ${frozen.length === 1 ? "is" : "are"} frozen`}.`
-          : "Whether transfers are suspended, and whether a contract that holds gifts is frozen, could not be asked of the token just now, so nothing is said of it here rather than something out of date."}
-      </p>
-      <h3 className="font-medium">A plain send, with no gift</h3>
+      </SubFold>
+      <SubFold title="A plain send, with no gift">
       <p className={HELP}>
         From Me, &quot;Spend or withdraw&quot;, then &quot;Send to another Viky account of mine&quot;: AUSD goes from one
         account to another in one transaction. The person pastes the other account&apos;s code, types the amount and presses
@@ -68,7 +69,8 @@ export async function JudgesAgora() {
         the same to any account, and the only codes it refuses are this account&apos;s own and Viky&apos;s contracts.
         {sends ? ` ${sends.sent} such sends had been relayed when the fees below were read.` : ""}
       </p>
-      <h3 className="font-medium">What a gift costs, and who pays it</h3>
+      </SubFold>
+      <SubFold title="What a gift costs, who pays it, and how fast it settles">
       <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] [@media(min-width:600px)]:grid-cols-[14rem_1fr]">
         <dt className={MUTED}>The network, paid by Viky</dt>
         <dd className={HELP} data-cost="network">
@@ -111,6 +113,7 @@ export async function JudgesAgora() {
           server and their own connection, which is not measured here.
         </dd>
       </dl>
-    </section>
+      </SubFold>
+    </Fold>
   );
 }

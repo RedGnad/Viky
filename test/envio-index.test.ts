@@ -113,15 +113,16 @@ test("the judges page shows the index beside the chain, and says so when it cann
   assert.match(page, /<JudgesWhoUsed index=\{index\} \/>/);
   // The index is read by the judges page and by nothing else: its blocks, and the counting of who used Viky.
   const users = execFileSync("grep", ["-rl", "envio-index", "app", "src"], { encoding: "utf8" }).trim().split("\n").sort();
-  assert.deepEqual(users, ["app/judges/JudgesIndex.tsx", "app/judges/JudgesMera.tsx", "app/judges/JudgesWhoUsed.tsx", "app/judges/page.tsx", "src/pilot-accounts.ts"]);
+  assert.deepEqual(users, ["app/judges/JudgesIndex.tsx", "app/judges/JudgesMera.tsx", "app/judges/JudgesMinute.tsx", "app/judges/JudgesWhoUsed.tsx", "app/judges/page.tsx", "src/pilot-accounts.ts"]);
   // An index that does not answer is a sentence on each block, never an error on the page (the founder, 2 Oct 2026):
   // the reading never throws, and no block prints anything of a failure.
-  for (const file of ["app/judges/JudgesIndex.tsx", "app/judges/JudgesWhoUsed.tsx", "app/judges/JudgesMera.tsx"]) {
+  for (const file of ["app/judges/JudgesIndex.tsx", "app/judges/JudgesWhoUsed.tsx", "app/judges/JudgesMera.tsx", "app/judges/JudgesMinute.tsx"]) {
     const source = readFileSync(file, "utf8");
     assert.doesNotMatch(source, /error\.message|catch \(error\)/, `${file} prints nothing of a failure`);
   }
   const who = readFileSync("app/judges/JudgesWhoUsed.tsx", "utf8");
   assert.match(who, /if \(!index\) \{[\s\S]*?data-who-used="unread"[\s\S]*?So no count is shown here\s+rather than an old one\./);
   assert.match(readFileSync("app/judges/JudgesMera.tsx", "utf8"), /How many are written there could not be read from the index just now\./);
+  assert.match(readFileSync("app/judges/JudgesMinute.tsx", "utf8"), /The index of the contracts' events could not be read just now, so no count is given here: /);
   assert.match(readFileSync("src/envio-index.ts", "utf8"), /\} catch \{\s*return null;\s*\}\s*\}/, "the reading answers nothing, it never throws");
 });

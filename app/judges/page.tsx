@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { Shell } from "../kit/Shell";
 import { JudgesAccount } from "../components/JudgesAccount";
 import { MilestoneJudges } from "../components/MilestoneJudges";
-import { DISPLAY, TITLE } from "../components/ui";
+import { DISPLAY } from "../components/ui";
 import { readOwnership, ownershipWords } from "@/src/judges-owner";
 import { portalsListedAndRead, providerCounts, witnessProviders } from "@/src/portal-store";
 import { countryInWords } from "@/src/university-shown";
@@ -15,13 +15,16 @@ import { AUSD_ADDRESS, MONAD_CHAIN_ID, PUBLIC_RPC_URL } from "@/src/monad/chain"
 import { readIndex } from "@/src/envio-index";
 import { JudgesAgora } from "./JudgesAgora";
 import { JudgesConditions } from "./JudgesConditions";
+import { JudgesContents } from "./JudgesContents";
 import { JudgesContracts } from "./JudgesContracts";
 import { JudgesEarlyGifts } from "./JudgesEarlyGifts";
 import { JudgesIndex } from "./JudgesIndex";
 import { JudgesMera } from "./JudgesMera";
+import { JudgesMinute } from "./JudgesMinute";
 import { JudgesReliability } from "./JudgesReliability";
 import { JudgesVerify } from "./JudgesVerify";
 import { JudgesWhoUsed } from "./JudgesWhoUsed";
+import { Fold } from "./Fold";
 
 export const metadata: Metadata = {
   title: "For judges",
@@ -81,14 +84,22 @@ export default async function JudgesPage() {
         <h1 className={DISPLAY}>For judges</h1>
         <p className={MUTED}>
           Everything verifiable about Viky on one page, and everything that is not, written as it is. Nothing here is
-          shown to funders or recipients.
+          shown to funders or recipients. The first block is the page in one minute; every section under it opens
+          when its title is pressed.
         </p>
       </header>
 
+      {/* For a judge in a hurry (the audit of 1 Oct 2026, D-11): the page in one minute, then its contents. */}
+      <JudgesMinute
+        index={index}
+        contracts={secondVersionSet ? { daily: escrowV2, milestone: milestoneV2, anchor, version: 2 } : { daily: escrow ?? null, milestone: process.env.NEXT_PUBLIC_MILESTONE_GIFT_ADDRESS?.trim() ?? null, anchor: null, version: 1 }}
+      />
+
+      <JudgesContents />
+
       {/* The judges' own path (D291): two gestures, no account kept by Viky, the judge keeps their passkey. The code
           itself is only in the submission portal's instructions, never on this page. */}
-      <section className="space-y-[var(--space-sm)]">
-        <h2 className={TITLE}>For judges, how to try it</h2>
+      <Fold id="try" title="For judges, how to try it" open>
         <ol className={`${HELP} list-decimal space-y-[var(--space-xs)] pl-[var(--space-lg)]`}>
           <li>
             On the home page, press Sign in and create your account: your face or your fingerprint makes a passkey on
@@ -148,12 +159,11 @@ export default async function JudgesPage() {
             </ol>
           </li>
         </ol>
-      </section>
+      </Fold>
 
       <JudgesWhoUsed index={index} />
 
-      <section className="space-y-[var(--space-sm)]">
-        <h2 className={TITLE}>Network</h2>
+      <Fold id="network" title="Network">
         {/* On a phone each label sits above its value: two columns there left a value 198 pixels, and breaking
             anywhere to fit an address broke every sentence beside it mid-word. Only an unbreakable string breaks now. */}
         <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] text-[length:var(--type-help)] [@media(min-width:600px)]:grid-cols-[10rem_1fr]">
@@ -247,7 +257,7 @@ export default async function JudgesPage() {
             </>
           ) : null}
         </dl>
-      </section>
+      </Fold>
 
       {/* First, because it is the one thing on this page a stranger can do instead of believing us. */}
       <JudgesVerify />
@@ -267,8 +277,7 @@ export default async function JudgesPage() {
       <JudgesMera index={index} />
 
       {/* How money comes in (D289): through a licensed partner, the asset named, and the next step said as it is. */}
-      <section className="space-y-[var(--space-sm)]">
-        <h2 className={TITLE}>How money comes in</h2>
+      <Fold id="money-in" title="How money comes in">
         <p className={HELP}>
           A funder pays by card or bank transfer on Ramp&apos;s own page, not Viky&apos;s. Ramp Swaps (Ireland) Limited is an
           authorised crypto-asset service provider under MiCA, regulated by the Central Bank of Ireland (
@@ -284,10 +293,9 @@ export default async function JudgesPage() {
           opens with the account, the amount in euros and AUSD already filled in.{" "}
           {rampHostApiKey() ? "The key is set on this deployment: the page opens filled in." : "The key is not set on this deployment yet."}
         </p>
-      </section>
+      </Fold>
 
-      <section className="space-y-[var(--space-sm)]">
-        <h2 className={TITLE}>How a day is read</h2>
+      <Fold id="reading" title="How a day is read">
         <p className={HELP}>
           Duolingo runs in public mode: once a day, Viky&apos;s keeper reads the recipient&apos;s public profile through
           an attested fetch (Reclaim zkFetch through Reclaim&apos;s TEE client). The attestor signs Duolingo&apos;s
@@ -325,10 +333,9 @@ export default async function JudgesPage() {
           only to connect the account or when that look does not show it below its target. Private sources keep the
           user-proof path through the Reclaim verifier app.
         </p>
-      </section>
+      </Fold>
 
-      <section className="space-y-[var(--space-sm)]">
-        <h2 className={TITLE}>Risks and holes, written as they are</h2>
+      <Fold id="risks" title="Risks and holes, written as they are">
         <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
           <li>
             <strong>Duolingo&apos;s terms.</strong> The profile Viky reads is a public endpoint Duolingo does not
@@ -662,7 +669,7 @@ export default async function JudgesPage() {
             is what makes a signature without a real reading behind it detectable, for the readings whose proof is kept.
           </li>
         </ul>
-      </section>
+      </Fold>
 
       <MilestoneJudges />
 

@@ -1,6 +1,6 @@
 import { dateOfDay } from "@/src/day-record";
 import { earlyGifts, EARLIER_HOST } from "@/src/judges-gifts";
-import { TITLE } from "../components/ui";
+import { Fold } from "./Fold";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
@@ -17,8 +17,7 @@ export async function JudgesEarlyGifts() {
   const gifts = await earlyGifts();
   if (gifts.length === 0) return null;
   return (
-    <section className="space-y-[var(--space-md)]">
-      <h2 className={TITLE}>The first two gifts, and why this app does not show them</h2>
+    <Fold id="first-gifts" title="The first two gifts, and why this app does not show them" space="md">
       <p className={HELP}>
         Gifts {gifts.map((gift) => gift.giftId).join(" and ")} were made and opened on {EARLIER_HOST}, before{" "}
         viky.cash served the app. An account here is a passkey, and a passkey is bound to the hostname it was created
@@ -69,6 +68,6 @@ export async function JudgesEarlyGifts() {
         passkey that holds them answers only to {EARLIER_HOST}. Gifts made here are bound to viky.cash and stay
         readable here.
       </p>
-    </section>
+    </Fold>
   );
 }

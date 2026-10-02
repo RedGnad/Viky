@@ -33,8 +33,27 @@ for (const size of SIZES) {
       await page.locator('a[href="/me"]:visible').first().click();
       await page.locator('a[href="/judges"]:visible').first().click();
 
+      // The page for a judge in a hurry (D-11): the minute first, then the contents, whose links open their section.
+      await expect(page.getByRole("heading", { name: "In one minute" })).toBeVisible({ timeout: 30_000 });
+      // The command is shown where a gift contract is set, and a sentence where none is (the build under test may set
+      // none): either way the block leads to the check of a credited day.
+      await expect(page.locator('[data-minute="command"]')).toContainText(/cast call 0x[0-9a-fA-F]{40} "owner\(\)\(address\)"|No gift contract is set on this deployment/);
+      await expect(page.locator('[data-minute="command"]').getByRole("link", { name: "verify a credited day yourself" })).toHaveAttribute("href", "#verify");
+      const risks = page.locator("#risks details");
+      await expect(risks).not.toHaveAttribute("open", "");
+      await page.getByRole("navigation", { name: "On this page" }).getByRole("link", { name: "Risks and holes" }).click();
+      await expect(risks).toHaveAttribute("open", "");
+      await expect(page.getByText("Duolingo's terms.")).toBeVisible();
+      // Nothing is wider than the screen, folded or opened.
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
+
       const index = page.locator("section", { has: page.getByRole("heading", { name: "The index of the contracts' events" }) });
       await expect(index).toBeVisible({ timeout: 30_000 });
+      // A section is its title until it is pressed (D-11): what it holds is not shown before, and is after.
+      const held = index.locator("[data-index]").first();
+      await expect(held).toBeHidden();
+      await index.getByRole("heading", { name: "The index of the contracts' events" }).click();
+      await expect(held).toBeVisible();
       if (process.env.VIKY_INDEX_SET === "1") {
         await expect(index.locator('[data-index="block"]')).toContainText(/^Block [\d,]+/);
         await expect(index.getByText(/the index's events add up to \$[\d.]+ still held/).first()).toBeVisible();
