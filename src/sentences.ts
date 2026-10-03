@@ -27,24 +27,21 @@ function spokenTo(source: string): string {
 }
 
 /**
- * The month's limit of readings is reached (the founder, 3 Oct 2026): said in place, plainly and without alarm, where a
- * reading or a proof would have gone. Viky asks an outside service for each attested reading and for each proof a
- * person shows, and that service counts them by the month (src/attested-calls.ts). `until` is the real end of the
- * window of the day that can still be counted, in the reader's own clock; a gift that is not counted by days has none.
- * `email` is where to write, and the sentence that names it is left out where none is set.
+ * The month's limit of readings is reached (the founder, 3 Oct 2026): said in place, where a reading or a proof would
+ * have gone, short, and in the one red of the product (`.limit-said`). Viky asks an outside service for each attested
+ * reading and for each proof a person shows, and that service counts them by the month (src/attested-calls.ts).
+ * `until` is the real end of the window of the day that can still be counted, in the reader's own clock; a gift that
+ * is not counted by days has none, and reads that nothing is lost instead. `email` is where to write, and the
+ * sentence that names it is left out where none is set.
  */
+const LIMIT_READING = "Monthly reading limit reached.";
+const LIMIT_PROOF = "Monthly proof limit reached.";
 export const LIMIT = {
   reading: (until: string | null, email: string | null) =>
-    [
-      "Viky can't check this right now: we've reached our monthly limit of readings.",
-      "Nothing is lost.",
-      until ? `Your day can still be counted until ${until}.` : "",
-      email ? `Write to ${email} and we'll sort it out.` : "",
-    ]
-      .filter(Boolean)
-      .join(" "),
-  proof: (email: string | null) =>
-    ["Viky can't take a new proof right now: we've reached our monthly limit.", "Nothing was taken.", email ? `Write to ${email} and we'll sort it out.` : ""].filter(Boolean).join(" "),
+    [LIMIT_READING, until ? `Your day can still be counted until ${until}.` : "Nothing is lost.", email ? `Write to ${email}.` : ""].filter(Boolean).join(" "),
+  proof: (email: string | null) => [LIMIT_PROOF, "Nothing was taken.", email ? `Write to ${email}.` : ""].filter(Boolean).join(" "),
+  /** Whether a sentence is one of the two, wherever a screen prints what it was answered: it is then set in the red. */
+  isSaid: (text: string | null | undefined) => Boolean(text && (text.startsWith(LIMIT_READING) || text.startsWith(LIMIT_PROOF))),
 } as const;
 
 /** The three destinations of the bar and the rail, and the mark. */

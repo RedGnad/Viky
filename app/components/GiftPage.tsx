@@ -866,11 +866,10 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
                 ? readerIsFunder
                   ? A.startAboveCapTheirs(milestone.startAboveCap, milestone.maximumStart, recipientName)
                   : A.startAboveCapMine(milestone.startAboveCap, milestone.maximumStart)
-                : /* The month's limit of readings: in the place a reading would have been told. */
-                  limitLine
-                  ? [limitLine]
-                  : null
+                : null
           }
+          /* The month's limit of readings: in the place a reading would have been told. */
+          limit={limitLine}
           action={action}
           agreed={{ open: read.agreementOpen, children: agreed }}
           checked={checked}

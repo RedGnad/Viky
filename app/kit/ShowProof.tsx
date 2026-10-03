@@ -100,8 +100,9 @@ export function ShowProof({
     return (
       <section className={CARD} role="status" data-proof-limit>
         <p className="font-medium">{W.title(condition.source)}</p>
-        {/* The whole of it in the open, once (the founder, 3 Oct 2026): it is what the person needs before starting. */}
-        <p className={BODY}>{LIMIT.proof(contactEmail())}</p>
+        {/* The whole of it in the open, once, short and in the red (the founder, 3 Oct 2026): it is what the person
+            needs before starting. */}
+        <p className="limit-said">{LIMIT.proof(contactEmail())}</p>
       </section>
     );
   }
