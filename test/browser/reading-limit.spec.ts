@@ -18,7 +18,7 @@ import { DAY, gift, json, makeAnAccount, neverAskedToBeTold, now } from "./gift-
  */
 const shot = photographer(process.env.VIKY_LIMIT_CAPTURES);
 
-const AGAIN = "24 Oct";
+const AGAIN = "1 Nov";
 const card = (page: Page) => page.locator("section.gift-card-placed");
 const said = (page: Page) => card(page).locator("[data-limit-said]");
 const fold = (page: Page) => card(page).locator("[data-limit-can]");

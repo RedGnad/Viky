@@ -1,6 +1,6 @@
 // The breaker where every paid reading passes (the founder, 3 Oct 2026; src/attested-calls.ts). On 30 Sep one gift
 // whose reading kept failing cost 57 proofs in five hours, of a month's hundred. So a UTC day has two ceilings, counted
-// on the proofs given: four for a gift, eight for all. At a ceiling nothing leaves for Reclaim, the refusal is ours,
+// on the proofs given: four for a gift, twenty-five for all. At a ceiling nothing leaves for Reclaim, the refusal is ours,
 // the operator is told with the gift and the reason, and the person reads when it resumes.
 
 delete process.env.DATABASE_URL;
@@ -91,21 +91,22 @@ const atNoon = {
   ceiling: (about: Parameters<typeof ceilingNow>[0], needs: number) => ceilingNow(about, needs, NOON),
 };
 
-test("four proofs a day for a gift and eight for all, each moved by a setting with no new code", () => {
-  assert.deepEqual(DAILY_CEILING, { perGift: 4, all: 8 });
-  assert.deepEqual(dailyCeilings({}), { perGift: 4, all: 8 });
+test("four proofs a day for a gift and twenty-five for all, each moved by a setting with no new code", () => {
+  // The founder, 3 Oct 2026: eight for all until the month was found to hold ninety-five readings, then twenty-five.
+  assert.deepEqual(DAILY_CEILING, { perGift: 4, all: 25 });
+  assert.deepEqual(dailyCeilings({}), { perGift: 4, all: 25 });
   assert.deepEqual(dailyCeilings({ RECLAIM_DAILY_PER_GIFT: "6", RECLAIM_DAILY_ALL: "20" }), { perGift: 6, all: 20 });
   // Zero is a number: it stops every paid reading until the setting is changed. Anything that is not a whole number is not a setting.
   assert.deepEqual(dailyCeilings({ RECLAIM_DAILY_PER_GIFT: "0", RECLAIM_DAILY_ALL: " 0 " }), { perGift: 0, all: 0 });
-  assert.deepEqual(dailyCeilings({ RECLAIM_DAILY_PER_GIFT: "four", RECLAIM_DAILY_ALL: "-1" }), { perGift: 4, all: 8 });
+  assert.deepEqual(dailyCeilings({ RECLAIM_DAILY_PER_GIFT: "four", RECLAIM_DAILY_ALL: "-1" }), { perGift: 4, all: 25 });
   // Which ceiling a reading would pass: the gift's own first, then everybody's.
-  const ceilings = { perGift: 4, all: 8 };
+  const ceilings = { perGift: 4, all: 25 };
   assert.equal(ceilingPassed({ gift: 3, all: 3 }, "7", 1, ceilings), null);
   assert.equal(ceilingPassed({ gift: 4, all: 4 }, "7", 1, ceilings), "gift");
   assert.equal(ceilingPassed({ gift: 3, all: 3 }, "7", 2, ceilings), "gift", "a reading of two fetches is admitted whole or not at all");
-  assert.equal(ceilingPassed({ gift: 0, all: 8 }, "7", 1, ceilings), "all");
-  assert.equal(ceilingPassed({ gift: 0, all: 7 }, null, 2, ceilings), "all");
-  assert.equal(ceilingPassed({ gift: 0, all: 6 }, null, 2, ceilings), null, "a reading that names no gift is held to everybody's ceiling alone");
+  assert.equal(ceilingPassed({ gift: 0, all: 25 }, "7", 1, ceilings), "all");
+  assert.equal(ceilingPassed({ gift: 0, all: 24 }, null, 2, ceilings), "all");
+  assert.equal(ceilingPassed({ gift: 0, all: 23 }, null, 2, ceilings), null, "a reading that names no gift is held to everybody's ceiling alone");
   assert.equal(nextDayAt(NOON), 20_701 * 86_400);
 });
 
@@ -163,10 +164,14 @@ test("a reading of two fetches is admitted whole or not at all, so a ceiling nev
 });
 
 test("at everybody's ceiling no gift is read, and a fetch that names no gift counts towards it", async () => {
-  await given(3, "1");
-  await given(3, "2");
-  await given(2, null);
+  await given(10, "1");
+  await given(10, "2");
+  await given(4, null);
   const fetched: string[] = [];
+  // Twenty-four given: one more is read, and it is the day's last.
+  await readingFor({ giftId: "3", reason: "a daily gift, by the counting pass" }, () => countedFetch("duolingo-profile", async () => void fetched.push("the twenty-fifth"), atNoon));
+  assert.deepEqual(fetched, ["the twenty-fifth"]);
+  fetched.length = 0;
   await assert.rejects(
     readingFor({ giftId: "3", reason: "a daily gift, by the counting pass" }, () => countedFetch("duolingo-profile", async () => void fetched.push("3"), atNoon)),
     (error: unknown) => error instanceof ReclaimCeilingReached && error.scope === "all",
@@ -185,21 +190,21 @@ test("at everybody's ceiling no gift is read, and a fetch that names no gift cou
 
 test("the operator is told once in the day, with the gift, the reason, the count and how to move the ceiling", async () => {
   const about = { giftId: "1000003", reason: "a climb at its target", fetches: 2 };
-  const alert = ceilingAlert({ scope: "gift", about, use: { gift: 4, all: 5 }, ceilings: { perGift: 4, all: 8 }, resumesAt: nextDayAt(NOON) });
+  const alert = ceilingAlert({ scope: "gift", about, use: { gift: 4, all: 5 }, ceilings: { perGift: 4, all: 25 }, resumesAt: nextDayAt(NOON) });
   assert.equal(alert.subject, "Reclaim: gift 1000003 reached its ceiling of 4 proofs for the day");
   assert.match(alert.text, /^Stopped: gift 1000003, a climb at its target\. Nothing was sent to Reclaim for it\./);
-  assert.match(alert.text, /Today \(UTC\): 4 proofs for this gift, of 4 a day\. 5 proofs for all gifts, of 8 a day\./);
+  assert.match(alert.text, /Today \(UTC\): 4 proofs for this gift, of 4 a day\. 5 proofs for all gifts, of 25 a day\./);
   assert.match(alert.text, /Other gifts are still read\. This one is read again from the next UTC day\./);
   assert.match(alert.text, /Readings resume at 2026-09-\d\d 00:00 UTC|Readings resume at \d{4}-\d\d-\d\d 00:00 UTC/);
   assert.match(alert.text, /set RECLAIM_DAILY_PER_GIFT or RECLAIM_DAILY_ALL: no new code is needed\./);
-  const all = ceilingAlert({ scope: "all", about: null, use: { gift: 0, all: 8 }, ceilings: { perGift: 4, all: 8 }, resumesAt: nextDayAt(NOON) });
-  assert.equal(all.subject, "Reclaim: the ceiling of 8 proofs for the day is reached");
+  const all = ceilingAlert({ scope: "all", about: null, use: { gift: 0, all: 25 }, ceilings: { perGift: 4, all: 25 }, resumesAt: nextDayAt(NOON) });
+  assert.equal(all.subject, "Reclaim: the ceiling of 25 proofs for the day is reached");
   assert.match(all.text, /Stopped: a reading that names no gift, no reason given\./);
   assert.match(all.text, /No gift is read attested until the next UTC day\./);
   // Claimed once for a gift in a day, and once for all: a loop meets the ceiling at every turn and is told of once.
   await tellOfTheCeiling("gift", about, { gift: 4, all: 5 }, NOON);
   await tellOfTheCeiling("gift", about, { gift: 4, all: 5 }, NOON + 60_000);
-  await tellOfTheCeiling("all", null, { gift: 0, all: 8 }, NOON);
+  await tellOfTheCeiling("all", null, { gift: 0, all: 25 }, NOON);
   await tellOfTheCeiling("gift", about, { gift: 4, all: 5 }, NOON + DAY_MS);
   const claimed = (await db.query<{ name: string }>("SELECT name FROM viky_pass_guard ORDER BY name")).rows.map((row) => row.name);
   assert.deepEqual(claimed, ["reclaim-ceiling:all:20700", "reclaim-ceiling:gift:1000003:20700", "reclaim-ceiling:gift:1000003:20701"]);
