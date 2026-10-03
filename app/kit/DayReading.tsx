@@ -15,7 +15,8 @@ import { LIVE_READING_EVERY_MS } from "./LiveReading";
  * what it is doing; only that reading takes one of the month's proofs. Counted, the page is refreshed and the day
  * plays its own movement. A tab put behind stops looking; brought back, it looks again at once if a minute has passed.
  *
- * What it never does: take a proof without a lesson seen. A look that fails is said, and the page looks again.
+ * What it never does: take a proof without a lesson seen. A look that fails is said, and the page looks again. An
+ * answer about the account itself, a profile the source no longer has, is said in the answer's own words.
  */
 
 const L = GIFT_LIVE.climbing;
@@ -59,7 +60,7 @@ export function useDayReading(active: boolean, giftId: string, onCounted: () => 
     };
     const said = (outcome: PublicOutcome): DayReadingState => {
       if (outcome.kind !== "refused" || NOTHING_NEW.has(outcome.code) || SAID_ELSEWHERE.has(outcome.code)) return { phase: "quiet" };
-      return { phase: "failed", text: outcome.looked || OURS.has(outcome.code) ? null : outcome.message };
+      return { phase: "failed", text: OURS.has(outcome.code) ? null : outcome.message };
     };
     const tick = async () => {
       timer = undefined;
