@@ -165,7 +165,7 @@ test("a gift on the first two versions reads as it always did, and the first day
 
 test("what was agreed says only what is guaranteed, and the judges page says the exact rule (the re-read of 3 Oct 2026, C2 and C4)", () => {
   // The founder's own sentence. The exact case, a second lesson after the day's pay, is not promised here.
-  assert.equal(WORDS.agreed, "One lesson pays one day. An extra lesson the same day is not saved for later.");
+  assert.equal(WORDS.agreed, "One lesson pays one day. A second lesson the same day counts for tomorrow only if today was already counted when it was taken.");
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
   assert.match(page, /\{paysTheSameDay\(status\.version\) && words\?\.asItGoes \? <p className=\{BODY\}>\{words\.asItGoes\.agreed\}<\/p> : null\}/, "in what was agreed, for a gift on the third contract and for no other");
   const judges = readFileSync("app/judges/page.tsx", "utf8");

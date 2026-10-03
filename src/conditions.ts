@@ -445,7 +445,7 @@ export const DUOLINGO_DAILY: Condition = {
     catchUpTheirs: (deadline) => `Yesterday is not counted yet, and not lost either: a lesson before ${deadline} your time still earns that day.`,
     alreadyRead: "Viky already read your Duolingo today. Come back tomorrow.",
     asItGoes: {
-      agreed: "One lesson pays one day. An extra lesson the same day is not saved for later.",
+      agreed: "One lesson pays one day. A second lesson the same day counts for tomorrow only if today was already counted when it was taken.",
       countingFrom: (firstDay) => `Done. From today, ${firstDay}, every day with your lesson is yours, counted the day you do it.`,
       reads: "Viky looks at your Duolingo when this page opens, and through the day. A lesson is counted the day you do it.",
       readsTheirs: "Viky looks at their Duolingo when this page opens, and through the day. A lesson is counted the day it is done.",
