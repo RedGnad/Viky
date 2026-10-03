@@ -425,6 +425,12 @@ export const MOTION = {
     riseBy: 0.38,
     landing: SPRING.expressiveFastSpatial,
   },
+  /**
+   * The days wake when a gift is opened (the founder, 3 Oct 2026; the motion roadmap, section 6): their eyes open one
+   * by one from the left, on the spring a day earned lands on, 40 ms apart, and the whole row has woken in 600 ms
+   * whatever its length, so the days past the first few open together. Material's long4 for the budget.
+   */
+  wake: { staggerMs: 40, budgetMs: 600, eyes: SPRING.expressiveFastSpatial },
   /** A day gone back, on arrival: it slides to the left and fades to its resting opacity. Material's medium2. */
   returned: { durationMs: 300, easing: EASING.standard, fromOffset: 0.22 },
   /** The amount, on arrival and last: it counts to its value once, in under a second. Material's extra-long1. */

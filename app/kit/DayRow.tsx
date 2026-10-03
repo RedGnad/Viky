@@ -1,11 +1,13 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useMinute } from "./clock";
 import { giftDays, stripOf } from "@/src/day-states";
+import { MOTION } from "@/src/design-tokens";
+import { springEasing } from "@/src/motion";
 import { contractDayInWords } from "@/src/moments";
 import { Character } from "./Character";
 import { characterOf, endsHidden, fadeOf, useHiddenEdges } from "./DayStrip";
-import { ArrivalDay } from "./Motion";
+import { ArrivalDay, reduced } from "./Motion";
 import { GIFT_LIVE as L, GIFT_PAGE as W } from "@/src/sentences";
 import { CARD_LABEL } from "../components/ui";
 
@@ -26,7 +28,19 @@ import { CARD_LABEL } from "../components/ui";
  * Under each character, small, what one day is worth, as on the card being filled in (D304; on a gift's page since
  * the founder's word of 3 Oct 2026, for the person it is for as for the one who offered it). The figure is the page's
  * own, the day's share of the gift; a reader of the screen hears it once, in "What was agreed", not thirty times.
+ *
+ * Before a gift starts its days are asleep, eyes closed. Once it is opened they are awake, and at the opening itself
+ * they wake (the founder, 3 Oct 2026; the motion roadmap, section 6): the eyes open one by one from the left, on the
+ * spring a day earned lands on, and the whole row has woken in `MOTION.wake.budgetMs` whatever its length; then the
+ * sentence and the action that follow arrive. It plays once, when `awake` turns true on a page already drawn, which is
+ * the answer to the opening. A page opened later on an opened gift draws the eyes open and still, and so does a device
+ * that asks for less motion.
  */
+
+/** How far a closed eye opens: a pill 2.4 tall scaled to the 6.2 of an open eye, as the card's first day (DayStrip). */
+const EYES_OPEN = "scaleY(2.8)";
+/** What follows the row on a gift's card, and arrives once the row has woken: the state, what is next, the action. */
+const AFTER_THE_ROW = ".gift-state, .gift-next, .gift-action";
 
 type Shape = Readonly<{ startDay: number; endDay: number; durationDays: number; creditedDays: number; missedDays: number; givenBackDays?: number }>;
 
@@ -39,6 +53,7 @@ export function DayRow({
   voice,
   silent = false,
   each,
+  awake = false,
 }: Readonly<{
   id: string;
   gift: Shape;
@@ -50,6 +65,8 @@ export function DayRow({
   silent?: boolean;
   /** What one day is worth, written small under each character. */
   each?: string;
+  /** The gift is opened and has not started: its days are awake, eyes open. */
+  awake?: boolean;
 }>) {
   const nowMs = useMinute();
   const drawn = nowMs !== 0 && gift.startDay !== 0;
@@ -60,6 +77,31 @@ export function DayRow({
   const states = drawn ? stripOf(gift, catchUpSeconds, nowMs, records) : [];
   const row = useRef<HTMLOListElement>(null);
   const today = useRef<HTMLLIElement>(null);
+  // The days wake when `awake` turns true after the first image, never on it: that turn is the opening's own answer.
+  // Started before the browser paints, so the eyes are never seen open and then closed again (D243).
+  const sleeping = useRef<HTMLOListElement>(null);
+  const wasAwake = useRef(awake);
+  useLayoutEffect(() => {
+    if (wasAwake.current === awake) return;
+    const woke = awake && !wasAwake.current;
+    wasAwake.current = awake;
+    if (!woke || reduced()) return;
+    const { staggerMs, budgetMs, eyes } = MOTION.wake;
+    const spring = springEasing(eyes);
+    const lastStart = Math.max(0, budgetMs - spring.durationMs);
+    const days = [...(sleeping.current?.querySelectorAll<HTMLElement>(".day-row-day") ?? [])];
+    const running = days.flatMap((day, index) =>
+      [...day.querySelectorAll<SVGElement>('[data-part="eye"]')].map((eye) =>
+        eye.animate([{ transform: "scaleY(1)" }, { transform: EYES_OPEN }], { duration: spring.durationMs, easing: spring.easing, delay: Math.min(index * staggerMs, lastStart), fill: "backwards" }),
+      ),
+    );
+    // Then the sentence and the action that follow, once the whole row has woken: as a screen's blocks arrive.
+    const after = [...(sleeping.current?.closest(".gift-card-placed")?.querySelectorAll<HTMLElement>(AFTER_THE_ROW) ?? [])];
+    for (const block of after) {
+      running.push(block.animate([{ opacity: 0 }, { opacity: 1 }], { duration: MOTION.reveal.durationMs, easing: MOTION.reveal.easing, delay: budgetMs, fill: "backwards" }));
+    }
+    return () => running.forEach((animation) => animation.cancel());
+  }, [awake]);
   // Which side still hides a day, which is the fade at that edge, and the fade is what says there is more that way:
   // seven days fit on a wide screen and not on a narrow one, and the number of days does not tell.
   const hidden = useHiddenEdges(row, states.length);
@@ -75,10 +117,11 @@ export function DayRow({
   if (asleep) {
     return (
       <div className="day-row" aria-hidden>
-        <ol className="day-row-days">
+        <ol ref={sleeping} className="day-row-days" data-days={awake ? "awake" : "asleep"}>
           {Array.from({ length: gift.durationDays }, (_, index) => (
-            <li key={index} className="day-row-day" data-worth={each ? "" : undefined}>
-              <Character state="toCome" variant={index} standing={false} className="h-auto w-full" />
+            <li key={index} className="day-row-day" data-worth={each ? "" : undefined} data-awake={awake ? "" : undefined}>
+              {/* Awake, the drawing is written into the page: its eyes are a part that moves, and stays open (D206). */}
+              <Character state="toCome" variant={index} standing={false} drawn={awake ? "inline" : "referenced"} className="h-auto w-full" />
               {each ? <span className="day-row-worth">{each}</span> : null}
             </li>
           ))}
