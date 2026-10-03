@@ -110,7 +110,12 @@ test("the sheet says what the person meets, in the founder's words, and the term
   const said = PAY.partnerLocked("Rampnow");
   assert.equal(
     said,
-    "Our partner Rampnow takes your card. The first time, it asks who you are: your details, a code by text, and your ID. Your account and the amount are already filled in. Come back here afterwards: your gift starts by itself.",
+    "At Rampnow, the first time: your details, a code by text and your ID. Your account and the amount are already filled in. Come back here: the gift starts by itself.",
+  );
+  // Under the pay sheet's button, one line: who takes the card, its ID the first time, and its terms (the mockup of 3 Oct 2026).
+  assert.equal(
+    `${PAY.cardLine.before(WAY_IN_USDC.name)}${PAY.cardLine.link(WAY_IN_USDC.name)}${PAY.cardLine.after}`,
+    "Rampnow takes your card, with your ID the first time. By paying you are 18 or older and accept Rampnow's terms.",
   );
   assert.deepEqual(scanSource("sentence", said), [], "through the consumer words check");
   // The founder's words of 1 Oct 2026, once the conversion needs no gesture (src/usdc-router.ts).

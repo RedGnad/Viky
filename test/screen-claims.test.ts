@@ -364,20 +364,25 @@ test("the legal notice says exactly what the program lets the operator do, and n
  * what a person does next stayed in front of everybody (GOV.UK Details: "make a page easier to scan when it contains
  * information that only some users will need", never for what the majority must read).
  */
-test("on the sheet that pays, the link warning is in the body and the rest is one press away", () => {
+test("on the sheet that pays, one fold holds what only some readers need, and the link warning is the link's", () => {
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
-  // The sentence that changes what a person does next is read without pressing anything.
-  assert.match(sheet, /\{FUND\.check\.linkRisk\(recipient\)\}<\/p>\s*<details className="said-fold" data-what-happens="">/);
-  // What only some readers need is inside the disclosure the mockup draws as a second, quiet button, and all of it
-  // is still there: what this condition promises, the two names, the fourteen days, the fee and where it was read.
+  // The link's warning changes what a person does with the link, so it is said where the link is (the mockup of 3 Oct
+  // 2026), on the screen that gives it, and no more on the sheet that pays.
+  assert.doesNotMatch(sheet, /linkRisk/);
+  assert.match(readFileSync("app/components/PayGift.tsx", "utf8"), /onlyThem\(/);
+  // Everything else a careful reader may want is inside the one fold, and all of it is still there: what this
+  // condition promises, the fourteen days, the two names, what the card service asks the first time, its fee, the rate.
   const inside = sheet.slice(sheet.indexOf('<details className="said-fold" data-what-happens="">'), sheet.indexOf("</details>"));
-  assert.match(inside, /FUND\.check\.namesSeen/);
+  assert.match(inside, /W\.namesSeen/);
   assert.match(inside, /fourteenDays/);
-  assert.match(inside, /feeSentence\(way\)/);
+  assert.match(inside, /W\.feeAndRate\(feeInWords\(way\)/);
+  assert.match(inside, /feeSentence\(way\)/, "and the measured form where a service publishes no fee of its own, or no rate is read");
   assert.match(inside, /CASH_OUT\.sourceLine/);
-  assert.match(inside, /mustShow|howItWorks|check\.missed/);
-  // And what the sheet says in the open is what the mockup says in the open: three lines, the total, the passkey.
-  for (const said of ["W.rows.gift(recipient)", "W.rows.viky", "W.youPay", "W.passkeyMakesTheAccount"]) {
+  assert.match(inside, /mustShow|howItWorks|W\.missedBy/);
+  assert.match(inside, /W\.partnerLocked\(way\.name\)/);
+  // And what the sheet says in the open is what the mockup says: the name, the lines, the total, the action, its line.
+  for (const said of ["W.nameLabel(recipient)", "W.rows.gift(recipient)", "W.rows.fromAccount", "W.rows.fee", "W.rows.viky", "W.youPay", "W.payByCard(", "<CardLine way={way} />", "W.passkeyMakesTheAccount"]) {
     assert.ok(sheet.includes(said), `the sheet says ${said}`);
   }
+  assert.equal((sheet.match(/<details /g) ?? []).length, 1, "one fold of its own; the code's is the code's");
 });
