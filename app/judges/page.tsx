@@ -366,9 +366,11 @@ export default async function JudgesPage() {
 
       <Fold id="reading" title="How a day is read">
         <p className={HELP}>
-          Duolingo runs in public mode: once a day, Viky&apos;s keeper reads the recipient&apos;s public profile through
-          an attested fetch (Reclaim zkFetch through Reclaim&apos;s TEE client). The attestor signs Duolingo&apos;s
-          response; Viky verifies that signature, pins the attestor&apos;s address (the one in <code>src/reclaim-proof-set.ts</code>)
+          Duolingo runs in public mode: once a day, Viky&apos;s keeper looks at the recipient&apos;s public profile
+          plainly, and when that look shows a day the contract can credit, reads it through an attested fetch (Reclaim
+          zkFetch through Reclaim&apos;s TEE client). The look is never evidence: it is not signed and not sent, and it
+          can only spare a reading the contract would refuse (<code>src/daily-look.ts</code>). The attestor signs
+          Duolingo&apos;s response; Viky verifies that signature, pins the attestor&apos;s address (the one in <code>src/reclaim-proof-set.ts</code>)
           and checks the proof is about the right URL and username; the evidence signer then turns the
           signed reading into an EIP-712 check-in, and the contract credits or refuses it. What is not verified: the
           attestor&apos;s own TEE attestation, which zk-fetch 1.1.0 does not put in the proof. The person signs in to
@@ -394,10 +396,13 @@ export default async function JudgesPage() {
         </p>
         <p className={HELP}>
           What a reading costs, written here on purpose: each attested read is paid on Reclaim&apos;s side (their public
-          price starts at $0.10 per verification). Reads are counted per gift, never per person: the morning pass reads
-          each daily gift once and skips one already counted that day, so two gifts on one Duolingo account are two reads a
-          day. Each attempt to connect the account is one more, and so is each count the person asks for: no daily ceiling
-          bounds those, only ten asks in ten minutes from one IP address, counted in each app server&apos;s memory. A climb
+          price starts at $0.10 per verification). Reads are counted per gift, never per person: the morning pass looks
+          at each daily gift once, takes an attested read only for one whose look shows a day to credit (or whose look
+          failed), and skips one already counted that day, so two gifts on one Duolingo account are two reads on a morning
+          both earned a day. Connecting the account is one more, and a connection by code takes it only once a plain look
+          has found the code in the name; a count the person asks for looks first in the same way. No daily ceiling bounds
+          those asks, only ten in ten minutes from one IP address, counted in each app server&apos;s memory. A gift on
+          Strava or Fitbit has no plain look yet: it is read attested each morning that has a day to credit, earned or not. A climb
           is looked at plainly, not through Reclaim, in both of the day&apos;s passes and at each ask, and read attested
           only to connect the account or when that look does not show it below its target. Private sources keep the
           user-proof path through the Reclaim verifier app.
@@ -435,8 +440,9 @@ export default async function JudgesPage() {
           <li>
             <strong>Duolingo&apos;s terms.</strong> The profile Viky reads is a public endpoint Duolingo does not
             document, and Duolingo&apos;s terms say &quot;You may not use any data mining, robots, scraping, or similar
-            data gathering or extraction methods&quot;. Viky reads a profile once a day for each gift made on it, and
-            again each time the person connects it or asks for a count. The risk is
+            data gathering or extraction methods&quot;. Viky reads a profile once a day for each gift made on it, a
+            second time that day when the first shows a day to credit, and again each time the person connects it or
+            asks for a count. The risk is
             accepted and spread by having several conditions rather than one; the shape of that endpoint is pinned by
             the tests, like any other source that could drift, and if it changes or closes, the reading fails on our
             side. The day then stays open until its catch-up window closes, 30 hours after it ends, and goes back to

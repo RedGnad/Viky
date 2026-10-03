@@ -2,7 +2,7 @@ import { getAddress, type Hex } from "viem";
 import { contactEmail } from "./contact";
 import { LIMIT, MILESTONE_ACTIONS } from "./sentences";
 import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
-import { attestClimbRating, isClimbReadError, readClimbStanding, type AttestedClimbReading } from "./climb-reading";
+import { attestClimbRating, isClimbReadError, readClimbName, readClimbStanding, type AttestedClimbReading } from "./climb-reading";
 import { climbIdentityLabel, climbOfGoal, climbProviderId, type ClimbId } from "./climbs";
 import { nameHasChessCode } from "./chess-reading";
 import { identityPseudonym } from "./gift-attestation";
@@ -27,6 +27,8 @@ import type { ChessStanding } from "./chess-com";
  *   reading suited them.
  * - `reach`: every later reading, by the keeper each day or by the recipient on demand. The first one at or past the
  *   target releases the whole gift.
+ *
+ * A start by code looks for the code plainly before it pays for a proof, and takes none until the code is there.
  *
  * A reach reading looks before it pays for a proof. A plain read of the page says where the person stands; below the
  * target nothing could move, because the contract refuses a reading short of the target and keeps no trace of it, so
@@ -89,6 +91,11 @@ export type MilestoneReadingDeps = {
   loadGift: (giftId: string) => Promise<GiftRecord | null>;
   readState: (contract: Hex, giftId: string) => Promise<MilestoneState>;
   plain: (username: string, mode: ClimbId) => Promise<ChessStanding>;
+  /**
+   * The name the account shows, read plainly, or nothing when it shows none: where a start by code looks for the code
+   * before it pays for a proof. A test that omits it pays every time.
+   */
+  plainName?: (username: string, mode: ClimbId) => Promise<string | null>;
   attest: (input: { username: string; mode: ClimbId; withName: boolean }) => Promise<AttestedClimbReading>;
   /** The identity pseudonym of the player, with the label of the house the climb is read on. */
   identity: (playerId: string, mode: ClimbId) => Hex;
@@ -122,6 +129,7 @@ export function liveMilestoneReadingDeps(): MilestoneReadingDeps {
     loadGift,
     readState: (contract, giftId) => readMilestoneGift(contract, giftId),
     plain: (username, mode) => readClimbStanding(username, mode),
+    plainName: (username, mode) => readClimbName(username, mode),
     attest: (input) => attestClimbRating(input),
     identity: (playerId, mode) => identityPseudonym(climbIdentityLabel(mode), playerId),
     prove: relayProve,
@@ -326,6 +334,21 @@ export async function runMilestoneReading(
     const provesItsOwn = record.usernameSource === "recipient";
     if (provesItsOwn && (!record.bindingCode || !record.bindingCodeExpiresAt || record.bindingCodeExpiresAt.getTime() < now * 1_000)) {
       return refused(giftId, "CODE_EXPIRED");
+    }
+    // The code is looked for plainly first, which costs nothing (3 Oct 2026). A try before the code was in the name, or
+    // before the house showed it, used to cost a proof each time, two attested fetches on Chess.com. A look that fails
+    // takes no proof either: the person tries again in a minute. The attested name is still the one that proves it.
+    if (provesItsOwn && deps.plainName) {
+      let shown: string | null;
+      try {
+        shown = await deps.plainName(username, mode);
+      } catch (error) {
+        if (isClimbReadError(error) && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);
+        if (isClimbReadError(error)) return refused(giftId, error.code);
+        throw error;
+      }
+      if (!shown) return refused(giftId, "NO_NAME");
+      if (!nameHasChessCode(shown, record.bindingCode ?? "")) return refused(giftId, "CODE_NOT_IN_NAME");
     }
     let reading: AttestedClimbReading;
     try {

@@ -29,6 +29,12 @@ export type PublicDuolingoProfile = Readonly<{
   /** The courses the profile carries, as Duolingo names them, and the one it says is current (U1). */
   courses: readonly DuolingoCourse[];
   currentCourseId: string | null;
+  /**
+   * The experience the profile prints and the name the person shows, or nothing when the answer carries none. They are
+   * what a look reads before an attested reading is paid for (src/daily-look.ts): never evidence, and never sent on.
+   */
+  totalXp: number | null;
+  name: string | null;
 }>;
 
 /** One course of a public profile: its id, the title Duolingo prints, and the experience won in it. */
@@ -62,7 +68,7 @@ export function parsePublicDuolingoProfile(value: unknown, requestedUsername: st
     if (!item || typeof item !== "object") return false;
     const username = (item as { username?: unknown }).username;
     return typeof username === "string" && username.toLowerCase() === requestedUsername.toLowerCase();
-  }) as { id?: unknown; username?: unknown } | undefined;
+  }) as { id?: unknown; username?: unknown; totalXp?: unknown; name?: unknown } | undefined;
   const id = candidate?.id === undefined ? "" : String(candidate.id);
   const username = typeof candidate?.username === "string" ? candidate.username : "";
   const courses = coursesOf((candidate as { courses?: unknown } | undefined)?.courses);
@@ -73,7 +79,9 @@ export function parsePublicDuolingoProfile(value: unknown, requestedUsername: st
   if (!PROFILE_ID.test(id) || BigInt(id) > (1n << 64n) - 1n || !USERNAME.test(username)) {
     throw new DuolingoProfileError("SOURCE_UNAVAILABLE", "Duolingo profile could not be resolved");
   }
-  return { id, username, courses, currentCourseId };
+  const totalXp = typeof candidate.totalXp === "number" && Number.isSafeInteger(candidate.totalXp) && candidate.totalXp >= 0 ? candidate.totalXp : null;
+  const name = typeof candidate.name === "string" ? candidate.name : null;
+  return { id, username, courses, currentCourseId, totalXp, name };
 }
 
 export async function resolvePublicDuolingoProfile(usernameInput: string): Promise<PublicDuolingoProfile> {
