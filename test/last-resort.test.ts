@@ -152,7 +152,8 @@ test("once for a gift in a day: a last resort already taken is not taken again",
   const source = readFileSync("src/duolingo-public-checkin.ts", "utf8");
   assert.match(source, /claimLastResort: \(giftId, day\) => claimPass\(`daily-last-resort:\$\{giftId\}:\$\{day\}`, LAST_RESORT_CLAIMED_FOR_SECONDS\),/);
   // And the reading asks it only for the second reading, only when the last resort is due.
-  assert.match(source, /const within = input\.pass === "recount" \? LAST_RESORT_WITHIN_SECONDS\.recount : null;/);
+  assert.match(source, /const within = input\.lookOnly \? null : lastResortWithin\(input\.pass, onChain\.version\);/);
+  assert.match(source, /return pass === "recount" \? LAST_RESORT_WITHIN_SECONDS\.recount : null;/);
 });
 
 test("a profile the source no longer has is said as such, with no proof, even at the last chance", async () => {
@@ -220,5 +221,5 @@ test("the passes say which of them is reading, and a gift whose look failed is h
   // The live pass hands the name on to the reading.
   assert.match(readFileSync("src/daily-pass.ts", "utf8"), /count: \(giftId, pass\) => readDailyGift\(\{ giftId, purpose: "count", pass \}\),/);
   // And a count a person asks for names no pass: after a look that failed it takes no proof.
-  assert.match(readFileSync("app/api/gift/[id]/count/route.ts", "utf8"), /readDailyGift\(\{ giftId: id, purpose: "count", force: true \}\)/);
+  assert.match(readFileSync("app/api/gift/[id]/count/route.ts", "utf8"), /: \{ giftId: id, purpose: "count", force: true \}\);/);
 });

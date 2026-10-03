@@ -295,6 +295,8 @@ export type Condition = Readonly<{
     theyConnect?: string;
     /** What a counted day was, in the morning message to the funder: "yesterday's lesson". */
     yesterday?: string;
+    /** The same of a day counted the day it was done, which the third daily contract allows: "today's lesson". */
+    today?: string;
     /** One line under a gift link's preview in a messaging app, to the person it is for. */
     preview?: string;
   }>;
@@ -392,6 +394,7 @@ export const DUOLINGO_DAILY: Condition = {
     eachDay: "each day with a lesson",
     theyConnect: "connects their Duolingo",
     yesterday: "yesterday's lesson",
+    today: "today's lesson",
     preview: "A Duolingo lesson each day: each day you do one, that day's share becomes yours.",
   },
   recipient: {

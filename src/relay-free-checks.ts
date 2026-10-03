@@ -2,7 +2,7 @@ import { getAddress, recoverTypedDataAddress, type Hex } from "viem";
 import { GiftApiError } from "./gift-api";
 import { withdrawIntentTypedData } from "./gift-terms";
 import { isMilestoneGiftId, milestoneWithdrawTypedData } from "./milestone-protocol";
-import { dailyVersionOf, milestoneVersionOf } from "./v2";
+import { dailyVersionOf, milestoneVersionOf, opensByItsLink } from "./v2";
 import { endTypedData, withdrawTypedDataV2 } from "./v2-protocol";
 
 /**
@@ -34,7 +34,7 @@ export type WithdrawIntent = Readonly<{ giftId: string; contract: Hex; recipient
 export function withdrawTypedDataOf(intent: Pick<WithdrawIntent, "giftId" | "contract" | "to" | "amount" | "nonce" | "deadline">) {
   const message = { giftId: BigInt(intent.giftId), to: intent.to, amount: intent.amount, nonce: intent.nonce, deadline: intent.deadline };
   const milestone = isMilestoneGiftId(intent.giftId);
-  if ((milestone ? milestoneVersionOf(intent.contract) : dailyVersionOf(intent.contract)) === 2) return withdrawTypedDataV2(milestone ? "milestone" : "daily", intent.contract, message);
+  if (opensByItsLink(milestone ? milestoneVersionOf(intent.contract) : dailyVersionOf(intent.contract))) return withdrawTypedDataV2(milestone ? "milestone" : "daily", intent.contract, message);
   return milestone ? milestoneWithdrawTypedData(intent.contract, message) : withdrawIntentTypedData(intent.contract, message);
 }
 

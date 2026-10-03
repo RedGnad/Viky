@@ -1,5 +1,5 @@
 import { getAddress, type Hex } from "viem";
-import { consentAnchorAddress, giftEscrowV2Address, milestoneGiftV2Address } from "./v2";
+import { consentAnchorAddress, giftEscrowV2Address, giftEscrowV3Address, milestoneGiftV2Address } from "./v2";
 
 /**
  * Viky's own contracts on Monad mainnet, each read on chain on 29 Sep 2026 (owner: the project's Safe). Browser safe.
@@ -28,12 +28,12 @@ export const USDC_ROUTER = getAddress("0xf05449c8b868Ce1e6a0D7223e2ceCbbfD1498F9
 export const VIKY_CONTRACTS: readonly Hex[] = [GIFT_ESCROW, EARLIER_GIFT_ESCROW, MILESTONE_GIFT, EXIT_ROUTER, USDC_ROUTER];
 
 /**
- * The three contracts of the second version, once their addresses are set (src/v2.ts), and none before (the review
- * of 2 Oct 2026, R-09). None of the three has a way to give back money sent to it by a plain transfer, the anchor no
- * more than the two that hold gifts.
+ * The three contracts of the second version and the third daily contract, once their addresses are set (src/v2.ts),
+ * and none before (the review of 2 Oct 2026, R-09). None of them has a way to give back money sent to it by a plain
+ * transfer, the anchor no more than those that hold gifts.
  */
 export function secondVersionContracts(): readonly Hex[] {
-  return [giftEscrowV2Address(), milestoneGiftV2Address(), consentAnchorAddress()].filter((address): address is Hex => address !== null);
+  return [giftEscrowV2Address(), milestoneGiftV2Address(), consentAnchorAddress(), giftEscrowV3Address()].filter((address): address is Hex => address !== null);
 }
 
 /** Whether an address is one of Viky's own contracts, where money sent by hand would be lost. */

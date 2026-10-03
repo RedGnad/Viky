@@ -9,7 +9,7 @@ import { liveTellingDeps } from "./morning-send-live";
 import { loadAttestation } from "./proof-session-store";
 import { tellOfARefusedBaseline } from "./reading-proportion";
 import { newGiftsEscrow, escrowAddress, relay, RelayerError, relayerClients, type RelayResult } from "./relayer";
-import { DAILY_ABIS, dailyAbiOf, dailyVersionOf, giftEscrowV2Address } from "./v2";
+import { DAILY_ABIS, dailyAbiOf, dailyVersionOf, newDailyGiftsContract, opensByItsLink } from "./v2";
 import { isStartSignedBy, NO_START_SIGNATURE, StartNotSigned } from "./v2-start";
 
 /**
@@ -23,12 +23,12 @@ export type CreatedGift = Readonly<{ giftId: string; hash: Hex; blockNumber: big
 /**
  * New gifts are always created on the current contract; the record keeps which one.
  *
- * Terms that carry an opening key are the second version's (src/v2-protocol.ts): they go to the second version's
- * contract and nowhere else, and are refused while it is not set. Terms without one go to the first version's, and are
+ * Terms that carry an opening key are the second version's (src/v2-protocol.ts): they go to the contract such gifts
+ * are made on, the third version's once it is set and the second's before it, and are refused while neither is. Terms without one go to the first version's, and are
  * refused once the second is set: from then a gift the evidence signer could open is no longer made.
  */
 export async function relayCreateGift(params: GiftParams, authorization: ContractAuthorization, onSubmitted?: (hash: Hex) => Promise<void>, openingKey?: Hex): Promise<CreatedGift> {
-  const second = giftEscrowV2Address();
+  const second = newDailyGiftsContract();
   if (openingKey && !second) throw new RelayerError("NOT_CONFIGURED", "The second version of the gift contract is not configured");
   if (!openingKey && second) throw new RelayerError("NOT_CONFIGURED", "This gift was prepared for an earlier version. Reload the page and try again.");
   const escrow = openingKey ? newGiftsEscrow() : escrowAddress();
@@ -82,7 +82,7 @@ async function recordEndedDays(giftId: string, escrow: Hex, result: RelayResult)
 
 export async function relayClaim(input: { giftId: string; escrow: Hex; recipient: Hex; contactHash: Hex; nowSeconds?: number }): Promise<RelayResult> {
   // The first version only: there the evidence signer attests the opening. On the second it has no say (`relayOpen`).
-  if (dailyVersionOf(input.escrow) === 2) throw new RelayerError("NOT_CONFIGURED", "This gift is opened with the key of its link");
+  if (opensByItsLink(dailyVersionOf(input.escrow))) throw new RelayerError("NOT_CONFIGURED", "This gift is opened with the key of its link");
   const now = input.nowSeconds ?? Math.floor(Date.now() / 1_000);
   const message = {
     giftId: BigInt(input.giftId),
@@ -176,7 +176,7 @@ export async function relayCheckIn(sessionId: string, escrow: Hex, startSignatur
   const m = stored.message;
   const giftId = String(m.giftId);
   let recipientSignature = NO_START_SIGNATURE;
-  const second = dailyVersionOf(escrow) === 2 ? await readGift(escrow, giftId) : null;
+  const second = opensByItsLink(dailyVersionOf(escrow)) ? await readGift(escrow, giftId) : null;
   if (second && second.startDay === 0) {
     const start = { giftId: BigInt(giftId), identityHash: String(m.identityHash) as Hex, metricValue: BigInt(m.metricValue), observedAt: BigInt(m.observedAt) };
     if (!startSignature) throw new StartNotSigned("daily", escrow, start);

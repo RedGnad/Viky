@@ -54,12 +54,14 @@ function sideOf(account: string, funder: string): MorningSide {
 
 /**
  * Tells everyone subscribed to a gift about the day just settled. Several days can settle at once when the keeper
- * has been down: the message speaks of the last of them, because that is the one a person wakes up to.
+ * has been down, or when one reading catches up yesterday and pays today: the message speaks of the last of them.
  */
-export async function tellAboutDays(giftId: string, days: readonly SettledDay[], deps: TellingDeps): Promise<number> {
+export async function tellAboutDays(giftId: string, days: readonly SettledDay[], deps: TellingDeps, nowMs: number = Date.now()): Promise<number> {
   const last = [...days].sort((a, b) => a.day - b.day).at(-1);
   if (!last) return 0;
-  return await tell(giftId, { kind: "day", outcome: last.outcome, amount: "" }, deps, last.day);
+  // A day counted the day it was done says "today": the third daily contract pays a day by a reading of that day.
+  const today = last.outcome === "earned" && last.day === Math.floor(nowMs / 86_400_000);
+  return await tell(giftId, { kind: "day", outcome: last.outcome, amount: "", ...(today ? { today } : {}) }, deps, last.day);
 }
 
 /** Tells everyone subscribed to a gift how its first proof's review was decided, when it did not reach the gift. */

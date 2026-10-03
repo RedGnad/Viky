@@ -1551,6 +1551,8 @@ export const MORNING = {
   installFirst: "Add Viky to your Home Screen first. Then Viky can tell you each morning.",
   recipient: {
     earned: (amount: string) => `Yesterday counted. ${opening(amount)} is yours.`,
+    /** A day counted the day it was done (the third daily contract): told within the quarter of an hour. */
+    earnedToday: (amount: string) => `Today counted. ${opening(amount)} is yours.`,
     returnedTo: (funder: string) => `Yesterday went back to ${funder}. Today still counts.`,
     returned: "Yesterday went back. Today still counts.",
     reached: (amount: string) => `You reached it. ${opening(amount)} is yours.`,
@@ -1565,6 +1567,8 @@ export const MORNING = {
     didIt: (name: string, yesterday: string, amount: string) => `${name} did ${yesterday}. ${opening(amount)} is theirs.`,
     countedNamed: (name: string, amount: string) => `${name} counted yesterday. ${opening(amount)} is theirs.`,
     counted: (amount: string) => `Yesterday counted. ${opening(amount)} is theirs.`,
+    countedTodayNamed: (name: string, amount: string) => `${name} counted today. ${opening(amount)} is theirs.`,
+    countedToday: (amount: string) => `Today counted. ${opening(amount)} is theirs.`,
     returned: (amount: string) => `Yesterday came back to you: ${amount}.`,
     reachedNamed: (name: string, amount: string) => `${name} reached it. ${opening(amount)} is theirs.`,
     reached: (amount: string) => `It is reached. ${opening(amount)} is theirs.`,

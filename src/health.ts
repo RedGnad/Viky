@@ -13,7 +13,7 @@ import { createMonadPublicClient } from "./monad/chain";
 import { lastPasses } from "./pass-log";
 import { READING_FINGERPRINT } from "./reading-fingerprint";
 import { relayerClients, RELAYER_MIN_BALANCE } from "./relayer";
-import { giftEscrowV2Address, milestoneGiftV2Address } from "./v2";
+import { giftEscrowV2Address, giftEscrowV3Address, milestoneGiftV2Address } from "./v2";
 import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT } from "./viky-contracts";
 
 /**
@@ -178,8 +178,9 @@ export async function readExitPin(): Promise<ExitPin> {
 /** The key this environment signs evidence with, and the signer each contract that takes evidence names on chain. */
 export async function readEvidenceKeys(ours: Hex = evidenceSignerAddress()): Promise<EvidenceKeys> {
   const client = createMonadPublicClient();
-  // The second version's two contracts take evidence too, once they are set (src/v2.ts).
-  const second = [giftEscrowV2Address(), milestoneGiftV2Address()].filter((address): address is Hex => address !== null);
+  // The second version's two contracts take evidence too, once they are set, and so does the third daily contract,
+  // which announces a new signer the same way (src/v2.ts).
+  const second = [giftEscrowV2Address(), milestoneGiftV2Address(), giftEscrowV3Address()].filter((address): address is Hex => address !== null);
   const named = await Promise.all(
     [GIFT_ESCROW, EARLIER_GIFT_ESCROW, MILESTONE_GIFT, ...second].map(async (contract) => {
       // Every one of them exposes the same view; the daily contract's ABI reads it on each.

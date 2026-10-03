@@ -2,6 +2,7 @@ import { encodeAbiParameters, hexToBytes, keccak256, parseAbiParameters, sha256,
 import { privateKeyToAccount } from "viem/accounts";
 import { CHAIN_ID, CHECK_IN_TYPES, WITHDRAW_TYPES } from "./gift-terms";
 import { MILESTONE_PROOF_TYPES, MILESTONE_WITHDRAW_TYPES } from "./milestone-protocol";
+import { dailyVersionOf } from "./v2";
 
 /**
  * The browser-safe half of the second version of the two gift contracts (`contracts/GiftEscrowV2.sol`,
@@ -34,12 +35,23 @@ import { MILESTONE_PROOF_TYPES, MILESTONE_WITHDRAW_TYPES } from "./milestone-pro
 
 export const GIFT_V2_DOMAIN = { name: "Viky Gift", version: "2", chainId: CHAIN_ID } as const;
 export const MILESTONE_V2_DOMAIN = { name: "Viky Milestone", version: "2", chainId: CHAIN_ID } as const;
+/**
+ * The third daily contract (`contracts/GiftEscrowV3.sol`): the second's types and the second's flows, under its own
+ * version, so nothing signed for one daily contract is ever valid on another.
+ */
+export const GIFT_V3_DOMAIN = { name: "Viky Gift", version: "3", chainId: CHAIN_ID } as const;
 
 /** Which of the two contracts a typed message is for. */
 export type V2Kind = "daily" | "milestone";
 
+/**
+ * The domain everything is signed under for a contract a gift's link opens: the opening, the first reading, the
+ * readings, the withdrawal, the ending. For a daily contract it is the domain of the version at that address (src/v2.ts):
+ * the third's for the address set as the third, the second's for any other.
+ */
 export function v2Domain(kind: V2Kind, contract: Hex) {
-  return { ...(kind === "daily" ? GIFT_V2_DOMAIN : MILESTONE_V2_DOMAIN), verifyingContract: contract };
+  const daily = dailyVersionOf(contract) === 3 ? GIFT_V3_DOMAIN : GIFT_V2_DOMAIN;
+  return { ...(kind === "daily" ? daily : MILESTONE_V2_DOMAIN), verifyingContract: contract };
 }
 
 export const OPEN_TYPES = {
@@ -75,6 +87,8 @@ export const START_TYPEHASH = keccak256(stringToHex("Start(uint256 giftId,bytes3
 export const END_TYPEHASH = keccak256(stringToHex("End(uint256 giftId,uint256 keep,uint256 giveBack,uint256 nonce,uint64 deadline)"));
 
 export const FUND_NONCE_TAG_V2 = keccak256(stringToHex("viky.fund.v2"));
+/** `GiftEscrowV3.FUND_NONCE_TAG`: terms signed for the third daily contract pay on no other. */
+export const FUND_NONCE_TAG_V3 = keccak256(stringToHex("viky.fund.v3"));
 export const MILESTONE_FUND_NONCE_TAG_V2 = keccak256(stringToHex("viky.milestone.fund.v2"));
 
 /** `GiftEscrowV2.MAX_OBSERVATION_AGE`: a reading more than thirty minutes old is refused. */
@@ -119,6 +133,19 @@ export function hashGiftParamsV2(p: GiftParamsV2): Hex {
 /** `GiftEscrowV2.fundingNonce`: the nonce the funder's `ReceiveWithAuthorization` carries. */
 export function fundingNonceV2(p: GiftParamsV2): Hex {
   return keccak256(encodeAbiParameters(parseAbiParameters("bytes32, bytes32"), [FUND_NONCE_TAG_V2, hashGiftParamsV2(p)]));
+}
+
+/** `GiftEscrowV3.fundingNonce`: the same terms, hashed the same way, under the third contract's own tag. */
+export function fundingNonceV3(p: GiftParamsV2): Hex {
+  return keccak256(encodeAbiParameters(parseAbiParameters("bytes32, bytes32"), [FUND_NONCE_TAG_V3, hashGiftParamsV2(p)]));
+}
+
+/**
+ * The nonce the funder signs for terms that carry an opening key, on the daily contract the gift is made on: each
+ * contract takes only a nonce made with its own tag, so the contract named here is the one the money can go to.
+ */
+export function fundingNonceOn(contract: Hex, p: GiftParamsV2): Hex {
+  return dailyVersionOf(contract) === 3 ? fundingNonceV3(p) : fundingNonceV2(p);
 }
 
 export type MilestoneParamsV2 = {

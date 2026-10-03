@@ -1,7 +1,7 @@
 import type { Hex } from "viem";
 import type { GiftState } from "./gift-reader";
 import { sendAlert, type AlertOutcome } from "./provider-alert";
-import { dailyVersionOf } from "./v2";
+import { dailyVersionOf, opensByItsLink } from "./v2";
 
 /**
  * A reading far out of proportion with a gift's daily target is not attested (the review of 2 Oct 2026, R-15, second
@@ -19,8 +19,8 @@ import { dailyVersionOf } from "./v2";
  * reading is never refused by it, and a figure that is only a few times too high is not caught by it either: that one
  * is told after the fact, by the alert below.
  *
- * It holds for gifts of the second version of the contracts only, which is off until its addresses are set
- * (src/v2.ts): nothing changes for a gift that exists.
+ * It holds for gifts of the second version of the contracts and of the third daily contract, each off until its
+ * address is set (src/v2.ts): nothing changes for a gift of the first version.
  */
 export const READING_JUMP_FACTOR = 10_000;
 
@@ -76,7 +76,7 @@ export function outOfProportionAlert(giftId: string, gift: Baselined, reading: P
  * the operator. Called with the gift as the contract holds it, right before every `signCheckIn`.
  */
 export async function assertReadingInProportion(escrow: Hex, gift: Baselined, reading: Read, alert: OperatorAlert = sendAlert): Promise<void> {
-  if (dailyVersionOf(escrow) !== 2) return;
+  if (!opensByItsLink(dailyVersionOf(escrow))) return;
   const found = outOfProportion(gift, reading);
   if (!found) return;
   const giftId = reading.giftId.toString();
@@ -101,6 +101,6 @@ export function brokenBaselineAlert(giftId: string, baseline: bigint, read: bigi
  * refusal is the one trace a baseline set too high leaves. Said every time it happens, and never thrown.
  */
 export async function tellOfARefusedBaseline(escrow: Hex, giftId: string, baseline: bigint, read: bigint, alert: OperatorAlert = sendAlert): Promise<void> {
-  if (dailyVersionOf(escrow) !== 2) return;
+  if (!opensByItsLink(dailyVersionOf(escrow))) return;
   await alert(brokenBaselineAlert(giftId, baseline, read)).catch(() => undefined);
 }

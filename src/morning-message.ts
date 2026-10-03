@@ -17,13 +17,14 @@ export type MorningSide = "recipient" | "funder";
 
 /** What happened, as the keeper's own record of it says. */
 export type MorningNews =
-  | Readonly<{ kind: "day"; outcome: DayOutcome; amount: string }>
+  /** `today`: the day was counted the day it was done, which the third daily contract allows; absent, it was yesterday's. */
+  | Readonly<{ kind: "day"; outcome: DayOutcome; amount: string; today?: boolean }>
   | Readonly<{ kind: "reached"; amount: string }>
   | Readonly<{ kind: "expired"; amount: string }>
   /** A first proof's review, decided without reaching the gift: refused, or read and not there yet. */
   | Readonly<{ kind: "reviewed"; verdict: "refused" | "notYet"; amount: string }>;
 
-export type MorningWords = Readonly<{ yesterday?: string }>;
+export type MorningWords = Readonly<{ yesterday?: string; today?: string }>;
 
 /** The one sentence this side reads on their phone. */
 export function morningSentence(side: MorningSide, news: MorningNews, names: GiftNames, words: MorningWords = {}): string {
@@ -37,12 +38,16 @@ export function morningSentence(side: MorningSide, news: MorningNews, names: Gif
   if (side === "recipient") {
     if (news.kind === "reached") return MORNING.recipient.reached(news.amount);
     if (news.kind === "expired") return funder ? MORNING.recipient.expiredTo(news.amount, funder) : MORNING.recipient.expired(news.amount);
-    if (news.outcome === "earned") return MORNING.recipient.earned(news.amount);
+    if (news.outcome === "earned") return news.today ? MORNING.recipient.earnedToday(news.amount) : MORNING.recipient.earned(news.amount);
     return funder ? MORNING.recipient.returnedTo(funder) : MORNING.recipient.returned;
   }
   if (news.kind === "reached") return them ? MORNING.funder.reachedNamed(them, news.amount) : MORNING.funder.reached(news.amount);
   if (news.kind === "expired") return MORNING.funder.expired(news.amount);
   if (news.outcome === "returned") return MORNING.funder.returned(news.amount);
+  if (news.today) {
+    if (them && words.today) return MORNING.funder.didIt(them, words.today, news.amount);
+    return them ? MORNING.funder.countedTodayNamed(them, news.amount) : MORNING.funder.countedToday(news.amount);
+  }
   if (them && words.yesterday) return MORNING.funder.didIt(them, words.yesterday, news.amount);
   if (them) return MORNING.funder.countedNamed(them, news.amount);
   return MORNING.funder.counted(news.amount);

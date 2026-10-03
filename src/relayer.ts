@@ -15,7 +15,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { giftEscrowAbi } from "./gift-escrow-abi";
 import { giftGasLimit, type GiftFunction } from "./gift-gas";
-import { dailyAbiOf, giftEscrowV2Address } from "./v2";
+import { dailyAbiOf, newDailyGiftsContract } from "./v2";
 import { addMonadGasBuffer } from "./monad-gas";
 import { MONAD_CHAIN_ID, monadChain, monadTransport, waitForFinality } from "./monad/chain";
 
@@ -74,11 +74,11 @@ export function relayerClients(): RelayerClients {
 }
 
 /**
- * The second version of the daily contract when it is set, and the contract new gifts are created on from then
- * (src/v2.ts). Nothing while it is not: new gifts stay on `escrowAddress()`.
+ * The contract new gifts are created on: the third version of the daily contract once it is set, the second before
+ * it (src/v2.ts), and `escrowAddress()` while neither is.
  */
 export function newGiftsEscrow(): Hex {
-  return giftEscrowV2Address() ?? escrowAddress();
+  return newDailyGiftsContract() ?? escrowAddress();
 }
 
 /** The contract new gifts are created on until the second version is set. Existing gifts are served by the contract that holds them. */

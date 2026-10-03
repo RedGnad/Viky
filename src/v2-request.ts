@@ -1,6 +1,6 @@
 import { getAddress, isAddress, type Hex } from "viem";
 import { GiftApiError } from "./gift-api";
-import { giftEscrowV2Address, milestoneGiftV2Address } from "./v2";
+import { milestoneGiftV2Address, newDailyGiftsContract } from "./v2";
 
 /**
  * What a creation request of the second version carries beside the terms (the audit of 1 Oct 2026): the address of the
@@ -18,7 +18,7 @@ export type RequestedLink = Readonly<{ openingKey: Hex; fingerprint: string }>;
 const FINGERPRINT = /^[0-9a-f]{64}$/;
 
 export function requestedLink(body: Readonly<{ openingKey?: unknown; linkFingerprint?: unknown }>, kind: "daily" | "milestone"): RequestedLink | null {
-  const second = kind === "daily" ? giftEscrowV2Address() : milestoneGiftV2Address();
+  const second = kind === "daily" ? newDailyGiftsContract() : milestoneGiftV2Address();
   const carriesOne = body.openingKey !== undefined || body.linkFingerprint !== undefined;
   if (!carriesOne) {
     if (second) throw new GiftApiError("OUT_OF_DATE", "This page is out of date. Load it again and send the gift from there. Nothing was taken.", 409);

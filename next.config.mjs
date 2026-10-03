@@ -13,6 +13,12 @@ const secondVersionSet = secondVersion.filter((value) => value !== "");
 if (secondVersionSet.length > 0 && (secondVersionSet.length < 3 || secondVersionSet.some((value) => !/^0x[0-9a-fA-F]{40}$/.test(value)) || new Set(secondVersionSet.map((value) => value.toLowerCase())).size < 3)) {
   throw new Error(`Refusing to build: ${SECOND_VERSION_SETTINGS.join(", ")} are set together, each an address of its own, or none is.`);
 }
+// The third version of the daily contract stands on the second (`thirdVersionProblem` in src/v2.ts): its address is
+// refused without the three, and when it names one of them.
+const thirdVersion = (process.env.NEXT_PUBLIC_GIFT_ESCROW_V3_ADDRESS ?? "").trim();
+if (thirdVersion !== "" && (!/^0x[0-9a-fA-F]{40}$/.test(thirdVersion) || secondVersionSet.length < 3 || secondVersionSet.some((value) => value.toLowerCase() === thirdVersion.toLowerCase()))) {
+  throw new Error("Refusing to build: NEXT_PUBLIC_GIFT_ESCROW_V3_ADDRESS is an address of its own, set once the three of the second version are, or it is not set.");
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

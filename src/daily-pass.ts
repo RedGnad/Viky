@@ -127,7 +127,7 @@ export type DailyPassDeps = {
   boundGifts: () => Promise<ReadonlyArray<{ giftId: string }>>;
   allGifts: () => Promise<ReadonlyArray<{ giftId: string; escrow: Hex | null; goalType?: number }>>;
   read: (escrow: Hex, giftId: string) => Promise<PassGift>;
-  /** One gift's reading, told which pass asks: only the second reading of the morning may read without a look (src/daily-look.ts). */
+  /** One gift's reading, told which pass asks: which of them may read without a look is the reading's own rule (src/daily-look.ts). */
   count: (giftId: string, pass: "counting" | "recount") => Promise<PublicCheckInOutcome>;
   drain: (giftId: string, escrow: Hex) => Promise<{ hash: string }>;
   finalise: (giftId: string, escrow: Hex) => Promise<{ hash: string }>;
@@ -509,6 +509,9 @@ function describe(outcome: PublicCheckInOutcome): DailyPassLine {
     case "refused":
       // A refusal a plain look foresaw says so: no attested reading was taken for it (src/daily-look.ts).
       return { giftId: outcome.giftId, step: "count", result: `refused: ${outcome.code}${outcome.xp !== undefined ? ` (${outcome.xp} XP)` : ""}${outcome.looked ? ", by a look, no proof taken" : ""}` };
+    // A pass never asks for a look alone: named all the same, should one ever answer it.
+    case "seen":
+      return { giftId: outcome.giftId, step: "count", result: `seen: a lesson is in (${outcome.xp} XP), no proof taken` };
     // A pass counts, it never takes a first reading: named all the same, should one ever answer it.
     case "sign":
       return { giftId: outcome.giftId, step: "count", result: "held: the first reading waits for the recipient's signature" };

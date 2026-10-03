@@ -11,6 +11,7 @@ import { milestoneClaim } from "@/src/milestone-routes";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { admitWayOut, countedIfSent } from "@/src/relay-admission";
 import { assertGiftContractConfigured, escrowOf } from "@/src/relayer";
+import { opensByItsLink } from "@/src/v2";
 import { openingOf, openWithTheLinkKey, versionOfGift } from "@/src/v2-opening";
 
 export const runtime = "nodejs";
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
       const opening = openingOf(body.opening);
       assertGiftContractConfigured();
       const known = await loadGift(giftId);
-      if (!known || versionOfGift(known) !== 2 || known.recipient) throw new GiftApiError("CLAIM_LINK_INVALID", "This link is not valid or was already used", 404);
+      if (!known || !opensByItsLink(versionOfGift(known)) || known.recipient) throw new GiftApiError("CLAIM_LINK_INVALID", "This link is not valid or was already used", 404);
       refuseOwnGift(known, auth.account);
       // Counted once the signature has been held to the gift's own opening key, and held against the part of
       // everybody's count kept for the ways out (the review of 2 Oct 2026, R-16).
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
     // review of 2 Oct 2026, R-01). A page loaded before the second version was set sends one here, and is asked to load
     // again rather than told its link is bad. Refused before the key is compared with anything.
     const named = await loadGift(giftId);
-    if (named && versionOfGift(named) === 2) throw new GiftApiError("OUT_OF_DATE", "This page is out of date. Load it again to open your gift. Nothing was changed.", 409);
+    if (named && opensByItsLink(versionOfGift(named))) throw new GiftApiError("OUT_OF_DATE", "This page is out of date. Load it again to open your gift. Nothing was changed.", 409);
     const gift = await loadGiftForClaim(giftId, token);
     if (!gift) throw new GiftApiError("CLAIM_LINK_INVALID", "This link is not valid or was already used", 404);
     refuseOwnGift(gift, auth.account);

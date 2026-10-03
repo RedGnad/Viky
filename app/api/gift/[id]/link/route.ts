@@ -7,6 +7,7 @@ import { readMilestoneGift } from "@/src/milestone-reader";
 import { isMilestoneGiftId } from "@/src/milestone-protocol";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { escrowOf } from "@/src/relayer";
+import { opensByItsLink } from "@/src/v2";
 import { termsSaltOf } from "@/src/v2-link";
 
 export const runtime = "nodejs";
@@ -45,7 +46,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const escrow = escrowOf(record);
     const state = isMilestoneGiftId(id) ? await readMilestoneGift(escrow, id) : await readGift(escrow, id);
     if (state.cancelled) throw new GiftApiError("GIFT_CANCELLED", "This gift has been taken back, so it has no link.", 409);
-    if (state.version === 2) return NextResponse.json({ salt: await termsSaltOf(record, escrow) }, { headers: NO_STORE });
+    if (opensByItsLink(state.version)) return NextResponse.json({ salt: await termsSaltOf(record, escrow) }, { headers: NO_STORE });
     if (state.recipient) throw new GiftApiError("ALREADY_OPENED", "This gift is already open, so its link cannot be changed.", 409);
 
     const token = await rotateClaimToken(id, auth.account);

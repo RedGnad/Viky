@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 import type { Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ATTESTATION_TTL_SECONDS, CHECK_IN_TYPES, CLAIM_TYPES, GIFT_DOMAIN } from "./gift-terms";
-import { dailyVersionOf } from "./v2";
+import { dailyVersionOf, opensByItsLink } from "./v2";
 import { v2Domain } from "./v2-protocol";
 
 export * from "./gift-terms";
@@ -56,7 +56,7 @@ export type ClaimMessage = {
 
 /** The domain a reading is signed under: the version of the contract it is for (src/v2.ts). */
 function domainOf(verifyingContract: Hex) {
-  return dailyVersionOf(verifyingContract) === 2 ? v2Domain("daily", verifyingContract) : { ...GIFT_DOMAIN, verifyingContract };
+  return opensByItsLink(dailyVersionOf(verifyingContract)) ? v2Domain("daily", verifyingContract) : { ...GIFT_DOMAIN, verifyingContract };
 }
 
 export async function signCheckIn(message: CheckInMessage, verifyingContract: Hex): Promise<Hex> {
