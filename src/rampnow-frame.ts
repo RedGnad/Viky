@@ -51,6 +51,20 @@ export function rampnowFrameAddress(fill: Readonly<{ account?: string; euros?: n
   return /^pk_[A-Za-z0-9_]+$/.test(key) ? `${page}&apiKey=${encodeURIComponent(key)}` : page;
 }
 
+/**
+ * The frame's height: as tall as Rampnow's own widget when the sheet has the room, never shorter than a form can be
+ * used in, and in between whatever the sheet has left (the founder, 3 Oct 2026). At a fixed 600 it stood taller than
+ * the sheet on a laptop of 700: its last button was cut, the link under it was out of sight, and nothing could be
+ * scrolled, since a wheel or a finger on a frame moves the frame's own page and never the sheet around it.
+ */
+export const FRAME_HEIGHT = { most: 600, least: 360 } as const;
+
+/** What the sheet has left for the frame: its cap, less its head, the air around its contents, and what stands under the frame. */
+export function frameHeightFor(room: Readonly<{ cap: number; head: number; padding: number; under: number }>): number {
+  const left = Math.floor(room.cap - room.head - room.padding - room.under);
+  return Math.max(FRAME_HEIGHT.least, Math.min(FRAME_HEIGHT.most, left));
+}
+
 /** The events the SDK knows (RampnowEventType), and so the only ones believed. */
 export const RAMPNOW_EVENTS = [
   "WIDGET_READY",

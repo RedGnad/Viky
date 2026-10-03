@@ -36,6 +36,7 @@ async function rampnowStandIn(context: BrowserContext, ending: Ending): Promise<
       body: `<!doctype html><html><body style="font:16px sans-serif;padding:24px">
         <p>Rampnow, stood in for by the test.</p>
         <button id="pay">Pay 30 EUR</button>
+        <button id="login" style="position:fixed;left:24px;bottom:8px">Login</button>
         <script>
           ${says}
         </script></body></html>`,
@@ -130,4 +131,71 @@ test.describe("Rampnow in a frame", () => {
       await context.close();
     });
   }
+});
+
+/**
+ * The frame fits the sheet (the founder, 3 Oct 2026). At a fixed 600 it stood taller than the sheet on a laptop of
+ * 700: Rampnow's last button was half hidden, the link under the frame out of sight, and nothing could be scrolled.
+ * The stand-in pins a button to the bottom of its page, as Rampnow's "Login" is.
+ */
+test.describe("Rampnow's frame fits the sheet, whatever the window", () => {
+  test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each case opens its own window");
+  test.skip(process.env.VIKY_RAMPNOW_FRAME_BUILD !== "1", "needs a build with the way and the frame switched on");
+  test.setTimeout(120_000);
+
+  const WINDOWS = [
+    { name: "390", viewport: { width: 390, height: 844 } },
+    { name: "laptop-700", viewport: { width: 1280, height: 700 } },
+  ];
+
+  for (const size of WINDOWS) {
+    test(`the frame, its last button and the link under it are whole inside the sheet (${size.name})`, async ({ browser, baseURL }) => {
+      const funder = await profile(browser, baseURL, size.viewport);
+      const { page, context } = funder;
+      await toTheFrame(page, context, "SILENT");
+      const frame = page.locator("iframe[data-rampnow-frame]");
+      const body = sheet(page).locator(".sheet-body");
+      /** Whole inside the part of the sheet that shows, and inside the window. */
+      const whole = async (box: { y: number; height: number } | null, what: string) => {
+        const room = await body.boundingBox();
+        expect(box, what).not.toBeNull();
+        expect(box!.y, `${what}: its top`).toBeGreaterThanOrEqual(room!.y - 1);
+        expect(box!.y + box!.height, `${what}: its bottom, in the sheet`).toBeLessThanOrEqual(room!.y + room!.height + 1);
+        expect(box!.y + box!.height, `${what}: its bottom, in the window`).toBeLessThanOrEqual(size.viewport.height);
+      };
+      await whole(await frame.boundingBox(), "the frame");
+      await whole(await page.frameLocator("iframe[data-rampnow-frame]").getByRole("button", { name: "Login" }).boundingBox(), "the frame's last button");
+      await expect(body).toHaveAttribute("data-scrolls", "no");
+      await shot(SHOTS, page, size.name, "6-the-frame-fits");
+      // Fifteen seconds without a word from the frame: the link comes under it, and the frame makes room for it.
+      const link = sheet(page).getByRole("link", { name: "Open the card page" });
+      await expect(link).toBeVisible({ timeout: 20_000 });
+      await page.waitForTimeout(400);
+      await whole(await frame.boundingBox(), "the frame, with the link under it");
+      await whole(await page.frameLocator("iframe[data-rampnow-frame]").getByRole("button", { name: "Login" }).boundingBox(), "the frame's last button, with the link under it");
+      await whole(await link.boundingBox(), "the link to the card page");
+      await whole(await sheet(page).locator("[data-rampnow-beside]").boundingBox(), "everything under the frame");
+      // Nothing is left to scroll: the frame took exactly the room the link left it.
+      await expect(body).toHaveAttribute("data-scrolls", "no");
+      expect((await frame.boundingBox())!.height).toBeGreaterThanOrEqual(360);
+      await shot(SHOTS, page, size.name, "7-the-frame-and-the-link-under-it");
+      await context.close();
+    });
+  }
+
+  test("on a window too short for all of it, the sheet scrolls by what is under the frame", async ({ browser, baseURL }) => {
+    const funder = await profile(browser, baseURL, { width: 1280, height: 520 });
+    const { page, context } = funder;
+    await toTheFrame(page, context, "SILENT");
+    const link = sheet(page).getByRole("link", { name: "Open the card page" });
+    await expect(link).toBeAttached({ timeout: 20_000 });
+    const body = sheet(page).locator(".sheet-body");
+    await expect(body).toHaveAttribute("data-scrolls", "yes");
+    // A wheel on what shows under or beside the frame moves the sheet, down to its last line.
+    await link.scrollIntoViewIfNeeded();
+    const room = await body.boundingBox();
+    const box = await link.boundingBox();
+    expect(box!.y + box!.height).toBeLessThanOrEqual(room!.y + room!.height + 1);
+    await context.close();
+  });
 });
