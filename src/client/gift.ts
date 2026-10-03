@@ -171,7 +171,10 @@ export type PublicOutcome =
   | { kind: "bound"; giftId: string; totalXp: number; hash: string }
   | { kind: "counted"; giftId: string; totalXp: number; creditedDays: number; hash: string }
   | { kind: "already"; giftId: string; reason: string }
-  | { kind: "refused"; giftId: string; code: string; message: string; totalXp?: number };
+  /** A look that stopped at the look, on a gift read as the day goes: a lesson is in, and no proof was taken. */
+  | { kind: "seen"; giftId: string }
+  /** `looked`: a plain look answered, and no attested reading was taken for it. */
+  | { kind: "refused"; giftId: string; code: string; message: string; totalXp?: number; looked?: boolean };
 
 export function nameGoalAccount(giftId: string, username: string): Promise<{ giftId: string; username: string; code: string; expiresAt: string }> {
   return postJson(`/api/gift/${giftId}/account`, { username });
@@ -185,6 +188,14 @@ export async function bindGoalAccount(giftId: string, signer: () => Promise<Loca
 
 export function countNow(giftId: string): Promise<PublicOutcome> {
   return postJson(`/api/gift/${giftId}/count`, {});
+}
+
+/**
+ * A look at a gift read as the day goes (app/api/gift/[id]/count): it costs nothing, takes no proof, and answers
+ * whether a lesson is in. The page asks it as it opens and once a minute, and asks for the count only for a lesson seen.
+ */
+export function lookNow(giftId: string): Promise<PublicOutcome> {
+  return postJson(`/api/gift/${giftId}/count?look=1`, {});
 }
 
 export type GiftStatus = {
@@ -227,6 +238,11 @@ export type GiftStatus = {
   names: { recipientName: string | null; funderName: string | null } | null;
   /** Which version of its contract holds the gift (src/v2.ts). Absent on an answer made before the second existed. */
   version?: ContractVersion;
+  /**
+   * The gift is read as the day goes (the third daily contract, on a source that can be looked at plainly): its page
+   * looks as it opens and once a minute, and a lesson is paid the day it is done. Absent or false on any other gift.
+   */
+  readLive?: boolean;
   /** The second version only: what ending the gift now would do, for the person it is for (src/gift-ending.ts). */
   end?: EndOffer | null;
   /** The second version only: the ending, once the person it is for has ended it. */

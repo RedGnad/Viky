@@ -54,6 +54,7 @@ export function DayRow({
   silent = false,
   each,
   awake = false,
+  leadOnToday = false,
 }: Readonly<{
   id: string;
   gift: Shape;
@@ -67,6 +68,11 @@ export function DayRow({
   each?: string;
   /** The gift is opened and has not started: its days are awake, eyes open. */
   awake?: boolean;
+  /**
+   * The line under the row counts to today even when an earlier day is still open (a gift read as the day goes, the
+   * mockup of 3 Oct 2026): there a lesson is paid the day it is done, so today is the day the page is about.
+   */
+  leadOnToday?: boolean;
 }>) {
   const nowMs = useMinute();
   const drawn = nowMs !== 0 && gift.startDay !== 0;
@@ -134,7 +140,10 @@ export function DayRow({
   const words = (state: (typeof states)[number]) => (state === "returned" ? returned : W.dayWords[state]);
   // Which day it opens on: today, if the gift has one. A gift that has not started yet opens on its first day, and
   // one that has finished on its last, because that is the day the person came to see.
-  const now = states.findIndex((state) => state === "today" || state === "catchable" || state === "aboutToReturn");
+  const firstOpen = states.findIndex((state) => state === "today" || state === "catchable" || state === "aboutToReturn");
+  // By its date and not by its state: there, today can be counted already, and it is still the day in view.
+  const todayAt = leadOnToday ? numbers.indexOf(Math.floor(nowMs / 86_400_000)) : -1;
+  const now = todayAt >= 0 ? todayAt : firstOpen;
   // A gift its recipient ended opens on the day it stopped at, the first of the days given back: "Day 3 of 7" is then
   // where the gift stands, and the days after it are the ones that went back.
   const stoppedAt = gift.givenBackDays ? Math.min(states.length - 1, gift.creditedDays + gift.missedDays) : -1;

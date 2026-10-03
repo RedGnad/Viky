@@ -1,4 +1,7 @@
+import type { RecipientWords } from "./conditions";
+import { leftInWords, type DayNow } from "./day-now";
 import type { Voice } from "./gift-voice";
+import { contractDayInWords } from "./moments";
 import type { Moment } from "./gift-moment";
 import { END_GIFT as E, GIFT_CARD as W_CARD, GIFT_LIVE as L, GIFT_PAGE as W } from "./sentences";
 
@@ -61,6 +64,33 @@ export type LiveInput = Readonly<{
   takeableFromHome?: boolean;
   /** The gift was ended by the person it is for: the day, in the reader's clock, and the two amounts the ending moved. */
   ended?: Readonly<{ onInWords: string; keptDisplay: string; givenBackDisplay: string }> | null;
+  /**
+   * A habit read as the day goes (the third daily contract, src/day-now.ts): where today stands, with the days already
+   * named and the time already a figure, since the page knows the clock and this module does not. Nothing on any
+   * other gift, whose counting moment reads as it always did.
+   */
+  asItGoes?: AsItGoes | null;
+}>;
+
+/** Where today stands for a gift read as the day goes, in the pieces a sentence is made of. */
+export type AsItGoes = Readonly<{
+  /**
+   * `catchUp`: an earlier day is still open, `day`, and one more lesson would pay `then`. `open`: today is waited
+   * for. `counted`: today is counted. `over`: the last day has passed and every day is settled.
+   */
+  kind: "catchUp" | "open" | "counted" | "over";
+  /** The earlier day still open, as a sentence names it: "yesterday", or a date. */
+  day?: string;
+  /** The day one more lesson would pay after it: "today", "yesterday", a date, or nothing when none is open. */
+  then?: string | null;
+  /** How long is left for the day that is waited for: "9 h 12". */
+  left?: string;
+  /** What one day adds, for the figure of a day just counted. */
+  perDayDisplay: string;
+  /** A lesson was seen and the attested reading is under way. */
+  certifying: boolean;
+  /** The register's words for what is waited for and what was seen (src/conditions.ts). */
+  words: NonNullable<RecipientWords["asItGoes"]>;
 }>;
 
 export type Live = Readonly<{
@@ -190,6 +220,7 @@ export function liveOf(input: LiveInput): Live {
       };
 
     case "counting":
+      if (input.asItGoes) return asItGoesOf(input, input.asItGoes, back);
       return {
         // The last judged day, in the morning message's own words: the same wording whether the fact arrives on the
         // phone or on the screen. The money it carries there is the figure here, so the sentence does not repeat it.
@@ -302,6 +333,69 @@ export function liveOf(input: LiveInput): Live {
         back: null,
       };
   }
+}
+
+/**
+ * Where today stands, in the pieces the card's sentences are made of: each day named as a sentence names it, "today",
+ * "yesterday" or its date, and how long is left as a figure, from the reader's own clock. With no day a lesson could
+ * pay and none just counted, the gift's days are over.
+ */
+export function asItGoesNow(now: DayNow | null, nowMs: number, perDayDisplay: string, certifying: boolean, words: AsItGoes["words"]): AsItGoes {
+  const today = Math.floor(nowMs / 86_400_000);
+  const named = (day: number) => (day === today ? L.asItGoes.thisDay : day === today - 1 ? L.asItGoes.yesterday : contractDayInWords(day));
+  if (!now) return { kind: "over", perDayDisplay, certifying: false, words };
+  if (now.kind === "catchUp") return { kind: "catchUp", day: named(now.day), then: now.then === null ? null : named(now.then), left: leftInWords(now.deadlineMs, nowMs), perDayDisplay, certifying, words };
+  if (now.kind === "open") return { kind: "open", left: leftInWords(now.endsAtMs, nowMs), perDayDisplay, certifying, words };
+  // Counted: nothing is being read, whatever a page that has not caught up yet believes.
+  return { kind: "counted", perDayDisplay, certifying: false, words };
+}
+
+/** A sentence's first letter in capitals: "yesterday" names a day inside a sentence and begins another. */
+const capitalised = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+/**
+ * A habit read as the day goes (the founder's mockup of 3 Oct 2026). The state is what a lesson done now would pay,
+ * or that today is counted. Where the next reading was announced stands how long is left, at the reader's own clock,
+ * and once today is counted, what today added. Nothing is announced, because nothing is waited for but the lesson.
+ */
+function asItGoesOf(input: LiveInput, now: AsItGoes, back: Live["back"]): Live {
+  const yours = isTheirs(input.voice);
+  const a = L.asItGoes;
+  const headline = now.certifying
+    ? yours
+      ? now.words.inYours
+      : now.words.inTheirs(input.recipientName)
+    : now.kind === "catchUp"
+      ? a.catchUp(capitalised(now.day ?? a.yesterday))
+      : now.kind === "open"
+        ? now.words.notIn
+        : now.kind === "counted"
+          ? a.counted
+          : a.over;
+  // What the next lesson pays, said only while an earlier day is open: the contract pays the oldest open day first.
+  const line =
+    now.kind === "catchUp" && now.day
+      ? [yours ? now.words.nextPaysYours(now.day) : now.words.nextPaysTheirs(input.recipientName, now.day), now.then ? now.words.oneMorePays(now.then) : ""].filter(Boolean).join(" ")
+      : null;
+  const side =
+    now.kind === "catchUp" && now.left && now.day
+      ? { label: a.leftFor(now.day), value: now.left }
+      : now.kind === "open" && now.left
+        ? { label: a.leftToday, value: now.left }
+        : now.kind === "counted"
+          ? { label: a.today, value: a.plus(now.perDayDisplay) }
+          : null;
+  // Once what has gone back takes the right column, how long is left is a sentence under the state.
+  const leftLine = back === null ? null : now.kind === "catchUp" && now.left && now.day ? a.leftForLine(now.left, now.day) : now.kind === "open" && now.left ? a.leftTodayLine(now.left) : null;
+  const next = [line, leftLine].filter(Boolean).join(" ");
+  return {
+    headline,
+    figure: { label: yours ? W.yoursSoFar : W.theirsSoFar, value: input.theirsDisplay },
+    next: next.length > 0 ? next : null,
+    nextAt: back === null ? side : null,
+    back,
+    quiet: input.voice === "recipient" && input.takeableFromHome ? L.counting.takeFromHome : null,
+  };
 }
 
 /** What makes it theirs, in the fewest words, under the money of a gift nobody has opened yet. */

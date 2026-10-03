@@ -5,7 +5,7 @@ import { useMinute } from "../kit/clock";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { openWithTheLinkSecret, type StartStep } from "@/src/client/v2";
 import { openingSecretOf } from "@/src/v2-protocol";
-import { opensByItsLink } from "@/src/v2";
+import { opensByItsLink, paysTheSameDay } from "@/src/v2";
 import { useMoneySession } from "@/src/account/money-session";
 import { isAccountError } from "@/src/account/errors";
 import { useDoor } from "@/src/account/door";
@@ -27,10 +27,11 @@ import {
 } from "@/src/client/gift";
 import { checkMilestone, requestMilestoneCode, startMilestone, type MilestoneOutcome } from "@/src/client/milestone";
 import { conditionById, conditionOfGoal } from "@/src/conditions";
+import { dayNow, lessonWouldPay } from "@/src/day-now";
 import { stripFromRecord } from "@/src/day-states";
 import { spokenAmount, whenInWords } from "@/src/display-currency";
 import { giftOfMilestone, giftOfSummary, funderMayTakeItBack, readAs } from "@/src/gift-moment";
-import { eyebrowOf, liveOf, titleOf } from "@/src/gift-live";
+import { asItGoesNow, eyebrowOf, liveOf, titleOf } from "@/src/gift-live";
 import { notTheirs, voiceOf, type Voice } from "@/src/gift-voice";
 import { milestoneById } from "@/src/milestone-conditions";
 import { previewLine, sharedWith } from "@/src/preview-line";
@@ -54,6 +55,7 @@ import { ConnectTheAccount } from "../kit/ConnectTheAccount";
 import { Character } from "../kit/Character";
 import { ConsentLine, FunderConsent, RecipientConsent, useGiftConsent, type StopCost } from "../kit/Consent";
 import { ConnectTheSource, type ConnectWords } from "../kit/ConnectTheSource";
+import { dayReadingFailure, useDayReading } from "../kit/DayReading";
 import { DayRow } from "../kit/DayRow";
 import { charactersOf } from "../kit/DayStrip";
 import { FieldRefusal } from "../kit/FieldRefusal";
@@ -256,6 +258,20 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
     },
   );
   const readingLine = readsLive ? <LiveLine state={liveState} source={source} /> : null;
+  /**
+   * A habit read as the day goes (the third daily contract, the founder's mockup of 3 Oct 2026): the page looks as it
+   * opens and once a minute, for either of its two people, and only while a lesson done now would pay a day. A look
+   * costs nothing; the attested reading starts by itself for a lesson seen, and nothing is pressed (app/kit/DayReading.tsx).
+   */
+  const asItGoes = daily?.readLive && moment === "counting" ? (words?.asItGoes ?? null) : null;
+  const today = daily && asItGoes ? dayNow(daily, daily.catchUpSeconds, nowMs) : null;
+  const readsTheDay = Boolean(asItGoes && (mine || readerIsFunder) && !readingsStopped && lessonWouldPay(today));
+  const dayReading = useDayReading(readsTheDay, giftId, () => void refresh());
+  // A look or a reading that failed on our side: said under the state, with the hour the open day can still be
+  // counted until, in the reader's own clock. The page looks again in a minute.
+  const openUntilMs = !daily || !today || today.kind === "counted" ? null : today.kind === "catchUp" ? today.deadlineMs : (today.day + 1) * 86_400_000 + daily.catchUpSeconds * 1_000;
+  const dayFailure = dayReadingFailure(dayReading, source);
+  const dayFailureLine = dayFailure ? [dayFailure, openUntilMs !== null && nowMs !== 0 ? L.asItGoes.stillOpenUntil(momentInWords(openUntilMs, nowMs)) : ""].filter(Boolean).join(" ") : null;
   /** The recipient's yes and stop (the founder, 29 Sep 2026): the line under the card, and the funder's sentence. */
   const consent = useGiftConsent(giftId, (mine || readerIsFunder) && status.opened && !gift.finished);
   const recipientName = names?.recipientName ?? (milestone ? milestone.goalAccount.username : (daily?.goalAccount.source === "funder" ? daily.goalAccount.username : null));
@@ -289,7 +305,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
 
   /** The last day Viky judged, from the record it keeps of each day. Nothing for a gift settled before that record. */
   const lastJudged = daily && daily.days.length > 0 ? [...daily.days].sort((a, b) => b.day - a.day)[0].outcome : null;
-  const nextReading = nowMs === 0 || gift.finished || gift.cancelled || readingsStopped ? null : W.nextReading(momentInWords(nextPassMs(COUNTING_PASS_UTC, nowMs), nowMs));
+  // A gift read as the day goes announces no next reading: its page looked as it opened.
+  const nextReading = nowMs === 0 || gift.finished || gift.cancelled || readingsStopped || asItGoes ? null : W.nextReading(momentInWords(nextPassMs(COUNTING_PASS_UTC, nowMs), nowMs));
   // One sentence in the open: which service is not checked, by this gift's own source, and the day it starts again.
   // The rest is folded: until when the open day can still be counted, in the reader's clock, that what is theirs is
   // taken out as usual, what the empty reserve does not touch, and where to write.
@@ -326,7 +343,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
   /** The target as a sentence may name it: a climb's number, a grade's words, and nothing for something had or not. */
   const targetToName = !milestone ? null : hadOrNot ? (milestone.targetWords ?? null) : (milestone.targetWords ?? (milestone.target === null ? null : String(milestone.target)));
 
-  const nextPass = nowMs === 0 || gift.finished || gift.cancelled || readingsStopped ? null : nextPassMs(COUNTING_PASS_UTC, nowMs);
+  const nextPass = nowMs === 0 || gift.finished || gift.cancelled || readingsStopped || asItGoes ? null : nextPassMs(COUNTING_PASS_UTC, nowMs);
   const liveInput = {
     moment,
     voice,
@@ -354,8 +371,12 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
     lateUntilInWords: lateUntilMs === null ? null : dateInWords(lateUntilMs, zone),
     // Ended by the person it is for: the day in this reader's clock, and the two amounts the ending moved.
     ended: status.ended ? { onInWords: dateInWords(status.ended.atMs, zone), keptDisplay: status.ended.keptDisplay, givenBackDisplay: status.ended.givenBackDisplay } : null,
+    // Where today stands, once the clock is known: before it, the card says what it always said of a gift counting.
+    asItGoes: daily && asItGoes && nowMs !== 0 ? asItGoesNow(today, nowMs, daily.perDayDisplay, dayReading.phase === "certifying", asItGoes) : null,
   } as const;
-  const live = liveOf(liveInput);
+  const said = liveOf(liveInput);
+  // Under the state, after what the next lesson pays: a sentence of that length has no place beside the figures.
+  const live = dayFailureLine ? { ...said, next: [said.next, dayFailureLine].filter(Boolean).join(" ") } : said;
 
   // The money on the card counts from what this device last saw of it, last in the arrival and once (the brief,
   // section 6). Only money counts: a rating is a reading, not an amount.
@@ -395,13 +416,17 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
   const dailyOutcome = (result: PublicOutcome): string => {
     switch (result.kind) {
       case "bound":
-        return [words?.countingFrom(contractDayInWords(Math.floor(nowMs / 86_400_000) + 1)) ?? "", account.namedByFunder ? "" : W.codeOut]
+        // The first day is the day of the connection on the third daily contract, and the day after it before.
+        return [(paysTheSameDay(status.version) && words?.asItGoes ? words.asItGoes.countingFrom(contractDayInWords(Math.floor(nowMs / 86_400_000))) : words?.countingFrom(contractDayInWords(Math.floor(nowMs / 86_400_000) + 1))) ?? "", account.namedByFunder ? "" : W.codeOut]
           .filter(Boolean)
           .join(" ");
       case "counted":
         return W.readCounted(result.creditedDays);
       case "already":
         return result.reason === "counted_today" ? (words?.alreadyRead ?? W.readCounted(0)) : (W.nothingToDo[result.reason] ?? W.readCounted(0));
+      // A look alone is asked by the page that reads as it opens, never by a press: it has nothing to say here.
+      case "seen":
+        return W.readCounted(0);
       case "refused":
         throw new ApiError({
           status: 409,
@@ -711,7 +736,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       <Climb giftId={giftId} status={milestone} />
     )
   ) : daily ? (
-    <DayRow id={giftId} gift={daily} catchUpSeconds={daily.catchUpSeconds} records={daily.days} voice={voice} silent={Boolean(live.when)} each={daily.perDayDisplay} awake={daily.opened} />
+    <DayRow id={giftId} gift={daily} catchUpSeconds={daily.catchUpSeconds} records={daily.days} voice={voice} silent={Boolean(live.when)} each={daily.perDayDisplay} awake={daily.opened} leadOnToday={Boolean(asItGoes)} />
   ) : null;
 
   /** What was agreed: the amount, what it counts, how long, and what happens to what is not earned. Read once. */
@@ -751,6 +776,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
               : W.becomesYours(daily.perDayDisplay, words?.eachDayYours ?? condition?.words.eachDay ?? "", agreedWhen(daily))}
           </p>
           <p className={BODY}>{readerIsFunder ? W.comesBackToYou : W.goesBackToThem(funderName)}</p>
+          {/* On the third daily contract a day is paid the day it is read: what that guarantees, and no more. */}
+          {paysTheSameDay(status.version) && words?.asItGoes ? <p className={BODY}>{words.asItGoes.agreed}</p> : null}
         </>
       ) : null}
       {readerIsFunder ? <p className={HELP}>{W.made(dateInWords(status.createdAtChain * 1000, zone), giftId)}</p> : null}
@@ -769,6 +796,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       {nextReading && !gift.finished ? (
         <p className={HELP}>{voice === "recipient" ? (words?.reads ?? "") : (words?.readsTheirs ?? "")}</p>
       ) : null}
+      {asItGoes && !readingsStopped ? <p className={HELP}>{voice === "recipient" ? asItGoes.reads : asItGoes.readsTheirs}</p> : null}
       {hadOrNot ? (
         <p className={HELP}>{readerIsFunder ? M.ruleProvedTheirs(milestoneBy(hadOrNot, zone)) : M.ruleProvedYours(milestoneBy(hadOrNot, zone))}</p>
       ) : milestone && milestone.target !== null ? (
@@ -789,7 +817,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       {/* Asking for a reading now is not the moment's action, so it is not offered beside it: it lives here, with the
           rest of how a gift is checked. Being told is offered in the open, under the card (the founder, 1 Oct 2026). */}
       {/* A milestone is read as its page opens, so it has no button for it (the founder, 29 Sep 2026). */}
-      {(mine || readerIsFunder) && !milestone && !gift.finished && gift.connected && !gift.sourceClosed && !readingsStopped ? (
+      {/* Neither has a habit read as its page opens (the founder, 3 Oct 2026): opening the page is the gesture. */}
+      {(mine || readerIsFunder) && !milestone && !gift.finished && gift.connected && !gift.sourceClosed && !readingsStopped && !asItGoes ? (
         <>
           <button type="button" onClick={countToday} disabled={working} className={`${SMALL_BUTTON} self-start`}>
             <ButtonWords busy={busy === "counting"} doing={W.reading}>
@@ -889,6 +918,9 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
           }
           /* The month's limit of readings: in the place a reading would have been told. */
           limit={limitSaid}
+          /* A lesson was seen: the attested reading runs by itself, and says what it is doing. */
+          waiting={dayReading.phase === "certifying" ? WAITS.counting(source) : null}
+          looking={dayReading.phase === "looking"}
           action={action}
           agreed={{ open: read.agreementOpen, children: agreed }}
           checked={checked}
@@ -955,8 +987,8 @@ function milestoneBy(status: MilestoneStatus, zone: string): string {
 }
 
 /** The dates a daily gift runs between, or how long it runs once it is connected. */
-function agreedWhen(gift: Readonly<{ startDay: number; endDay: number; durationDays: number }>): string {
-  return gift.startDay === 0 ? W.forDaysFromConnecting(gift.durationDays) : contractRangeInWords(gift.startDay, gift.endDay);
+function agreedWhen(gift: Readonly<{ startDay: number; endDay: number; durationDays: number; version?: GiftStatus["version"] }>): string {
+  return gift.startDay === 0 ? W.forDaysFromConnecting(gift.durationDays, paysTheSameDay(gift.version)) : contractRangeInWords(gift.startDay, gift.endDay);
 }
 
 /** Whether the day row is drawn from the record of each day rather than from the totals alone. */

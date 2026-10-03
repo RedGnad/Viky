@@ -1226,6 +1226,24 @@ dialog.sheet[open] {
   margin: 2px 0 4px;
 }
 
+/* The wheel of a look still under way, after the state's last word. Its place has no width and no height, so it
+   takes no room on the line and can push nothing onto another one: on a line already full the wheel stands in the
+   card's own margin. It comes and goes and nothing moves. */
+.gift-state-wheel-place {
+  position: relative;
+  display: inline-block;
+  width: 0;
+  height: 0;
+}
+
+.gift-state-wheel {
+  position: absolute;
+  left: 0.45em;
+  top: -0.62em;
+  width: 0.6em;
+  height: 0.6em;
+}
+
 /* With no dated line under the state, the money keeps the same air from it as the next moment would have had. */
 .gift-state + .gift-figures,
 .gift-state-closed + .gift-figures {

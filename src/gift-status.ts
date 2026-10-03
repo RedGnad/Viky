@@ -1,4 +1,5 @@
 import { catchUpSecondsOf } from "./catch-up";
+import { readAsTheDayGoes } from "./daily-count";
 import { countableUntil } from "./days-waiting";
 import { giftLimitFor } from "./gift-limit";
 import { GiftApiError } from "./gift-api";
@@ -111,6 +112,8 @@ export async function giftStatusFor(id: string, reader: GiftReader): Promise<Any
     createdAtChain: gift.fundedAt,
     hasRecord: record !== null,
     version: gift.version,
+    // Read as the day goes (src/daily-count.ts): the page looks as it opens, and a lesson is paid the day it is done.
+    readLive: readAsTheDayGoes(record),
     end: dailyEndOffer(gift, viewerIsRecipient),
     ended: dailyEnded(gift),
     givenBackDays: gift.givenBackDays,

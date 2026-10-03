@@ -39,6 +39,8 @@ export function GiftLive({
   closed,
   reading,
   limit = null,
+  waiting = null,
+  looking = false,
   action,
   agreed,
   checked,
@@ -65,6 +67,17 @@ export function GiftLive({
    * the person can do, a line each, folded under its own name with the card's other folds.
    */
   limit?: Readonly<{ said: string; can: readonly string[] }> | null;
+  /**
+   * A reading that started by itself is under way (a gift read as its page opens): the wheel and the step, under the
+   * state, where the next moment would have been said. Nothing was pressed, so no button carries it.
+   */
+  waiting?: string | null;
+  /**
+   * The look taken as the page came to the front is still under way after a second: the wheel beside the state, and
+   * no word. Its place after the state's last word has no width, so it can take no room on the line: nothing on the
+   * card moves when it comes or goes, however full that line is.
+   */
+  looking?: boolean;
   /** The one action of this moment, or nothing. Never two of the same weight. */
   action?: ReactNode;
   /** What was agreed, folded under its name, and open at the one moment a person is discovering it. */
@@ -86,7 +99,14 @@ export function GiftLive({
         {shape ? <div className="gift-shape">{shape}</div> : null}
 
         {live.when ? <p className={`${CARD_LABEL} gift-when`}>{live.when}</p> : null}
-        <p className="gift-state">{live.headline}</p>
+        <p className="gift-state">
+          {live.headline}
+          {looking && !waiting ? (
+            <span className="gift-state-wheel-place">
+              <span className="working-ring working-ring-inline gift-state-wheel" role="status" aria-label={L.asItGoes.looking} data-looking="" />
+            </span>
+          ) : null}
+        </p>
         {closed?.map((line) => (
           <p key={line} className="gift-state-closed">
             {line}
@@ -98,7 +118,14 @@ export function GiftLive({
             {limit.said}
           </p>
         ) : null}
-        {live.next ? <p className="gift-next">{live.next}</p> : null}
+        {waiting ? (
+          <p className="gift-next inline-flex items-center gap-[var(--space-sm)]" role="status" data-waiting="">
+            <span className="working-ring working-ring-inline" aria-hidden="true" />
+            <span>{waiting}</span>
+          </p>
+        ) : live.next ? (
+          <p className="gift-next">{live.next}</p>
+        ) : null}
 
         {live.figure ? (
           <div className="gift-figures">
