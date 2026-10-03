@@ -34,6 +34,7 @@
     "deploy:v3": "tsx scripts/deploy-v3.ts",
     "check:v3-handover": "tsx scripts/check-v3-handover.ts",
     "rehearse:v2": "tsx scripts/rehearse-v2-fork.ts",
+    "rehearse:v3": "tsx scripts/rehearse-v3-fork.ts",
     "check:gift-escrow": "tsx scripts/check-gift-escrow.ts",
     "check:signer": "tsx scripts/check-signer.ts",
     "check:sources": "tsx scripts/check-sources.ts",
