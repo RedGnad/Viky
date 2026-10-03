@@ -20,6 +20,7 @@ import { savePendingGift } from "@/src/pending-gift";
 import { rateDateInWords, spokenAmount } from "@/src/display-currency";
 import type { RailReach } from "@/src/rail-country";
 import { feeSentence, RAMP_NO_GIFT_COIN_IN, wayInFillsIn, wayInPage, waysIn, WAY_IN_GIFT_COIN, WAY_IN_USDC } from "@/src/rails";
+import { rampnowFrameOn } from "@/src/rampnow-frame";
 import { ACCOUNT_DOOR, CASH_OUT, FUND, MILESTONE_FUND, PAY as W } from "@/src/sentences";
 import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, PRIMARY_BUTTON, SMALL_BUTTON } from "../../components/ui";
 import { AccountPanel } from "../../components/AccountPanel";
@@ -197,6 +198,8 @@ export function PaySheet({
       savePendingGift({ ...draftToTerms(draft, account), wayIn: way.name });
       // A card paid inside Viky opens on the wait, in a sheet of its own, by this same press.
       if (!enough && way.embedded) return router.push("/fund?step=paying&card=1");
+      // Rampnow in a frame of our own, when it is switched on (src/rampnow-frame.ts): opened on the wait, by this press.
+      if (!enough && way === WAY_IN_USDC && rampnowFrameOn()) return router.push("/fund?step=paying&rampnow=1");
       // The partner's page opens in this press only when it arrives filled in (D289). Otherwise the person has not seen
       // their code yet, a first funder has only just made it: the waiting screen shows it, with its copy, and opens the
       // page when they press (D296).

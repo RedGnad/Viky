@@ -72,7 +72,7 @@ test("every page forbids being framed and says nothing of the framework that ans
   const headers = answer.headers();
   expect(headers["x-frame-options"]).toBe("DENY");
   expect(headers["x-content-type-options"]).toBe("nosniff");
-  expect(headers["content-security-policy"]).toBe("frame-ancestors 'none'; frame-src 'self' https://deposit.swapper.finance");
+  expect(headers["content-security-policy"]).toBe("frame-ancestors 'none'; frame-src 'self' https://deposit.swapper.finance https://app.rampnow.io");
   expect(headers["x-powered-by"]).toBeUndefined();
 });
 

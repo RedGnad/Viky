@@ -78,11 +78,12 @@ const nextConfig = {
            * Three more for every page (the audit of 1 Oct 2026). A file is what its type says and nothing a browser
            * guesses. No other site may draw Viky inside a frame of its own, which is how a press meant for one page is
            * taken by another: said twice, since older browsers read the first and newer ones the second. And the only
-           * frame Viky itself draws is the card service's, off until its id is set (`SwapperSheet`).
+           * frames Viky itself draws are the card services', off until each is switched on (`SwapperSheet`, and
+           * `RampnowSheet` behind `NEXT_PUBLIC_RAMPNOW_FRAME`).
            */
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
-          { key: "Content-Security-Policy", value: "frame-ancestors 'none'; frame-src 'self' https://deposit.swapper.finance" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'; frame-src 'self' https://deposit.swapper.finance https://app.rampnow.io" },
         ],
       },
     ];

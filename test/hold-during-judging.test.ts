@@ -515,7 +515,7 @@ test("every page forbids framing, type guessing and the framework's name, and fr
   assert.equal(header("X-Content-Type-Options"), "nosniff");
   assert.equal(header("X-Frame-Options"), "DENY");
   assert.equal(header("Referrer-Policy"), "strict-origin");
-  assert.equal(header("Content-Security-Policy"), "frame-ancestors 'none'; frame-src 'self' https://deposit.swapper.finance");
+  assert.equal(header("Content-Security-Policy"), "frame-ancestors 'none'; frame-src 'self' https://deposit.swapper.finance https://app.rampnow.io");
 });
 
 test("an account is made on viky.cash and on a development host, and nowhere else", () => {
