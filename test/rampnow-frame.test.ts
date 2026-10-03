@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { rampnowPage } from "../src/rails";
-import { RAMPNOW_FRAME_ALLOW, RAMPNOW_FRAME_PAID_THROUGH, rampnowEventOf, rampnowFrameAddress, rampnowFrameOn, rampnowOutcome } from "../src/rampnow-frame";
+import { FRAME_HEIGHT, frameHeightFor, RAMPNOW_FRAME_ALLOW, RAMPNOW_FRAME_PAID_THROUGH, rampnowEventOf, rampnowFrameAddress, rampnowFrameOn, rampnowOutcome } from "../src/rampnow-frame";
 
 /**
  * Rampnow in a frame of our own (the founder, 3 Oct 2026), from its official widget mode and the code of its SDK
@@ -84,4 +84,21 @@ test("the frame allows what the SDK allows, the camera and the payment among it,
   assert.match(route, /const key = process\.env\.RAMPNOW_API_KEY \?\? "";/);
   assert.match(route, /account: getAddress\(auth\.account\)/);
   assert.doesNotMatch(readFileSync("app/kit/offer/RampnowSheet.tsx", "utf8"), /RAMPNOW_API_KEY/);
+});
+
+test("the frame is as tall as the sheet has room for: whole inside it on a laptop of 700, and never shorter than a form can be used in", () => {
+  assert.deepEqual(FRAME_HEIGHT, { most: 600, least: 360 });
+  // A sheet stops at 82 % of the window (app/globals.css, dialog.sheet-tall); its head and the air of its body are measured on the page.
+  const sheet = (windowHeight: number, under = 0) => frameHeightFor({ cap: windowHeight * 0.82, head: 70, padding: 32, under });
+  assert.equal(sheet(1200), 600, "Rampnow's own height when there is room");
+  assert.equal(sheet(844), 590, "a phone: a little under it, whole in the sheet");
+  assert.equal(sheet(700), 472, "a laptop of 700: the fixed 600 stood 128 pixels out of the sheet");
+  assert.equal(sheet(844, 150), 440, "the link under it takes its own room from the frame, so both are in sight");
+  assert.equal(sheet(700, 150), 360, "and on a short window the frame stops at its least: the sheet scrolls for the rest");
+  // The sheet reads its own cap, head and air, and what stands under the frame, and reads them again when they change.
+  const sheetSource = readFileSync("app/kit/offer/RampnowSheet.tsx", "utf8");
+  assert.match(sheetSource, /const cap = parseFloat\(getComputedStyle\(dialog\)\.maxHeight\);/);
+  assert.match(sheetSource, /window\.addEventListener\("resize", fit\);\n\s*const watch = new ResizeObserver\(fit\);\n\s*if \(under\.current\) watch\.observe\(under\.current\);/);
+  assert.match(sheetSource, /ref=\{frame\} style=\{\{ height \}\}/);
+  assert.doesNotMatch(sheetSource, /h-\[600px\]/, "no fixed height");
 });
