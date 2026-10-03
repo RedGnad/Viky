@@ -20,7 +20,7 @@ import { readOwnership, ownershipWords } from "@/src/judges-owner";
 import { portalsListedAndRead, providerCounts, witnessProviders } from "@/src/portal-store";
 import { countryInWords } from "@/src/university-shown";
 import { usesDelivered } from "@/src/phone-order-store";
-import { consentAnchorAddress, giftEscrowV2Address, milestoneGiftV2Address } from "@/src/v2";
+import { consentAnchorAddress, giftEscrowV2Address, giftEscrowV3Address, milestoneGiftV2Address } from "@/src/v2";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, PUBLIC_RPC_URL } from "@/src/monad/chain";
 import { readIndex } from "@/src/envio-index";
 import { MOBILE_CEILINGS, mobileMoneyOn } from "@/src/mobile-money";
@@ -106,6 +106,8 @@ export default async function JudgesPage() {
   const milestoneV2 = milestoneGiftV2Address();
   const anchor = consentAnchorAddress();
   const secondVersionSet = escrowV2 !== null && milestoneV2 !== null;
+  // The third daily contract, where a day is paid the day it is read: said only once it is set, like the second.
+  const thirdVersionSet = giftEscrowV3Address() !== null;
   // The index of the contracts' events, read once for the two blocks that show it. It answers nothing rather than an
   // error (src/envio-index.ts), and each block then says so in a sentence.
   const index = await readIndex();
@@ -164,7 +166,10 @@ export default async function JudgesPage() {
             the funder&apos;s side of your own gift.
           </li>
           <li>
-            What you will see, and when: a day counts the morning after it ends (the readings pass of 00:30 UTC); a
+            What you will see, and when:{" "}
+            {thirdVersionSet
+              ? "on a gift made now, a day counts the day its lesson is done, when the gift's page is opened or within a quarter of an hour; on a gift made on the second version, the morning after it ends (the readings pass of 00:30 UTC). Either way a "
+              : "a day counts the morning after it ends (the readings pass of 00:30 UTC); a "}
             missed day comes back to the funder 31 hours after it ends (the settling pass of 07:00 UTC, two mornings
             later). To see a settlement in one sitting, offer a Chess.com rating one point above the account&apos;s
             own: the first reading is the start, and a reading at the target, asked from the gift&apos;s page, settles
@@ -365,6 +370,18 @@ export default async function JudgesPage() {
       </Fold>
 
       <Fold id="reading" title="How a day is read">
+        {thirdVersionSet ? (
+          <p className={HELP} data-third-version-rule>
+            On the third daily contract, where a daily gift is made now, a day is paid the day it is read. The first day
+            is the day the account is connected. The gift&apos;s page looks at the public profile as it opens, a pass looks
+            every quarter of an hour, and an attested read is taken only for a lesson a look saw. A reading pays the
+            oldest open day first, and never a day that has not begun. A lesson taken after the day was paid is counted
+            by the first reading of the next day; taken before, it is not kept. So one lesson never pays two days, no more
+            days are paid than lessons were taken, and a day can be paid on which no lesson was taken: the one after a day
+            with a second lesson that came after that day&apos;s pay. A gift made on the second version stays there, under
+            the rule the next paragraph says.
+          </p>
+        ) : null}
         <p className={HELP}>
           Duolingo runs in public mode: once a day, Viky&apos;s keeper looks at the recipient&apos;s public profile
           plainly, and when that look shows a day the contract can credit, reads it through an attested fetch (Reclaim
@@ -781,6 +798,9 @@ export default async function JudgesPage() {
             deadline.
             {secondVersionSet
               ? " On the second version of the contracts the first reading of a gift is signed by the recipient too, so the key alone cannot do this to a milestone, and the recipient can end a daily gift it was done to: what was counted stays theirs and the rest goes back at once."
+              : null}
+            {thirdVersionSet
+              ? " On the third daily contract this key alone can have a day paid from the moment a gift is connected, without the day's delay the second version left between the connection and the first money a reading could move. The money still goes only to the recipient or to the funder, and the pause is still the only brake."
               : null}{" "}
             It cannot change the terms a funder signed or take back what was already credited. The journal on this page
             is what makes a signature without a real reading behind it detectable, for the readings whose proof is kept.

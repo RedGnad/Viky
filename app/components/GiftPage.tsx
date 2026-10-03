@@ -759,6 +759,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
               : W.becomesYours(daily.perDayDisplay, words?.eachDayYours ?? condition?.words.eachDay ?? "", agreedWhen(daily))}
           </p>
           <p className={BODY}>{readerIsFunder ? W.comesBackToYou : W.goesBackToThem(funderName)}</p>
+          {/* On the third daily contract a day is paid the day it is read: what that guarantees, and no more. */}
+          {paysTheSameDay(status.version) && words?.asItGoes ? <p className={BODY}>{words.asItGoes.agreed}</p> : null}
         </>
       ) : null}
       {readerIsFunder ? <p className={HELP}>{W.made(dateInWords(status.createdAtChain * 1000, zone), giftId)}</p> : null}

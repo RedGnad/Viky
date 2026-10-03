@@ -163,6 +163,24 @@ test("a gift on the first two versions reads as it always did, and the first day
   assert.equal(conditionOfGoal(GOAL_TYPE_DUOLINGO_COURSE_XP)?.recipient?.asItGoes, WORDS);
 });
 
+test("what was agreed says only what is guaranteed, and the judges page says the exact rule (the re-read of 3 Oct 2026, C2 and C4)", () => {
+  // The founder's own sentence. The exact case, a second lesson after the day's pay, is not promised here.
+  assert.equal(WORDS.agreed, "One lesson pays one day. An extra lesson the same day is not saved for later.");
+  const page = readFileSync("app/components/GiftPage.tsx", "utf8");
+  assert.match(page, /\{paysTheSameDay\(status\.version\) && words\?\.asItGoes \? <p className=\{BODY\}>\{words\.asItGoes\.agreed\}<\/p> : null\}/, "in what was agreed, for a gift on the third contract and for no other");
+  const judges = readFileSync("app/judges/page.tsx", "utf8");
+  // Said only once the third contract is set: until then no gift is on it.
+  assert.match(judges, /const thirdVersionSet = giftEscrowV3Address\(\) !== null;/);
+  assert.match(judges, /\{thirdVersionSet \? \(\n\s*<p className=\{HELP\} data-third-version-rule>/);
+  assert.ok(judges.includes("A lesson taken after the day was paid is counted"), "the exact rule, first half");
+  assert.ok(judges.includes("by the first reading of the next day; taken before, it is not kept."), "the exact rule, second half");
+  // Where our own key is described: what it alone can do on the third contract, and what still holds.
+  assert.ok(judges.includes("On the third daily contract this key alone can have a day paid from the moment a gift is connected, without the day's delay the second version left"));
+  assert.ok(judges.includes("The money still goes only to the recipient or to the funder, and the pause is still the only brake."));
+  // And the contract is listed first, as the chain answers for it, once it is set.
+  assert.match(readFileSync("src/judges-chain.ts", "utf8"), /if \(escrowV3\) jobs\.push\(factsFor\("The gift contract, for a habit, third version: new gifts are made here, and a day is paid the day it is read", escrowV3, giftEscrowV3Abi as unknown as Abi,/);
+});
+
 test("the page reads as it opens, and nothing is pressed", () => {
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
   // Read as the day goes: only a gift the server says is, in its counting moment, by either of its two people, while a

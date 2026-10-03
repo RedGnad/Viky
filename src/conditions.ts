@@ -344,6 +344,11 @@ export type RecipientWords = Readonly<{
    * page looks as it opens, and nothing is pressed. Absent on a condition that is read each morning on every version.
    */
   asItGoes?: Readonly<{
+    /**
+     * What is agreed and guaranteed about the day's pay, read in "What was agreed" (the re-read of 3 Oct 2026, C2):
+     * nothing a reading's own timing could make untrue is promised there. The exact rule is on the judges page.
+     */
+    agreed: string;
     /** Connected: the first day is the day of the connection. */
     countingFrom: (firstDay: string) => string;
     /** How it is read, in "How this is checked", to the person it is for and to anybody else. */
@@ -440,6 +445,7 @@ export const DUOLINGO_DAILY: Condition = {
     catchUpTheirs: (deadline) => `Yesterday is not counted yet, and not lost either: a lesson before ${deadline} your time still earns that day.`,
     alreadyRead: "Viky already read your Duolingo today. Come back tomorrow.",
     asItGoes: {
+      agreed: "One lesson pays one day. An extra lesson the same day is not saved for later.",
       countingFrom: (firstDay) => `Done. From today, ${firstDay}, every day with your lesson is yours, counted the day you do it.`,
       reads: "Viky looks at your Duolingo when this page opens, and through the day. A lesson is counted the day you do it.",
       readsTheirs: "Viky looks at their Duolingo when this page opens, and through the day. A lesson is counted the day it is done.",
