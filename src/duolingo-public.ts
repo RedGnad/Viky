@@ -1,5 +1,5 @@
 import { keccak256, stringToHex, type Hex } from "viem";
-import { countedFetch, ReclaimCeilingReached, ReclaimLimitReached } from "./attested-calls";
+import { countedFetch, REAL_READINGS_OFF, realReadingsOff, ReclaimCeilingReached, ReclaimLimitReached } from "./attested-calls";
 import { duolingoProfileUrl, isValidDuolingoUsername } from "./duolingo-public-terms";
 import { localProofVerified, proofVerifierMode } from "./proof-verification";
 
@@ -225,6 +225,7 @@ export async function fetchPublicProfile(username: string, deps: PublicProfileDe
  * attestor pin stay here, so the worker cannot forge a reading.
  */
 async function workerZkFetch(url: string): Promise<ZkFetchProof> {
+  if (realReadingsOff()) throw new PublicProfileError("NOT_CONFIGURED", REAL_READINGS_OFF);
   const base = process.env.ZKFETCH_WORKER_URL!.trim().replace(/\/$/, "");
   const secret = process.env.ZKFETCH_WORKER_SECRET?.trim();
   if (!secret) throw new PublicProfileError("NOT_CONFIGURED", "The attested fetch worker is not configured");
@@ -275,6 +276,7 @@ export async function reclaimPublicProfileDeps(): Promise<PublicProfileDeps> {
  * Reclaim's TEE client (`useTee`).
  */
 export async function reclaimLocalProfileDeps(): Promise<PublicProfileDeps> {
+  if (realReadingsOff()) throw new PublicProfileError("NOT_CONFIGURED", REAL_READINGS_OFF);
   const appId = process.env.RECLAIM_ZKFETCH_APP_ID?.trim();
   const appSecret = process.env.RECLAIM_ZKFETCH_APP_SECRET?.trim();
   if (!appId || !appSecret) throw new PublicProfileError("NOT_CONFIGURED", "The attested fetch is not configured");

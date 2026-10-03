@@ -1,5 +1,5 @@
 import { keccak256, stringToHex, type Hex } from "viem";
-import { countedFetch, ReclaimCeilingReached, ReclaimLimitReached } from "./attested-calls";
+import { countedFetch, REAL_READINGS_OFF, realReadingsOff, ReclaimCeilingReached, ReclaimLimitReached } from "./attested-calls";
 import { attestedSource, headersFor, matchesOf, type AttestedSource, type ResponseMatch } from "./attested-sources";
 import { allowedAttestors, attestorAccepted, type ZkFetchProof } from "./duolingo-public";
 import { localProofVerified, proofVerifierMode } from "./proof-verification";
@@ -219,6 +219,7 @@ async function workerIsCurrent(base: string): Promise<void> {
  * worker is told a source and an account, never a URL, and only the proof comes back; everything is checked here.
  */
 async function workerZkFetch(source: AttestedSource, account: string, bearer?: string): Promise<ZkFetchProof> {
+  if (realReadingsOff()) throw new AttestedReadError("NOT_CONFIGURED", REAL_READINGS_OFF);
   const base = process.env.ZKFETCH_WORKER_URL!.trim().replace(/\/$/, "");
   const secret = process.env.ZKFETCH_WORKER_SECRET?.trim();
   if (!secret) throw new AttestedReadError("NOT_CONFIGURED", "The attested fetch worker is not configured");
@@ -245,6 +246,7 @@ async function workerZkFetch(source: AttestedSource, account: string, bearer?: s
 }
 
 async function localZkFetch(source: AttestedSource, account: string, bearer?: string): Promise<ZkFetchProof> {
+  if (realReadingsOff()) throw new AttestedReadError("NOT_CONFIGURED", REAL_READINGS_OFF);
   const appId = process.env.RECLAIM_ZKFETCH_APP_ID?.trim();
   const appSecret = process.env.RECLAIM_ZKFETCH_APP_SECRET?.trim();
   if (!appId || !appSecret) throw new AttestedReadError("NOT_CONFIGURED", "The attested fetch is not configured");

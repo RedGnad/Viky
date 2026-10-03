@@ -477,6 +477,20 @@ export async function noteAttestedCall(call: AttestedCall, after: () => Promise<
 }
 
 /**
+ * No real reading from a developer's machine (the founder, 3 Oct 2026). A month's readings are few, and one taken
+ * from a machine that is not production reaches the same Reclaim application without being written in production's
+ * journal. So a developer's `.env.local` holds `VIKY_NO_REAL_READING=1`, which no deployment sets: with it nothing
+ * leaves for Reclaim, neither through the reading service nor straight from here, and nothing opens a proof there.
+ * The reading is refused as not configured, before any fetch. Rehearsals feed their own readings; a real call is asked
+ * of the founder first, and the line is taken out for that one run.
+ */
+export const REAL_READINGS_OFF = "Real readings are switched off on this machine (VIKY_NO_REAL_READING): feed a stand-in, or ask first";
+
+export function realReadingsOff(env: Environment = process.env): boolean {
+  return env.VIKY_NO_REAL_READING?.trim() === "1";
+}
+
+/**
  * Whether a fetch that threw never left for Reclaim, so that it is not counted: nothing is configured, the reading
  * service runs other sources (src/attested-read.ts refuses before asking it), or the service put the reading off to
  * keep a platform's pace, which it answers at once without fetching (scripts/zkfetch-worker.ts, "is read again in").

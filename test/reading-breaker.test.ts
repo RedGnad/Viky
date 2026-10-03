@@ -322,3 +322,23 @@ test("while proofs are paused nothing is looked at and nothing is paid for: the 
   assert.match(source, /look: lookByGoal,/);
   assert.match(source, /return readingFor\(\{ giftId: input\.giftId, reason: "a certificate's link, pasted" \}, \(\) => provePasted\(input, deps\)\);/);
 });
+
+test("a developer's machine takes no real reading: with the switch nothing leaves, by the service or straight from here, and no proof is opened", async () => {
+  const { realReadingsOff, REAL_READINGS_OFF, neverLeftForReclaim } = await import("../src/attested-calls");
+  assert.equal(realReadingsOff({}), false, "no deployment sets it");
+  assert.equal(realReadingsOff({ VIKY_NO_REAL_READING: "1" }), true);
+  assert.equal(realReadingsOff({ VIKY_NO_REAL_READING: "on" }), false, "one value, and no other");
+  // Refused as not configured, which the journal reads as never having left for Reclaim: nothing is counted.
+  assert.equal(neverLeftForReclaim(new AttestedReadError("NOT_CONFIGURED", REAL_READINGS_OFF)), true);
+  // The four places a reading leaves from, each refusing before anything else, and the one that opens a proof.
+  const read = readFileSync("src/attested-read.ts", "utf8");
+  assert.match(read, /async function workerZkFetch\([^)]*\): Promise<ZkFetchProof> \{\n  if \(realReadingsOff\(\)\) throw new AttestedReadError\("NOT_CONFIGURED", REAL_READINGS_OFF\);/);
+  assert.match(read, /async function localZkFetch\([^)]*\): Promise<ZkFetchProof> \{\n  if \(realReadingsOff\(\)\) throw new AttestedReadError\("NOT_CONFIGURED", REAL_READINGS_OFF\);/);
+  const duolingo = readFileSync("src/duolingo-public.ts", "utf8");
+  assert.match(duolingo, /async function workerZkFetch\(url: string\): Promise<ZkFetchProof> \{\n  if \(realReadingsOff\(\)\) throw new PublicProfileError\("NOT_CONFIGURED", REAL_READINGS_OFF\);/);
+  assert.match(duolingo, /export async function reclaimLocalProfileDeps\(\): Promise<PublicProfileDeps> \{\n  if \(realReadingsOff\(\)\) throw new PublicProfileError\("NOT_CONFIGURED", REAL_READINGS_OFF\);/);
+  const session = readFileSync("app/api/proof/session/route.ts", "utf8");
+  assert.ok(session.indexOf("if (realReadingsOff()) throw new Error(REAL_READINGS_OFF);") < session.indexOf("await ReclaimProofRequest.init("), "before the proof is opened at Reclaim");
+  // Every other way to Reclaim goes through one of those: no other file makes a client or calls the service.
+  for (const file of ["src/attested-read.ts", "src/duolingo-public.ts"]) assert.equal(readFileSync(file, "utf8").match(/new ReclaimClient\(/g)?.length, 1, file);
+});
