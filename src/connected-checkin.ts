@@ -1,8 +1,11 @@
+import { contactEmail } from "./contact";
+import { LIMIT } from "./sentences";
 import { getAddress, type Hex } from "viem";
 import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
 import { attestedRead, AttestedReadError, reclaimAttestedReadDeps, type AttestedReadDeps } from "./attested-read";
 import { attestedSource, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES } from "./attested-sources";
 import { conditionOfGoal } from "./conditions";
+import { noDayToCredit } from "./daily-look";
 import { openSecret, sealSecret, vaultConfigured } from "./connect-vault";
 import { eraseConnection, loadConnection, saveRefreshedTokens, type Connection } from "./connection-store";
 import type { PublicCheckInOutcome, PublicCheckInPurpose } from "./duolingo-public-checkin";
@@ -173,6 +176,10 @@ export async function runConnectedCheckIn(input: { giftId: string; purpose: Publ
   if (leave && !leave.allowed) return { kind: "refused", giftId, code: NO_AGREEMENT.code, message: NO_AGREEMENT.message };
   const now = deps.now();
   if (purpose === "count" && !input.force && (await countedToday(giftId, now))) return { kind: "already", giftId, reason: "counted_today" };
+  // No proof for a morning that has no day to credit, by the contract's own rule on its own figures (src/daily-look.ts):
+  // the morning after the connection, and every morning once the last day is settled.
+  const noDay = purpose === "count" ? contractRefusal(noDayToCredit(onChain, now) ?? undefined) : null;
+  if (noDay) return { kind: "refused", giftId, code: noDay.code, message: noDay.message, looked: true };
 
   let tokens: ConnectedTokens;
   try {
@@ -204,6 +211,8 @@ export async function runConnectedCheckIn(input: { giftId: string; purpose: Publ
     NOT_CONFIGURED: "Counting is not switched on yet.",
     WORKER_OUT_OF_DATE: "The reading service is being updated.",
     NOT_FOUND: `${line.name} answered that there is no such day.`,
+    // The month's limit of readings (src/attested-calls.ts). The screen adds until when the day can still be counted.
+    LIMIT_REACHED: LIMIT.reading(null, contactEmail()),
   };
   let reading: Awaited<ReturnType<typeof attestedRead>>;
   try {

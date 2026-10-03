@@ -27,6 +27,8 @@
   --divider: #C5C2CF;
   /* What a sheet lays over the screen behind it: the ink, thinned, so the card is still read through it. */
   --scrim: rgba(30, 22, 51, 0.32);
+  /* The one red: the sentence that says a monthly limit is reached, and nothing else (src/design-tokens.ts, LIMIT_RED). */
+  --limit-red: #B3261E;
 
   /*
    * The card, and what reads on it (the rendered mockups of 19 Sep 2026). A card is the object on the ground, never
@@ -322,6 +324,7 @@
     --text: #FFF6E2;
     --muted: #C7C4DA;
     --accent: #FFC531;
+    --limit-red: #F2B8B5;
     --on-accent: #151026;
     --accent-text: #FFF6E2;
     --control-border: #FFF6E2;
@@ -398,6 +401,7 @@
   --text: #FFF6E2;
   --muted: #C7C4DA;
   --accent: #FFC531;
+  --limit-red: #F2B8B5;
   --on-accent: #151026;
   --accent-text: #FFF6E2;
   --control-border: #FFF6E2;
@@ -1234,6 +1238,23 @@ dialog.sheet[open] {
   line-height: var(--type-gift-state-closed-leading);
   font-weight: 500;
   margin-bottom: 4px;
+}
+
+/* A monthly limit is reached (the founder, 3 Oct 2026): short, at the small size, and in the one red. On the card it
+   stands where the state is said; in a block that offers a proof, where its button was. */
+.limit-said {
+  color: var(--limit-red);
+  font-size: var(--type-help);
+  line-height: var(--type-help-leading);
+  font-weight: 600;
+}
+
+.gift-state + .limit-said {
+  margin-bottom: 4px;
+}
+
+.limit-said + .gift-figures {
+  margin-top: 14px;
 }
 
 /* When the source last updated what was read (the founder, 29 Sep 2026): quiet, under the figure's own label. */

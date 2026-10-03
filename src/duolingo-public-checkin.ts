@@ -4,6 +4,10 @@ import { readDuolingoCourse, CourseReadError, type CourseReading } from "./duoli
 import { fetchPublicProfile, PublicProfileError, reclaimPublicProfileDeps, type PublicProfile, type PublicProfileDeps } from "./duolingo-public";
 import { checkInSubject, displayNameHasCode, DUOLINGO_PUBLIC_PROVIDER_LABEL } from "./duolingo-public-terms";
 import { DUOLINGO_DAILY } from "./conditions";
+import { contactEmail } from "./contact";
+import { lookBeforeCount, lookForCode, type ProfileLook } from "./daily-look";
+import { resolvePublicDuolingoProfile } from "./duolingo-profile";
+import { LIMIT } from "./sentences";
 import { contractRefusal } from "./gift-api";
 import { ATTESTATION_TTL_SECONDS, identityPseudonym, serialiseMessage, signCheckIn, type CheckInMessage } from "./gift-attestation";
 import { checkInDayIndex, readGift, utcDayOf } from "./gift-reader";
@@ -20,6 +24,9 @@ import { StartNotSigned } from "./v2-start";
  * check-in attestation, with nobody signing in anywhere. `bind` is the first read (it proves control
  * when the recipient named the account, and opens the window); `count` is the daily read the keeper
  * runs. Every outcome is typed, refusals included, so the screen and the keeper log say why.
+ *
+ * Both look plainly before they pay for the attested read (src/daily-look.ts): a count takes none when the contract
+ * would credit no day with what the profile shows, and a connection by code takes none until the code is in the name.
  */
 
 export type PublicCheckInPurpose = "bind" | "count";
@@ -29,7 +36,11 @@ export type PublicCheckInOutcome =
   | Readonly<{ kind: "bound"; giftId: string; xp: number; hash: Hex; unit?: string }>
   | Readonly<{ kind: "counted"; giftId: string; xp: number; creditedDays: number; hash: Hex; unit?: string }>
   | Readonly<{ kind: "already"; giftId: string; reason: "counted_today" | "not_bound" | "not_opened" | "no_account" | "already_bound" | "finished" | "cancelled" }>
-  | Readonly<{ kind: "refused"; giftId: string; code: string; message: string; xp?: number }>
+  /**
+   * `countableUntil`, with the refusal `LIMIT_REACHED` only: when the window of the day still to count closes, in UTC
+   * seconds (src/daily-count.ts). `looked`, when a plain look answered and no attested reading was taken.
+   */
+  | Readonly<{ kind: "refused"; giftId: string; code: string; message: string; xp?: number; countableUntil?: number | null; looked?: true }>
   /** The second version: the first reading was taken, and waits for the recipient's own signature (src/held-start.ts). */
   | StartAsked;
 
@@ -40,9 +51,12 @@ export type PublicCheckInDeps = {
   now: () => number;
   /** Whether the recipient's agreement lets this gift be read (src/consent-guard.ts); a test that omits it reads. */
   leave?: (giftId: string, fundedAt: number) => Promise<ReadingLeave>;
+  /** The plain look taken before a proof is paid for (src/daily-look.ts); a test that omits it pays every time. */
+  look?: ProfileLook;
 };
 
 const defaultDeps: PublicCheckInDeps = {
+  look: resolvePublicDuolingoProfile,
   profile: reclaimPublicProfileDeps,
   course: (username, courseId) => readDuolingoCourse({ username, courseId }),
   now: () => Math.floor(Date.now() / 1_000),
@@ -96,7 +110,23 @@ export async function runPublicCheckIn(input: { giftId: string; purpose: PublicC
     PROOF_INVALID: "The reading could not be verified. Try again in a minute.",
     PROOF_MISMATCH: "The reading could not be verified. Try again in a minute.",
     NOT_CONFIGURED: "Counting is not switched on yet.",
+    // The month's limit of readings (src/attested-calls.ts). The screen adds until when the day can still be counted.
+    LIMIT_REACHED: LIMIT.reading(null, contactEmail()),
   };
+  const codeNotInName = (shown: string) => refusal(giftId, "CODE_NOT_IN_NAME", `The code is not in that profile's name yet (it reads "${shown}"). Add it, wait a moment, and try again.`);
+  // Look first, which costs nothing: an attested reading is one of a month's hundred (src/daily-look.ts).
+  if (deps.look && purpose === "count") {
+    // No proof for a reading the contract would refuse: no day to credit, or not one full target since the last one.
+    const foreseen = await lookBeforeCount({ username: record.goalUsername, courseId, gift: onChain, nowSeconds: now }, deps.look);
+    const mapped = foreseen ? contractRefusal(foreseen.refusal) : null;
+    if (foreseen && mapped) return { kind: "refused", giftId, code: mapped.code, message: mapped.message, xp: foreseen.xp, looked: true };
+  }
+  if (deps.look && purpose === "bind" && record.usernameSource === "recipient") {
+    // No proof until the code is in the name, and none for a look that failed: the person tries again in a minute.
+    const stopped = await lookForCode({ username: record.goalUsername, code: record.bindingCode ?? "" }, deps.look);
+    if (stopped) return stopped.code === "CODE_NOT_IN_NAME" ? codeNotInName(stopped.shown) : refusal(giftId, stopped.code, messages[stopped.code]);
+  }
+
   let read: { username: string; profileId: string; displayName: string; xp: number; observedAt: number; nullifier: Hex; proof: unknown; streak: number | null };
   try {
     if (courseId) {
@@ -111,9 +141,8 @@ export async function runPublicCheckIn(input: { giftId: string; purpose: PublicC
     throw error;
   }
 
-  if (purpose === "bind" && record.usernameSource === "recipient" && !displayNameHasCode(read.displayName, record.bindingCode ?? "")) {
-    return refusal(giftId, "CODE_NOT_IN_NAME", `The code is not in that profile's name yet (it reads "${read.displayName}"). Add it, wait a moment, and try again.`);
-  }
+  // The attested name is the one that proves the account is theirs: the look only kept a proof from being wasted.
+  if (purpose === "bind" && record.usernameSource === "recipient" && !displayNameHasCode(read.displayName, record.bindingCode ?? "")) return codeNotInName(read.displayName);
 
   const recipient = getAddress(record.recipient);
   const subject = checkInSubject(read.profileId, courseId);

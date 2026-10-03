@@ -13,7 +13,7 @@ import type { ZkFetchProof } from "./duolingo-public";
  * code goes (D27: the last name, in English).
  */
 
-export type CodeforcesReadErrorCode = "INVALID_USERNAME" | "PROFILE_NOT_FOUND" | "NO_NAME" | "NO_RATING" | "FETCH_FAILED" | "PROOF_INVALID" | "PROOF_MISMATCH" | "WORKER_OUT_OF_DATE" | "NOT_CONFIGURED";
+export type CodeforcesReadErrorCode = "INVALID_USERNAME" | "PROFILE_NOT_FOUND" | "NO_NAME" | "NO_RATING" | "FETCH_FAILED" | "PROOF_INVALID" | "PROOF_MISMATCH" | "WORKER_OUT_OF_DATE" | "LIMIT_REACHED" | "NOT_CONFIGURED";
 
 export class CodeforcesReadError extends Error {
   constructor(
@@ -35,8 +35,8 @@ export function codeforcesPlayerId(handle: string): string {
   return handle.trim().toLowerCase();
 }
 
-/** Where a person stands today, read plainly. A handle nobody has answers 400 with the site's own words. */
-export async function readCodeforcesStanding(handle: string, fetchImpl: PlainFetch = fetch): Promise<ChessStanding> {
+/** The user a handle belongs to, read plainly. A handle nobody has answers 400 with the site's own words. */
+async function readCodeforcesUser(handle: string, fetchImpl: PlainFetch): Promise<ApiUser> {
   if (!isValidCodeforcesHandle(handle)) throw new CodeforcesReadError("INVALID_USERNAME", "That is not a Codeforces handle");
   let response: Response;
   try {
@@ -50,7 +50,18 @@ export async function readCodeforcesStanding(handle: string, fetchImpl: PlainFet
     throw new CodeforcesReadError("FETCH_FAILED", body?.comment ?? `Codeforces answered ${response.status}`);
   }
   if (response.status !== 200 || !body?.result?.[0]) throw new CodeforcesReadError("FETCH_FAILED", `Codeforces answered ${response.status}`);
-  const user = body.result[0];
+  return body.result[0];
+}
+
+/** The last name an account shows, read plainly: where a binding code goes (D27). Nothing when none is set. */
+export async function readCodeforcesName(handle: string, fetchImpl: PlainFetch = fetch): Promise<string | null> {
+  const user = await readCodeforcesUser(handle, fetchImpl);
+  return typeof user.lastName === "string" && user.lastName.length > 0 ? user.lastName : null;
+}
+
+/** Where a person stands today, read plainly. */
+export async function readCodeforcesStanding(handle: string, fetchImpl: PlainFetch = fetch): Promise<ChessStanding> {
+  const user = await readCodeforcesUser(handle, fetchImpl);
   const username = String(user.handle ?? handle);
   return {
     username,

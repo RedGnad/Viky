@@ -58,6 +58,9 @@ const OURS_TO_FIX: ReadonlySet<string> = new Set([
   // A connected source that did not answer the token refresh (src/strava.ts, src/fitbit.ts): an outage of theirs or
   // a limit we met, not a connection the person took back.
   "REFRESH_UNAVAILABLE",
+  // The month's limit of attested readings is reached (src/attested-calls.ts): no reading was taken, so nothing is
+  // settled against it, and the person reads why on the gift's page.
+  "LIMIT_REACHED",
   // A reading that threw instead of answering (see `counted` below).
   "READING_FAILED",
 ]);
@@ -496,7 +499,8 @@ function describe(outcome: PublicCheckInOutcome): DailyPassLine {
     case "already":
       return { giftId: outcome.giftId, step: "count", result: `skipped: ${outcome.reason}` };
     case "refused":
-      return { giftId: outcome.giftId, step: "count", result: `refused: ${outcome.code}${outcome.xp !== undefined ? ` (${outcome.xp} XP)` : ""}` };
+      // A refusal a plain look foresaw says so: no attested reading was taken for it (src/daily-look.ts).
+      return { giftId: outcome.giftId, step: "count", result: `refused: ${outcome.code}${outcome.xp !== undefined ? ` (${outcome.xp} XP)` : ""}${outcome.looked ? ", by a look, no proof taken" : ""}` };
     // A pass counts, it never takes a first reading: named all the same, should one ever answer it.
     case "sign":
       return { giftId: outcome.giftId, step: "count", result: "held: the first reading waits for the recipient's signature" };

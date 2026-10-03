@@ -1,3 +1,4 @@
+import type { GiftLimit } from "./gift-limit";
 import type { EndOffer, Ended } from "./gift-ending";
 import type { MilestonePhase } from "./milestone-reader";
 
@@ -119,6 +120,8 @@ export type MilestoneStatus = Readonly<{
     registered: { who: string; wcaId: string | null } | null;
     result: { name: string; wcaId: string; best: number; inWords: string } | null;
   } | null;
+  /** The month's limit of readings or of proofs, when it is reached and this gift is still running (src/gift-limit.ts). */
+  limit?: GiftLimit | null;
 }>;
 
 /**

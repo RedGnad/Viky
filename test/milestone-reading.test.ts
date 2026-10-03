@@ -7,7 +7,7 @@ import { chessProviderId } from "../src/chess-com";
 import { ChessReadError, nameHasChessCode, newChessCode, CHESS_CODE_ALPHABET, CHESS_CODE_LENGTH, type AttestedChessReading } from "../src/chess-reading";
 import type { GiftRecord } from "../src/gift-store";
 import type { MilestoneState } from "../src/milestone-reader";
-import { MILESTONE_OURS_TO_FIX, runMilestoneReading, type MilestoneReadingDeps } from "../src/milestone-reading";
+import { MILESTONE_OURS_TO_FIX, PROOF_EVERY_SECONDS, runMilestoneReading, type MilestoneReadingDeps } from "../src/milestone-reading";
 import type { MilestoneProofMessage } from "../src/milestone-protocol";
 import { milestoneStatusOf } from "../src/milestone-status";
 import type { MilestoneReading } from "../src/milestone-store";
@@ -325,6 +325,46 @@ test("an account the recipient named needs its code: without it nothing is sent,
   assert.equal(empty.kind === "refused" && empty.code, "NO_NAME");
 });
 
+test("a start by code looks for the code plainly first: no proof until it is in the name, and none for a look that failed (3 Oct 2026)", async () => {
+  // A try before the code is in the name cost a proof each time, two attested fetches on Chess.com.
+  const without = harness(THEIR_OWN, OPENED, { plainName: async () => "Erik" });
+  const early = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, without.deps);
+  assert.equal(early.kind === "refused" && early.code, "CODE_NOT_IN_NAME");
+  assert.deepEqual(without.calls, [], "no proof is paid for");
+
+  const noName = harness(THEIR_OWN, OPENED, { plainName: async () => null });
+  const empty = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, noName.deps);
+  assert.equal(empty.kind === "refused" && empty.code, "NO_NAME");
+  assert.deepEqual(noName.calls, []);
+
+  // The look itself failed: no proof either, and the person reads to try again in a minute.
+  const down = harness(THEIR_OWN, OPENED, { plainName: async () => Promise.reject(new ChessReadError("FETCH_FAILED", "Chess.com is not answering")) });
+  const failed = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, down.deps);
+  assert.equal(failed.kind === "refused" && failed.code, "FETCH_FAILED");
+  assert.equal(failed.kind === "refused" && failed.message, "Chess.com could not be read just now. Nothing was changed. Try again in a minute.");
+  assert.deepEqual(down.calls, []);
+
+  const closed = harness(THEIR_OWN, OPENED, { plainName: async () => Promise.reject(new ChessReadError("ACCOUNT_CLOSED", "closed")) });
+  const gone = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, closed.deps);
+  assert.equal(gone.kind === "refused" && gone.code, "ACCOUNT_CLOSED");
+  assert.deepEqual(closed.calls, []);
+
+  // The code is there: the proof is taken, and its own name is still the one that binds.
+  const seen = harness(THEIR_OWN, OPENED, { plainName: async () => "Erik kxq-prt" });
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "start" }, seen.deps)).kind, "started");
+  assert.deepEqual(seen.calls, ["attest:withName", "prove", "bind"]);
+  const lagging = harness(THEIR_OWN, OPENED, { plainName: async () => "Erik KXQPRT", attest: async () => attested(1904, { name: "Erik" }) });
+  const notYet = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, lagging.deps);
+  assert.equal(notYet.kind === "refused" && notYet.code, "CODE_NOT_IN_NAME");
+  assert.deepEqual(lagging.proved, []);
+
+  // The funder named the account: no code, so no look for one.
+  const named = harness(RECORD, OPENED, { plainName: async () => Promise.reject(new Error("never asked")) });
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "start" }, named.deps)).kind, "started");
+  // And the live reading has the look.
+  assert.match(readFileSync("src/milestone-reading.ts", "utf8"), /plainName: \(username, mode\) => readClimbName\(username, mode\),/);
+});
+
 test("below the target the keeper only looks, and pays for no proof", async () => {
   const run = harness(BOUND, CLIMBING);
   const outcome = await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, run.deps);
@@ -391,6 +431,65 @@ test("the pass that runs every five minutes pays for no proof when the look itse
   assert.deepEqual(run.calls, ["plain"]);
   // And the frequent pass is the one that sets it.
   assert.match(readFileSync("src/frequent-pass.ts", "utf8"), /runMilestoneReading\(\{ giftId, purpose: "reach", recentSeconds: FREQUENT_PASS_RECENT_SECONDS, lookMustSucceed: true \}\)/);
+});
+
+test("a proof is claimed before it is paid for: once in six hours after a look that failed, once an hour in the last day, every four minutes at the target (3 Oct 2026)", async () => {
+  assert.deepEqual(PROOF_EVERY_SECONDS, { atTheTarget: 4 * 60, unseen: 6 * 3_600, unseenInTheLastDay: 3_600 });
+  const failing = { plain: async () => Promise.reject(new ChessReadError("FETCH_FAILED", "Chess.com answered 404")), attest: async () => attested(1960) };
+  const claims: Array<[string, number]> = [];
+  const claim = (granted: boolean) => ({
+    claimProof: async (giftId: string, everySeconds: number) => {
+      claims.push([giftId, everySeconds]);
+      return granted;
+    },
+  });
+
+  // The open page reads each minute. Its look fails: the first ask takes the proof, and the asks after it do not.
+  let run = harness(BOUND, CLIMBING, { ...failing, ...claim(true) });
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, run.deps)).kind, "reached");
+  run = harness(BOUND, CLIMBING, { ...failing, ...claim(false), attest: async () => assert.fail("no proof at every ask") });
+  const refusedAgain = await runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, run.deps);
+  assert.deepEqual(refusedAgain, { kind: "refused", giftId: "1000000", code: "FETCH_FAILED", message: "Chess.com could not be read just now. Nothing was changed. Try again in a minute.", rating: undefined });
+  assert.deepEqual(run.recorded, [], "and nothing is written");
+  assert.deepEqual(claims, [["1000000", 6 * 3_600], ["1000000", 6 * 3_600]]);
+
+  // The pass of every five minutes, in a gift's last day: one proof an hour, not one at every pass.
+  claims.length = 0;
+  const lastDay = { ...CLIMBING, deadline: NOW + 86_400 - 1 };
+  run = harness(BOUND, lastDay, { ...failing, ...claim(false), attest: async () => assert.fail("no proof at every pass") });
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "reach", lookMustSucceed: true }, run.deps)).kind, "refused");
+  assert.deepEqual(claims, [["1000000", 3_600]]);
+  // Before its last day that pass stops at the look, and claims nothing.
+  claims.length = 0;
+  run = harness(BOUND, CLIMBING, { ...failing, ...claim(true) });
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "reach", lookMustSucceed: true }, run.deps)).kind, "refused");
+  assert.deepEqual(claims, []);
+
+  // A page that answers and carries no rating in the cadence says no more than a look that failed.
+  run = harness(BOUND, CLIMBING, { plain: async () => ({ username: "erik", playerId: "41", status: "basic", rating: null, ratedAt: null, rd: null, best: null }), ...claim(false), attest: async () => assert.fail("no proof") });
+  const unrated = await runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, run.deps);
+  assert.equal(unrated.kind === "refused" && unrated.code, "NO_RATING");
+  assert.deepEqual(claims, [["1000000", 6 * 3_600]]);
+
+  // At the target the first proof is taken at once. One that did not settle is not taken again at the next minute.
+  claims.length = 0;
+  const atTarget = { plain: async () => ({ username: "erik", playerId: "41", status: "basic", rating: 1960, ratedAt: NOW - 60, rd: 42, best: 1960 }) };
+  run = harness(BOUND, CLIMBING, { ...atTarget, attest: async () => attested(1960), ...claim(true) });
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, run.deps)).kind, "reached");
+  run = harness(BOUND, CLIMBING, { ...atTarget, ...claim(false), attest: async () => assert.fail("no second proof a minute later") });
+  assert.deepEqual(await runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, run.deps), { kind: "already", giftId: "1000000", reason: "read_recently" });
+  assert.deepEqual(claims, [["1000000", 4 * 60], ["1000000", 4 * 60]]);
+
+  // Below the target nothing is claimed: the look is all there is. And the first reading of a gift is not a pass's.
+  claims.length = 0;
+  run = harness(BOUND, CLIMBING, claim(false));
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, run.deps)).kind, "notYet");
+  run = harness(RECORD, OPENED, claim(false));
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "start" }, run.deps)).kind, "started");
+  assert.deepEqual(claims, []);
+
+  // The claim is the guard that is true once per stretch, one name per gift, whichever instance asks first.
+  assert.match(readFileSync("src/milestone-reading.ts", "utf8"), /claimProof: \(giftId, everySeconds\) => claimPass\(`milestone-proof:\$\{giftId\}`, everySeconds\),/);
 });
 
 test("a look that finds what the last one found is not a new line of the journal", async () => {

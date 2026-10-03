@@ -1,3 +1,7 @@
+import { BEFORE_THE_JOURNAL, cycleInWords, cycleUse, limitsOf, RECLAIM_ALLOWANCE } from "@/src/attested-calls";
+import { contactEmail } from "@/src/contact";
+import { LIMIT } from "@/src/sentences";
+import { PROOF_EVERY_SECONDS } from "@/src/milestone-reading";
 import { formatAusd } from "@/src/gift-reader";
 import { judgeCreditConfig, judgeCreditsStanding, standingInWords } from "@/src/judge-credit";
 import { rampHostApiKey, rampnowWayIn } from "@/src/rails";
@@ -109,6 +113,9 @@ export default async function JudgesPage() {
   // Gifts created before the D30 corrections keep running on the contract that holds them, and every
   // gift record names its own contract, so both are listed here for as long as the older one holds one.
   const earlierEscrow = process.env.NEXT_PUBLIC_EARLIER_GIFT_ESCROW_ADDRESS?.trim();
+  // What the month has used of Reclaim's allowance, counted from the journal of attested fetches as the page is served.
+  const reclaimUse = await cycleUse().catch(() => null);
+  const reclaimLimits = reclaimUse ? limitsOf(reclaimUse) : null;
   // The judge credit's amount, said on the page; its code is never read here (D291).
   const judgeCredit = judgeCreditConfig();
   // How many were given and how many the ceiling still allows, counted from the journal at each reading of the page.
@@ -359,9 +366,11 @@ export default async function JudgesPage() {
 
       <Fold id="reading" title="How a day is read">
         <p className={HELP}>
-          Duolingo runs in public mode: once a day, Viky&apos;s keeper reads the recipient&apos;s public profile through
-          an attested fetch (Reclaim zkFetch through Reclaim&apos;s TEE client). The attestor signs Duolingo&apos;s
-          response; Viky verifies that signature, pins the attestor&apos;s address (the one in <code>src/reclaim-proof-set.ts</code>)
+          Duolingo runs in public mode: once a day, Viky&apos;s keeper looks at the recipient&apos;s public profile
+          plainly, and when that look shows a day the contract can credit, reads it through an attested fetch (Reclaim
+          zkFetch through Reclaim&apos;s TEE client). The look is never evidence: it is not signed and not sent, and it
+          can only spare a reading the contract would refuse (<code>src/daily-look.ts</code>). The attestor signs
+          Duolingo&apos;s response; Viky verifies that signature, pins the attestor&apos;s address (the one in <code>src/reclaim-proof-set.ts</code>)
           and checks the proof is about the right URL and username; the evidence signer then turns the
           signed reading into an EIP-712 check-in, and the contract credits or refuses it. What is not verified: the
           attestor&apos;s own TEE attestation, which zk-fetch 1.1.0 does not put in the proof. The person signs in to
@@ -387,13 +396,42 @@ export default async function JudgesPage() {
         </p>
         <p className={HELP}>
           What a reading costs, written here on purpose: each attested read is paid on Reclaim&apos;s side (their public
-          price starts at $0.10 per verification). Reads are counted per gift, never per person: the morning pass reads
-          each daily gift once and skips one already counted that day, so two gifts on one Duolingo account are two reads a
-          day. Each attempt to connect the account is one more, and so is each count the person asks for: no daily ceiling
-          bounds those, only ten asks in ten minutes from one IP address, counted in each app server&apos;s memory. A climb
+          price starts at $0.10 per verification). Reads are counted per gift, never per person: the morning pass looks
+          at each daily gift once, takes an attested read only for one whose look shows a day to credit (or whose look
+          failed), and skips one already counted that day, so two gifts on one Duolingo account are two reads on a morning
+          both earned a day. Connecting the account is one more, and a connection by code takes it only once a plain look
+          has found the code in the name; a count the person asks for looks first in the same way. No daily ceiling bounds
+          those asks, only ten in ten minutes from one IP address, counted in each app server&apos;s memory. A gift on
+          Strava or Fitbit has no plain look yet: it is read attested each morning that has a day to credit, earned or not. A climb
           is looked at plainly, not through Reclaim, in both of the day&apos;s passes and at each ask, and read attested
           only to connect the account or when that look does not show it below its target. Private sources keep the
           user-proof path through the Reclaim verifier app.
+        </p>
+        <p className={HELP} data-reclaim-cycle>
+          The month&apos;s count, kept here because Reclaim&apos;s dashboard shows no count of the fetches: its free tier
+          allows up to {RECLAIM_ALLOWANCE.fetches} attested fetches and {RECLAIM_ALLOWANCE.verifications} verifications a
+          month, and gives more on request only. {cycleInWords(reclaimUse)}
+          {reclaimUse && (reclaimUse.fetches.allowed !== RECLAIM_ALLOWANCE.fetches || reclaimUse.verifications.allowed !== RECLAIM_ALLOWANCE.verifications)
+            ? " Reclaim has granted more than the free tier, and the limits in force are the ones counted against."
+            : ""}
+          {reclaimLimits?.readings
+            ? ` The limit of readings is reached: Viky sends no attested reading to Reclaim until the next cycle or until more is granted, nothing is settled against a reading that was not taken, and a person whose gift waits for one reads this on its page, with the hour their day can still be counted until: "${LIMIT.reading(null, contactEmail())}"`
+            : ""}
+          {reclaimLimits?.proofs
+            ? ` The limit of proofs is reached: Viky opens no new proof at Reclaim, and a person reads this before starting one: "${LIMIT.proof(contactEmail())}"`
+            : ""}{" "}
+          The limit Viky holds itself to goes by the readings that gave a proof and by the proofs that came back, not by
+          what was started or asked: what Reclaim counts is not published, and on 3 Oct 2026 fetches still passed at 126
+          started and 68 proofs.
+          {reclaimUse?.from === BEFORE_THE_JOURNAL.cycleFrom
+            ? ` Of this cycle's fetches, ${BEFORE_THE_JOURNAL.started} started and ${BEFORE_THE_JOURNAL.proved} proofs were counted on 3 Oct 2026 from the reading service's logs, which start on 28 Sep, and from the gifts' journal, so the figures are a floor. 114 of those fetches went in five hours on 30 Sep 2026, on one gift whose plain look kept failing, half of them without a proof: the pass of every five minutes tried a proof at each failed look. It stops at a failed look since 1 Oct 2026.`
+            : ""}{" "}
+          Since 3 Oct 2026 every fetch is written down as it leaves, proof or not, and a proof is claimed before it is
+          paid for: for one gift, once in {PROOF_EVERY_SECONDS.unseen / 3_600} hours after a look that failed or showed no
+          rating, once an hour in the gift&apos;s last day, and every {PROOF_EVERY_SECONDS.atTheTarget / 60} minutes at the
+          target until one settles it. The operator is told by email at half of an allowance, at four fifths, and at the
+          limit, with the days then waiting for a reading. What is not closed: each attempt to connect an account by a
+          code in its name is still a proof, whether the code is there yet or not.
         </p>
       </Fold>
 
@@ -402,8 +440,9 @@ export default async function JudgesPage() {
           <li>
             <strong>Duolingo&apos;s terms.</strong> The profile Viky reads is a public endpoint Duolingo does not
             document, and Duolingo&apos;s terms say &quot;You may not use any data mining, robots, scraping, or similar
-            data gathering or extraction methods&quot;. Viky reads a profile once a day for each gift made on it, and
-            again each time the person connects it or asks for a count. The risk is
+            data gathering or extraction methods&quot;. Viky reads a profile once a day for each gift made on it, a
+            second time that day when the first shows a day to credit, and again each time the person connects it or
+            asks for a count. The risk is
             accepted and spread by having several conditions rather than one; the shape of that endpoint is pinned by
             the tests, like any other source that could drift, and if it changes or closes, the reading fails on our
             side. The day then stays open until its catch-up window closes, 30 hours after it ends, and goes back to
