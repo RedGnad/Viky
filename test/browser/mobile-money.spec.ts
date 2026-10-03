@@ -30,9 +30,11 @@ const OFFER = {
   ],
   numberRule: "^[0-9]{9,40}$",
   nameRule: "^(?=.*[A-Za-z])[A-Za-z0-9\\s\\-'&().,;]{2,100}$",
+  rate: 587.1333,
+  mostUnits: "200000000",
 };
 
-async function inSenegal(device: Profile, ending: "arrived" | "failed", priced = true): Promise<{ started: () => unknown; sent: () => unknown }> {
+async function inSenegal(device: Profile, ending: "arrived" | "failed", priced = true, mostUnits = "200000000"): Promise<{ started: () => unknown; sent: () => unknown; priced: () => unknown }> {
   const { page, context } = device;
   // What the account holds, changed as the money leaves, so every screen after the send shows what is left.
   const holdings = { ausd: 15_000_000n, usdc: 0n, mon: 0n };
@@ -43,11 +45,20 @@ async function inSenegal(device: Profile, ending: "arrived" | "failed", priced =
   await page.route("**/api/rails/where**", (route) =>
     route.fulfill(json({ country: "sn", ask: false, fromConnection: "sn", fromDevice: "sn", waysOut: { Ramp: "does-not", Mercuryo: "does-not" }, waysIn: {}, card: { offered: false, country: "sn" }, out: { bank: null, cardSmallest: null } })),
   );
-  await page.route("**/api/mobile-money/offer**", (route) => route.fulfill(json(OFFER)));
-  await page.route("**/api/exit/quote", (route) => route.fulfill(json({ shown: "11.19", sells: "USDC", name: "Ramp", ticket: "ticket-1" })));
-  await page.route("**/api/mobile-money/quote", (route) =>
-    priced ? route.fulfill(json({ local: 6540.92, currency: "XOF", at: "2026-10-02T21:40:00.000Z", settlement: "5-10 minutes" })) : route.fulfill(json({ error: "Mobile money is not open here yet. Nothing was taken.", code: "NOT_CONFIGURED" }, 503)),
-  );
+  await page.route("**/api/mobile-money/offer**", (route) => route.fulfill(json({ ...OFFER, mostUnits })));
+  // The exchange makes a little less than it takes: 15.07 asked first gives 15.04, then 15.11 gives 15.08.
+  await page.route("**/api/exit/quote", (route) => {
+    const asked = BigInt((JSON.parse(route.request().postData() ?? "{}") as { amount?: string }).amount ?? "0");
+    const floor = (asked * 998n) / 1000n;
+    return route.fulfill(json({ shown: (Number(floor) / 1e6).toFixed(6), sells: "USDC", name: "Ramp", ticket: `ticket-${asked}` }));
+  });
+  let quoted: unknown = null;
+  await page.route("**/api/mobile-money/quote", (route) => {
+    quoted = JSON.parse(route.request().postData() ?? "{}");
+    const local = (quoted as { local?: number }).local ?? 0;
+    // Switch's exact quote for the francs typed: what it takes in dollars at its rate, a little above the published one.
+    return priced ? route.fulfill(json({ local, currency: "XOF", sourceUnits: String(Math.round((local / 584.2) * 1e6)), at: "2026-10-03T10:15:00.000Z" })) : route.fulfill(json({ error: "Mobile money is not open here yet. Nothing was taken.", code: "NOT_CONFIGURED" }, 503));
+  });
   await page.route("**/api/exit/prepare", (route) =>
     route.fulfill(json({ id: "terms-1", shown: "11.19", signed: false, authorization: { to: EXIT_ROUTER, value: "11200000", validAfter: "0", validBefore: String(Math.floor(Date.now() / 1000) + 600), nonce: `0x${"11".repeat(32)}` } })),
   );
@@ -71,7 +82,7 @@ async function inSenegal(device: Profile, ending: "arrived" | "failed", priced =
     return route.fulfill(json({ reference: REFERENCE, phase, status: phase === "arrived" ? "COMPLETED" : phase === "failed" ? "FAILED" : "PROCESSING", network: "ORANGE", numberEnd: "4567", local: 6540.92, currency: "XOF", units: "11190000", country: "SN" }));
   });
   await makeAnAccount(device);
-  return { started: () => started, sent: () => sent };
+  return { started: () => started, sent: () => sent, priced: () => quoted };
 }
 
 test.describe("your mobile money", () => {
@@ -97,9 +108,15 @@ test.describe("your mobile money", () => {
       await page.getByRole("radio", { name: "Orange" }).check();
       await page.getByLabel("Number").fill("771234567");
       await page.getByLabel("Name on the account").fill("Awa Ndiaye");
+      // The amount is in francs, set to the most one payout may be now: $15.00 held, at Switch's published rate.
+      await expect(page.getByLabel("How much")).toHaveValue("8806");
+      await expect(page.getByText("From 5 872 F to 8 806 F at a time.", { exact: true })).toBeVisible();
+      await page.getByLabel("How much").fill("8800");
       await page.clock.fastForward(1_000);
-      await expect(page.getByText("about 6 540 F", { exact: true })).toBeVisible();
-      await expect(page.getByText("At the rate of 2 Oct, 21:40 UTC.", { exact: true })).toBeVisible();
+      // The francs figure is Switch's quote for the francs typed, and the dollars it takes from the balance come second.
+      await expect(page.getByText("about 8 800 F", { exact: true })).toBeVisible();
+      expect(asked.priced()).toEqual({ country: "SN", local: 8800 });
+      await expect(page.getByText(/^\$15\.\d\d from your balance, at the rate of 3 Oct, 10:15 UTC\.$/)).toBeVisible();
       const send = page.getByRole("button", { name: "Send to my Orange" });
       await expect(send).toBeEnabled();
       await expect(page.getByText(/USDC|wallet|address|token|chain/i)).toHaveCount(0);
@@ -113,6 +130,8 @@ test.describe("your mobile money", () => {
       // What the routes were asked: the exchange's own transaction, the payout's fields, and the deposit, exactly.
       expect(asked.started()).toEqual({ exitTx: `0x${"e1".repeat(32)}`, country: "SN", network: "ORANGE", number: "771234567", holderName: "Awa Ndiaye" });
       expect(asked.sent()).toMatchObject({ coin: "0x754704Bc059F8C67012fEd69BC8A327a5aafb603", to: "0x3131b6f6a32751C9d99C1710e357A6C4297d17Bc", value: "11190000" });
+      // The exchange was taken with the second, larger amount: the one whose floor reaches what Switch asks.
+      expect(asked.started()).toBeTruthy();
       await shot(page, size.name, "3-on-its-way");
 
       await page.clock.fastForward(6_000);
@@ -155,6 +174,19 @@ test.describe("your mobile money", () => {
       await expect(other.page.getByRole("button", { name: "Send to my Orange" })).toBeDisabled();
       await shot(other.page, size.name, "6-cannot-be-priced");
       await other.context.close();
+    });
+
+    test(`the day's ceiling met: said in place of the form, nothing to fill in (${size.name})`, async ({ browser, baseURL }) => {
+      const device = await profile(browser, baseURL, size.viewport);
+      const { page } = device;
+      await inSenegal(device, "arrived", true, "5000000");
+      await page.goto("/cash-out");
+      await page.getByRole("button", { name: "Send to my mobile money" }).click();
+      await expect(page.getByText("You have sent $500.00 to mobile money today, the most for a day. It opens again tomorrow.", { exact: true })).toBeVisible();
+      await expect(page.getByLabel("How much")).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /^Send to my/ })).toHaveCount(0);
+      await shot(page, size.name, "7-the-day-is-full");
+      await device.context.close();
     });
   }
 });

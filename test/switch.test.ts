@@ -87,11 +87,41 @@ test("dollars go to Switch and come back by their digits, never through a float 
 });
 
 test("a quote moves nothing and says what the dollars give, and what Switch keeps when it says", async () => {
-  const { fetchLike, calls } = answering({ success: true, data: { rate: 587.13, expiry: "2026-10-02T21:45:00.000Z", settlement: "5-10 minutes", fee: { total: 0.12, currency: "USDC" }, destination: { amount: 6510.2, currency: "XOF" } } });
+  const { fetchLike, calls } = answering({ success: true, data: { rate: 587.13, expiry: "2026-10-02T21:45:00.000Z", settlement: "5-10 minutes", fee: { total: 0.12, currency: "USDC" }, source: { amount: 11.2, currency: "USDC" }, destination: { amount: 6510.2, currency: "XOF" } } });
   const quote = await quotePayout({ country: "SN", units: 11_200_000n }, { fetchLike, env: ENV, now: () => new Date("2026-10-02T21:40:00.000Z") });
   assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { amount: 11.2, country: "SN", asset: "monad:usdc", channel: "MOBILEMONEY" });
   assert.equal(calls[0].url, "https://api.onswitch.xyz/offramp/quote");
-  assert.deepEqual(quote, { local: 6510.2, currency: "XOF", rate: 587.13, feeUnits: 120_000n, at: "2026-10-02T21:40:00.000Z", expiry: "2026-10-02T21:45:00.000Z", settlement: "5-10 minutes" });
+  assert.deepEqual(quote, { local: 6510.2, currency: "XOF", sourceUnits: 11_200_000n, rate: 587.13, feeUnits: 120_000n, at: "2026-10-02T21:40:00.000Z", expiry: "2026-10-02T21:45:00.000Z", settlement: "5-10 minutes" });
+});
+
+test("asked for an amount of local money, the quote is Switch's exact output: the francs delivered, the dollars counted", async () => {
+  const { fetchLike, calls } = answering({ success: true, data: { rate: 587.13, source: { amount: 15.07, currency: "USDC" }, destination: { amount: 8800, currency: "XOF" } } });
+  const quote = await quotePayout({ country: "SN", local: 8800, currency: "XOF" }, { fetchLike, env: ENV });
+  // docs.onswitch.xyz, Get quote: "With true, amount is the local currency to deliver".
+  assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { amount: 8800, country: "SN", currency: "XOF", asset: "monad:usdc", channel: "MOBILEMONEY", exact_output: true });
+  assert.equal(quote.sourceUnits, 15_070_000n);
+  assert.equal(quote.local, 8800);
+});
+
+test("Switch's live answers of 2 Oct 2026, 23:23 UTC, with no fee in them, read as they came", async () => {
+  // Measured with the live key, quotes only: the dollars sent for Senegal, then the francs delivered.
+  const sent = { expiry: "2026-10-03T00:28:50+01:00", settlement: "5-10 minutes", channel: "MOBILEMONEY", rate: 589.21703, source: { amount: 10, amount_usd: 10, currency: "USDC", network: "MONAD" }, destination: { amount: 5892.1703, amount_usd: 10, currency: "XOF", network: "FIAT" } };
+  const byDollars = await quotePayout({ country: "SN", units: 10_000_000n }, { fetchLike: answering({ success: true, message: "Offramp quote fetched successfully", data: sent }).fetchLike, env: ENV });
+  assert.equal(byDollars.local, 5892.1703);
+  assert.equal(byDollars.sourceUnits, 10_000_000n);
+  assert.equal(byDollars.feeUnits, null, "no fee line in the answer, so none is said");
+  const delivered = { expiry: "2026-10-03T00:29:32+01:00", settlement: "5-10 minutes", channel: "MOBILEMONEY", rate: 589.21703, source: { amount: 14.935075, amount_usd: 14.935074, currency: "USDC", network: "MONAD" }, destination: { amount: 8800, amount_usd: 14.935074, currency: "XOF", network: "FIAT" } };
+  const byFrancs = await quotePayout({ country: "SN", local: 8800, currency: "XOF" }, { fetchLike: answering({ success: true, message: "Offramp quote fetched successfully", data: delivered }).fetchLike, env: ENV });
+  assert.equal(byFrancs.sourceUnits, 14_935_075n);
+  assert.equal(byFrancs.local, 8800);
+  assert.equal(byFrancs.expiry, "2026-10-03T00:29:32+01:00");
+});
+
+test("Switch's published rates are read per currency", async () => {
+  const { payoutRates } = await import("../src/switch");
+  const rates = await payoutRates({ fetchLike: answering({ success: true, data: [{ currency: "XOF", rate: 587.1333 }, { currency: "XAF", rate: 610.164 }, { currency: "BAD", rate: "x" }] }).fetchLike, env: ENV });
+  assert.equal(rates.get("XOF"), 587.1333);
+  assert.equal(rates.has("BAD"), false);
 });
 
 test("a payout is opened for the person's own number, refunded to their own account, for a gift, and its deposit is read exactly", async () => {

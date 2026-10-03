@@ -55,3 +55,16 @@ test("Switch's time is said in words that never break at a hyphen", async () => 
   assert.equal(delayInWords("30 - 120 seconds"), "30 to 120 seconds");
   assert.equal(delayInWords("Same day"), "Same day");
 });
+
+test("the two ceilings: $200 a payout, $500 a day per account, each refused by its sentence, and the most one payout may be now", async () => {
+  const { ceilingProblem, mostNow, MOBILE_CEILINGS, MOBILE_REFUSALS } = await import("../src/mobile-money");
+  assert.deepEqual(MOBILE_CEILINGS, { usdPerPayout: 200, usdPerAccountPerDay: 500 });
+  assert.equal(ceilingProblem(200_000_000n, 0n), null);
+  assert.equal(ceilingProblem(200_000_001n, 0n), "One payout can be $200.00 at most for now. Nothing was taken.");
+  assert.equal(ceilingProblem(150_000_000n, 400_000_000n), "Up to $500.00 a day can go to mobile money for now, and $400.00 already went today. Nothing was taken.");
+  assert.equal(ceilingProblem(100_000_000n, 400_000_000n), null);
+  assert.equal(mostNow(0n), 200_000_000n);
+  assert.equal(mostNow(420_000_000n), 80_000_000n);
+  assert.equal(mostNow(520_000_000n), 0n);
+  assert.equal(MOBILE_REFUSALS.dayReached(), "You have sent $500.00 to mobile money today, the most for a day. It opens again tomorrow.");
+});

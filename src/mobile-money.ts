@@ -6,6 +6,37 @@
  * server setting `MOBILE_MONEY_OUT=on`, unset at the merge, and nothing about the way is offered while it is off.
  */
 
+/**
+ * How much mobile money can carry for now (the founder, 3 Oct 2026), the same rule as the phone and gift card way out:
+ * a ceiling per payout and one per account and per day, in dollars from the balance, checked when the payout is priced
+ * and again when it is sent, since a price moves nothing and counts for nothing.
+ */
+export const MOBILE_CEILINGS = Object.freeze({ usdPerPayout: 200, usdPerAccountPerDay: 500 });
+
+const DOLLAR = 1_000_000n;
+const dollars = (units: bigint) => `$${(units / DOLLAR).toString()}.${((units % DOLLAR) / 10_000n).toString().padStart(2, "0")}`;
+
+export const MOBILE_REFUSALS = {
+  overPayout: () => `One payout can be ${dollars(BigInt(MOBILE_CEILINGS.usdPerPayout) * DOLLAR)} at most for now. Nothing was taken.`,
+  overDay: (used: bigint) => `Up to ${dollars(BigInt(MOBILE_CEILINGS.usdPerAccountPerDay) * DOLLAR)} a day can go to mobile money for now, and ${dollars(used)} already went today. Nothing was taken.`,
+  /** Said in place of the form once the day's ceiling leaves less than the smallest payout. */
+  dayReached: () => `You have sent ${dollars(BigInt(MOBILE_CEILINGS.usdPerAccountPerDay) * DOLLAR)} to mobile money today, the most for a day. It opens again tomorrow.`,
+} as const;
+
+/** What one more payout of this many dollars may be, given what the account already sent today; a refusal names the ceiling met. */
+export function ceilingProblem(units: bigint, usedToday: bigint): string | null {
+  if (units > BigInt(MOBILE_CEILINGS.usdPerPayout) * DOLLAR) return MOBILE_REFUSALS.overPayout();
+  if (usedToday + units > BigInt(MOBILE_CEILINGS.usdPerAccountPerDay) * DOLLAR) return MOBILE_REFUSALS.overDay(usedToday);
+  return null;
+}
+
+/** The most one payout may be now: the ceiling per payout, or what the day leaves, whichever is less. */
+export function mostNow(usedToday: bigint): bigint {
+  const leftToday = BigInt(MOBILE_CEILINGS.usdPerAccountPerDay) * DOLLAR - usedToday;
+  const perPayout = BigInt(MOBILE_CEILINGS.usdPerPayout) * DOLLAR;
+  return leftToday < 0n ? 0n : leftToday < perPayout ? leftToday : perPayout;
+}
+
 /** Whether the way is switched on here: the setting, and the key without which nothing could be asked. */
 export function mobileMoneyOn(env: Readonly<Record<string, string | undefined>> = process.env): boolean {
   return env.MOBILE_MONEY_OUT?.trim() === "on" && Boolean(env.SWITCH_SERVICE_KEY?.trim());

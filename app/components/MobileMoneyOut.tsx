@@ -2,10 +2,10 @@
 import { useEffect, useState } from "react";
 import type { LocalAccount } from "viem";
 import { ApiError } from "@/src/client/api";
-import { followMobileMoney, priceMobileMoney, sendToMobileMoney, type FollowedPayout, type MobileOffer, type MobilePrice } from "@/src/client/mobile-money";
+import { followMobileMoney, priceMobileMoney, sendToMobileMoney, type AccountOffer, type FollowedPayout, type MobilePrice } from "@/src/client/mobile-money";
 import { AUSD } from "@/src/coins";
 import { twoDecimalsDown } from "@/src/exit-steps";
-import { delayInWords, localInWords } from "@/src/mobile-money";
+import { delayInWords, localInWords, MOBILE_REFUSALS } from "@/src/mobile-money";
 import { MOBILE_OUT as W, USE_MONEY } from "@/src/sentences";
 import { ChoiceList } from "../kit/ChoiceList";
 import { BODY, CARD, CARD_AMOUNT, CARD_LABEL, FIELD, HELP, PRIMARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
@@ -16,23 +16,31 @@ import { BODY, CARD, CARD_AMOUNT, CARD_LABEL, FIELD, HELP, PRIMARY_BUTTON, SMALL
  * with the time Switch publishes for the country, and then arrived, or that it failed and the money comes back.
  *
  * The operators, the rules of the number and of the name, the smallest and largest payout and the time are Switch's
- * own for the country (`offer`, read while the person looks). The figure is Switch's quote for the dollars the exchange
- * would make, asked again whenever the amount changes; nothing moves before the button.
+ * own for the country (`offer`, read while the person looks). The amount is typed in the country's own money, francs in
+ * Senegal, and the dollars it takes from the balance come second (the founder, 3 Oct 2026): the figure is Switch's quote
+ * for exactly the amount typed, asked again whenever it changes. The field's bounds are said in that money at Switch's
+ * published rate; the two ceilings, per payout and per day, are the account's own. Nothing moves before the button.
  */
 
-type Offered = Extract<MobileOffer, { offered: true }>;
+type Offered = Extract<AccountOffer, { offered: true; mostUnits: string }>;
 type Step = "changing" | "placing" | "sending";
 
 function dollarsOf(units: bigint): string {
   return `$${twoDecimalsDown(units, AUSD.decimals)}`;
 }
 
-/** Dollars typed, in units of six decimals, or nothing when what is typed is not an amount. */
-function unitsTyped(typed: string): bigint | null {
-  const clean = typed.trim().replace(/^\$/, "");
+/** An amount typed in local money, spaces and a trailing F allowed, or nothing when it is not one. */
+function localTyped(typed: string): number | null {
+  const clean = typed.replace(/[\s\u202f]/g, "").replace(/F$/i, "").replace(",", ".");
   if (!/^\d+(\.\d{0,2})?$/.test(clean)) return null;
-  const [whole, part = ""] = clean.split(".");
-  return BigInt(whole) * 1_000_000n + BigInt(part.padEnd(2, "0")) * 10_000n;
+  const amount = Number(clean);
+  return amount > 0 ? amount : null;
+}
+
+/** Dollars of six decimals in local money at a rate: cut down, or, for a bound that must be reached, raised. */
+function inLocal(units: bigint, rate: number, round: "down" | "up"): number {
+  const value = (Number(units) / 1e6) * rate;
+  return round === "up" ? Math.ceil(value) : Math.floor(value);
 }
 
 /** "2 Oct, 21:40 UTC": the moment a quote was made, in the time every pass and every date of the product is said in. */
@@ -48,27 +56,33 @@ export function MobileMoneyOut(props: Readonly<{ offer: Offered; ausd: bigint; e
   const [network, setNetwork] = useState<string | null>(offer.operators.length === 1 ? offer.operators[0].code : null);
   const [number, setNumber] = useState("");
   const [holder, setHolder] = useState("");
-  const [typed, setTyped] = useState(() => twoDecimalsDown(props.ausd, AUSD.decimals));
+  // The bounds of one payout now, in dollars: the corridor's, the ceilings', and what the balance holds.
+  const least = BigInt(offer.minimumUnits);
+  const mostUnits = [BigInt(offer.mostUnits), BigInt(offer.maximumUnits), props.ausd].reduce((low, value) => (value < low ? value : low));
+  const leastLocal = inLocal(least, offer.rate, "up");
+  const mostLocal = inLocal(mostUnits, offer.rate, "down");
+  const dayReached = BigInt(offer.mostUnits) < least;
+  // What it starts at: the most one payout may be now, in the country's money, at Switch's published rate.
+  const [typed, setTyped] = useState(() => (mostLocal >= leastLocal ? String(mostLocal) : ""));
   const [price, setPrice] = useState<MobilePrice | "unpriced" | null>(null);
   const [step, setStep] = useState<Step | null>(null);
   const [payout, setPayout] = useState<FollowedPayout | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
 
   const operatorName = offer.operators.find((operator) => operator.code === network)?.name ?? "";
-  const units = unitsTyped(typed);
-  const least = BigInt(offer.minimumUnits);
-  const within = units !== null && units >= least && units <= BigInt(offer.maximumUnits) && units <= props.ausd;
+  const local = localTyped(typed);
+  const within = local !== null && local >= leastLocal && local <= mostLocal && !dayReached;
   const digits = number.replace(/\D/g, "");
   const numberFits = new RegExp(offer.numberRule).test(digits);
   const holderFits = new RegExp(offer.nameRule).test(holder.trim());
 
   // The figure, priced again a moment after the amount stops changing: the exchange's floor, then Switch's quote for it.
   useEffect(() => {
-    if (!within || units === null || payout || step) return;
+    if (!within || local === null || payout || step) return;
     let current = true;
     const timer = setTimeout(() => {
       setPrice(null);
-      priceMobileMoney({ amount: units, country: offer.country }).then(
+      priceMobileMoney({ local, country: offer.country }).then(
         (priced) => current && setPrice(priced),
         (error) => {
           if (!current) return;
@@ -83,7 +97,7 @@ export function MobileMoneyOut(props: Readonly<{ offer: Offered; ausd: bigint; e
     };
     // The amount's units decide it; the callbacks of the parent do not.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [within, units?.toString(), offer.country, payout, step]);
+  }, [within, local, offer.country, payout, step]);
 
   // A payout on its way is asked about every five seconds for a quarter of an hour, then left to "Check again".
   const waiting = payout?.phase === "waiting";
@@ -163,6 +177,21 @@ export function MobileMoneyOut(props: Readonly<{ offer: Offered; ausd: bigint; e
     );
   }
 
+  // The day's ceiling met: said in place of the form, and nothing to fill in.
+  if (dayReached) {
+    return (
+      <section className={CARD}>
+        <h2 className={TITLE}>{W.title}</h2>
+        <p className={BODY} data-mobile-ceiling>
+          {MOBILE_REFUSALS.dayReached()}
+        </p>
+        <button type="button" onClick={props.onBack} className={`${SMALL_BUTTON} self-start`}>
+          {W.back}
+        </button>
+      </section>
+    );
+  }
+
   const busy = step !== null;
   const ready = price !== null && price !== "unpriced" && network !== null && numberFits && holderFits && within && !busy;
   return (
@@ -189,8 +218,8 @@ export function MobileMoneyOut(props: Readonly<{ offer: Offered; ausd: bigint; e
       </label>
       <label className="flex flex-col gap-[var(--space-xs)]">
         <span className={CARD_LABEL}>{W.amount}</span>
-        <input value={typed} onChange={(event) => setTyped(event.target.value)} inputMode="decimal" className={FIELD} disabled={busy} />
-        <span className={HELP}>{W.amountHelp(dollarsOf(least))}</span>
+        <input value={typed} onChange={(event) => setTyped(event.target.value)} inputMode="numeric" className={FIELD} disabled={busy} />
+        <span className={HELP}>{W.amountHelp(localInWords(leastLocal, offer.currency), localInWords(mostLocal, offer.currency))}</span>
       </label>
       {/* The figure on the number, and when it was priced: Switch's quote, never a rate of ours. */}
       <div aria-live="polite" className="flex flex-col gap-[var(--space-xs)]" data-mobile-figure>
@@ -199,7 +228,7 @@ export function MobileMoneyOut(props: Readonly<{ offer: Offered; ausd: bigint; e
         {price && price !== "unpriced" ? (
           <>
             <p className={CARD_AMOUNT}>{W.about(localInWords(price.local, price.currency))}</p>
-            <p className={HELP}>{W.pricedAt(momentOf(price.at))}</p>
+            <p className={HELP}>{W.fromBalance(dollarsOf(price.dollars), momentOf(price.at))}</p>
           </>
         ) : null}
       </div>

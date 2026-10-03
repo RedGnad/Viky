@@ -21,7 +21,10 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  *                                         HMAC-SHA256 hex digest of the raw body under the service key.
  *
  * Live on 2 Oct 2026 the key answered coverage, requirements and rates, and refused every quote with "Access key not
- * enabled for REMITTANCE": until Switch enables it, no payout can be priced, and the way is offered nowhere.
+ * enabled for REMITTANCE": until Switch enables it, no payout can be priced, and the way is offered nowhere. From 23:23
+ * UTC that day it answers them: in Senegal and in Ivory Coast alike, 589.21703 francs a dollar, 5 892.17 F for $10 and
+ * 8 838.26 F for $15, 8 800 F for $14.935075, against 587.233 published by GET /rates in the same minute, and with no
+ * `fee` in the answer, where the docs' example carries one. No payout has run yet.
  */
 
 export const SWITCH_API = "https://api.onswitch.xyz";
@@ -176,6 +179,8 @@ export type PayoutQuote = Readonly<{
   /** The local amount the payout gives, and its currency. */
   local: number;
   currency: string;
+  /** The dollars that must be sent for it, as Switch counts them. */
+  sourceUnits: bigint;
   rate: number;
   /** What Switch keeps, in dollars, when its quote says. */
   feeUnits: bigint | null;
@@ -185,20 +190,45 @@ export type PayoutQuote = Readonly<{
   settlement: string | null;
 }>;
 
-/** What a payout of this many dollars gives now, in the country's currency. Moves nothing. */
-export async function quotePayout(input: { country: string; units: bigint }, deps: { fetchLike?: FetchLike; env?: Readonly<Record<string, string | undefined>>; now?: () => Date } = {}): Promise<PayoutQuote> {
-  const data = await switchCall<Record<string, unknown>>("/offramp/quote", { ...deps, body: { amount: amountOf(input.units), country: input.country, asset: SWITCH_ASSET, channel: SWITCH_CHANNEL } });
+/**
+ * What a payout gives now, in the country's currency. Moves nothing. Asked either for so many dollars sent, or, with
+ * `local`, for so much local currency delivered: Switch's `exact_output`, which then counts the dollars that must be sent
+ * for it (docs.onswitch.xyz, Get quote, read 2 Oct 2026).
+ */
+export async function quotePayout(
+  input: Readonly<{ country: string; units: bigint } | { country: string; local: number; currency: string }>,
+  deps: { fetchLike?: FetchLike; env?: Readonly<Record<string, string | undefined>>; now?: () => Date } = {},
+): Promise<PayoutQuote> {
+  const asked =
+    "local" in input
+      ? { amount: input.local, country: input.country, currency: input.currency, asset: SWITCH_ASSET, channel: SWITCH_CHANNEL, exact_output: true }
+      : { amount: amountOf(input.units), country: input.country, asset: SWITCH_ASSET, channel: SWITCH_CHANNEL };
+  const data = await switchCall<Record<string, unknown>>("/offramp/quote", { ...deps, body: asked });
   const destination = data.destination as Record<string, unknown> | undefined;
+  const source = data.source as Record<string, unknown> | undefined;
   const fee = data.fee as Record<string, unknown> | undefined;
   return {
     local: number(destination?.amount),
     currency: text(destination?.currency),
+    sourceUnits: unitsOf(number(source?.amount)),
     rate: number(data.rate),
     feeUnits: fee && typeof fee.total === "number" ? unitsOf(fee.total) : null,
     at: (deps.now ?? (() => new Date()))().toISOString(),
     expiry: typeof data.expiry === "string" ? data.expiry : null,
     settlement: typeof data.settlement === "string" ? data.settlement : null,
   };
+}
+
+/** Switch's published rate for each local currency, from a dollar, for payouts: GET /rates?direction=OFFRAMP. */
+export async function payoutRates(deps: { fetchLike?: FetchLike; env?: Readonly<Record<string, string | undefined>> } = {}): Promise<ReadonlyMap<string, number>> {
+  const rows = await switchCall<unknown[]>("/rates?direction=OFFRAMP", deps);
+  if (!Array.isArray(rows)) throw new SwitchError("BAD_ANSWER", "The mobile money service answered something unexpected");
+  const rates = new Map<string, number>();
+  for (const row of rows) {
+    const { currency, rate } = row as { currency?: unknown; rate?: unknown };
+    if (typeof currency === "string" && typeof rate === "number" && rate > 0) rates.set(currency, rate);
+  }
+  return rates;
 }
 
 export type Beneficiary = Readonly<{ network: string; number: string; holderName: string }>;
