@@ -5,7 +5,8 @@ import { giftEscrowV2Abi } from "./gift-escrow-v2-abi";
 import { milestoneGiftAbi } from "./milestone-gift-abi";
 import { milestoneGiftV2Abi } from "./milestone-gift-v2-abi";
 import { monadTransport, PUBLIC_RPC_URL } from "./monad/chain";
-import { consentAnchorAddress, giftEscrowV2Address, milestoneGiftV2Address } from "./v2";
+import { giftEscrowV3Abi } from "./gift-escrow-v3-abi";
+import { consentAnchorAddress, giftEscrowV2Address, giftEscrowV3Address, milestoneGiftV2Address } from "./v2";
 
 /**
  * What the chain itself says about Viky's contracts, read when the judges page is served (U2, S5).
@@ -133,11 +134,16 @@ export async function contractFacts(): Promise<ContractFacts[]> {
   const earlier = process.env.NEXT_PUBLIC_EARLIER_GIFT_ESCROW_ADDRESS?.trim();
   const milestone = process.env.NEXT_PUBLIC_MILESTONE_GIFT_ADDRESS?.trim();
   const escrowV2 = giftEscrowV2Address();
+  const escrowV3 = giftEscrowV3Address();
   const milestoneV2 = milestoneGiftV2Address();
   const anchor = consentAnchorAddress();
   const jobs: Array<Promise<ContractFacts>> = [];
-  // The second version first: it is where a gift made today goes.
-  if (escrowV2) jobs.push(factsFor("The gift contract, for a habit, second version: new gifts are made here", escrowV2, giftEscrowV2Abi as unknown as Abi, [
+  // Where a gift made today goes comes first: the third daily contract once it is set, the second version before it.
+  if (escrowV3) jobs.push(factsFor("The gift contract, for a habit, third version: new gifts are made here, and a day is paid the day it is read", escrowV3, giftEscrowV3Abi as unknown as Abi, [
+    { what: "new gifts", getter: "creationPaused" },
+    { what: "readings and openings", getter: "checkInPaused" },
+  ], [EVIDENCE_SIGNER, ANNOUNCED_SIGNER]));
+  if (escrowV2) jobs.push(factsFor(escrowV3 ? "The gift contract, for a habit, second version: it runs the gifts it holds" : "The gift contract, for a habit, second version: new gifts are made here", escrowV2, giftEscrowV2Abi as unknown as Abi, [
     { what: "new gifts", getter: "creationPaused" },
     { what: "readings and openings", getter: "checkInPaused" },
   ], [EVIDENCE_SIGNER, ANNOUNCED_SIGNER]));

@@ -29,6 +29,7 @@ import { rememberGiftLink } from "@/src/gift-link-memory";
 import { formatAusd } from "@/src/gift-reader";
 import { dollarsToUnits } from "@/src/money";
 import { settlingTimeInWords } from "@/src/pass-schedule";
+import { newDailyGiftsPayTheSameDay } from "@/src/v2";
 import { forgetPendingGift, peekPendingGift, savePendingGift, type PendingGift } from "@/src/pending-gift";
 import { wayInAsksNothing, wayInPage, waysIn, WAY_IN_USDC, type WayIn } from "@/src/rails";
 import { JudgeCode } from "../kit/offer/JudgeCode";
@@ -544,7 +545,7 @@ export function PayGift() {
                   <p className={META}>{W.made.days(made.days)}</p>
                 </div>
               </div>
-              <p className={BODY}>{W.made.firstDay(madeCondition?.source ?? "")}</p>
+              <p className={BODY}>{W.made.firstDay(madeCondition?.source ?? "", newDailyGiftsPayTheSameDay())}</p>
             </>
           )}
           <p className={HELP}>{W.made.reference(whenInWords(made.atMs), made.giftId)}</p>
@@ -577,7 +578,7 @@ export function PayGift() {
               <ol className="flex list-decimal flex-col gap-[var(--space-sm)] pl-[var(--space-lg)]">
                 {(madeMilestone
                   ? M.made.next(made.recipientName, madeCondition?.source ?? "", made.target ?? 0, made.days, settlingTimeInWords(made.atMs), made.namedByFunder === true)
-                  : W.made.next(made.recipientName, madeCondition?.words.theyConnect ?? W.made.theyConnectAny, madeCondition?.words.eachDay ?? "", spokenAmount(perDay), settlingTimeInWords(made.atMs))
+                  : W.made.next(made.recipientName, madeCondition?.words.theyConnect ?? W.made.theyConnectAny, madeCondition?.words.eachDay ?? "", spokenAmount(perDay), settlingTimeInWords(made.atMs), newDailyGiftsPayTheSameDay())
                 ).map((line) => (
                   <li key={line}>{line}</li>
                 ))}

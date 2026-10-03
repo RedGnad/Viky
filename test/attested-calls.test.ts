@@ -604,7 +604,7 @@ test("the gift's page says the limit where it says where the gift stands, folds 
   assert.match(page, /const emptyReserve = limit && status\.opened && condition \? \(limit\[reserveOf\(condition\.nature\)\] \? reserveOf\(condition\.nature\) : null\) : null;/);
   assert.match(page, /const readingsStopped = emptyReserve === "readings";/);
   assert.match(page, /&& \(voice === "recipient" \|\| voice === "funder"\) && !readingsStopped\);/, "no live reading while the limit stands");
-  assert.match(page, /const nextReading = nowMs === 0 \|\| gift\.finished \|\| gift\.cancelled \|\| readingsStopped \? null :/, "and no next reading is announced");
+  assert.match(page, /const nextReading = nowMs === 0 \|\| gift\.finished \|\| gift\.cancelled \|\| readingsStopped \|\| asItGoes \? null :/, "and no next reading is announced");
   // In the open: the source and the day. Folded: the open day's hour, what is theirs, what is not touched, where to write.
   assert.match(page, /said: LIMIT\.said\(source, emptyReserve, limit\.again, mine\),/);
   assert.match(page, /openDayInWords\(limit\.countableUntil, mine, recipientName, nowMs\)/, "the hour in the reader's own clock, to each of the two people");
@@ -614,7 +614,8 @@ test("the gift's page says the limit where it says where the gift stands, folds 
   assert.match(card, /\{limit \? \(\n\s*<p className="limit-said" role="status" data-limit-said>\n\s*\{limit\.said\}/, "one sentence, in the quiet colour of the labels");
   assert.match(card, /<details className="gift-fold" data-limit-can>\n\s*<summary className="gift-fold-name">\n\s*\{LIMIT\.can\}/, "the rest folded under its own name");
   assert.ok(card.indexOf("data-limit-can") < card.indexOf("{L.agreed}"), "before what was agreed: it is what the person came to ask");
-  assert.match(page, /&& !gift\.sourceClosed && !readingsStopped \? \(/, "and no count is offered");
+  assert.match(page, /&& !gift\.sourceClosed && !readingsStopped && !asItGoes \? \(/, "and no count is offered");
+  assert.match(page, /const readsTheDay = Boolean\(asItGoes && \(mine \|\| readerIsFunder\) && !readingsStopped && lessonWouldPay\(today\)\);/, "nor does a habit read as its page opens look");
   // A proof a person shows: the card says it too, and nothing is offered to start one.
   assert.match(page, /limitReached=\{emptyReserve === "proofs"\}/);
   assert.match(readFileSync("app/kit/ShowProof.tsx", "utf8"), /if \(limitReached && state\.at !== "waiting"\) return null;/);

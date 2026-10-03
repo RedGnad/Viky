@@ -52,6 +52,15 @@ export function linkOpenedDailyContracts(): readonly Hex[] {
   return [giftEscrowV2Address(), giftEscrowV3Address()].filter((address): address is Hex => address !== null);
 }
 
+/**
+ * Whether a daily gift made now is paid the day its lesson is done, and starts the day it is connected: new daily
+ * gifts go to the third daily contract. What a funder reads before a gift exists says the rule of the contract it
+ * will be made on.
+ */
+export function newDailyGiftsPayTheSameDay(): boolean {
+  return giftEscrowV3Address() !== null;
+}
+
 /** The second version of the milestone contract, or nothing while it is not set. */
 export function milestoneGiftV2Address(): Hex | null {
   return addressOf(process.env.NEXT_PUBLIC_MILESTONE_GIFT_V2_ADDRESS);
