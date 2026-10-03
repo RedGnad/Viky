@@ -91,8 +91,19 @@ export function dailyCeilings(env: Environment = process.env): { perGift: number
 /** The day of the month a cycle starts, at midnight UTC: the dashboard showed the cycle of 23 Sep to 24 Oct 2026. */
 export const RECLAIM_CYCLE_DAY = 23;
 
-/** The shares of an allowance at which the operator is told: half, four fifths, and all of it, which is the limit. */
-export const RECLAIM_ALERT_AT = [0.5, 0.8, 1] as const;
+/**
+ * What is left of an allowance when the operator is told: fifteen, ten, five, and none, which is the limit (the
+ * founder, 3 Oct 2026). By what is left and not by a share of the whole: that day thirty readings were left for
+ * three weeks and a judging, and "four fifths" said nothing of them.
+ */
+export const RECLAIM_ALERT_LEFT = [15, 10, 5, 0] as const;
+
+/**
+ * The judging of the event this is built for, in UTC days, both included. Each of those mornings the operator is sent
+ * what the day before spent (`morningSummaryDue`), from six o'clock UTC.
+ */
+export const JUDGING = { from: "2026-10-14", until: "2026-10-27" } as const;
+export const MORNING_SUMMARY_HOUR_UTC = 6;
 
 /**
  * What was already spent in the cycle that began on 23 Sep 2026 when this journal began, counted on 3 Oct 2026: 126
@@ -101,6 +112,14 @@ export const RECLAIM_ALERT_AT = [0.5, 0.8, 1] as const;
  * this is a floor. One proof was asked of a person, on 27 Sep, and never came back. It counts for that cycle alone.
  */
 export const BEFORE_THE_JOURNAL = { cycleFrom: "2026-09-23T00:00:00.000Z", started: 128, proved: 70, asked: 1, shown: 0 } as const;
+
+/**
+ * Of what was counted before the journal began, what one fault of ours cost on 30 Sep 2026: a Chess.com gift whose
+ * ratings answered 404, read by the pass of every five minutes, which took a new proof of the profile at each round
+ * and found no rating behind it. 114 fetches in five hours, 57 of them a proof, none of them of any use. The rest of
+ * the proofs counted then were real use.
+ */
+export const LOST_ON_30_SEP_2026 = { fetches: 114, proofs: 57 } as const;
 
 let executor: SqlExecutor | undefined;
 let ready: Promise<void> | undefined;
@@ -249,23 +268,34 @@ export function cycleInWords(use: CycleUse | null): string {
 
 export type Alert = Readonly<{ subject: string; text: string }>;
 
-/** The share of an allowance already reached, among those the operator is told at, or none below the first. */
-export function shareReached(used: number, allowed: number): number | null {
-  const reached = RECLAIM_ALERT_AT.filter((share) => used >= Math.ceil(allowed * share));
+/** What is left of an allowance: never less than nothing, whatever was used past it. */
+export function leftOf(used: number, allowed: number): number {
+  return Math.max(0, allowed - used);
+}
+
+/** The mark what is left has come down to, among those the operator is told at, or none while more is left than the first. */
+export function leftMarkReached(used: number, allowed: number): number | null {
+  const left = leftOf(used, allowed);
+  const reached = RECLAIM_ALERT_LEFT.filter((mark) => left <= mark);
   return reached.length > 0 ? reached[reached.length - 1] : null;
 }
 
 /** The days of daily gifts that a reading could still count, and when the first of their windows closes (UTC seconds). */
 export type DaysWaiting = Readonly<{ days: number; gifts: number; nearestEndsAt: number | null }>;
 
-/** What the operator reads when a share of an allowance is reached. At the limit it says what is waiting. */
+/** What the operator reads when what is left of an allowance comes down to a mark. At the limit it says what is waiting. */
 export function allowanceAlert(use: CycleUse, what: "fetches" | "verifications", waiting: DaysWaiting | null = null): Alert {
   const { fetches, verifications } = use;
   const atTheLimit = what === "fetches" ? fetches.proved >= fetches.allowed : verifications.shown >= verifications.allowed;
+  // What is left comes first: it is what there is to decide on. At the limit the subject says the limit.
   const subject =
     what === "fetches"
-      ? `Reclaim: ${atTheLimit ? "the limit is reached, " : ""}${fetches.proved} readings this cycle, of ${fetches.allowed}`
-      : `Reclaim: ${atTheLimit ? "the limit is reached, " : ""}${verifications.shown} proofs shown by people this cycle, of ${verifications.allowed}`;
+      ? atTheLimit
+        ? `Reclaim: the limit is reached, ${fetches.proved} readings this cycle, of ${fetches.allowed}`
+        : `Reclaim: ${leftOf(fetches.proved, fetches.allowed)} readings left until ${utcDayInWords(use.until)}, ${fetches.proved} of ${fetches.allowed} used`
+      : atTheLimit
+        ? `Reclaim: the limit is reached, ${verifications.shown} proofs shown by people this cycle, of ${verifications.allowed}`
+        : `Reclaim: ${leftOf(verifications.shown, verifications.allowed)} proofs of people left until ${utcDayInWords(use.until)}, ${verifications.shown} of ${verifications.allowed} used`;
   const stopped =
     what === "fetches"
       ? "From now Viky sends no attested reading to Reclaim, and each person whose gift waits for one reads why on its page."
@@ -280,8 +310,8 @@ export function allowanceAlert(use: CycleUse, what: "fetches" | "verifications",
     subject,
     text: [
       `Cycle from ${utcDayInWords(use.from)} to ${utcDayInWords(use.until)} (UTC).`,
-      `Readings: ${fetches.proved} attested fetches gave a proof, of ${fetches.started} started, for an allowance of ${fetches.allowed}.`,
-      `Proofs of people: ${verifications.shown} came back from Reclaim, of ${verifications.asked} asked, ${verifications.verified} verified, for an allowance of ${verifications.allowed}.`,
+      `Readings: ${fetches.proved} attested fetches gave a proof, of ${fetches.started} started, for an allowance of ${fetches.allowed}: ${leftOf(fetches.proved, fetches.allowed)} left.`,
+      `Proofs of people: ${verifications.shown} came back from Reclaim, of ${verifications.asked} asked, ${verifications.verified} verified, for an allowance of ${verifications.allowed}: ${leftOf(verifications.shown, verifications.allowed)} left.`,
       ...(atTheLimit ? ["", stopped, ...(what === "fetches" ? [days] : [])] : []),
       "",
       "Reclaim gives more on request only: ask, then set RECLAIM_FETCH_ALLOWANCE or RECLAIM_VERIFICATION_ALLOWANCE to what it grants.",
@@ -301,9 +331,9 @@ export type AlertsDueDeps = Readonly<{
 }>;
 
 /**
- * The alerts that have just become due, each claimed so it is said once in its cycle: the highest share reached of
- * each allowance, and nothing when it was told already. Already past a share when first looked at, only that one is
- * told, not those under it.
+ * The alerts that have just become due, each claimed so it is said once in its cycle: the mark what is left of each
+ * allowance has come down to, and nothing when it was told already. Already under a mark when first looked at, only
+ * the lowest one reached is told, not those above it.
  */
 export async function allowanceAlertsDue(nowMs: number = Date.now(), deps: AlertsDueDeps = { use: cycleUse, claim: claimPass }): Promise<Alert[]> {
   const use = await deps.use(nowMs);
@@ -313,13 +343,80 @@ export async function allowanceAlertsDue(nowMs: number = Date.now(), deps: Alert
     ["verifications", use.verifications.shown, use.verifications.allowed],
   ] as const;
   for (const [what, used, allowed] of kinds) {
-    const share = shareReached(used, allowed);
-    if (share === null) continue;
-    if (!(await deps.claim(`reclaim:${what}:${use.from.slice(0, 10)}:${share}`, TOLD_ONCE_SECONDS, nowMs))) continue;
-    const waiting = what === "fetches" && share === 1 && deps.waiting ? await deps.waiting(nowMs).catch(() => null) : null;
+    const mark = leftMarkReached(used, allowed);
+    if (mark === null) continue;
+    if (!(await deps.claim(`reclaim:${what}:${use.from.slice(0, 10)}:left-${mark}`, TOLD_ONCE_SECONDS, nowMs))) continue;
+    const waiting = what === "fetches" && mark === 0 && deps.waiting ? await deps.waiting(nowMs).catch(() => null) : null;
     due.push(allowanceAlert(use, what, waiting));
   }
   return due;
+}
+
+// --- the morning's summary, during the judging -----------------------------------------------------------------------
+
+/** What a UTC day spent, a line for each gift and reason: the fetches that gave a proof, and those that did not. */
+export type DaySpent = ReadonlyArray<Readonly<{ gift: string | null; reason: string | null; proved: number; failed: number }>>;
+
+/** The fetches of the UTC day that began at `dayStartMs`, by gift and by reason, the costliest first. */
+export async function spentOn(dayStartMs: number): Promise<DaySpent> {
+  await ensureAttestedCallsSchema();
+  const rows = await sql()`
+    SELECT gift, reason, count(*) FILTER (WHERE ok)::int AS proved, count(*) FILTER (WHERE NOT ok)::int AS failed
+      FROM viky_attested_calls
+     WHERE kind = 'fetch' AND at >= ${new Date(dayStartMs).toISOString()} AND at < ${new Date(dayStartMs + 86_400_000).toISOString()}
+     GROUP BY gift, reason
+     ORDER BY proved DESC, failed DESC, gift`;
+  return rows.map((row) => ({ gift: row.gift === null || row.gift === undefined ? null : String(row.gift), reason: row.reason === null || row.reason === undefined ? null : String(row.reason), proved: Number(row.proved), failed: Number(row.failed) }));
+}
+
+/** Whether a moment is inside the judging, by its UTC day. */
+export function inJudging(nowMs: number): boolean {
+  const day = new Date(nowMs).toISOString().slice(0, 10);
+  return day >= JUDGING.from && day <= JUDGING.until;
+}
+
+const proofs = (count: number) => `${count} ${count === 1 ? "proof" : "proofs"}`;
+
+/**
+ * What the operator reads each morning of the judging: what the day before spent, by gift and by reason, what is left
+ * of each reserve, and the day they start again. `use` is the cycle's count at the moment the summary is made.
+ */
+export function morningSummary(dayStartMs: number, spent: DaySpent, use: CycleUse): Alert {
+  const day = utcDayInWords(new Date(dayStartMs).toISOString());
+  const proved = spent.reduce((sum, line) => sum + line.proved, 0);
+  const failed = spent.reduce((sum, line) => sum + line.failed, 0);
+  const left = leftOf(use.fetches.proved, use.fetches.allowed);
+  const lines = spent.map((line) => `- ${line.gift ? `gift ${line.gift}` : "no gift named"}, ${line.reason ?? "no reason given"}: ${proofs(line.proved)}${line.failed > 0 ? `, ${line.failed} without` : ""}`);
+  return {
+    subject: `Reclaim, ${day}: ${proofs(proved)} spent, ${left} left until ${utcDayInWords(use.until)}`,
+    text: [
+      `On ${day} (UTC), ${proved} attested ${proved === 1 ? "fetch" : "fetches"} gave a proof${failed > 0 ? ` and ${failed} did not` : ""}.`,
+      ...(lines.length > 0 ? ["By gift and by reason:", ...lines] : ["Nothing was asked of Reclaim that day."]),
+      "",
+      `Readings left: ${left} of ${use.fetches.allowed} (${use.fetches.proved} gave a proof this cycle, of ${use.fetches.started} started).`,
+      `Proofs of people left: ${leftOf(use.verifications.shown, use.verifications.allowed)} of ${use.verifications.allowed} (${use.verifications.shown} came back this cycle).`,
+      `Both reserves start again on ${utcDayInWords(use.until)} (UTC).`,
+    ].join("\n"),
+  };
+}
+
+export type MorningSummaryDeps = Readonly<{
+  claim: (name: string, everySeconds: number, nowMs: number) => Promise<boolean>;
+  spent: (dayStartMs: number) => Promise<DaySpent>;
+  use: (nowMs: number) => Promise<CycleUse>;
+}>;
+
+/**
+ * The summary of the day before, when it is due: a morning of the judging, from six o'clock UTC, once. Asked by the
+ * call that already arrives every five minutes (app/api/cron/milestones), so it leaves within minutes of six.
+ */
+export async function morningSummaryDue(nowMs: number = Date.now(), deps: MorningSummaryDeps = { claim: claimPass, spent: spentOn, use: cycleUse }): Promise<Alert | null> {
+  const now = new Date(nowMs);
+  if (!inJudging(nowMs) || now.getUTCHours() < MORNING_SUMMARY_HOUR_UTC) return null;
+  const today = Math.floor(nowMs / 86_400_000);
+  if (!(await deps.claim(`reclaim-summary:${today}`, 2 * 86_400, nowMs))) return null;
+  const yesterday = (today - 1) * 86_400_000;
+  return morningSummary(yesterday, await deps.spent(yesterday), await deps.use(nowMs));
 }
 
 export type AttestedCall = Readonly<{

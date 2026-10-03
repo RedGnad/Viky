@@ -5,6 +5,12 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { BEFORE_THE_JOURNAL, DAILY_CEILING, JUDGING, LOST_ON_30_SEP_2026, RECLAIM_ALERT_LEFT, RECLAIM_ALLOWANCE } from "../src/attested-calls";
+import { fetchesOfGoal } from "../src/certificate-reading";
+import { climbFetches } from "../src/climb-reading";
+import { CODEFORCES_CLIMB } from "../src/climbs";
+import { COURSERA_GOAL_TYPE } from "../src/coursera-certificate";
+import { CREDLY_GOAL_TYPE } from "../src/credly-badge";
 import { COUNTING_PASS, dailyPass, type DailyPassDeps } from "../src/daily-pass";
 import { attestMarathonResult, readMarathonResult } from "../src/marathon-reading";
 import { PLATFORM_PACE, SourcePace } from "../src/source-throttle";
@@ -119,4 +125,43 @@ test("the pace is the numbers the page gives, and a restart of the service forge
 
   assert.ok(page.includes("The pace is held in the service&apos;s memory: a restart or a redeploy of the service forgets a pause and starts the day&apos;s count again."));
   assert.ok(!page.includes("four hundred readings a day at most"), "no ceiling said without its restart");
+});
+
+test("how to try it starts with the daily Duolingo path and gives each path's cost in readings, which is the code's", () => {
+  const from = page.indexOf("data-try-paths");
+  const paths = page.slice(from, page.indexOf("</ul>", from));
+  const order = [
+    "First, Duolingo, a lesson a day: two readings for one connection, one lesson and one day paid.",
+    "A climb on Chess.com: four readings, started and reached.",
+    "On Codeforces a reading is one fetch: two, started and reached.",
+    "A certificate by its link",
+    "A Credly badge: two.",
+    "Strava or Fitbit, by the day: one reading to connect",
+    "A document a person shows (a score, an enrolment, a grade): no reading.",
+  ].map((sentence) => paths.indexOf(sentence));
+  assert.ok(order.every((at, index) => at >= 0 && (index === 0 || at > order[index - 1])), `each path is said, Duolingo first: ${order.join(", ")}`);
+  // A climb is read twice, at its start and at its target; a certificate once.
+  assert.equal(2 * climbFetches("rapid"), 4);
+  assert.equal(2 * climbFetches(CODEFORCES_CLIMB), 2);
+  assert.equal(fetchesOfGoal(COURSERA_GOAL_TYPE), 1);
+  assert.equal(fetchesOfGoal(CREDLY_GOAL_TYPE), 2);
+  assert.equal(RECLAIM_ALLOWANCE.verifications, 25);
+  // What is left is said where the judge chooses, from the journal as the page is served.
+  assert.match(paths, /\{reclaimUse \? <span data-readings-left> \{readingsLeftInWords\(reclaimUse\)\}<\/span> : null\}/);
+  assert.match(page, /return `\$\{left\} \$\{left === 1 \? "reading is" : "readings are"\} left until \$\{utcDayInWords\(use\.until\)\}, when the count starts again\.`;/);
+});
+
+test("the cycle's detail is said as it is: thirteen proofs of real use, fifty-seven lost on 30 Sep by our fault, and what is left", () => {
+  assert.deepEqual(LOST_ON_30_SEP_2026, { fetches: 114, proofs: 57 });
+  assert.equal(BEFORE_THE_JOURNAL.proved - LOST_ON_30_SEP_2026.proofs, 13);
+  assert.ok(page.includes("Of those ${BEFORE_THE_JOURNAL.proved} proofs, ${BEFORE_THE_JOURNAL.proved - LOST_ON_30_SEP_2026.proofs} were real use and ${LOST_ON_30_SEP_2026.proofs} were lost on 30 Sep 2026 by a fault of ours on one Chess.com gift: its ratings answered 404, and the pass of every five minutes took a new proof of the profile at each round, ${LOST_ON_30_SEP_2026.fetches} fetches in five hours."));
+  assert.ok(page.includes("Corrected on 3 Oct 2026: a proof is claimed before it is paid for and a day has its ceilings, so the same fault now costs ${dailyCeilings().perGift} proofs in a day at most."));
+  assert.equal(DAILY_CEILING.perGift, 4);
+  assert.ok(page.includes("{reclaimUse ? <span data-cycle-left> {readingsLeftInWords(reclaimUse)}</span> : null}"));
+  // The operator's alerts, as the page says them, are the marks and the judging the code holds.
+  assert.deepEqual(RECLAIM_ALERT_LEFT, [15, 10, 5, 0]);
+  assert.deepEqual(JUDGING, { from: "2026-10-14", until: "2026-10-27" });
+  assert.ok(page.includes('{RECLAIM_ALERT_LEFT.filter((mark) => mark > 0).join(", ")} and none are left of an allowance'));
+  assert.ok(!page.includes("at half of an allowance"), "the shares are gone");
+  assert.ok(!page.includes("each attempt to connect an account by a code in its name is still a proof"), "closed on 3 Oct 2026 by the look for the code");
 });
