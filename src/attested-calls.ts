@@ -76,9 +76,11 @@ export function reclaimAllowance(env: Environment = process.env): { fetches: num
 
 /**
  * The most proofs a UTC day may take: for one gift, four, which is what a Chess.com climb started and reached the
- * same day costs (two fetches each time), and for all gifts together, eight.
+ * same day costs (two fetches each time), and for all gifts together, twenty-five (the founder, 3 Oct 2026: eight
+ * until then, raised once the month was found to hold ninety-five readings and not thirty). What stops a fault from
+ * spending a month is the gift's own ceiling: the fault of 30 Sep was one gift's.
  */
-export const DAILY_CEILING = { perGift: 4, all: 8 } as const;
+export const DAILY_CEILING = { perGift: 4, all: 25 } as const;
 
 /**
  * The ceilings in force: `RECLAIM_DAILY_PER_GIFT` and `RECLAIM_DAILY_ALL` when they are set, a whole number each. Zero
@@ -89,17 +91,17 @@ export function dailyCeilings(env: Environment = process.env): { perGift: number
 }
 
 /**
- * The day of the month the count starts again, at midnight UTC. Reclaim's dashboard shows the cycle as "23/09 -
- * 24/10": it began on the 23rd and is shown to end on the 24th, and which of the two days theirs starts again on is
- * not published. Ours takes the later one (the founder, 3 Oct 2026), for the screen as for the limit: our count never
- * starts again before theirs.
+ * The day of the month the count starts again, at midnight UTC: the 1st. Reclaim's dashboard shows it for the account
+ * that holds Viky's two applications, on the Hacker plan: "01/10 - 01/11/2026" (the founder, 3 Oct 2026, who compared
+ * the two application ids with production's). A dashboard read earlier that day, with a cycle from the 23rd, was
+ * another account's.
  */
-export const RECLAIM_CYCLE_DAY = 24;
+export const RECLAIM_CYCLE_DAY = 1;
 
 /**
  * What is left of an allowance when the operator is told: fifteen, ten, five, and none, which is the limit (the
- * founder, 3 Oct 2026). By what is left and not by a share of the whole: that day thirty readings were left for
- * three weeks and a judging, and "four fifths" said nothing of them.
+ * founder, 3 Oct 2026). By what is left and not by a share of the whole: "four fifths" says nothing of how many
+ * readings a judging still has.
  */
 export const RECLAIM_ALERT_LEFT = [15, 10, 5, 0] as const;
 
@@ -111,20 +113,27 @@ export const JUDGING = { from: "2026-10-14", until: "2026-10-27" } as const;
 export const MORNING_SUMMARY_HOUR_UTC = 6;
 
 /**
- * What was already spent in the cycle Reclaim began on 23 Sep 2026 when this journal began, counted on 3 Oct 2026: 126
- * fetches of which 68 gave a proof in the reading service's own logs, which start on 28 Sep at 20:40 UTC, and the two
- * readings of 23 and 24 Sep that the gifts' journal holds. A fetch that failed before 28 Sep 20:40 is in neither, so
- * this is a floor. One proof was asked of a person, on 27 Sep, and never came back. It counts for that cycle alone,
- * which in this count is the one that starts again on 24 Oct (`RECLAIM_CYCLE_DAY`): the reading of 23 Sep is in the
- * figure, so nothing Reclaim counted in its cycle is left out of ours.
+ * What was already spent in the cycle of October 2026 when this journal began, counted on 3 Oct 2026 from the reading
+ * service's own logs: five fetches since 1 Oct at midnight UTC, each of which gave a proof (two on 1 Oct and two on
+ * 2 Oct, a Chess.com climb started and reached; one on 3 Oct, a Duolingo account connected). Every one of them is a
+ * production gift's: none left from a developer's machine. No proof was asked of a person in that time. It counts for
+ * that cycle alone.
  */
-export const BEFORE_THE_JOURNAL = { cycleFrom: "2026-09-24T00:00:00.000Z", started: 128, proved: 70, asked: 1, shown: 0 } as const;
+export const BEFORE_THE_JOURNAL = { cycleFrom: "2026-10-01T00:00:00.000Z", started: 5, proved: 5, asked: 0, shown: 0 } as const;
 
 /**
- * Of what was counted before the journal began, what one fault of ours cost on 30 Sep 2026: a Chess.com gift whose
- * ratings answered 404, read by the pass of every five minutes, which took a new proof of the profile at each round
- * and found no rating behind it. 114 fetches in five hours, 57 of them a proof, none of them of any use. The rest of
- * the proofs counted then were real use.
+ * The cycle before, September 2026, as far as it is known: 98 proofs given (35 daily readings kept with their proof
+ * from 11 to 24 Sep, 6 on 28 Sep, 57 on 30 Sep) and at least 156 fetches started (those, and the 58 that gave no
+ * proof: one on 28 Sep, 57 on 30 Sep). A floor: a fetch that failed before the reading service's logs begin, on 28 Sep
+ * at 20:40 UTC, is written nowhere. Reclaim refused none of them for its quota, though the hundredth was started on
+ * 30 Sep and readings went on giving their proof after it: which is why the limit goes by the proofs given.
+ */
+export const SEPTEMBER_2026 = { proofs: 98, started: 156 } as const;
+
+/**
+ * What one fault of ours cost on 30 Sep 2026, in September's cycle: a Chess.com gift whose ratings answered 404, read
+ * by the pass of every five minutes, which took a new proof of the profile at each round and found no rating behind
+ * it. 114 fetches in five hours, 57 of them a proof, none of them of any use. Found and corrected on 3 Oct 2026.
  */
 export const LOST_ON_30_SEP_2026 = { fetches: 114, proofs: 57 } as const;
 
@@ -157,7 +166,7 @@ export function ensureAttestedCallsSchema(): Promise<void> {
   return ready;
 }
 
-/** The cycle a moment falls in: from the 24th at midnight UTC to the next 24th. */
+/** The cycle a moment falls in: from the 1st of its month at midnight UTC to the 1st of the next. */
 export function cycleOf(nowMs: number): { from: Date; until: Date } {
   const now = new Date(nowMs);
   const before = now.getUTCDate() < RECLAIM_CYCLE_DAY ? 1 : 0;
@@ -260,7 +269,7 @@ export function utcDayInWords(iso: string): string {
 }
 
 /**
- * The day a cycle's reserves start again, as a screen says it: "24 Oct", the first day of the next cycle, in UTC, so it
+ * The day a cycle's reserves start again, as a screen says it: "1 Nov", the first day of the next cycle, in UTC, so it
  * is written the same on the server and in every browser. West of UTC the reserves are back the evening before.
  */
 export function startsAgainInWords(nowMs: number = Date.now()): string {

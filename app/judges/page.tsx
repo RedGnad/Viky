@@ -1,4 +1,4 @@
-import { BEFORE_THE_JOURNAL, cycleInWords, cycleUse, dailyCeilings, JUDGING, leftOf, limitsOf, LOST_ON_30_SEP_2026, RECLAIM_ALERT_LEFT, RECLAIM_ALLOWANCE, startsAgainInWords, utcDayInWords, type CycleUse } from "@/src/attested-calls";
+import { BEFORE_THE_JOURNAL, cycleInWords, cycleUse, dailyCeilings, JUDGING, leftOf, limitsOf, LOST_ON_30_SEP_2026, RECLAIM_ALERT_LEFT, RECLAIM_ALLOWANCE, SEPTEMBER_2026, startsAgainInWords, utcDayInWords, type CycleUse } from "@/src/attested-calls";
 import { LIMIT } from "@/src/sentences";
 import { PROOF_EVERY_SECONDS } from "@/src/milestone-reading";
 import { formatAusd } from "@/src/gift-reader";
@@ -465,9 +465,9 @@ export default async function JudgesPage() {
         <p className={HELP} data-reclaim-cycle>
           The month&apos;s count, kept here because Reclaim&apos;s dashboard shows no count of the fetches: its free tier
           allows up to {RECLAIM_ALLOWANCE.fetches} attested fetches and {RECLAIM_ALLOWANCE.verifications} verifications a
-          month, and gives more on request only. {cycleInWords(reclaimUse)} Reclaim&apos;s dashboard shows its cycle
-          as 23/09 to 24/10: the count here holds what was spent from the 23rd and starts again on the 24th, the later
-          day, so that it never starts again before theirs.
+          month, and gives more on request only. {cycleInWords(reclaimUse)} A cycle runs from the 1st of a month to
+          the 1st of the next, as Reclaim&apos;s dashboard shows it for the account that holds Viky&apos;s two
+          applications.
           {reclaimUse && (reclaimUse.fetches.allowed !== RECLAIM_ALLOWANCE.fetches || reclaimUse.verifications.allowed !== RECLAIM_ALLOWANCE.verifications)
             ? " Reclaim has granted more than the free tier, and the limits in force are the ones counted against."
             : ""}
@@ -478,12 +478,20 @@ export default async function JudgesPage() {
             ? ` The limit of proofs is reached: Viky opens no new proof at Reclaim, and a person reads this before starting one, by the gift's own source: "${LIMIT.said("their university", "proofs", startsAgainInWords())}"`
             : ""}{" "}
           The limit Viky holds itself to goes by the readings that gave a proof and by the proofs that came back, not by
-          what was started or asked: what Reclaim counts is not published, and on 3 Oct 2026 fetches still passed at 126
-          started and 68 proofs.
+          what was started or asked: what Reclaim counts is not published, and in September&apos;s cycle readings went
+          on giving their proof after the hundredth fetch was started, with no refusal for a quota: {SEPTEMBER_2026.proofs}{" "}
+          proofs given that we know of, for at least {SEPTEMBER_2026.started} fetches started.
           {reclaimUse?.from === BEFORE_THE_JOURNAL.cycleFrom
-            ? ` Of this cycle's fetches, ${BEFORE_THE_JOURNAL.started} started and ${BEFORE_THE_JOURNAL.proved} proofs were counted on 3 Oct 2026 from the reading service's logs, which start on 28 Sep, and from the gifts' journal, so the figures are a floor. Of those ${BEFORE_THE_JOURNAL.proved} proofs, ${BEFORE_THE_JOURNAL.proved - LOST_ON_30_SEP_2026.proofs} were real use and ${LOST_ON_30_SEP_2026.proofs} were lost on 30 Sep 2026 by a fault of ours on one Chess.com gift: its ratings answered 404, and the pass of every five minutes took a new proof of the profile at each round, ${LOST_ON_30_SEP_2026.fetches} fetches in five hours. Corrected on 3 Oct 2026: a proof is claimed before it is paid for and a day has its ceilings, so the same fault now costs ${dailyCeilings().perGift} proofs in a day at most.`
+            ? ` Of this cycle's fetches, ${BEFORE_THE_JOURNAL.started} were started before the journal began and each gave a proof, counted on 3 Oct 2026 from the reading service's logs: two on 1 Oct, two on 2 Oct, one on 3 Oct.`
             : ""}
           {reclaimUse ? <span data-cycle-left> {readingsLeftInWords(reclaimUse)}</span> : null}{" "}
+          <span data-september-fault>
+            A fault of ours, found and corrected, in September&apos;s cycle: on 30 Sep 2026 the ratings of one Chess.com
+            gift answered 404, and the pass of every five minutes took a new proof of the profile at each round,{" "}
+            {LOST_ON_30_SEP_2026.fetches} fetches in five hours and {LOST_ON_30_SEP_2026.proofs} proofs lost. Corrected on
+            3 Oct 2026: a proof is claimed before it is paid for and a day has its ceilings, so the same fault now costs{" "}
+            {dailyCeilings().perGift} proofs in a day at most.
+          </span>{" "}
           Since 3 Oct 2026 every fetch is written down as it leaves, proof or not, and a proof is claimed before it is
           paid for: for one gift, once in {PROOF_EVERY_SECONDS.unseen / 3_600} hours after a look that failed or showed no
           rating, once an hour in the gift&apos;s last day, and every {PROOF_EVERY_SECONDS.atTheTarget / 60} minutes at the

@@ -25,6 +25,7 @@ import {
   leftOf,
   limitsNow,
   limitsOf,
+  LOST_ON_30_SEP_2026,
   morningSummary,
   morningSummaryDue,
   neverLeftForReclaim,
@@ -33,6 +34,7 @@ import {
   RECLAIM_ALLOWANCE,
   reclaimAllowance,
   ReclaimLimitReached,
+  SEPTEMBER_2026,
   spentOn,
   startsAgainInWords,
   type AttestedCall,
@@ -73,25 +75,26 @@ after(async () => {
 
 function use(proved: number, shown = 0, more: { started?: number; asked?: number; verified?: number; fetchesAllowed?: number } = {}): CycleUse {
   return {
-    from: "2026-10-24T00:00:00.000Z",
-    until: "2026-11-24T00:00:00.000Z",
+    from: "2026-11-01T00:00:00.000Z",
+    until: "2026-12-01T00:00:00.000Z",
     fetches: { started: more.started ?? proved, proved, allowed: more.fetchesAllowed ?? 100 },
     verifications: { asked: more.asked ?? shown, shown, verified: more.verified ?? 0, allowed: 25 },
   };
 }
 
-test("a cycle runs from the 24th at midnight UTC to the next 24th, the later of the two days Reclaim's dashboard shows", () => {
-  // The dashboard shows "23/09 - 24/10": ours starts again on the 24th, so it never starts again before theirs.
-  assert.equal(RECLAIM_CYCLE_DAY, 24);
+test("a cycle runs from the 1st of a month at midnight UTC to the 1st of the next, as Reclaim's dashboard shows it", () => {
+  // The dashboard of the account that holds the two applications: "01/10 - 01/11/2026".
+  assert.equal(RECLAIM_CYCLE_DAY, 1);
   const at = (iso: string) => {
     const { from, until } = cycleOf(Date.parse(iso));
     return `${from.toISOString().slice(0, 10)} to ${until.toISOString().slice(0, 10)}`;
   };
-  assert.equal(at("2026-10-03T13:00:00Z"), "2026-09-24 to 2026-10-24");
-  assert.equal(at("2026-09-24T00:00:00Z"), "2026-09-24 to 2026-10-24", "from its first second");
-  assert.equal(at("2026-10-23T23:59:59Z"), "2026-09-24 to 2026-10-24", "to its last: the 23rd is still the cycle before");
-  assert.equal(at("2026-10-24T00:00:00Z"), "2026-10-24 to 2026-11-24");
-  assert.equal(at("2027-01-05T08:00:00Z"), "2026-12-24 to 2027-01-24", "over a new year");
+  assert.equal(at("2026-10-03T13:00:00Z"), "2026-10-01 to 2026-11-01");
+  assert.equal(at("2026-10-01T00:00:00Z"), "2026-10-01 to 2026-11-01", "from its first second");
+  assert.equal(at("2026-10-31T23:59:59Z"), "2026-10-01 to 2026-11-01", "to its last");
+  assert.equal(at("2026-11-01T00:00:00Z"), "2026-11-01 to 2026-12-01");
+  assert.equal(at("2026-09-30T15:00:00Z"), "2026-09-01 to 2026-10-01", "the fault of 30 Sep is September's");
+  assert.equal(at("2026-12-30T08:00:00Z"), "2026-12-01 to 2027-01-01", "over a new year");
 });
 
 test("the allowance is the free tier's unless Reclaim granted more, and the operator is told when fifteen, ten, five and none are left", () => {
@@ -127,28 +130,35 @@ test("the cycle's use is what the journal holds: fetches started and proved, pro
   }
   await db.query("UPDATE viky_attested_calls SET at = '2026-11-01T09:00:00Z'");
   // A fetch of the cycle before, and one of the cycle after, are not this cycle's.
-  await db.query("INSERT INTO viky_attested_calls (at, kind, source, ok) VALUES ('2026-10-23T23:59:59Z', 'fetch', 'chess-player', true), ('2026-11-24T00:00:00Z', 'fetch', 'chess-player', true)");
+  await db.query("INSERT INTO viky_attested_calls (at, kind, source, ok) VALUES ('2026-10-31T23:59:59Z', 'fetch', 'chess-player', true), ('2026-12-01T00:00:00Z', 'fetch', 'chess-player', true)");
   assert.deepEqual(await cycleUse(now, {}), {
-    from: "2026-10-24T00:00:00.000Z",
-    until: "2026-11-24T00:00:00.000Z",
+    from: "2026-11-01T00:00:00.000Z",
+    until: "2026-12-01T00:00:00.000Z",
     fetches: { started: 3, proved: 2, allowed: 100 },
     verifications: { asked: 2, shown: 1, verified: 1, allowed: 25 },
   });
   assert.equal((await cycleUse(now, { RECLAIM_FETCH_ALLOWANCE: "300" })).fetches.allowed, 300, "counted against what Reclaim granted");
 });
 
-test("what was spent before the journal began counts for the cycle that ends on 24 Oct 2026, and for no other", async () => {
-  assert.deepEqual(BEFORE_THE_JOURNAL, { cycleFrom: "2026-09-24T00:00:00.000Z", started: 128, proved: 70, asked: 1, shown: 0 });
+test("what was spent before the journal began counts for October 2026's cycle, and for no other", async () => {
+  // Five fetches since 1 Oct at midnight UTC, each a proof, read in the reading service's logs: two on 1 Oct, two on
+  // 2 Oct, one on 3 Oct. Nothing was asked of a person.
+  assert.deepEqual(BEFORE_THE_JOURNAL, { cycleFrom: "2026-10-01T00:00:00.000Z", started: 5, proved: 5, asked: 0, shown: 0 });
   await noteAttestedCall({ kind: "fetch", source: "duolingo-profile", ok: true }, quiet);
   await db.query("UPDATE viky_attested_calls SET at = '2026-10-04T00:40:00Z'");
   const first = await cycleUse(Date.parse("2026-10-04T08:00:00Z"), {});
-  assert.deepEqual(first.fetches, { started: 129, proved: 71, allowed: 100 });
-  assert.deepEqual(first.verifications, { asked: 1, shown: 0, verified: 0, allowed: 25 });
-  // By the fetches started the allowance was passed that day, and readings went on: the limit goes by the proofs.
+  assert.deepEqual(first.fetches, { started: 6, proved: 6, allowed: 100 });
+  assert.deepEqual(first.verifications, { asked: 0, shown: 0, verified: 0, allowed: 25 });
   assert.deepEqual(limitsOf(first), { readings: false, proofs: false });
-  const next = await cycleUse(Date.parse("2026-10-24T08:00:00Z"), {});
+  assert.equal(leftOf(first.fetches.proved, first.fetches.allowed), 94);
+  const next = await cycleUse(Date.parse("2026-11-01T08:00:00Z"), {});
   assert.deepEqual(next.fetches, { started: 0, proved: 0, allowed: 100 });
   assert.equal(next.verifications.asked, 0);
+  // September's cycle, as far as it is known: 98 proofs for at least 156 fetches started, and the fault of 30 Sep in it.
+  assert.deepEqual(SEPTEMBER_2026, { proofs: 98, started: 156 });
+  assert.deepEqual(LOST_ON_30_SEP_2026, { fetches: 114, proofs: 57 });
+  assert.equal(35 + 6 + LOST_ON_30_SEP_2026.proofs, SEPTEMBER_2026.proofs, "the daily readings kept, the proofs of 28 Sep, and those of 30 Sep");
+  assert.equal(SEPTEMBER_2026.proofs + 1 + (LOST_ON_30_SEP_2026.fetches - LOST_ON_30_SEP_2026.proofs), SEPTEMBER_2026.started, "and the fetches that gave none: one on 28 Sep, 57 on 30 Sep");
 });
 
 test("the limit goes by the readings that gave a proof and by the proofs that came back", async () => {
@@ -302,41 +312,41 @@ test("each mark of what is left is told once in its cycle, only the lowest one r
   const subjects = async () => (await allowanceAlertsDue(0, deps)).map((alert) => alert.subject);
   assert.deepEqual(await subjects(), [], "more than fifteen left, nothing");
   now = use(85, 0, { started: 99 });
-  assert.deepEqual(await subjects(), ["Reclaim: 15 readings left until 24 Nov 2026, 85 of 100 used"], "by the proofs given, not by the fetches started");
+  assert.deepEqual(await subjects(), ["Reclaim: 15 readings left until 1 Dec 2026, 85 of 100 used"], "by the proofs given, not by the fetches started");
   now = use(88);
   assert.deepEqual(await subjects(), [], "told once");
   now = use(91);
-  assert.deepEqual(await subjects(), ["Reclaim: 9 readings left until 24 Nov 2026, 91 of 100 used"]);
+  assert.deepEqual(await subjects(), ["Reclaim: 9 readings left until 1 Dec 2026, 91 of 100 used"]);
   now = use(95);
-  assert.deepEqual(await subjects(), ["Reclaim: 5 readings left until 24 Nov 2026, 95 of 100 used"]);
+  assert.deepEqual(await subjects(), ["Reclaim: 5 readings left until 1 Dec 2026, 95 of 100 used"]);
   assert.equal(asked, 0, "what is waiting is counted at the limit only");
   now = use(100, 10);
   const atTheLimit = await allowanceAlertsDue(0, deps);
-  assert.deepEqual(atTheLimit.map((alert) => alert.subject), ["Reclaim: the limit is reached, 100 readings this cycle, of 100", "Reclaim: 15 proofs of people left until 24 Nov 2026, 10 of 25 used"]);
+  assert.deepEqual(atTheLimit.map((alert) => alert.subject), ["Reclaim: the limit is reached, 100 readings this cycle, of 100", "Reclaim: 15 proofs of people left until 1 Dec 2026, 10 of 25 used"]);
   assert.equal(asked, 1);
   assert.match(atTheLimit[0].text, /From now Viky sends no attested reading to Reclaim, and each person whose gift waits for one reads why on its page\./);
   assert.match(atTheLimit[0].text, /3 days of 2 daily gifts wait for a reading\. The first of them goes back to its funder at 2026-10-25 06:00 UTC unless it is read before\./);
   now = use(140, 14);
   assert.deepEqual(await subjects(), []);
   assert.deepEqual([...claimed], [
-    "reclaim:fetches:2026-10-24:left-15",
-    "reclaim:fetches:2026-10-24:left-10",
-    "reclaim:fetches:2026-10-24:left-5",
-    "reclaim:fetches:2026-10-24:left-0",
-    "reclaim:verifications:2026-10-24:left-15",
+    "reclaim:fetches:2026-11-01:left-15",
+    "reclaim:fetches:2026-11-01:left-10",
+    "reclaim:fetches:2026-11-01:left-5",
+    "reclaim:fetches:2026-11-01:left-0",
+    "reclaim:verifications:2026-11-01:left-15",
   ]);
   // Already under a mark when first looked at: one email, for the lowest mark reached, not one for each above it.
   claimed.clear();
   now = use(92);
-  assert.deepEqual(await subjects(), ["Reclaim: 8 readings left until 24 Nov 2026, 92 of 100 used"]);
-  assert.deepEqual([...claimed], ["reclaim:fetches:2026-10-24:left-10"]);
+  assert.deepEqual(await subjects(), ["Reclaim: 8 readings left until 1 Dec 2026, 92 of 100 used"]);
+  assert.deepEqual([...claimed], ["reclaim:fetches:2026-11-01:left-10"]);
 });
 
 test("the alert says the cycle, both counts, what stops at the limit, and how to lift it", () => {
   const filling = allowanceAlert(use(85, 3, { started: 96, asked: 5, verified: 2 }), "fetches");
-  assert.equal(filling.subject, "Reclaim: 15 readings left until 24 Nov 2026, 85 of 100 used");
+  assert.equal(filling.subject, "Reclaim: 15 readings left until 1 Dec 2026, 85 of 100 used");
   assert.deepEqual(filling.text.split("\n"), [
-    "Cycle from 24 Oct 2026 to 24 Nov 2026 (UTC).",
+    "Cycle from 1 Nov 2026 to 1 Dec 2026 (UTC).",
     "Readings: 85 attested fetches gave a proof, of 96 started, for an allowance of 100: 15 left.",
     "Proofs of people: 3 came back from Reclaim, of 5 asked, 2 verified, for an allowance of 25: 22 left.",
     "",
@@ -376,9 +386,9 @@ test("each morning of the judging the operator reads what the day before spent, 
     { gift: null, reason: null, proved: 1, failed: 0 },
   ]);
 
-  const cycle: CycleUse = { from: "2026-09-24T00:00:00.000Z", until: "2026-10-24T00:00:00.000Z", fetches: { started: 140, proved: 81, allowed: 100 }, verifications: { asked: 4, shown: 3, verified: 3, allowed: 25 } };
+  const cycle: CycleUse = { from: "2026-10-01T00:00:00.000Z", until: "2026-11-01T00:00:00.000Z", fetches: { started: 140, proved: 81, allowed: 100 }, verifications: { asked: 4, shown: 3, verified: 3, allowed: 25 } };
   const summary = morningSummary(Date.parse("2026-10-15T00:00:00Z"), spent, cycle);
-  assert.equal(summary.subject, "Reclaim, 15 Oct 2026: 5 proofs spent, 19 left until 24 Oct 2026");
+  assert.equal(summary.subject, "Reclaim, 15 Oct 2026: 5 proofs spent, 19 left until 1 Nov 2026");
   assert.deepEqual(summary.text.split("\n"), [
     "On 15 Oct 2026 (UTC), 5 attested fetches gave a proof and 1 did not.",
     "By gift and by reason:",
@@ -389,10 +399,10 @@ test("each morning of the judging the operator reads what the day before spent, 
     "",
     "Readings left: 19 of 100 (81 gave a proof this cycle, of 140 started).",
     "Proofs of people left: 22 of 25 (3 came back this cycle).",
-    "Both reserves start again on 24 Oct 2026 (UTC).",
+    "Both reserves start again on 1 Nov 2026 (UTC).",
   ]);
   const idle = morningSummary(Date.parse("2026-10-15T00:00:00Z"), [], cycle);
-  assert.equal(idle.subject, "Reclaim, 15 Oct 2026: 0 proofs spent, 19 left until 24 Oct 2026");
+  assert.equal(idle.subject, "Reclaim, 15 Oct 2026: 0 proofs spent, 19 left until 1 Nov 2026");
   assert.match(idle.text, /^On 15 Oct 2026 \(UTC\), 0 attested fetches gave a proof\.\nNothing was asked of Reclaim that day\.\n/);
 });
 
@@ -416,13 +426,13 @@ test("the morning's summary leaves once a day, from six o'clock UTC, and only du
   assert.equal(await due("2026-10-13T06:05:00Z"), null, "the day before the judging");
   assert.equal(await due("2026-10-14T05:59:00Z"), null, "before six");
   assert.deepEqual(claimed, [], "nothing is claimed before it is due");
-  assert.equal(await due("2026-10-14T06:01:00Z"), "Reclaim, 13 Oct 2026: 1 proof spent, 88 left until 24 Nov 2026");
+  assert.equal(await due("2026-10-14T06:01:00Z"), "Reclaim, 13 Oct 2026: 1 proof spent, 88 left until 1 Dec 2026");
   assert.deepEqual(asked, [Date.parse("2026-10-13T00:00:00Z")], "the day before, whole");
   assert.equal(await due("2026-10-14T06:06:00Z"), null, "once");
   assert.equal(await due("2026-10-14T23:55:00Z"), null);
   // A morning the five-minute call missed is still told, later that day.
-  assert.equal(await due("2026-10-15T13:20:00Z"), "Reclaim, 14 Oct 2026: 1 proof spent, 88 left until 24 Nov 2026");
-  assert.equal(await due("2026-10-27T06:00:00Z"), "Reclaim, 26 Oct 2026: 1 proof spent, 88 left until 24 Nov 2026", "the last morning");
+  assert.equal(await due("2026-10-15T13:20:00Z"), "Reclaim, 14 Oct 2026: 1 proof spent, 88 left until 1 Dec 2026");
+  assert.equal(await due("2026-10-27T06:00:00Z"), "Reclaim, 26 Oct 2026: 1 proof spent, 88 left until 1 Dec 2026", "the last morning");
   assert.equal(await due("2026-10-28T06:00:00Z"), null, "the judging is over");
   assert.equal(claimed.length, 3);
   // It rides the call that already arrives every five minutes, and leaves through the operator's alerts.
@@ -477,13 +487,13 @@ test("a person's proof: the limit is looked at before Reclaim is asked, the sess
 
 test("one sentence in the open names the service by the gift's own source and the day it starts again, and the rest is folded", () => {
   // The founder's own words of 3 Oct 2026, for a reading and for a proof.
-  assert.equal(LIMIT.said("Duolingo", "readings", "24 Oct"), "Viky can't check Duolingo right now: this month's readings are used up. It starts again on 24 Oct.");
+  assert.equal(LIMIT.said("Duolingo", "readings", "1 Nov"), "Viky can't check Duolingo right now: this month's readings are used up. It starts again on 1 Nov.");
   // A source named from the funder's side is said to its own person as theirs; a proper name is said as it is.
-  assert.equal(LIMIT.said("their university", "proofs", "24 Oct"), "Viky can't check their university right now: this month's proofs are used up. It starts again on 24 Oct.");
-  assert.equal(LIMIT.said("their university", "proofs", "24 Oct", true), "Viky can't check your university right now: this month's proofs are used up. It starts again on 24 Oct.");
-  assert.equal(LIMIT.said("Duolingo", "readings", "24 Oct", true), LIMIT.said("Duolingo", "readings", "24 Oct"));
-  assert.ok(LIMIT.isSaid(LIMIT.said("their university", "proofs", "24 Oct", true)));
-  assert.equal(LIMIT.said("their university", "proofs", "24 Oct"), "Viky can't check their university right now: this month's proofs are used up. It starts again on 24 Oct.");
+  assert.equal(LIMIT.said("their university", "proofs", "1 Nov"), "Viky can't check their university right now: this month's proofs are used up. It starts again on 1 Nov.");
+  assert.equal(LIMIT.said("their university", "proofs", "1 Nov", true), "Viky can't check your university right now: this month's proofs are used up. It starts again on 1 Nov.");
+  assert.equal(LIMIT.said("Duolingo", "readings", "1 Nov", true), LIMIT.said("Duolingo", "readings", "1 Nov"));
+  assert.ok(LIMIT.isSaid(LIMIT.said("their university", "proofs", "1 Nov", true)));
+  assert.equal(LIMIT.said("their university", "proofs", "1 Nov"), "Viky can't check their university right now: this month's proofs are used up. It starts again on 1 Nov.");
   // What is folded under "What you can do", a line each.
   assert.equal(LIMIT.can, "What you can do");
   assert.equal(LIMIT.dayYours("tomorrow, 5 Oct, at 08:00"), "Your day can still be counted until tomorrow, 5 Oct, at 08:00.");
@@ -495,28 +505,28 @@ test("one sentence in the open names the service by the gift's own source and th
   assert.equal(LIMIT.untouched.proofs, "Gifts that Viky reads by itself are not touched.");
   assert.equal(LIMIT.write("hello@viky.cash"), "Write to hello@viky.cash: we can reopen it sooner.");
   // Beside a condition in a list: four words.
-  assert.equal(LIMIT.backOn("24 Oct"), "Back on 24 Oct");
-  assert.ok(LIMIT.backOn("24 Oct").split(" ").length <= 4);
+  assert.equal(LIMIT.backOn("1 Nov"), "Back on 1 Nov");
+  assert.ok(LIMIT.backOn("1 Nov").split(" ").length <= 4);
   // The sentence in the open is known for what it is wherever a screen prints an answer, and nothing else is taken for it.
-  assert.equal(LIMIT.isSaid(LIMIT.said("Chess.com", "readings", "24 Oct")), true);
-  assert.equal(LIMIT.isSaid(`${LIMIT.said("Duolingo", "readings", "24 Oct")} ${LIMIT.dayYours("today, 4 Oct, at 9:00")}`), true, "with the hour after it, under a press");
-  assert.equal(LIMIT.isSaid(LIMIT.said("ETS", "proofs", "24 Oct")), true);
+  assert.equal(LIMIT.isSaid(LIMIT.said("Chess.com", "readings", "1 Nov")), true);
+  assert.equal(LIMIT.isSaid(`${LIMIT.said("Duolingo", "readings", "1 Nov")} ${LIMIT.dayYours("today, 4 Oct, at 9:00")}`), true, "with the hour after it, under a press");
+  assert.equal(LIMIT.isSaid(LIMIT.said("ETS", "proofs", "1 Nov")), true);
   for (const other of ["Duolingo could not be read just now. Try again in a minute.", "Viky has read this as often as it does in one day. It resumes tomorrow. Nothing is lost.", "", null, undefined]) assert.equal(LIMIT.isSaid(other), false);
   // The day it starts again is the cycle's own first day, in UTC, written the same on the server and in every browser.
-  assert.equal(startsAgainInWords(Date.UTC(2026, 9, 3, 18, 0)), "24 Oct");
-  assert.equal(startsAgainInWords(Date.UTC(2026, 9, 23, 23, 59)), "24 Oct");
-  assert.equal(startsAgainInWords(Date.UTC(2026, 9, 24, 0, 0)), "24 Nov");
-  assert.equal(startsAgainInWords(Date.UTC(2026, 11, 30, 12, 0)), "24 Jan");
+  assert.equal(startsAgainInWords(Date.UTC(2026, 9, 3, 18, 0)), "1 Nov");
+  assert.equal(startsAgainInWords(Date.UTC(2026, 9, 31, 23, 59)), "1 Nov");
+  assert.equal(startsAgainInWords(Date.UTC(2026, 10, 1, 0, 0)), "1 Dec");
+  assert.equal(startsAgainInWords(Date.UTC(2026, 11, 30, 12, 0)), "1 Jan");
   // A climb's refusal names its own source, and "this" where a caller has none to name.
   assert.equal(refusalMessage("LIMIT_REACHED", "Chess.com"), LIMIT.said("Chess.com", "readings", startsAgainInWords()));
   assert.equal(refusalMessage("LIMIT_REACHED"), LIMIT.said("this", "readings", startsAgainInWords()));
   // Which reserve a condition draws on, and which conditions say so when one is used up.
   assert.deepEqual([reserveOf("read"), reserveOf("connected"), reserveOf("shown")], ["readings", "readings", "proofs"]);
-  const readingsEmpty = { readings: true, proofs: false, again: "24 Oct" };
+  const readingsEmpty = { readings: true, proofs: false, again: "1 Nov" };
   assert.equal(emptyReserveOf("read", readingsEmpty), "readings");
   assert.equal(emptyReserveOf("connected", readingsEmpty), "readings");
   assert.equal(emptyReserveOf("shown", readingsEmpty), null, "a document shown draws on the other reserve: it stays as it was");
-  assert.equal(emptyReserveOf("shown", { readings: false, proofs: true, again: "24 Oct" }), "proofs");
+  assert.equal(emptyReserveOf("shown", { readings: false, proofs: true, again: "1 Nov" }), "proofs");
   assert.equal(emptyReserveOf("read", null), null);
   assert.equal(emptyReserveOf(undefined, readingsEmpty), null);
 });
@@ -564,8 +574,8 @@ test("a gift's page is told of the limit only while the gift runs, with the hour
   const until = () => day(104, 6);
   assert.equal(await giftLimitFor(true, until, async () => ({ readings: false, proofs: false })), null);
   const cycle = Date.UTC(2026, 9, 3, 18, 0);
-  assert.deepEqual(await giftLimitFor(true, until, async () => ({ readings: true, proofs: false }), cycle), { readings: true, proofs: false, countableUntil: day(104, 6), again: "24 Oct" });
-  assert.deepEqual(await giftLimitFor(true, until, async () => ({ readings: false, proofs: true }), cycle), { readings: false, proofs: true, countableUntil: null, again: "24 Oct" }, "the proofs' limit has no day");
+  assert.deepEqual(await giftLimitFor(true, until, async () => ({ readings: true, proofs: false }), cycle), { readings: true, proofs: false, countableUntil: day(104, 6), again: "1 Nov" });
+  assert.deepEqual(await giftLimitFor(true, until, async () => ({ readings: false, proofs: true }), cycle), { readings: false, proofs: true, countableUntil: null, again: "1 Nov" }, "the proofs' limit has no day");
   assert.equal(await giftLimitFor(false, until, async () => ({ readings: true, proofs: true })), null, "a gift that is over waits for nothing");
   assert.match(readFileSync("src/gift-status.ts", "utf8"), /limit: await giftLimitFor\(!gift\.finalised && !gift\.cancelled, \(\) => countableUntil\(gift, now, catchUpSecondsOf\(escrow\)\)\),/);
   assert.match(readFileSync("src/milestone-status.ts", "utf8"), /limit: await giftLimitFor\(!state\.settled && !state\.cancelled, \(\) => null\)/);
@@ -583,9 +593,9 @@ test("the browser adds the hour of the open day in the reader's own clock, and l
   assert.match(openDayInWords(until, true, null, now), /^Your day can still be counted until tomorrow, 5 Oct, at 0?8:00\.$/);
   assert.match(openDayInWords(until, false, "Boo", now), /^Boo's day can still be counted until tomorrow, 5 Oct, at 0?8:00\.$/);
   // Under a press there is no fold: the server's own sentence, then until when the day can still be counted.
-  const said = LIMIT.said("Duolingo", "readings", "24 Oct");
+  const said = LIMIT.said("Duolingo", "readings", "1 Nov");
   const refused = { kind: "refused", giftId: "4", code: "LIMIT_REACHED", message: said, countableUntil: Math.floor(Date.now() / 1_000) + 3_600 };
-  assert.match(withTheLimitSaid(refused).message, /^Viky can't check Duolingo right now: this month's readings are used up\. It starts again on 24 Oct\. Your day can still be counted until /);
+  assert.match(withTheLimitSaid(refused).message, /^Viky can't check Duolingo right now: this month's readings are used up\. It starts again on 1 Nov\. Your day can still be counted until /);
   assert.equal(LIMIT.isSaid(withTheLimitSaid(refused).message), true, "and it is still set in the red");
   // A gift not counted by days has no hour: the server's sentence is left as it is.
   const climb = { kind: "refused", giftId: "1000004", code: "LIMIT_REACHED", message: said };
@@ -637,7 +647,7 @@ test("the judges page says the cycle's count from the journal, the limit when it
   assert.equal(cycleInWords(null), "The cycle's count could not be read right now.");
   assert.equal(
     cycleInWords(use(29, 1, { started: 31, asked: 2, verified: 1 })),
-    "Cycle from 24 Oct 2026 to 24 Nov 2026. Readings: 29 of 100 (attested fetches that gave a proof; 31 were started). Proofs shown by people: 1 of 25 (2 asked, 1 verified).",
+    "Cycle from 1 Nov 2026 to 1 Dec 2026. Readings: 29 of 100 (attested fetches that gave a proof; 31 were started). Proofs shown by people: 1 of 25 (2 asked, 1 verified).",
   );
   const page = readFileSync("app/judges/page.tsx", "utf8").replace(/\s+/g, " ");
   assert.match(page, /const reclaimUse = await cycleUse\(\)\.catch\(\(\) => null\); const reclaimLimits = reclaimUse \? limitsOf\(reclaimUse\) : null;/);
@@ -646,6 +656,11 @@ test("the judges page says the cycle's count from the journal, the limit when it
   assert.match(page, /\{reclaimLimits\?\.proofs \? ` The limit of proofs is reached: [^`]*"\$\{LIMIT\.said\("their university", "proofs", startsAgainInWords\(\)\)\}"` : ""\}/);
   assert.match(page, /once in \{PROOF_EVERY_SECONDS\.unseen \/ 3_600\} hours after a look that failed or showed no rating, once an hour in the gift&apos;s last day, and every \{PROOF_EVERY_SECONDS\.atTheTarget \/ 60\} minutes at the target/);
   assert.equal(PROOF_EVERY_SECONDS.unseenInTheLastDay, 3_600, "once an hour, as the page says in words");
-  // The floor and the day it was counted are said only for the cycle they are about.
-  assert.match(page, /\{reclaimUse\?\.from === BEFORE_THE_JOURNAL\.cycleFrom \? ` Of this cycle's fetches, \$\{BEFORE_THE_JOURNAL\.started\} started and \$\{BEFORE_THE_JOURNAL\.proved\} proofs were counted on 3 Oct 2026/);
+  // What was counted before the journal began is said only for the cycle it is about.
+  assert.match(page, /\{reclaimUse\?\.from === BEFORE_THE_JOURNAL\.cycleFrom \? ` Of this cycle's fetches, \$\{BEFORE_THE_JOURNAL\.started\} were started before the journal began and each gave a proof, counted on 3 Oct 2026 from the reading service's logs: two on 1 Oct, two on 2 Oct, one on 3 Oct\.` : ""\}/);
+  assert.equal(BEFORE_THE_JOURNAL.started, BEFORE_THE_JOURNAL.proved, "each gave a proof");
+  assert.equal(BEFORE_THE_JOURNAL.started, 2 + 2 + 1);
+  // The cycle is said as the dashboard shows it, and the dashboard read by mistake is gone from the page.
+  assert.ok(page.includes("A cycle runs from the 1st of a month to the 1st of the next, as Reclaim&apos;s dashboard shows it for the account that holds Viky&apos;s two applications."));
+  assert.ok(!page.includes("23/09"), "the other account's cycle is said nowhere");
 });

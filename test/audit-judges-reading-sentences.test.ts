@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { BEFORE_THE_JOURNAL, DAILY_CEILING, JUDGING, LOST_ON_30_SEP_2026, RECLAIM_ALERT_LEFT, RECLAIM_ALLOWANCE } from "../src/attested-calls";
+import { BEFORE_THE_JOURNAL, DAILY_CEILING, JUDGING, LOST_ON_30_SEP_2026, RECLAIM_ALERT_LEFT, RECLAIM_ALLOWANCE, SEPTEMBER_2026 } from "../src/attested-calls";
 import { fetchesOfGoal } from "../src/certificate-reading";
 import { climbFetches } from "../src/climb-reading";
 import { CODEFORCES_CLIMB } from "../src/climbs";
@@ -151,13 +151,23 @@ test("how to try it starts with the daily Duolingo path and gives each path's co
   assert.match(page, /return `\$\{left\} \$\{left === 1 \? "reading is" : "readings are"\} left until \$\{utcDayInWords\(use\.until\)\}, when the count starts again\.`;/);
 });
 
-test("the cycle's detail is said as it is: thirteen proofs of real use, fifty-seven lost on 30 Sep by our fault, and what is left", () => {
-  assert.deepEqual(LOST_ON_30_SEP_2026, { fetches: 114, proofs: 57 });
-  assert.equal(BEFORE_THE_JOURNAL.proved - LOST_ON_30_SEP_2026.proofs, 13);
-  assert.ok(page.includes("Of those ${BEFORE_THE_JOURNAL.proved} proofs, ${BEFORE_THE_JOURNAL.proved - LOST_ON_30_SEP_2026.proofs} were real use and ${LOST_ON_30_SEP_2026.proofs} were lost on 30 Sep 2026 by a fault of ours on one Chess.com gift: its ratings answered 404, and the pass of every five minutes took a new proof of the profile at each round, ${LOST_ON_30_SEP_2026.fetches} fetches in five hours."));
-  assert.ok(page.includes("Corrected on 3 Oct 2026: a proof is claimed before it is paid for and a day has its ceilings, so the same fault now costs ${dailyCeilings().perGift} proofs in a day at most."));
-  assert.equal(DAILY_CEILING.perGift, 4);
+test("the cycle's detail is said as it is: October's real count, and September's fault as one found and corrected", () => {
+  // October: five fetches before the journal began, each a proof, and what is left as the page is served.
+  assert.deepEqual(BEFORE_THE_JOURNAL, { cycleFrom: "2026-10-01T00:00:00.000Z", started: 5, proved: 5, asked: 0, shown: 0 });
   assert.ok(page.includes("{reclaimUse ? <span data-cycle-left> {readingsLeftInWords(reclaimUse)}</span> : null}"));
+  // September: the 57 proofs lost on 30 Sep stay said, whatever the cycle the page is read in.
+  assert.deepEqual(LOST_ON_30_SEP_2026, { fetches: 114, proofs: 57 });
+  const from = page.indexOf("<span data-september-fault>");
+  const fault = page.slice(from, page.indexOf("</span>", from));
+  assert.ok(from > 0 && !page.slice(page.lastIndexOf("{reclaimUse?.from === BEFORE_THE_JOURNAL.cycleFrom", from), from).includes("data-september-fault"), "outside the sentence that is said for October alone");
+  assert.ok(fault.includes("A fault of ours, found and corrected, in September&apos;s cycle: on 30 Sep 2026 the ratings of one Chess.com gift answered 404, and the pass of every five minutes took a new proof of the profile at each round,"));
+  assert.ok(fault.includes("{LOST_ON_30_SEP_2026.fetches} fetches in five hours and {LOST_ON_30_SEP_2026.proofs} proofs lost."));
+  assert.ok(fault.includes("Corrected on 3 Oct 2026: a proof is claimed before it is paid for and a day has its ceilings, so the same fault now costs"));
+  assert.ok(fault.includes("{dailyCeilings().perGift} proofs in a day at most."));
+  assert.deepEqual(DAILY_CEILING, { perGift: 4, all: 25 });
+  // Reclaim refused nothing in September: what is known of that cycle is said where the limit's rule is.
+  assert.deepEqual(SEPTEMBER_2026, { proofs: 98, started: 156 });
+  assert.ok(page.includes("in September&apos;s cycle readings went on giving their proof after the hundredth fetch was started, with no refusal for a quota: {SEPTEMBER_2026.proofs}{\" \"} proofs given that we know of, for at least {SEPTEMBER_2026.started} fetches started."));
   // The operator's alerts, as the page says them, are the marks and the judging the code holds.
   assert.deepEqual(RECLAIM_ALERT_LEFT, [15, 10, 5, 0]);
   assert.deepEqual(JUDGING, { from: "2026-10-14", until: "2026-10-27" });
