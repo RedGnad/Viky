@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { foreseenRefusal, lookBeforeCount, lookForCode, noDayToCredit } from "../src/daily-look";
+import { foreseenRefusal, LAST_RESORT_WITHIN_SECONDS, lastResortDue, lookBeforeCount, lookForCode, noDayToCredit } from "../src/daily-look";
 import { COUNTING_PASS, dailyPass, type DailyPassDeps } from "../src/daily-pass";
 import { DuolingoProfileError, type PublicDuolingoProfile } from "../src/duolingo-profile";
 import { contractRefusal } from "../src/gift-api";
@@ -75,7 +75,8 @@ test("on the third contract a reading pays its own day: the look opens today, an
   const source = readFileSync("contracts/GiftEscrowV3.sol", "utf8");
   let from = 0;
   for (const line of [
-    "uint32 startDay = _readDay(a.observedAt);",
+    // The first day is the day of the block that carries the first reading (the re-read of 3 Oct 2026, C1).
+    "uint32 startDay = _dayOf(block.timestamp);",
     "if (a.metricValue < g.baselineValue) revert MetricDecreased();",
     "uint32 readDay = _readDay(a.observedAt);",
     "uint32 upper = readDay > g.endDay ? g.endDay : readDay;",
@@ -119,15 +120,46 @@ test("before a count, the look answers the refusal and its figure, or nothing: a
   const never = async () => Promise.reject(new Error("never asked"));
   assert.deepEqual(await lookBeforeCount({ ...input, nowSeconds: morning(CONNECTED + 1) }, never), { kind: "refused", refusal: "OutsideWindow" });
   assert.deepEqual(await lookBeforeCount({ ...input, gift: { ...GIFT, settledThroughDay: CONNECTED + 7 }, nowSeconds: morning(CONNECTED + 9) }, never), { kind: "refused", refusal: "NothingToCredit" });
-  // The look failed, or its answer carries no figure: it says so, and whoever asked decides whether a proof is taken.
+  // The source did not answer, or its answer carries no figure: the look could not say, and says so.
   assert.deepEqual(await lookBeforeCount(input, async () => Promise.reject(new DuolingoProfileError("SOURCE_UNAVAILABLE", "down"))), { kind: "unseen" });
-  assert.deepEqual(await lookBeforeCount(input, async () => Promise.reject(new DuolingoProfileError("NO_SUCH_PROFILE", "none"))), { kind: "unseen" });
   assert.deepEqual(await lookBeforeCount(input, async () => profile({ totalXp: null })), { kind: "unseen" });
+  // No profile by that name is the source's answer about the account, not a failure to read it.
+  assert.deepEqual(await lookBeforeCount(input, async () => Promise.reject(new DuolingoProfileError("NO_SUCH_PROFILE", "none"))), { kind: "gone" });
+  assert.deepEqual(await lookBeforeCount(input, async () => Promise.reject(new DuolingoProfileError("INVALID_USERNAME", "odd"))), { kind: "gone" });
   // A gift on one course is judged on that course's experience, never on the whole profile's.
   const courses = [{ id: "DUOLINGO_ES_EN", title: "Spanish", xp: 1_003 }];
   const onCourse = { ...input, courseId: "DUOLINGO_ES_EN" };
   assert.deepEqual(await lookBeforeCount(onCourse, async () => profile({ totalXp: 9_000, courses })), { kind: "refused", refusal: "InsufficientProgress", xp: 1_003 });
   assert.deepEqual(await lookBeforeCount({ ...input, courseId: "DUOLINGO_IT_EN" }, async () => profile({ totalXp: 1_000, courses })), { kind: "unseen" }, "a course the look does not show");
+});
+
+test("the reading of last resort is due only when the oldest open day closes before the next pass that could read it", () => {
+  const CATCH_UP = 30 * 3_600;
+  const within = LAST_RESORT_WITHIN_SECONDS.recount;
+  const open = { ...GIFT, finalised: false, cancelled: false };
+  /** The second reading of the morning, at 03:30 UTC, started anywhere inside its hour. */
+  const recount = (day: number, minute = 30) => day * DAY + 3 * 3_600 + minute * 60;
+  // Day 1 (CONNECTED + 1) is unsettled. Its window closes at 06:00 UTC two days after it.
+  // The morning after it: it closes tomorrow at 06:00, and tomorrow's passes come before that. Not the last chance.
+  assert.equal(lastResortDue(open, recount(CONNECTED + 2), CATCH_UP, within), false);
+  assert.equal(lastResortDue(open, recount(CONNECTED + 2, 59), CATCH_UP, within), false);
+  // Two mornings after it: it closes at 06:00 this morning. The last chance.
+  assert.equal(lastResortDue(open, recount(CONNECTED + 3), CATCH_UP, within), true);
+  assert.equal(lastResortDue(open, recount(CONNECTED + 3, 59), CATCH_UP, within), true);
+  // Past 06:00 that day is gone, and the next open day closes the morning after: not due any more.
+  assert.equal(lastResortDue(open, (CONNECTED + 3) * DAY + 6 * 3_600 + 1, CATCH_UP, within), false);
+  // With that day settled, the oldest open one is the next, which closes a day later.
+  assert.equal(lastResortDue({ ...open, settledThroughDay: CONNECTED + 1 }, recount(CONNECTED + 3), CATCH_UP, within), false);
+  assert.equal(lastResortDue({ ...open, settledThroughDay: CONNECTED + 1 }, recount(CONNECTED + 4), CATCH_UP, within), true);
+  // The last day of the gift, two mornings after it: its last chance too.
+  assert.equal(lastResortDue({ ...open, settledThroughDay: CONNECTED + 6 }, recount(CONNECTED + 9), CATCH_UP, within), true);
+  // No day open, a gift not started, a gift that is over: never.
+  assert.equal(lastResortDue({ ...open, settledThroughDay: CONNECTED + 7 }, recount(CONNECTED + 9), CATCH_UP, within), false);
+  assert.equal(lastResortDue({ ...open, startDay: 0 }, recount(CONNECTED + 3), CATCH_UP, within), false);
+  assert.equal(lastResortDue({ ...open, finalised: true }, recount(CONNECTED + 3), CATCH_UP, within), false);
+  // Twenty hours: past 06:00 of the same morning from the latest start of the pass, and short of 06:00 the morning after.
+  assert.equal(within, 20 * 3_600);
+  assert.ok(recount(0, 59) + within > 6 * 3_600 && recount(0) + within < DAY + 6 * 3_600);
 });
 
 test("before a connection by code, the look stops a try the code is not in, and a look that failed takes no proof", async () => {

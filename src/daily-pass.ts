@@ -35,6 +35,10 @@ import { watchAtPassStart, type RelayerAtStart, type WatchLine } from "./watch";
  * settling pass sends it back. So at 03:30 the gifts the counting pass held are read once more, while that day can
  * still be paid; and if the counting pass left no row at all, or stopped part way, the whole reading pass is run.
  * Reading again inside the settling pass would be of no use: every check-in drains the expired days first.
+ *
+ * A reading looks plainly before it pays for a proof, and a look that failed takes none (src/daily-look.ts): the gift
+ * is held, and read again at 03:30. That second reading is the only one that may go without a look, and only for a
+ * gift whose oldest open day closes at 06:00 that morning: its last chance, once.
  */
 
 export type DailyPassLine = { giftId: string; step: "create" | "count" | "drain" | "finalise" | "refund" | "read" | "expire" | "retire" | "erase"; result: string; hash?: string };
@@ -61,6 +65,9 @@ const OURS_TO_FIX: ReadonlySet<string> = new Set([
   // The month's limit of attested readings is reached (src/attested-calls.ts): no reading was taken, so nothing is
   // settled against it, and the person reads why on the gift's page.
   "LIMIT_REACHED",
+  // A day's ceiling of attested readings is reached (the breaker of src/attested-calls.ts): no reading was taken
+  // either, and it resumes the next UTC day.
+  "CEILING_REACHED",
   // A reading that threw instead of answering (see `counted` below).
   "READING_FAILED",
 ]);
@@ -120,7 +127,8 @@ export type DailyPassDeps = {
   boundGifts: () => Promise<ReadonlyArray<{ giftId: string }>>;
   allGifts: () => Promise<ReadonlyArray<{ giftId: string; escrow: Hex | null; goalType?: number }>>;
   read: (escrow: Hex, giftId: string) => Promise<PassGift>;
-  count: (giftId: string) => Promise<PublicCheckInOutcome>;
+  /** One gift's reading, told which pass asks: which of them may read without a look is the reading's own rule (src/daily-look.ts). */
+  count: (giftId: string, pass: "counting" | "recount") => Promise<PublicCheckInOutcome>;
   drain: (giftId: string, escrow: Hex) => Promise<{ hash: string }>;
   finalise: (giftId: string, escrow: Hex) => Promise<{ hash: string }>;
   refund: (giftId: string, escrow: Hex) => Promise<{ hash: string }>;
@@ -170,7 +178,7 @@ function liveDeps(): DailyPassDeps {
     boundGifts: loadBoundGifts,
     allGifts: loadAllGifts,
     read: (escrow, giftId) => readGift(escrow, giftId, clients.publicClient),
-    count: (giftId) => readDailyGift({ giftId, purpose: "count" }),
+    count: (giftId, pass) => readDailyGift({ giftId, purpose: "count", pass }),
     drain: relayDrain,
     finalise: relayFinalise,
     refund: relayRefund,
@@ -340,7 +348,7 @@ async function runPass(
       // counted today, finished, cancelled or not yet connected is never asked of the source at all, so it is taken
       // back out: it is not a reading, and counting it as one would make the source look silent when nobody spoke.
       run.readingsAttempted += 1;
-      const outcome = await counted(deps, gift.giftId);
+      const outcome = await counted(deps, gift.giftId, plan.name === "recount" ? "recount" : "counting");
       if (outcome.kind === "already") run.readingsAttempted -= 1;
       if (outcome.kind === "counted" || outcome.kind === "bound") run.readingsSucceeded += 1;
       if (outcome.kind === "refused") {
@@ -459,9 +467,9 @@ async function eraseIfConnected(deps: DailyPassDeps, record: { giftId: string; g
  * goes on to the next one: until 1 Oct 2026 one connected source that threw stopped the morning's readings for every
  * gift after it (the audit, F-23).
  */
-async function counted(deps: DailyPassDeps, giftId: string): Promise<PublicCheckInOutcome> {
+async function counted(deps: DailyPassDeps, giftId: string, pass: "counting" | "recount"): Promise<PublicCheckInOutcome> {
   try {
-    return await deps.count(giftId);
+    return await deps.count(giftId, pass);
   } catch (error) {
     if (stopsEveryRelay(error)) throw error;
     const reason = error instanceof Error ? error.message : String(error);

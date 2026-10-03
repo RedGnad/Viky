@@ -25,7 +25,7 @@ import { openWithTheLinkSecret, secondVersionOf, versionOf } from "../src/client
 import { NO_CONTACT_HASH } from "../src/contact-hash";
 import { readAsTheDayGoes } from "../src/daily-count";
 import { DuolingoProfileError, type PublicDuolingoProfile } from "../src/duolingo-profile";
-import { PROOF_EVERY_SECONDS, runPublicCheckIn, type PublicCheckInDeps } from "../src/duolingo-public-checkin";
+import { lastResortWithin, PROOF_EVERY_SECONDS, runPublicCheckIn, type PublicCheckInDeps } from "../src/duolingo-public-checkin";
 import { FREQUENT_DAILY_PASS_EVERY_SECONDS, frequentDailyPass } from "../src/frequent-pass";
 import { evidenceSignerAddress, signCheckIn, type CheckInMessage } from "../src/gift-attestation";
 import type { GiftState } from "../src/gift-reader";
@@ -243,7 +243,7 @@ function onChain(over: Partial<GiftState> = {}): GiftState {
 const seen = (totalXp: number | null): PublicDuolingoProfile => ({ id: "7", username: "Ama", courses: [], currentCourseId: null, totalXp, name: "Ama" });
 
 /** A connected gift in the store, and the dependencies of a reading that must never reach the attested fetch. */
-async function reading(escrow: Hex, gift: GiftState, look: PublicCheckInDeps["look"], claim: boolean = true) {
+async function reading(escrow: Hex, gift: GiftState, look: PublicCheckInDeps["look"], claim: boolean = true, now: number = NOON, lastResort: boolean = true) {
   await saveGift({ giftId: "7", funder: FUNDER.address, contactHash: NO_CONTACT_HASH, claimToken: "a-link-key-0123456789abcdef", goalType: GOAL_TYPE_DUOLINGO_XP, dailyTarget: 10, durationDays: 7, amount: 7_000_000n, createdTx: `0x${"a7".repeat(32)}`, escrow, goalUsername: "Ama" });
   await markClaimed("7", RECIPIENT.address, null);
   await markBound("7", "7");
@@ -257,7 +257,7 @@ async function reading(escrow: Hex, gift: GiftState, look: PublicCheckInDeps["lo
       calls.push("proof");
       throw new Error("the attested fetch was reached");
     },
-    now: () => NOON,
+    now: () => now,
     gift: async () => gift,
     look: look
       ? async (username) => {
@@ -269,6 +269,10 @@ async function reading(escrow: Hex, gift: GiftState, look: PublicCheckInDeps["lo
       calls.push(`claim:${giftId}:${everySeconds}`);
       return claim;
     },
+    claimLastResort: async (giftId, day) => {
+      calls.push(`lastResort:${giftId}:${day}`);
+      return lastResort;
+    },
   };
   return { calls, deps };
 }
@@ -276,13 +280,13 @@ async function reading(escrow: Hex, gift: GiftState, look: PublicCheckInDeps["lo
 test("an open page asks for a look alone: it answers whether a lesson is in, and no proof is ever paid for it", async () => {
   await withVersions(true, async () => {
     const lesson = await reading(V3, onChain(), async () => seen(1_010));
-    assert.deepEqual(await runPublicCheckIn({ giftId: "7", purpose: "count", onlyOnALook: true, lookOnly: true }, lesson.deps), { kind: "seen", giftId: "7", xp: 1_010 });
+    assert.deepEqual(await runPublicCheckIn({ giftId: "7", purpose: "count", lookOnly: true }, lesson.deps), { kind: "seen", giftId: "7", xp: 1_010 });
     assert.deepEqual(lesson.calls, ["look"], "no claim and no proof: the look takes nothing");
   });
   await db.query("DELETE FROM viky_gifts");
   await withVersions(true, async () => {
     const none = await reading(V3, onChain(), async () => seen(1_004));
-    const outcome = await runPublicCheckIn({ giftId: "7", purpose: "count", onlyOnALook: true, lookOnly: true }, none.deps);
+    const outcome = await runPublicCheckIn({ giftId: "7", purpose: "count", lookOnly: true }, none.deps);
     assert.deepEqual(outcome, { kind: "refused", giftId: "7", code: "NOT_ENOUGH_PROGRESS", message: "Not enough yet for a full day. One more lesson and it counts.", xp: 1_004, looked: true });
     assert.deepEqual(none.calls, ["look"]);
   });
@@ -290,7 +294,7 @@ test("an open page asks for a look alone: it answers whether a lesson is in, and
   await withVersions(true, async () => {
     // Today paid already: nothing is asked of the source at all.
     const paid = await reading(V3, onChain({ settledThroughDay: TODAY, creditedDays: 1 }), async () => seen(5_000));
-    const outcome = await runPublicCheckIn({ giftId: "7", purpose: "count", onlyOnALook: true, lookOnly: true }, paid.deps);
+    const outcome = await runPublicCheckIn({ giftId: "7", purpose: "count", lookOnly: true }, paid.deps);
     assert.equal(outcome.kind === "refused" && outcome.code, "NOTHING_TO_CREDIT");
     assert.deepEqual(paid.calls, []);
   });
@@ -298,34 +302,67 @@ test("an open page asks for a look alone: it answers whether a lesson is in, and
 
 test("read as the day goes, a proof is taken only for a lesson the look saw, and only once it is claimed", async () => {
   await withVersions(true, async () => {
-    // The look failed: no proof from a page or the frequent pass, which come back.
+    // The look failed: no proof from a page, which comes back in a minute.
     const down = await reading(V3, onChain(), async () => Promise.reject(new DuolingoProfileError("SOURCE_UNAVAILABLE", "down")));
-    const outcome = await runPublicCheckIn({ giftId: "7", purpose: "count", onlyOnALook: true }, down.deps);
+    const outcome = await runPublicCheckIn({ giftId: "7", purpose: "count" }, down.deps);
     assert.deepEqual(outcome, { kind: "refused", giftId: "7", code: "FETCH_FAILED", message: "Duolingo could not be read just now. Try again in a minute.", looked: true });
     assert.deepEqual(down.calls, ["look"]);
   });
   await db.query("DELETE FROM viky_gifts");
   await withVersions(true, async () => {
-    // A lesson is in, and a proof was taken for this gift less than four minutes ago: none is taken now.
-    const claimed = await reading(V3, onChain(), async () => seen(1_010), false);
-    assert.deepEqual(await runPublicCheckIn({ giftId: "7", purpose: "count", onlyOnALook: true }, claimed.deps), { kind: "already", giftId: "7", reason: "read_recently" });
-    assert.deepEqual(claimed.calls, ["look", `claim:7:${PROOF_EVERY_SECONDS}`]);
+    // A lesson is in, and a proof was taken for this gift less than four minutes ago: none is taken now, whoever asks.
+    for (const pass of [undefined, "frequent", "counting"] as const) {
+      await db.query("DELETE FROM viky_gifts");
+      const claimed = await reading(V3, onChain(), async () => seen(1_010), false);
+      assert.deepEqual(await runPublicCheckIn({ giftId: "7", purpose: "count", pass }, claimed.deps), { kind: "already", giftId: "7", reason: "read_recently" });
+      assert.deepEqual(claimed.calls, ["look", `claim:7:${PROOF_EVERY_SECONDS}`]);
+    }
     assert.equal(PROOF_EVERY_SECONDS, 240);
   });
   await db.query("DELETE FROM viky_gifts");
   await withVersions(true, async () => {
     // A lesson is in and the claim is given: the attested fetch is reached, and only then.
     const taken = await reading(V3, onChain(), async () => seen(1_010));
-    await assert.rejects(runPublicCheckIn({ giftId: "7", purpose: "count", onlyOnALook: true }, taken.deps), /the attested fetch was reached/);
+    await assert.rejects(runPublicCheckIn({ giftId: "7", purpose: "count", pass: "frequent" }, taken.deps), /the attested fetch was reached/);
     assert.deepEqual(taken.calls, ["look", `claim:7:${PROOF_EVERY_SECONDS}`, "proof"]);
   });
-  await db.query("DELETE FROM viky_gifts");
+});
+
+test("on the third contract a look that failed takes a reading of last resort once in a day, and only when a window closes before the next pass", async () => {
+  const DOWN = async () => Promise.reject(new DuolingoProfileError("SOURCE_UNAVAILABLE", "down"));
+  /** Yesterday is open and unsettled: its window closes at 06:00 UTC tomorrow. */
+  const behind = () => onChain({ startDay: TODAY - 1, endDay: TODAY + 5, settledThroughDay: TODAY - 2 });
+  const at = async (now: number, pass: "frequent" | "counting" | "recount" | undefined, gift = behind(), claim = true) => {
+    await db.query("DELETE FROM viky_gifts");
+    const read = await reading(V3, gift, DOWN, true, now, claim);
+    const outcome = await runPublicCheckIn({ giftId: "7", purpose: "count", pass }, read.deps).then(
+      (answered) => (answered.kind === "refused" ? answered.code : answered.kind),
+      (error: Error) => error.message,
+    );
+    return { outcome, calls: read.calls };
+  };
+  const closes = (TODAY + 1) * DAY + 6 * 3_600;
   await withVersions(true, async () => {
-    // The nightly pass is the one that reads without a look: a look that failed never costs a person a day.
-    const nightly = await reading(V3, onChain(), async () => Promise.reject(new DuolingoProfileError("SOURCE_UNAVAILABLE", "down")));
-    await assert.rejects(runPublicCheckIn({ giftId: "7", purpose: "count" }, nightly.deps), /the attested fetch was reached/);
-    assert.deepEqual(nightly.calls, ["look", "proof"], "and it claims nothing: its own schedule bounds it");
+    // Hours before the window closes: the next pass looks again, which costs nothing. No proof, no claim.
+    assert.deepEqual(await at(NOON, "frequent"), { outcome: "FETCH_FAILED", calls: ["look"] });
+    assert.deepEqual(await at(closes - 21 * 60, "frequent"), { outcome: "FETCH_FAILED", calls: ["look"] });
+    // The last pass before it closes: the reading of last resort, claimed for the gift and the day.
+    assert.deepEqual(await at(closes - 19 * 60, "frequent"), { outcome: "the attested fetch was reached", calls: ["look", `lastResort:7:${TODAY + 1}`, "proof"] });
+    // The passes of the morning are passes too, and the same rule holds them: at 03:30 the window is hours away.
+    assert.deepEqual(await at((TODAY + 1) * DAY + 3 * 3_600 + 30 * 60, "recount"), { outcome: "FETCH_FAILED", calls: ["look"] });
+    assert.deepEqual(await at(closes - 10 * 60, "counting"), { outcome: "the attested fetch was reached", calls: ["look", `lastResort:7:${TODAY + 1}`, "proof"] });
+    // Once for a gift in a day: already taken, it is not taken again.
+    assert.deepEqual(await at(closes - 5 * 60, "frequent", behind(), false), { outcome: "FETCH_FAILED", calls: ["look", `lastResort:7:${TODAY + 1}`] });
+    // A page names no pass: it never takes one, whatever is about to close. Neither does a look alone.
+    assert.deepEqual(await at(closes - 5 * 60, undefined), { outcome: "FETCH_FAILED", calls: ["look"] });
+    // Today alone open, with yesterday counted: its window closes the day after tomorrow, nothing is due.
+    assert.deepEqual(await at(closes - 5 * 60, "frequent", onChain({ startDay: TODAY, settledThroughDay: TODAY })), { outcome: "FETCH_FAILED", calls: ["look"] });
   });
+  // The rule by version, in one place: a gift read each morning has its last resort at the second reading alone.
+  assert.equal(lastResortWithin(undefined, 3), null);
+  assert.deepEqual((["counting", "recount", "frequent"] as const).map((pass) => lastResortWithin(pass, 3)), [1_200, 1_200, 1_200]);
+  assert.deepEqual((["counting", "recount", "frequent"] as const).map((pass) => lastResortWithin(pass, 2)), [null, 72_000, null]);
+  assert.deepEqual((["counting", "recount", "frequent"] as const).map((pass) => lastResortWithin(pass, 1)), [null, 72_000, null]);
 });
 
 test("which gifts are read as the day goes: on the third contract, on a source that can be looked at plainly", async () => {
@@ -337,7 +374,7 @@ test("which gifts are read as the day goes: on the third contract, on a source t
     // A connected source has no plain look: its gifts are read by the nightly pass alone, on every version.
     const route = readFileSync("src/daily-count.ts", "utf8");
     assert.match(route, /return paysTheSameDay\(versionOfGift\(record\)\) && conditionOfGoal\(record\.goalType\)\?\.nature !== "connected";/);
-    assert.match(route, /if \(condition\?\.nature === "connected" && \(input\.lookOnly \|\| input\.onlyOnALook\)\) return \{ kind: "already", giftId: input\.giftId, reason: "read_recently" \};/);
+    assert.match(route, /if \(condition\?\.nature === "connected" && input\.lookOnly\) return \{ kind: "already", giftId: input\.giftId, reason: "read_recently" \};/);
   });
   // The count route: a look is asked with ?look=1 under the reading limit, either of the two people may ask for a
   // gift read as the day goes, and a gift that is not is read for the person it is for alone, as before.
@@ -345,7 +382,7 @@ test("which gifts are read as the day goes: on the third contract, on a source t
   assert.match(count, /const rate = checkRateLimit\(isMilestoneGiftId\(id\) \|\| look \? "reading" : "verify", request\);/);
   assert.match(count, /const offeredIt = Boolean\(gift && live && gift\.funder\.toLowerCase\(\) === account\);/);
   assert.match(count, /if \(look && !live\) throw new GiftApiError\("NOT_READ_LIVE", /);
-  assert.match(count, /readDailyGift\(live \? \{ giftId: id, purpose: "count", onlyOnALook: true, lookOnly: look \} : \{ giftId: id, purpose: "count", force: true \}\)/);
+  assert.match(count, /readDailyGift\(live \? \{ giftId: id, purpose: "count", lookOnly: look \} : \{ giftId: id, purpose: "count", force: true \}\)/);
 });
 
 test("the pass of every quarter of an hour reads those gifts alone, one after another, and one failure is one line", async () => {
@@ -382,7 +419,7 @@ test("the pass of every quarter of an hour reads those gifts alone, one after an
   assert.equal(FREQUENT_DAILY_PASS_EVERY_SECONDS, 14 * 60);
   const route = readFileSync("app/api/cron/milestones/route.ts", "utf8");
   assert.match(route, /if \(await claimPass\("daily-gifts", FREQUENT_DAILY_PASS_EVERY_SECONDS\)\) \{/);
-  assert.match(readFileSync("src/frequent-pass.ts", "utf8"), /count: \(giftId\) => readDailyGift\(\{ giftId, purpose: "count", onlyOnALook: true \}\),/);
+  assert.match(readFileSync("src/frequent-pass.ts", "utf8"), /count: \(giftId\) => readDailyGift\(\{ giftId, purpose: "count", pass: "frequent" \}\),/);
 });
 
 test("on the first two versions nothing changed: one reading a day, and a count on demand still reads", async () => {
