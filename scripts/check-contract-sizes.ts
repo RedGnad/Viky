@@ -9,6 +9,8 @@ const productionArtifacts = [
   ["GiftEscrow", "out/GiftEscrow.sol/GiftEscrow.json"],
   ["MilestoneGift", "out/MilestoneGift.sol/MilestoneGift.json"],
   ["GiftEscrowV2", "out/GiftEscrowV2.sol/GiftEscrowV2.json"],
+  // Not deployed yet (3 Oct 2026): checked here so that it cannot outgrow the limit before it is.
+  ["GiftEscrowV3", "out/GiftEscrowV3.sol/GiftEscrowV3.json"],
   ["MilestoneGiftV2", "out/MilestoneGiftV2.sol/MilestoneGiftV2.json"],
   ["ConsentAnchor", "out/ConsentAnchor.sol/ConsentAnchor.json"],
   ["ExitRouter", "out/ExitRouter.sol/ExitRouter.json"],
