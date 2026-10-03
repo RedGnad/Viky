@@ -13,7 +13,7 @@ import { sendAlert, type AlertOutcome } from "./provider-alert";
  * evidence key of the environment no longer being the one the contracts name, and the morning pass not running at all.
  * Each is now one email through `sendAlert` (src/provider-alert.ts), sent when it is seen. A fifth since the delta
  * re-read of 2 Oct 2026: a new evidence signer announced on a contract of the second version, told while it waits.
- * A sixth since 3 Oct 2026: the month's allowance at Reclaim, told once at half, at four fifths and at the limit, where
+ * A sixth since 3 Oct 2026: the month's allowance at Reclaim, told once when fifteen, ten, five and none are left, where
  * the email says how many days wait for a reading and which goes back first (src/attested-calls.ts). It is told too
  * the moment a row crosses one of them; here it is looked at again, for a crossing nothing wrote a row at.
  *
