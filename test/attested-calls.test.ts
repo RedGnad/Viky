@@ -1,7 +1,8 @@
 // The journal of what Viky asks of Reclaim, the count of the month's allowance and the limit Viky holds itself to
 // (3 Oct 2026): every fetch that leaves is written down, proof or not; the cycle's use is counted from it; past the
-// limit nothing is sent and the refusal is LIMIT_REACHED; the operator is told once at half, at four fifths and at
-// the limit, with the days then waiting for a reading.
+// limit nothing is sent and the refusal is LIMIT_REACHED; the operator is told once when fifteen, ten, five and none
+// are left, the last with the days then waiting for a reading; and each morning of the judging, what the day before
+// spent.
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -16,16 +17,22 @@ import {
   cycleInWords,
   cycleOf,
   cycleUse,
+  inJudging,
   isReclaimQuotaRefusal,
+  JUDGING,
+  leftMarkReached,
+  leftOf,
   limitsNow,
   limitsOf,
+  morningSummary,
+  morningSummaryDue,
   neverLeftForReclaim,
   noteAttestedCall,
-  RECLAIM_ALERT_AT,
+  RECLAIM_ALERT_LEFT,
   RECLAIM_ALLOWANCE,
   reclaimAllowance,
   ReclaimLimitReached,
-  shareReached,
+  spentOn,
   type AttestedCall,
   type CycleUse,
 } from "../src/attested-calls";
@@ -82,17 +89,21 @@ test("a cycle runs from the 23rd at midnight UTC to the next 23rd", () => {
   assert.equal(at("2027-01-05T08:00:00Z"), "2026-12-23 to 2027-01-23", "over a new year");
 });
 
-test("the allowance is the free tier's unless Reclaim granted more, and the operator is told at half, at four fifths and at the limit", () => {
+test("the allowance is the free tier's unless Reclaim granted more, and the operator is told when fifteen, ten, five and none are left", () => {
   assert.deepEqual(RECLAIM_ALLOWANCE, { fetches: 100, verifications: 25 });
   assert.deepEqual(reclaimAllowance({}), { fetches: 100, verifications: 25 });
   assert.deepEqual(reclaimAllowance({ RECLAIM_FETCH_ALLOWANCE: "250", RECLAIM_VERIFICATION_ALLOWANCE: " 40 " }), { fetches: 250, verifications: 40 });
   // A setting that is not a whole number changes nothing: the limit is never lifted by a typing mistake.
   assert.deepEqual(reclaimAllowance({ RECLAIM_FETCH_ALLOWANCE: "unlimited", RECLAIM_VERIFICATION_ALLOWANCE: "-1" }), { fetches: 100, verifications: 25 });
-  assert.deepEqual(RECLAIM_ALERT_AT, [0.5, 0.8, 1]);
-  const fetches = (used: number) => shareReached(used, RECLAIM_ALLOWANCE.fetches);
-  assert.deepEqual([49, 50, 79, 80, 99, 100, 128].map(fetches), [null, 0.5, 0.5, 0.8, 0.8, 1, 1]);
-  const proofs = (used: number) => shareReached(used, RECLAIM_ALLOWANCE.verifications);
-  assert.deepEqual([12, 13, 19, 20, 24, 25].map(proofs), [null, 0.5, 0.5, 0.8, 0.8, 1]);
+  // By what is left, not by a share of the whole (the founder, 3 Oct 2026, with thirty left for three weeks).
+  assert.deepEqual(RECLAIM_ALERT_LEFT, [15, 10, 5, 0]);
+  const fetches = (used: number) => leftMarkReached(used, RECLAIM_ALLOWANCE.fetches);
+  assert.deepEqual([70, 84, 85, 89, 90, 94, 95, 99, 100, 128].map(fetches), [null, null, 15, 15, 10, 10, 5, 5, 0, 0]);
+  const proofs = (used: number) => leftMarkReached(used, RECLAIM_ALLOWANCE.verifications);
+  assert.deepEqual([9, 10, 14, 15, 20, 24, 25].map(proofs), [null, 15, 15, 10, 5, 5, 0]);
+  // The same marks on a larger allowance: they follow what is left, wherever the whole stands.
+  assert.deepEqual([184, 185, 200].map((used) => leftMarkReached(used, 200)), [null, 15, 0]);
+  assert.deepEqual([leftOf(70, 100), leftOf(100, 100), leftOf(128, 100)], [30, 0, 0], "never less than nothing");
 });
 
 test("the cycle's use is what the journal holds: fetches started and proved, proofs asked of people, come back and verified", async () => {
@@ -267,9 +278,9 @@ test("a count that cannot be written or read never costs the reading: it is a li
   assert.deepEqual(errors, ["reclaim limit not read: the database did not answer", "day's ceiling not read: the database did not answer", "attested call not counted (fetch chess-player): the database did not answer"]);
 });
 
-test("each share of an allowance is told once in its cycle, only the highest one reached, and the limit with what is waiting", async () => {
+test("each mark of what is left is told once in its cycle, only the lowest one reached, and the limit with what is waiting", async () => {
   const claimed = new Set<string>();
-  let now = use(49);
+  let now = use(84);
   let asked = 0;
   const deps = {
     use: async () => now,
@@ -284,37 +295,45 @@ test("each share of an allowance is told once in its cycle, only the highest one
     },
   };
   const subjects = async () => (await allowanceAlertsDue(0, deps)).map((alert) => alert.subject);
-  assert.deepEqual(await subjects(), [], "under half, nothing");
-  now = use(50, 0, { started: 90 });
-  assert.deepEqual(await subjects(), ["Reclaim: 50 readings this cycle, of 100"], "by the proofs given, not by the fetches started");
-  now = use(63);
+  assert.deepEqual(await subjects(), [], "more than fifteen left, nothing");
+  now = use(85, 0, { started: 99 });
+  assert.deepEqual(await subjects(), ["Reclaim: 15 readings left until 23 Nov 2026, 85 of 100 used"], "by the proofs given, not by the fetches started");
+  now = use(88);
   assert.deepEqual(await subjects(), [], "told once");
-  now = use(81);
-  assert.deepEqual(await subjects(), ["Reclaim: 81 readings this cycle, of 100"]);
+  now = use(91);
+  assert.deepEqual(await subjects(), ["Reclaim: 9 readings left until 23 Nov 2026, 91 of 100 used"]);
+  now = use(95);
+  assert.deepEqual(await subjects(), ["Reclaim: 5 readings left until 23 Nov 2026, 95 of 100 used"]);
   assert.equal(asked, 0, "what is waiting is counted at the limit only");
-  now = use(100, 13);
+  now = use(100, 10);
   const atTheLimit = await allowanceAlertsDue(0, deps);
-  assert.deepEqual(atTheLimit.map((alert) => alert.subject), ["Reclaim: the limit is reached, 100 readings this cycle, of 100", "Reclaim: 13 proofs shown by people this cycle, of 25"]);
+  assert.deepEqual(atTheLimit.map((alert) => alert.subject), ["Reclaim: the limit is reached, 100 readings this cycle, of 100", "Reclaim: 15 proofs of people left until 23 Nov 2026, 10 of 25 used"]);
   assert.equal(asked, 1);
   assert.match(atTheLimit[0].text, /From now Viky sends no attested reading to Reclaim, and each person whose gift waits for one reads why on its page\./);
   assert.match(atTheLimit[0].text, /3 days of 2 daily gifts wait for a reading\. The first of them goes back to its funder at 2026-10-25 06:00 UTC unless it is read before\./);
   now = use(140, 14);
   assert.deepEqual(await subjects(), []);
-  assert.deepEqual([...claimed], ["reclaim:fetches:2026-10-23:0.5", "reclaim:fetches:2026-10-23:0.8", "reclaim:fetches:2026-10-23:1", "reclaim:verifications:2026-10-23:0.5"]);
-  // Already past a share when first looked at, as on the day this was written: one email, not two.
+  assert.deepEqual([...claimed], [
+    "reclaim:fetches:2026-10-23:left-15",
+    "reclaim:fetches:2026-10-23:left-10",
+    "reclaim:fetches:2026-10-23:left-5",
+    "reclaim:fetches:2026-10-23:left-0",
+    "reclaim:verifications:2026-10-23:left-15",
+  ]);
+  // Already under a mark when first looked at: one email, for the lowest mark reached, not one for each above it.
   claimed.clear();
-  now = use(85);
-  assert.deepEqual(await subjects(), ["Reclaim: 85 readings this cycle, of 100"]);
-  assert.deepEqual([...claimed], ["reclaim:fetches:2026-10-23:0.8"]);
+  now = use(92);
+  assert.deepEqual(await subjects(), ["Reclaim: 8 readings left until 23 Nov 2026, 92 of 100 used"]);
+  assert.deepEqual([...claimed], ["reclaim:fetches:2026-10-23:left-10"]);
 });
 
 test("the alert says the cycle, both counts, what stops at the limit, and how to lift it", () => {
-  const half = allowanceAlert(use(50, 3, { started: 81, asked: 5, verified: 2 }), "fetches");
-  assert.equal(half.subject, "Reclaim: 50 readings this cycle, of 100");
-  assert.deepEqual(half.text.split("\n"), [
+  const filling = allowanceAlert(use(85, 3, { started: 96, asked: 5, verified: 2 }), "fetches");
+  assert.equal(filling.subject, "Reclaim: 15 readings left until 23 Nov 2026, 85 of 100 used");
+  assert.deepEqual(filling.text.split("\n"), [
     "Cycle from 23 Oct 2026 to 23 Nov 2026 (UTC).",
-    "Readings: 50 attested fetches gave a proof, of 81 started, for an allowance of 100.",
-    "Proofs of people: 3 came back from Reclaim, of 5 asked, 2 verified, for an allowance of 25.",
+    "Readings: 85 attested fetches gave a proof, of 96 started, for an allowance of 100: 15 left.",
+    "Proofs of people: 3 came back from Reclaim, of 5 asked, 2 verified, for an allowance of 25: 22 left.",
     "",
     "Reclaim gives more on request only: ask, then set RECLAIM_FETCH_ALLOWANCE or RECLAIM_VERIFICATION_ALLOWANCE to what it grants.",
     "The count is on /api/health, under reclaim.",
@@ -328,7 +347,85 @@ test("the alert says the cycle, both counts, what stops at the limit, and how to
   assert.match(proofs.text, /From now Viky opens no new proof at Reclaim, and a person reads why before starting one\./);
 });
 
-test("the operator is told the moment a row crosses a share, by the row itself", async () => {
+test("each morning of the judging the operator reads what the day before spent, by gift and by reason, what is left and when it starts again", async () => {
+  assert.deepEqual(JUDGING, { from: "2026-10-14", until: "2026-10-27" });
+  const judging = (iso: string) => inJudging(Date.parse(iso));
+  assert.deepEqual(["2026-10-13T23:59:59Z", "2026-10-14T00:00:00Z", "2026-10-27T23:59:59Z", "2026-10-28T00:00:00Z"].map(judging), [false, true, true, false]);
+
+  // The journal of 15 Oct: a gift's count, a milestone that failed once and then read, a fetch nobody named.
+  await db.query(`INSERT INTO viky_attested_calls (at, kind, source, ok, gift, reason) VALUES
+    ('2026-10-15T00:31:00Z', 'fetch', 'duolingo-profile', true, '7', 'the morning count'),
+    ('2026-10-15T09:10:00Z', 'fetch', 'duolingo-profile', true, '7', 'Count now'),
+    ('2026-10-15T11:00:00Z', 'fetch', 'chess-player', false, '9', 'the milestone pass'),
+    ('2026-10-15T11:04:00Z', 'fetch', 'chess-player', true, '9', 'the milestone pass'),
+    ('2026-10-15T11:04:30Z', 'fetch', 'chess-ratings-blitz', true, '9', 'the milestone pass'),
+    ('2026-10-15T14:00:00Z', 'fetch', 'chess-player', true, NULL, NULL),
+    ('2026-10-15T15:00:00Z', 'asked', 'university-shown', true, '11', NULL),
+    ('2026-10-14T23:59:59Z', 'fetch', 'duolingo-profile', true, '7', 'the morning count'),
+    ('2026-10-16T00:00:00Z', 'fetch', 'duolingo-profile', true, '7', 'the morning count')`);
+  const spent = await spentOn(Date.parse("2026-10-15T00:00:00Z"));
+  assert.deepEqual(spent, [
+    { gift: "9", reason: "the milestone pass", proved: 2, failed: 1 },
+    { gift: "7", reason: "Count now", proved: 1, failed: 0 },
+    { gift: "7", reason: "the morning count", proved: 1, failed: 0 },
+    { gift: null, reason: null, proved: 1, failed: 0 },
+  ]);
+
+  const cycle: CycleUse = { from: "2026-09-23T00:00:00.000Z", until: "2026-10-23T00:00:00.000Z", fetches: { started: 140, proved: 81, allowed: 100 }, verifications: { asked: 4, shown: 3, verified: 3, allowed: 25 } };
+  const summary = morningSummary(Date.parse("2026-10-15T00:00:00Z"), spent, cycle);
+  assert.equal(summary.subject, "Reclaim, 15 Oct 2026: 5 proofs spent, 19 left until 23 Oct 2026");
+  assert.deepEqual(summary.text.split("\n"), [
+    "On 15 Oct 2026 (UTC), 5 attested fetches gave a proof and 1 did not.",
+    "By gift and by reason:",
+    "- gift 9, the milestone pass: 2 proofs, 1 without",
+    "- gift 7, Count now: 1 proof",
+    "- gift 7, the morning count: 1 proof",
+    "- no gift named, no reason given: 1 proof",
+    "",
+    "Readings left: 19 of 100 (81 gave a proof this cycle, of 140 started).",
+    "Proofs of people left: 22 of 25 (3 came back this cycle).",
+    "Both reserves start again on 23 Oct 2026 (UTC).",
+  ]);
+  const idle = morningSummary(Date.parse("2026-10-15T00:00:00Z"), [], cycle);
+  assert.equal(idle.subject, "Reclaim, 15 Oct 2026: 0 proofs spent, 19 left until 23 Oct 2026");
+  assert.match(idle.text, /^On 15 Oct 2026 \(UTC\), 0 attested fetches gave a proof\.\nNothing was asked of Reclaim that day\.\n/);
+});
+
+test("the morning's summary leaves once a day, from six o'clock UTC, and only during the judging", async () => {
+  const claimed: string[] = [];
+  const asked: number[] = [];
+  const cycle = use(12);
+  const deps = {
+    claim: async (name: string) => {
+      if (claimed.includes(name)) return false;
+      claimed.push(name);
+      return true;
+    },
+    spent: async (dayStartMs: number) => {
+      asked.push(dayStartMs);
+      return [{ gift: "7", reason: "the morning count", proved: 1, failed: 0 }];
+    },
+    use: async () => cycle,
+  };
+  const due = async (iso: string) => (await morningSummaryDue(Date.parse(iso), deps))?.subject ?? null;
+  assert.equal(await due("2026-10-13T06:05:00Z"), null, "the day before the judging");
+  assert.equal(await due("2026-10-14T05:59:00Z"), null, "before six");
+  assert.deepEqual(claimed, [], "nothing is claimed before it is due");
+  assert.equal(await due("2026-10-14T06:01:00Z"), "Reclaim, 13 Oct 2026: 1 proof spent, 88 left until 23 Nov 2026");
+  assert.deepEqual(asked, [Date.parse("2026-10-13T00:00:00Z")], "the day before, whole");
+  assert.equal(await due("2026-10-14T06:06:00Z"), null, "once");
+  assert.equal(await due("2026-10-14T23:55:00Z"), null);
+  // A morning the five-minute call missed is still told, later that day.
+  assert.equal(await due("2026-10-15T13:20:00Z"), "Reclaim, 14 Oct 2026: 1 proof spent, 88 left until 23 Nov 2026");
+  assert.equal(await due("2026-10-27T06:00:00Z"), "Reclaim, 26 Oct 2026: 1 proof spent, 88 left until 23 Nov 2026", "the last morning");
+  assert.equal(await due("2026-10-28T06:00:00Z"), null, "the judging is over");
+  assert.equal(claimed.length, 3);
+  // It rides the call that already arrives every five minutes, and leaves through the operator's alerts.
+  const route = readFileSync("app/api/cron/milestones/route.ts", "utf8");
+  assert.match(route, /const summary = await morningSummaryDue\(\);\n\s+if \(summary\) await sendAlert\(summary\);/);
+});
+
+test("the operator is told the moment a row crosses a mark, by the row itself", async () => {
   let told = 0;
   await noteAttestedCall({ kind: "fetch", source: "chess-player", ok: true }, async () => {
     told += 1;

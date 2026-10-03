@@ -38,8 +38,8 @@ test("the judge's path leads to the recipient's side, and promises nothing a sin
   const sentences = read("src/sentences.ts");
   for (const label of ['me: "Me"', 'anotherAccount: "Use another account"', 'openMyGift: "Open my gift"']) assert.ok(sentences.includes(label), label);
   // When a day counts and when a missed one comes back: the schedules' own hours.
-  assert.ok(page.includes("a day counts the morning after it ends (the readings pass of 00:30 UTC); a "), "when a day counts, on the first two versions");
-  assert.ok(page.replace(/\s+/g, " ").includes("missed day comes back to the funder 31 hours after it ends (the settling pass of 07:00 UTC, two mornings later)"));
+  assert.ok(page.includes('"The day counts the morning after it ends (the readings pass of 00:30 UTC). A "'), "when a day counts, on the first two versions");
+  assert.ok(page.includes("day without a lesson costs no reading, a plain look sees it first, and it comes back to the funder 31 hours after it ends (the settling pass of 07:00 UTC, two mornings later)."));
   const crons = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8")).crons as { path: string; schedule: string }[];
   assert.equal(crons.find((cron) => cron.path === "/api/cron/daily")?.schedule, "30 0 * * *");
   assert.equal(crons.find((cron) => cron.path === "/api/cron/settle")?.schedule, "0 7 * * *");

@@ -1,4 +1,4 @@
-import { BEFORE_THE_JOURNAL, cycleInWords, cycleUse, dailyCeilings, limitsOf, RECLAIM_ALLOWANCE } from "@/src/attested-calls";
+import { BEFORE_THE_JOURNAL, cycleInWords, cycleUse, dailyCeilings, JUDGING, leftOf, limitsOf, LOST_ON_30_SEP_2026, RECLAIM_ALERT_LEFT, RECLAIM_ALLOWANCE, utcDayInWords, type CycleUse } from "@/src/attested-calls";
 import { contactEmail } from "@/src/contact";
 import { LIMIT } from "@/src/sentences";
 import { PROOF_EVERY_SECONDS } from "@/src/milestone-reading";
@@ -77,6 +77,12 @@ function UseLine({ use, name }: Readonly<{ use: FirstUse; name: string }>) {
       ))}
     </span>
   );
+}
+
+/** What is left of the month's readings, and the day they start again, as the journal counts them when the page is served. */
+function readingsLeftInWords(use: CycleUse): string {
+  const left = leftOf(use.fetches.proved, use.fetches.allowed);
+  return `${left} ${left === 1 ? "reading is" : "readings are"} left until ${utcDayInWords(use.until)}, when the count starts again.`;
 }
 
 // The only page where contract addresses appear. Consumer screens never show them. They are set in the text face
@@ -165,15 +171,37 @@ export default async function JudgesPage() {
             press Create my account. Press Open my gift, then connect the source. With one account you only ever see
             the funder&apos;s side of your own gift.
           </li>
-          <li>
-            What you will see, and when:{" "}
-            {thirdVersionSet
-              ? "on a gift made now, a day counts the day its lesson is done, when the gift's page is opened or within a quarter of an hour; on a gift made on the second version, the morning after it ends (the readings pass of 00:30 UTC). Either way a "
-              : "a day counts the morning after it ends (the readings pass of 00:30 UTC); a "}
-            missed day comes back to the funder 31 hours after it ends (the settling pass of 07:00 UTC, two mornings
-            later). To see a settlement in one sitting, offer a Chess.com rating one point above the account&apos;s
-            own: the first reading is the start, and a reading at the target, asked from the gift&apos;s page, settles
-            it at once.
+          <li data-try-paths>
+            What to offer, and what each costs of the month&apos;s attested readings, which are few and counted under
+            &quot;How a day is read&quot;, below.
+            {reclaimUse ? <span data-readings-left> {readingsLeftInWords(reclaimUse)}</span> : null}
+            <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)] pt-[var(--space-xs)]">
+              <li>
+                First, Duolingo, a lesson a day: two readings for one connection, one lesson and one day paid.
+                Connecting the account is one, counting the day is the other.{" "}
+                {thirdVersionSet
+                  ? "On a gift made now, the day is paid the day its lesson is done: when the gift's page is opened after the lesson, or within a quarter of an hour. On a gift made on the second version, the day counts the morning after it ends (the readings pass of 00:30 UTC). Either way a "
+                  : "The day counts the morning after it ends (the readings pass of 00:30 UTC). A "}
+                day without a lesson costs no reading, a plain look sees it first, and it comes back to the funder 31
+                hours after it ends (the settling pass of 07:00 UTC, two mornings later).
+              </li>
+              <li>
+                A climb on Chess.com: four readings, started and reached. Each reading is two fetches, the profile and
+                the ratings: two at the start, two at the target. It settles in one sitting: offer a rating one point
+                above the account&apos;s own, and once it is reached ask for the reading from the gift&apos;s page. On
+                Codeforces a reading is one fetch: two, started and reached.
+              </li>
+              <li>
+                A certificate by its link (Coursera, edX, MITx Online, Accredible, the Duolingo English Test) or a WCA
+                time: one reading, taken only once a plain look has found that the page can pay. A Credly badge: two.
+                A race finished: one.
+              </li>
+              <li>Strava or Fitbit, by the day: one reading to connect, then one each morning that has a day to credit.</li>
+              <li>
+                A document a person shows (a score, an enrolment, a grade): no reading. It is one of the month&apos;s{" "}
+                {RECLAIM_ALLOWANCE.verifications} proofs shown by people.
+              </li>
+            </ul>
           </li>
           <li>
             If the portal&apos;s instructions give you the link of a gift made for you, open it instead of making one. Money
@@ -446,14 +474,19 @@ export default async function JudgesPage() {
           what was started or asked: what Reclaim counts is not published, and on 3 Oct 2026 fetches still passed at 126
           started and 68 proofs.
           {reclaimUse?.from === BEFORE_THE_JOURNAL.cycleFrom
-            ? ` Of this cycle's fetches, ${BEFORE_THE_JOURNAL.started} started and ${BEFORE_THE_JOURNAL.proved} proofs were counted on 3 Oct 2026 from the reading service's logs, which start on 28 Sep, and from the gifts' journal, so the figures are a floor. 114 of those fetches went in five hours on 30 Sep 2026, on one gift whose plain look kept failing, half of them without a proof: the pass of every five minutes tried a proof at each failed look. It stops at a failed look since 1 Oct 2026.`
-            : ""}{" "}
+            ? ` Of this cycle's fetches, ${BEFORE_THE_JOURNAL.started} started and ${BEFORE_THE_JOURNAL.proved} proofs were counted on 3 Oct 2026 from the reading service's logs, which start on 28 Sep, and from the gifts' journal, so the figures are a floor. Of those ${BEFORE_THE_JOURNAL.proved} proofs, ${BEFORE_THE_JOURNAL.proved - LOST_ON_30_SEP_2026.proofs} were real use and ${LOST_ON_30_SEP_2026.proofs} were lost on 30 Sep 2026 by a fault of ours on one Chess.com gift: its ratings answered 404, and the pass of every five minutes took a new proof of the profile at each round, ${LOST_ON_30_SEP_2026.fetches} fetches in five hours. Corrected on 3 Oct 2026: a proof is claimed before it is paid for and a day has its ceilings, so the same fault now costs ${dailyCeilings().perGift} proofs in a day at most.`
+            : ""}
+          {reclaimUse ? <span data-cycle-left> {readingsLeftInWords(reclaimUse)}</span> : null}{" "}
           Since 3 Oct 2026 every fetch is written down as it leaves, proof or not, and a proof is claimed before it is
           paid for: for one gift, once in {PROOF_EVERY_SECONDS.unseen / 3_600} hours after a look that failed or showed no
           rating, once an hour in the gift&apos;s last day, and every {PROOF_EVERY_SECONDS.atTheTarget / 60} minutes at the
-          target until one settles it. The operator is told by email at half of an allowance, at four fifths, and at the
-          limit, with the days then waiting for a reading. What is not closed: each attempt to connect an account by a
-          code in its name is still a proof, whether the code is there yet or not.
+          target until one settles it. The operator is told by email when{" "}
+          {RECLAIM_ALERT_LEFT.filter((mark) => mark > 0).join(", ")} and none are left of an allowance, the last with the days then waiting for a reading, and
+          each morning of the judging (from {utcDayInWords(JUDGING.from)} to {utcDayInWords(JUDGING.until)}) with what the
+          day before spent, by gift and by reason. What is not closed: a gift on Strava or Fitbit has no plain look, a
+          proof whose sending failed is taken again at the next reading, what a person shows has no ceiling of its own
+          for a gift, and a reading asked from a developer&apos;s machine reaches the same Reclaim application without
+          being written in this journal.
         </p>
       </Fold>
 
