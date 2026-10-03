@@ -7,6 +7,8 @@ import { GIFT_PAGE as W } from "@/src/sentences";
 import { BODY, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../components/ui";
 import { FieldRefusal } from "./FieldRefusal";
 import { Sheet } from "./Sheet";
+import { ButtonWords, StepInProgress } from "./Waiting";
+import { WAITS } from "@/src/sentences";
 
 /**
  * Taking back a gift nobody has opened (the founder's third defect on gift 1000001, 19 Sep 2026). The contract has
@@ -62,8 +64,11 @@ export function TakeItBackSheet({
       footer={
         <>
           <button type="button" onClick={() => void takeItBack()} disabled={working} className={PRIMARY_BUTTON}>
-            {busy ? W.takingBack : W.takeBackConfirm(amountDisplay)}
+            <ButtonWords busy={busy} doing={W.takingBack}>
+              {W.takeBackConfirm(amountDisplay)}
+            </ButtonWords>
           </button>
+          <StepInProgress busy={busy} step={WAITS.takingBack} />
           <button type="button" onClick={onClose} disabled={working} className={SECONDARY_BUTTON}>
             {W.notNow}
           </button>

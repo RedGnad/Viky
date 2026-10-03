@@ -8,6 +8,8 @@ import { GIFT_PAGE as W } from "@/src/sentences";
 import { BODY, CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE } from "../components/ui";
 import { FieldRefusal } from "./FieldRefusal";
 import { Sheet } from "./Sheet";
+import { ButtonWords, StepInProgress } from "./Waiting";
+import { WAITS } from "@/src/sentences";
 
 /**
  * The link of a gift nobody has opened, given back to the funder (gift 1000001, 19 Sep 2026: the tab was closed
@@ -116,8 +118,11 @@ export function LinkAgain({
         footer={
           <>
             <button type="button" onClick={() => void askAgain()} disabled={busy} className={PRIMARY_BUTTON}>
-              {busy ? W.gettingLink : again}
+              <ButtonWords busy={busy} doing={W.gettingLink}>
+                {again}
+              </ButtonWords>
             </button>
+            <StepInProgress busy={busy} step={WAITS.newLink} />
             <button type="button" onClick={() => setAsking(false)} disabled={busy} className={SECONDARY_BUTTON}>
               {W.notNow}
             </button>

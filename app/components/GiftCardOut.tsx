@@ -14,6 +14,8 @@ import { CopyLine } from "../kit/CopyLine";
 import { Sheet } from "../kit/Sheet";
 import { BODY, CARD, CARD_AMOUNT, CARD_LABEL, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
 import { Said } from "../kit/Said";
+import { ButtonWords, StepInProgress, WaitLine } from "../kit/Waiting";
+import { WAITS } from "@/src/sentences";
 
 /**
  * A gift card, the Bitrefill way's second use (D271): the card chosen in a sheet, as "Which university?" is, from the
@@ -253,9 +255,14 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
                 {busy ? W.confirming : W.confirm}
               </button>
             ) : (
-              <button type="button" onClick={() => void askPrice()} disabled={busy || (!chosenPackage && (!typedFits || typedFar))} className={PRIMARY_BUTTON}>
-                {busy ? W.pricing : W.getPrice}
-              </button>
+              <>
+                <button type="button" onClick={() => void askPrice()} disabled={busy || (!chosenPackage && (!typedFits || typedFar))} className={PRIMARY_BUTTON}>
+                  <ButtonWords busy={busy} doing={W.pricing}>
+                    {W.getPrice}
+                  </ButtonWords>
+                </button>
+                <StepInProgress busy={busy} step={WAITS.price("Bitrefill")} />
+              </>
             )
           ) : null}
           {props.country ? (
@@ -271,7 +278,7 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
       {history}
       {props.country ? (
         <Sheet open={sheetOpen} title={W.chooseTitle} help={W.chooseHelp(countryName)} onClose={() => setSheetOpen(false)} tall>
-          {cards === null ? <p className={HELP}>{W.reading}</p> : null}
+          {cards === null ? <WaitLine>{W.reading}</WaitLine> : null}
           {cards === "unreadable" ? <p className={HELP}>{W.failed}</p> : null}
           {Array.isArray(cards) && cards.length === 0 ? <p className={HELP}>{W.none(countryName)}</p> : null}
           {listed.length > 0 ? (

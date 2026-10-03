@@ -7,6 +7,7 @@ import { MARATHON_PROOF as W } from "@/src/sentences";
 import { countryInWords } from "@/src/rail-country";
 import { CHIP, HELP } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
+import { WaitLine } from "../Waiting";
 
 /**
  * "Which race?" then "Which distance?" (D273, the founder of 27 Sep 2026): every coming race of the register, all
@@ -34,7 +35,7 @@ export function MarathonChooser({ open, draft, named, onChoose }: Readonly<{ ope
       live = false;
     };
   }, [open]);
-  if (races === null) return <p className={HELP}>{W.readingRaces}</p>;
+  if (races === null) return <WaitLine>{W.readingRaces}</WaitLine>;
   if (races === "unreadable") return <p className={HELP}>{W.racesUnreadable}</p>;
   const [chosenRaceId, chosenDistance] = (draft.course ?? "").split("/");
   const raceId = picked ?? (chosenRaceId || null);

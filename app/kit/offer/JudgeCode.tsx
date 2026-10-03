@@ -7,6 +7,8 @@ import { HELP, SMALL_BUTTON } from "../../components/ui";
 import { FoldChevron } from "../GiftLive";
 import { Field } from "../Field";
 import { FieldRefusal } from "../FieldRefusal";
+import { ButtonWords, StepInProgress } from "../Waiting";
+import { WAITS } from "@/src/sentences";
 
 /** A balance as whole cents, rounded down, as the card's amount field takes it: 25.004999 is "25.00". */
 export function centsDown(units: bigint): string {
@@ -103,8 +105,11 @@ export function JudgeCode({
       <Field id="gift-code" label={W.code.label} value={code} onChange={setCode} autoComplete="off" spellCheck={false} />
       {problem ? <FieldRefusal id="gift-code-refused">{problem}</FieldRefusal> : null}
       <button type="button" className={`${SMALL_BUTTON} self-start`} disabled={busy || code.trim().length === 0} onClick={() => void redeem()}>
-        {busy ? W.code.using : W.code.use}
+        <ButtonWords busy={busy} doing={W.code.using}>
+          {W.code.use}
+        </ButtonWords>
       </button>
+      <StepInProgress busy={busy} step={WAITS.code} />
     </div>
   );
   if (folded) {
