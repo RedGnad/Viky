@@ -5,6 +5,7 @@ import {
   asOpenExit,
   attachSignature,
   configureExitStore,
+  conversionsSent,
   discardExit,
   ensureExitSchema,
   loadExit,
@@ -213,4 +214,24 @@ test("terms past their deadline are retired, and what could still land is left a
   // Nothing is left to retire the second time, and the one still alive is still the one a person would be offered.
   assert.equal(await retireExpiredExits(now), 0);
   assert.equal((await openExit(ACCOUNT))?.id, liveSigned.id);
+});
+
+test("the judges page reads the conversions sent, USDC changed into what a gift holds, and the first of them", async () => {
+  assert.deepEqual(await conversionsSent(), { count: 0, first: null });
+  const AUSD = "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a" as `0x${string}`;
+  // A way out in USDC is not a conversion, however it ends.
+  const out = terms();
+  await saveExit(out);
+  await attachSignature(out.id, `0x${"55".repeat(65)}`);
+  await markExitSent(out.id, `0x${"66".repeat(32)}`);
+  const conversion = terms({ amount: 14_935_075n, tokenOut: AUSD, minOut: 14_785_724n });
+  await saveExit(conversion);
+  assert.deepEqual(await conversionsSent(), { count: 0, first: null }, "prepared is not sent");
+  await attachSignature(conversion.id, `0x${"77".repeat(65)}`);
+  await markExitSent(conversion.id, `0x${"88".repeat(32)}`);
+  const sent = await conversionsSent();
+  assert.equal(sent?.count, 1);
+  assert.equal(sent?.first?.amount, 14_935_075n);
+  assert.equal(sent?.first?.minOut, 14_785_724n);
+  assert.equal(sent?.first?.txHash, `0x${"88".repeat(32)}`);
 });

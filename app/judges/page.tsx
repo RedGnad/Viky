@@ -1,6 +1,12 @@
 import { formatAusd } from "@/src/gift-reader";
 import { judgeCreditConfig, judgeCreditsStanding, standingInWords } from "@/src/judge-credit";
-import { rampHostApiKey } from "@/src/rails";
+import { rampHostApiKey, rampnowWayIn } from "@/src/rails";
+import { rampnowFrameOn } from "@/src/rampnow-frame";
+import { usdcRouterAddress } from "@/src/usdc-router";
+import { USDC_ROUTER } from "@/src/viky-contracts";
+import { conversionsSent } from "@/src/exit-store";
+import { payoutsArrived } from "@/src/mobile-money-store";
+import { conversionUse, mobileMoneyUse, type FirstUse } from "@/src/judges-first-use";
 import type { Metadata } from "next";
 import { Shell } from "../kit/Shell";
 import { JudgesAccount } from "../components/JudgesAccount";
@@ -13,7 +19,7 @@ import { usesDelivered } from "@/src/phone-order-store";
 import { consentAnchorAddress, giftEscrowV2Address, milestoneGiftV2Address } from "@/src/v2";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, PUBLIC_RPC_URL } from "@/src/monad/chain";
 import { readIndex } from "@/src/envio-index";
-import { MOBILE_CEILINGS } from "@/src/mobile-money";
+import { MOBILE_CEILINGS, mobileMoneyOn } from "@/src/mobile-money";
 import { JudgesAgora } from "./JudgesAgora";
 import { JudgesConditions } from "./JudgesConditions";
 import { JudgesContents } from "./JudgesContents";
@@ -50,6 +56,25 @@ function Tx({ hash }: Readonly<{ hash: string }>) {
 /** The mobile money ceilings in words, from the constants the routes check (src/mobile-money.ts). */
 const MOBILE_CEILINGS_WORDS = `$${MOBILE_CEILINGS.usdPerPayout}.00 at most per payout and $${MOBILE_CEILINGS.usdPerAccountPerDay}.00 a day per account`;
 
+/** A way's state and its first use, with each transaction a judge can open (src/judges-first-use.ts). */
+function UseLine({ use, name }: Readonly<{ use: FirstUse; name: string }>) {
+  return (
+    <span data-first-use={name}>
+      {use.words}
+      {use.transactions.map((transaction) => (
+        <span key={transaction.hash}>
+          {" "}
+          {transaction.label[0].toUpperCase() + transaction.label.slice(1)}:{" "}
+          <a className="underline" href={`https://monadvision.com/tx/${transaction.hash}`}>
+            {`${transaction.hash.slice(0, 10)}…${transaction.hash.slice(-4)}`}
+          </a>
+          .
+        </span>
+      ))}
+    </span>
+  );
+}
+
 // The only page where contract addresses appear. Consumer screens never show them. They are set in the text face
 // like every other word: a monospace face would be the system's, and hex has no letter a text face confuses.
 export default async function JudgesPage() {
@@ -65,6 +90,12 @@ export default async function JudgesPage() {
   const witnessLines = await witnessProviders();
   // How many times each Bitrefill use was used (D271): said here, as for the conditions, and never in the flow.
   const uses = await usesDelivered();
+  // Mobile money and Rampnow, said as Bitrefill is (the founder, 3 Oct 2026): open and unused, then their first use.
+  const mobileOn = mobileMoneyOn();
+  const mobileUse = mobileMoneyUse(mobileOn, mobileOn ? await payoutsArrived() : null, countryInWords);
+  const converter = usdcRouterAddress();
+  const rampnowOn = rampnowWayIn();
+  const conversion = conversionUse(rampnowOn, rampnowOn ? await conversionsSent() : null);
   // What the second version changes for our own key is said only once its contracts are set (src/v2.ts): until then no
   // gift is on them, and this page says nothing it cannot show.
   const escrowV2 = giftEscrowV2Address();
@@ -247,6 +278,16 @@ export default async function JudgesPage() {
             ). Each owner is read again from the chain further down, with what that owner can and cannot do. Handing
             ownership over moved no money: the earlier contract held the 8.571432 AUSD of its first gift before and after
             it. That gift has since ended, and its last refund went back to its funder on 23 Sep 2026.
+            {converter === USDC_ROUTER ? (
+              <>
+                {" "}The converter of card payments was born owned by a key made for its deployment alone, which handed it
+                to the Safe in its third transaction on 3 Oct 2026, in{" "}
+                <a className="underline" href="https://monadvision.com/tx/0x87d44ed94b31fa7c8ba18872b5225415dc8a2651f62ff83794bcc38e85177103">
+                  0x87d44ed9…7103
+                </a>
+                .
+              </>
+            ) : null}
           </dd>
           {earlierEscrow ? (
             <>
@@ -296,6 +337,23 @@ export default async function JudgesPage() {
           today it opens bare and the funder copies their account from Viky&apos;s waiting screen. With the key, the page
           opens with the account, the amount in euros and AUSD already filled in.{" "}
           {rampHostApiKey() ? "The key is set on this deployment: the page opens filled in." : "The key is not set on this deployment yet."}
+        </p>
+        <p className={HELP} data-rampnow-way>
+          A third way is Rampnow, by card: the funder pays on Rampnow&apos;s page, which delivers USDC on Monad to their
+          account, and the converter changes it into AUSD on one signature, though the account holds none of the
+          chain&apos;s coin. The converter is a second copy of the way out&apos;s contract, ExitRouter, set on USDC
+          {converter ? (
+            <>
+              {" "}at{" "}
+              <a className="underline" href={`https://monadvision.com/address/${converter}`}>
+                <code>{converter}</code>
+              </a>
+              , its source verified through Sourcify on 3 Oct 2026, and its owner read with the others&apos; under Network
+            </>
+          ) : null}
+          . A conversion promises at least ninety-nine for a hundred, or nothing moves.{" "}
+          {rampnowOn ? (rampnowFrameOn() ? "Rampnow's page opens in a frame inside Viky. " : "Rampnow's page opens in a tab of its own. ") : null}
+          <UseLine use={conversion} name="rampnow" />
         </p>
       </Fold>
 
@@ -634,12 +692,15 @@ export default async function JudgesPage() {
             otherwise.
           </li>
           <li>
-            <strong>Mobile money, switched off.</strong> A payout to a mobile money number through Switch Labs is built and
-            offered nowhere: it is switched on only after a first real payout has reached a real number, and on 2 Oct 2026
-            Switch had not yet opened payouts to Viky&apos;s key. When it is on, the person types the amount in their own
-            money, francs in Senegal, and Switch&apos;s quote for exactly that amount gives the dollars it takes. Its
-            ceilings are the gift cards&apos; rule: {MOBILE_CEILINGS_WORDS}, checked when the payout is priced and again
-            when it is sent, and said in place of the form when the day&apos;s is met.
+            <strong>Mobile money.</strong> A payout to a mobile money number through Switch Labs. The person types the
+            amount in their own money, francs in Senegal, and Switch&apos;s quote for exactly that amount gives the dollars
+            it takes. Its ceilings are the gift cards&apos; rule: {MOBILE_CEILINGS_WORDS}, checked when the payout is
+            priced and again when it is sent, and said in place of the form when the day&apos;s is met. Switch refused
+            every quote to Viky&apos;s key until 2 Oct 2026, 23:23 UTC, and has answered them since.{" "}
+            {mobileOn
+              ? "Offered to everybody since 3 Oct 2026, by the founder's rule that a way whose code is complete is open at its deployment; the one setting that opens it also closes it, should Switch stop answering well. "
+              : null}
+            <UseLine use={mobileUse} name="mobile-money" />
           </li>
           <li>
             <strong>The Bitrefill way out.</strong> What it is: Viky buys a good, a phone top-up of credit or data or a

@@ -8,7 +8,7 @@ import { encodeAbiParameters, encodeEventTopics, getAddress, type Hex, type Publ
 import { USDC } from "../src/coins";
 import { exitRouterAbi } from "../src/exit-router-abi";
 import { ASK_SWITCH_EVERY_MS, followPayout, forgetKeptCoverage, offerIn, startPayout, type SwitchReader } from "../src/mobile-money-server";
-import { configureMobilePayoutStore, loadPayout, notePayoutState } from "../src/mobile-money-store";
+import { configureMobilePayoutStore, loadPayout, notePayoutState, payoutsArrived, recordPayout } from "../src/mobile-money-store";
 import type { SqlExecutor } from "../src/proof-session-store";
 import type { OpenedPayout } from "../src/switch";
 
@@ -192,4 +192,30 @@ test("the day counts payouts opened today whose dollars did not come back; a pay
     /\$450\.00 already went today/,
   );
   assert.equal(opened.length, 0);
+});
+
+test("the judges page reads how many payouts arrived and the first, dated by the moment Switch first said so", async () => {
+  await db.query("DELETE FROM viky_mobile_payouts");
+  assert.deepEqual(await payoutsArrived(), { count: 0, first: null });
+  const payout = (reference: string, exitTx: string) =>
+    recordPayout({ reference, account: ACCOUNT, country: "SN", network: "ORANGE", numberEnd: "4567", exitTx, units: 10_000_000n, depositAddress: `0x${"de".repeat(20)}`, depositUnits: 10_000_000n, localAmount: 5892.17, localCurrency: "XOF", rate: 589.21703, status: "AWAITING_DEPOSIT", expiresAt: new Date(Date.now() + 1_800_000) });
+  await payout("00000000-0000-4000-8000-000000000001", `0x${"a1".repeat(32)}`);
+  await payout("00000000-0000-4000-8000-000000000002", `0x${"a2".repeat(32)}`);
+  await notePayoutState("00000000-0000-4000-8000-000000000001", { status: "PROCESSING", local: null, depositHash: `0x${"d1".repeat(32)}` });
+  assert.deepEqual(await payoutsArrived(), { count: 0, first: null }, "processing is not arrived");
+  await notePayoutState("00000000-0000-4000-8000-000000000001", { status: "COMPLETED", local: 5892.17, depositHash: null });
+  const first = await payoutsArrived();
+  assert.equal(first?.count, 1);
+  assert.equal(first?.first?.network, "ORANGE");
+  assert.equal(first?.first?.depositTx, `0x${"d1".repeat(32)}`);
+  assert.equal(first?.first?.exitTx, `0x${"a1".repeat(32)}`);
+  const completedAt = first!.first!.at.getTime();
+  // Asked again later, a completed payout keeps the moment it first completed.
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  await notePayoutState("00000000-0000-4000-8000-000000000001", { status: "COMPLETED", local: null, depositHash: null });
+  assert.equal((await payoutsArrived())?.first?.at.getTime(), completedAt);
+  await notePayoutState("00000000-0000-4000-8000-000000000002", { status: "COMPLETED", local: null, depositHash: null });
+  const two = await payoutsArrived();
+  assert.equal(two?.count, 2);
+  assert.equal(two?.first?.exitTx, `0x${"a1".repeat(32)}`, "the first stays the first");
 });

@@ -58,6 +58,7 @@ export function ownedContracts(env: NodeJS.ProcessEnv = process.env): ReadonlyAr
     { label: "the earlier gift contract that still runs the first gifts", key: "NEXT_PUBLIC_EARLIER_GIFT_ESCROW_ADDRESS" },
     { label: second ? "first-version milestone gifts" : "milestone gifts", key: "NEXT_PUBLIC_MILESTONE_GIFT_ADDRESS" },
     { label: "the way out", key: "EXIT_ROUTER_ADDRESS" },
+    { label: "the converter of card payments", key: "NEXT_PUBLIC_USDC_ROUTER_ADDRESS" },
   ];
   const out: Array<{ label: string; address: Hex }> = [];
   for (const { label, key } of named) {

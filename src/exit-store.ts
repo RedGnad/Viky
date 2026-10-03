@@ -251,6 +251,28 @@ export async function markExitSent(id: string, txHash: Hex | null): Promise<bool
   return rows.length === 1;
 }
 
+export type SentConversion = Readonly<{ at: Date; amount: bigint; minOut: bigint; txHash: string | null }>;
+
+/**
+ * The conversions sent, for the judges page: USDC changed into what a gift holds by the second copy of the router, how
+ * many, and the first. Null when the journal cannot be read.
+ */
+export async function conversionsSent(): Promise<Readonly<{ count: number; first: SentConversion | null }> | null> {
+  try {
+    const rows = await sql()`
+      SELECT amount, min_out, tx_hash, sent_at, count(*) OVER ()::int AS sent FROM viky_exits
+       WHERE state = 'sent' AND token_out = ${GIFT_COIN} ORDER BY sent_at ASC LIMIT 1`;
+    if (!rows[0]) return { count: 0, first: null };
+    const row = rows[0];
+    return {
+      count: Number(row.sent),
+      first: { at: new Date(String(row.sent_at)), amount: BigInt(String(row.amount)), minOut: BigInt(String(row.min_out)), txHash: row.tx_hash === null || row.tx_hash === undefined ? null : String(row.tx_hash) },
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** What the planner needs and nothing more. */
 export function asOpenExit(record: ExitRecord): OpenExit {
   return { id: record.id, amount: record.amount, tokenOut: record.tokenOut, minOut: record.minOut, signature: record.signature };
