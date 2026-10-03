@@ -464,8 +464,10 @@ contract GiftEscrowV3 is Ownable2Step, ReentrancyGuard, EIP712 {
             g.identityHash = a.identityHash;
             g.baselineValue = a.metricValue;
             g.lastCheckInAt = a.observedAt;
-            // The first day is the day of this reading: a lesson taken later that day, and read, pays it.
-            uint32 startDay = _readDay(a.observedAt);
+            // The first day is the day this reading is recorded, the block's own: a lesson taken later that day,
+            // and read, pays it. Not the day it was observed: observed before midnight and carried after it, it
+            // would open a first day already over.
+            uint32 startDay = _dayOf(block.timestamp);
             g.startDay = startDay;
             g.endDay = startDay + g.durationDays - 1;
             g.settledThroughDay = startDay - 1;
@@ -479,8 +481,8 @@ contract GiftEscrowV3 is Ownable2Step, ReentrancyGuard, EIP712 {
         // The catch-up window is the contract's own rule: a day whose window has elapsed goes back before anything
         // is credited, whoever is or is not running a keeper.
         _drainElapsed(giftId, g);
-        // The day of the reading itself is open to it. It is never before the first day: a later reading is
-        // observed after the first one, which was taken on that day or the second before it.
+        // The day of the reading itself is open to it. A reading observed before the first day finds no open
+        // day and is refused below.
         uint32 readDay = _readDay(a.observedAt);
         uint32 upper = readDay > g.endDay ? g.endDay : readDay;
         if (upper <= g.settledThroughDay) revert NothingToCredit();
