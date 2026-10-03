@@ -106,25 +106,40 @@ function ownership(contract: Readonly<{ name: string; owner: Hex; pendingOwner: 
  * Everything that must be put right before the three settings are set, and what is worth knowing without being wrong.
  * No problem is what is wanted.
  */
+/**
+ * What a new gift contract must read of itself, whatever it replaces: the Safe owns it and nobody else is offered it,
+ * no evidence signer waits and the one in place is the one named, no pause of its readings was sent, and creation is
+ * open on it. The third daily contract is held to the same (src/v3-handover.ts).
+ */
+export function leftAsDeployed(expected: Pick<HandoverExpected, "owner" | "signer" | "nowSeconds">, contract: Omit<GiftContractRead, "replaces" | "goals" | "register" | "nextGiftId">): Readonly<{ problems: string[]; notes: string[] }> {
+  const problems: string[] = [];
+  const notes: string[] = [];
+  if (!same(contract.owner, expected.owner)) problems.push(`${contract.name}: its owner is ${contract.owner}, not the Safe ${expected.owner}. The Safe has not accepted it yet`);
+  if (!nobody(contract.pendingOwner)) problems.push(`${contract.name}: its ownership is still offered to ${contract.pendingOwner}`);
+  if (!nobody(contract.pendingEvidenceSigner)) problems.push(`${contract.name}: an evidence signer is waiting, ${contract.pendingEvidenceSigner}. Nobody announced one on purpose: call it off from the Safe before anything else`);
+  if (!same(contract.evidenceSigner, expected.signer)) problems.push(`${contract.name}: its evidence signer is ${contract.evidenceSigner}, not ${expected.signer}`);
+  if (contract.pausedUntil > 0n) {
+    const brakeBack = contract.pausedUntil + BigInt(PAUSE_REST_SECONDS);
+    const running = BigInt(expected.nowSeconds) < contract.pausedUntil;
+    if (BigInt(expected.nowSeconds) <= brakeBack) {
+      problems.push(
+        `${contract.name}: a pause of its readings was sent, which nobody sends on a new contract on purpose. It ${running ? "runs until" : "ended at"} ${moment(contract.pausedUntil)}, and the Safe cannot pause this contract before ${moment(brakeBack + 1n)}: it would hold gifts with no brake until then${running ? ` (the Safe can end the pause: ACTION=${contract.pauseAction} PAUSED=false TARGET=${contract.target})` : ""}. Wait until then, or deploy again`,
+      );
+    } else {
+      notes.push(`${contract.name}: a pause of its readings was sent and ended at ${moment(contract.pausedUntil)}. Its rest is over: the Safe can pause it again`);
+    }
+  }
+  if (contract.creationPaused) problems.push(`${contract.name}: creation is closed on it, and the deployment had opened it. The Safe opens it: ACTION=creation-paused PAUSED=false TARGET=${contract.target}`);
+  return { problems, notes };
+}
+
 export function handoverProblems(expected: HandoverExpected, gifts: readonly GiftContractRead[], anchor: AnchorRead): Readonly<{ problems: string[]; notes: string[] }> {
   const problems: string[] = [];
   const notes: string[] = [];
   for (const contract of gifts) {
-    problems.push(...ownership(contract, expected));
-    if (!nobody(contract.pendingEvidenceSigner)) problems.push(`${contract.name}: an evidence signer is waiting, ${contract.pendingEvidenceSigner}. Nobody announced one on purpose: call it off from the Safe before anything else`);
-    if (!same(contract.evidenceSigner, expected.signer)) problems.push(`${contract.name}: its evidence signer is ${contract.evidenceSigner}, not ${expected.signer}`);
-    if (contract.pausedUntil > 0n) {
-      const brakeBack = contract.pausedUntil + BigInt(PAUSE_REST_SECONDS);
-      const running = BigInt(expected.nowSeconds) < contract.pausedUntil;
-      if (BigInt(expected.nowSeconds) <= brakeBack) {
-        problems.push(
-          `${contract.name}: a pause of its readings was sent, which nobody sends on a new contract on purpose. It ${running ? "runs until" : "ended at"} ${moment(contract.pausedUntil)}, and the Safe cannot pause this contract before ${moment(brakeBack + 1n)}: it would hold gifts with no brake until then${running ? ` (the Safe can end the pause: ACTION=${contract.pauseAction} PAUSED=false TARGET=${contract.target})` : ""}. Wait until then, or deploy again`,
-        );
-      } else {
-        notes.push(`${contract.name}: a pause of its readings was sent and ended at ${moment(contract.pausedUntil)}. Its rest is over: the Safe can pause it again`);
-      }
-    }
-    if (contract.creationPaused) problems.push(`${contract.name}: creation is closed on it, and the deployment had opened it. The Safe opens it: ACTION=creation-paused PAUSED=false TARGET=${contract.target}`);
+    const itself = leftAsDeployed(expected, contract);
+    problems.push(...itself.problems);
+    notes.push(...itself.notes);
     for (const replaced of contract.replaces) {
       if (!replaced.creationPaused) problems.push(`${contract.name}: creation is open on ${replaced.name} ${replaced.address}, which it replaces. A gift made there takes a number this contract gives out too: the Safe closes it first`);
     }

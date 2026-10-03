@@ -3,6 +3,7 @@ import { consentAnchorAbi } from "./consent-anchor-abi";
 import { exitRouterAbi } from "./exit-router-abi";
 import { giftEscrowAbi } from "./gift-escrow-abi";
 import { giftEscrowV2Abi } from "./gift-escrow-v2-abi";
+import { giftEscrowV3Abi } from "./gift-escrow-v3-abi";
 import { milestoneGiftAbi } from "./milestone-gift-abi";
 import { milestoneGiftV2Abi } from "./milestone-gift-v2-abi";
 
@@ -14,6 +15,9 @@ import { milestoneGiftV2Abi } from "./milestone-gift-v2-abi";
  * The second version's three contracts are targets of their own (the review of 2 Oct 2026, R-06). Until then the tool
  * knew the four contracts in service only, so accepting the ownership of a new contract, pausing one in an emergency
  * or changing its signer meant writing the call's bytes by hand.
+ *
+ * The third daily contract is a target too, `escrow-v3`. It hands its ownership over and announces a signer exactly as
+ * the second version's contracts do, which is what `version: 2` says of a target here.
  */
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -29,6 +33,7 @@ const TARGETS: Readonly<Record<string, Readonly<{ name: string; setting: string;
   "escrow-v2": { name: "gift escrow, second version", setting: "NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS", abi: giftEscrowV2Abi as unknown as Abi, version: 2 },
   "milestone-v2": { name: "milestone gift, second version", setting: "NEXT_PUBLIC_MILESTONE_GIFT_V2_ADDRESS", abi: milestoneGiftV2Abi as unknown as Abi, version: 2 },
   anchor: { name: "consent anchor", setting: "NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS", abi: consentAnchorAbi as unknown as Abi, version: 2 },
+  "escrow-v3": { name: "gift escrow, third version", setting: "NEXT_PUBLIC_GIFT_ESCROW_V3_ADDRESS", abi: giftEscrowV3Abi as unknown as Abi, version: 2 },
 };
 
 export const SAFE_TARGETS: readonly string[] = Object.keys(TARGETS);
@@ -44,7 +49,7 @@ export function safeTarget(env: Env): SafeTarget {
   if (!target) throw new Error(`TARGET is ${SAFE_TARGETS.join(", ")}, and ${key} is none of them`);
   const set = env[target.setting]?.trim();
   const given = env.TARGET_ADDRESS?.trim();
-  if (given && target.version === 1) throw new Error(`TARGET_ADDRESS names a contract of the second version only: the ${target.name} is read from ${target.setting}`);
+  if (given && target.version === 1) throw new Error(`TARGET_ADDRESS names a contract of the second version or the third only: the ${target.name} is read from ${target.setting}`);
   if (given && !isAddress(given)) throw new Error("TARGET_ADDRESS is not an address");
   if (given && set && getAddress(given) !== getAddress(set)) throw new Error(`TARGET_ADDRESS is ${given}, and ${target.setting} says ${set}: one of the two is wrong`);
   const value = given || set;
@@ -59,12 +64,12 @@ export const SAFE_ACTIONS = ["creation-paused", "checkin-paused", "proof-paused"
 
 /** Which contracts each named action exists on: asked of another, it is refused here rather than by the encoder. */
 const ACTION_TARGETS: Readonly<Record<string, readonly string[]>> = {
-  "creation-paused": ["escrow", "earlier-escrow", "milestone", "escrow-v2", "milestone-v2"],
-  "checkin-paused": ["escrow", "earlier-escrow", "escrow-v2"],
+  "creation-paused": ["escrow", "earlier-escrow", "milestone", "escrow-v2", "milestone-v2", "escrow-v3"],
+  "checkin-paused": ["escrow", "earlier-escrow", "escrow-v2", "escrow-v3"],
   "proof-paused": ["milestone", "milestone-v2"],
-  "evidence-signer": ["escrow", "earlier-escrow", "milestone", "escrow-v2", "milestone-v2"],
+  "evidence-signer": ["escrow", "earlier-escrow", "milestone", "escrow-v2", "milestone-v2", "escrow-v3"],
   anchorer: ["anchor"],
-  "accept-ownership": ["escrow-v2", "milestone-v2", "anchor"],
+  "accept-ownership": ["escrow-v2", "milestone-v2", "anchor", "escrow-v3"],
 };
 
 export type SafeActionCall = Readonly<{ step: string; to: Address; data: Hex; target: SafeTarget | null; action: string }>;
