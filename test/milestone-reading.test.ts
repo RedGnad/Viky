@@ -325,6 +325,46 @@ test("an account the recipient named needs its code: without it nothing is sent,
   assert.equal(empty.kind === "refused" && empty.code, "NO_NAME");
 });
 
+test("a start by code looks for the code plainly first: no proof until it is in the name, and none for a look that failed (3 Oct 2026)", async () => {
+  // A try before the code is in the name cost a proof each time, two attested fetches on Chess.com.
+  const without = harness(THEIR_OWN, OPENED, { plainName: async () => "Erik" });
+  const early = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, without.deps);
+  assert.equal(early.kind === "refused" && early.code, "CODE_NOT_IN_NAME");
+  assert.deepEqual(without.calls, [], "no proof is paid for");
+
+  const noName = harness(THEIR_OWN, OPENED, { plainName: async () => null });
+  const empty = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, noName.deps);
+  assert.equal(empty.kind === "refused" && empty.code, "NO_NAME");
+  assert.deepEqual(noName.calls, []);
+
+  // The look itself failed: no proof either, and the person reads to try again in a minute.
+  const down = harness(THEIR_OWN, OPENED, { plainName: async () => Promise.reject(new ChessReadError("FETCH_FAILED", "Chess.com is not answering")) });
+  const failed = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, down.deps);
+  assert.equal(failed.kind === "refused" && failed.code, "FETCH_FAILED");
+  assert.equal(failed.kind === "refused" && failed.message, "Chess.com could not be read just now. Nothing was changed. Try again in a minute.");
+  assert.deepEqual(down.calls, []);
+
+  const closed = harness(THEIR_OWN, OPENED, { plainName: async () => Promise.reject(new ChessReadError("ACCOUNT_CLOSED", "closed")) });
+  const gone = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, closed.deps);
+  assert.equal(gone.kind === "refused" && gone.code, "ACCOUNT_CLOSED");
+  assert.deepEqual(closed.calls, []);
+
+  // The code is there: the proof is taken, and its own name is still the one that binds.
+  const seen = harness(THEIR_OWN, OPENED, { plainName: async () => "Erik kxq-prt" });
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "start" }, seen.deps)).kind, "started");
+  assert.deepEqual(seen.calls, ["attest:withName", "prove", "bind"]);
+  const lagging = harness(THEIR_OWN, OPENED, { plainName: async () => "Erik KXQPRT", attest: async () => attested(1904, { name: "Erik" }) });
+  const notYet = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, lagging.deps);
+  assert.equal(notYet.kind === "refused" && notYet.code, "CODE_NOT_IN_NAME");
+  assert.deepEqual(lagging.proved, []);
+
+  // The funder named the account: no code, so no look for one.
+  const named = harness(RECORD, OPENED, { plainName: async () => Promise.reject(new Error("never asked")) });
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "start" }, named.deps)).kind, "started");
+  // And the live reading has the look.
+  assert.match(readFileSync("src/milestone-reading.ts", "utf8"), /plainName: \(username, mode\) => readClimbName\(username, mode\),/);
+});
+
 test("below the target the keeper only looks, and pays for no proof", async () => {
   const run = harness(BOUND, CLIMBING);
   const outcome = await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, run.deps);

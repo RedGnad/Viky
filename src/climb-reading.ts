@@ -1,7 +1,7 @@
 import type { ChessStanding } from "./chess-com";
-import { attestChessRating, ChessReadError, readChessStanding, type AttestedChessReading } from "./chess-reading";
+import { attestChessRating, ChessReadError, readChessPlayer, readChessStanding, type AttestedChessReading } from "./chess-reading";
 import { climbSource, CODEFORCES_CLIMB, type ClimbId } from "./climbs";
-import { attestCodeforcesRating, CodeforcesReadError, readCodeforcesStanding } from "./codeforces-reading";
+import { attestCodeforcesRating, CodeforcesReadError, readCodeforcesName, readCodeforcesStanding } from "./codeforces-reading";
 
 /**
  * One door for every climb (the founder, 27 Sep 2026): the keeper, the create route and the rename flow read a
@@ -19,6 +19,16 @@ export type AttestedClimbReading = Omit<AttestedChessReading, "mode"> & Readonly
 
 export async function readClimbStanding(username: string, climb: ClimbId): Promise<ChessStanding> {
   return climbSource(climb) === "codeforces" ? readCodeforcesStanding(username) : readChessStanding(username, climb === CODEFORCES_CLIMB ? "rapid" : climb);
+}
+
+/**
+ * The name a person shows on the house a climb is read on, read plainly, or nothing when they show none: where the
+ * binding code is looked for before a proof is paid for (src/milestone-reading.ts).
+ */
+export async function readClimbName(username: string, climb: ClimbId): Promise<string | null> {
+  if (climbSource(climb) === "codeforces") return readCodeforcesName(username);
+  const name = (await readChessPlayer(username)).name;
+  return name && name.length > 0 ? name : null;
 }
 
 export async function attestClimbRating(input: { username: string; mode: ClimbId; withName: boolean }): Promise<AttestedClimbReading> {

@@ -71,8 +71,11 @@ async function readJson(url: string, fetchImpl: PlainFetch): Promise<{ status: n
   return { status: response.status, body };
 }
 
-/** Where a player stands today in one climb, read plainly. Every failure is typed. */
-export async function readChessStanding(username: string, climb: ChessClimb, fetchImpl: PlainFetch = fetch): Promise<ChessStanding> {
+/**
+ * The player a name belongs to, read plainly: who they are, that the account is open, and the name they show, which is
+ * where a binding code goes. Every failure is typed.
+ */
+export async function readChessPlayer(username: string, fetchImpl: PlainFetch = fetch): Promise<NonNullable<ReturnType<typeof playerOfProfile>>> {
   if (!isValidChessUsername(username)) throw new ChessReadError("INVALID_USERNAME", "That is not a Chess.com name");
   const profile = await readJson(chessProfileUrl(username), fetchImpl);
   if (profile.status === 404) throw new ChessReadError("PROFILE_NOT_FOUND", "No Chess.com player goes by that name");
@@ -80,6 +83,12 @@ export async function readChessStanding(username: string, climb: ChessClimb, fet
   const player = profile.status === 200 ? playerOfProfile(profile.body) : null;
   if (!player) throw new ChessReadError("FETCH_FAILED", `Chess.com answered ${profile.status}`);
   if (accountIsClosed(player.status)) throw new ChessReadError("ACCOUNT_CLOSED", "Chess.com has closed this account");
+  return player;
+}
+
+/** Where a player stands today in one climb, read plainly. Every failure is typed. */
+export async function readChessStanding(username: string, climb: ChessClimb, fetchImpl: PlainFetch = fetch): Promise<ChessStanding> {
+  const player = await readChessPlayer(username, fetchImpl);
   // A ratings page that does not answer 200 is Chess.com failing, even as a 404: the profile just said the player exists.
   const stats = await readJson(chessStatsUrl(username), fetchImpl);
   if (stats.status !== 200 || !stats.body || typeof stats.body !== "object") throw new ChessReadError("FETCH_FAILED", `Chess.com answered ${stats.status}`);
