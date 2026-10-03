@@ -5,7 +5,8 @@ import { fetchPublicProfile, PublicProfileError, reclaimPublicProfileDeps, type 
 import { checkInSubject, displayNameHasCode, DUOLINGO_PUBLIC_PROVIDER_LABEL } from "./duolingo-public-terms";
 import { DUOLINGO_DAILY } from "./conditions";
 import { contactEmail } from "./contact";
-import { lookBeforeCount, lookForCode, type ProfileLook } from "./daily-look";
+import { catchUpSecondsOf } from "./catch-up";
+import { LAST_RESORT_WITHIN_SECONDS, lastResortDue, lookBeforeCount, lookForCode, type ProfileLook } from "./daily-look";
 import { resolvePublicDuolingoProfile } from "./duolingo-profile";
 import { LIMIT } from "./sentences";
 import { contractRefusal } from "./gift-api";
@@ -17,6 +18,7 @@ import { loadGift, loadRelayed, markBound, type GiftRecord } from "./gift-store"
 import { holdTheStart, type StartAsked } from "./held-start";
 import { consumeAndSaveVerification, saveProofSession } from "./proof-session-store";
 import { escrowOf, RelayerError } from "./relayer";
+import { claimPass } from "./pass-guard";
 import { StartNotSigned } from "./v2-start";
 
 /**
@@ -27,6 +29,8 @@ import { StartNotSigned } from "./v2-start";
  *
  * Both look plainly before they pay for the attested read (src/daily-look.ts): a count takes none when the contract
  * would credit no day with what the profile shows, and a connection by code takes none until the code is in the name.
+ * A look that failed takes none either, but for the reading of last resort: by a pass, once for a gift in a day, when
+ * the window of its oldest open day closes before the next pass.
  */
 
 export type PublicCheckInPurpose = "bind" | "count";
@@ -51,12 +55,23 @@ export type PublicCheckInDeps = {
   now: () => number;
   /** Whether the recipient's agreement lets this gift be read (src/consent-guard.ts); a test that omits it reads. */
   leave?: (giftId: string, fundedAt: number) => Promise<ReadingLeave>;
+  /** The gift as its contract holds it; the chain's own answer when absent (src/gift-reader.ts). */
+  gift?: typeof readGift;
   /** The plain look taken before a proof is paid for (src/daily-look.ts); a test that omits it pays every time. */
   look?: ProfileLook;
+  /**
+   * Whether the reading of last resort may be taken for this gift on this UTC day: true once, whichever instance asks
+   * first (src/pass-guard.ts). A test that omits it takes it every time it is due.
+   */
+  claimLastResort?: (giftId: string, day: number) => Promise<boolean>;
 };
+
+/** Two days: the name carries the day, so a claim never comes back for it. */
+const LAST_RESORT_CLAIMED_FOR_SECONDS = 2 * 86_400;
 
 const defaultDeps: PublicCheckInDeps = {
   look: resolvePublicDuolingoProfile,
+  claimLastResort: (giftId, day) => claimPass(`daily-last-resort:${giftId}:${day}`, LAST_RESORT_CLAIMED_FOR_SECONDS),
   profile: reclaimPublicProfileDeps,
   course: (username, courseId) => readDuolingoCourse({ username, courseId }),
   now: () => Math.floor(Date.now() / 1_000),
@@ -74,7 +89,20 @@ async function countedToday(giftId: string, nowSeconds: number): Promise<boolean
   return relayed.some((entry) => entry.kind === "check-in" && entry.sessionId?.startsWith(`public:${giftId}:count:${today}:`));
 }
 
-export async function runPublicCheckIn(input: { giftId: string; purpose: PublicCheckInPurpose; force?: boolean }, deps: PublicCheckInDeps = defaultDeps): Promise<PublicCheckInOutcome> {
+export async function runPublicCheckIn(
+  input: {
+    giftId: string;
+    purpose: PublicCheckInPurpose;
+    force?: boolean;
+    /**
+     * Which pass is reading, when a pass is: only a pass may take a reading of last resort after a look that failed,
+     * and only the one that is the last before a window closes (`LAST_RESORT_WITHIN_SECONDS`). A count a person asks
+     * for names none: after a look that failed it takes no proof, and they try again in a minute.
+     */
+    pass?: "counting" | "recount";
+  },
+  deps: PublicCheckInDeps = defaultDeps,
+): Promise<PublicCheckInOutcome> {
   const { giftId, purpose } = input;
   const record: GiftRecord | null = await loadGift(giftId);
   if (!record || !record.recipient) return { kind: "already", giftId, reason: "not_opened" };
@@ -83,7 +111,7 @@ export async function runPublicCheckIn(input: { giftId: string; purpose: PublicC
   if (purpose === "count" && !record.boundAt) return { kind: "already", giftId, reason: "not_bound" };
 
   const escrow = escrowOf(record);
-  const onChain = await readGift(escrow, giftId);
+  const onChain = await (deps.gift ?? readGift)(escrow, giftId);
   if (onChain.cancelled) return { kind: "already", giftId, reason: "cancelled" };
   if (onChain.finalised) return { kind: "already", giftId, reason: "finished" };
   // No reading that moves money without the recipient's yes, and none after their stop (the founder, 29 Sep 2026).
@@ -117,9 +145,18 @@ export async function runPublicCheckIn(input: { giftId: string; purpose: PublicC
   // Look first, which costs nothing: an attested reading is one of a month's hundred (src/daily-look.ts).
   if (deps.look && purpose === "count") {
     // No proof for a reading the contract would refuse: no day to credit, or not one full target since the last one.
-    const foreseen = await lookBeforeCount({ username: record.goalUsername, courseId, gift: onChain, nowSeconds: now }, deps.look);
-    const mapped = foreseen ? contractRefusal(foreseen.refusal) : null;
-    if (foreseen && mapped) return { kind: "refused", giftId, code: mapped.code, message: mapped.message, xp: foreseen.xp, looked: true };
+    const looked = await lookBeforeCount({ username: record.goalUsername, courseId, gift: onChain, nowSeconds: now }, deps.look);
+    const mapped = looked.kind === "refused" ? contractRefusal(looked.refusal) : null;
+    if (looked.kind === "refused" && mapped) return { kind: "refused", giftId, code: mapped.code, message: mapped.message, xp: looked.xp, looked: true };
+    // No profile by that name: the source's own answer about the account, which a proof would only repeat.
+    if (looked.kind === "gone") return { kind: "refused", giftId, code: "PROFILE_NOT_FOUND", message: messages.PROFILE_NOT_FOUND, looked: true };
+    if (looked.kind === "unseen") {
+      // The look could not say, and no proof is taken for that: the day stays open and the next pass looks again. One
+      // reading goes without a look, the last chance of a day about to close, once for a gift in a day.
+      const within = input.pass === "recount" ? LAST_RESORT_WITHIN_SECONDS.recount : null;
+      const lastResort = within !== null && lastResortDue(onChain, now, catchUpSecondsOf(escrow), within) && (!deps.claimLastResort || (await deps.claimLastResort(giftId, utcDayOf(now))));
+      if (!lastResort) return { kind: "refused", giftId, code: "FETCH_FAILED", message: messages.FETCH_FAILED, looked: true };
+    }
   }
   if (deps.look && purpose === "bind" && record.usernameSource === "recipient") {
     // No proof until the code is in the name, and none for a look that failed: the person tries again in a minute.
