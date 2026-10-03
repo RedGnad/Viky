@@ -120,13 +120,18 @@ export type StartAsked = Readonly<{ kind: "sign"; giftId: string; start: Readonl
  *
  * The account signs for the gift the page is on and for no other: an answer naming another gift is refused here.
  */
-export async function withTheStartSigned<T extends { kind: string }>(giftId: string, outcome: T | StartAsked, signer: () => Promise<LocalAccount>): Promise<T> {
+export async function withTheStartSigned<T extends { kind: string }>(giftId: string, outcome: T | StartAsked, signer: () => Promise<LocalAccount>, onStep?: (step: StartStep) => void): Promise<T> {
   if (outcome.kind !== "sign") return outcome as T;
   const asked = outcome as StartAsked;
   if (asked.giftId !== giftId || !/^0x[0-9a-fA-F]{64}$/.test(asked.start.identityHash)) throw new ApiError({ status: 409, code: "REFUSED", message: "That reading could not be used. Try again in a minute." });
+  onStep?.("signing");
   const account = await signer();
   const signature = await account.signTypedData(
     startTypedData(asked.start.of, getAddress(asked.start.contract), { giftId: BigInt(giftId), identityHash: asked.start.identityHash, metricValue: BigInt(asked.start.metricValue), observedAt: BigInt(asked.start.observedAt) }),
   );
+  onStep?.("recording");
   return postJson<T>(`/api/gift/${giftId}/bind`, { startSignature: signature });
 }
+
+/** Where a first reading stands, for a screen that names the step once a wait is long: each is one thing this page awaits. */
+export type StartStep = "reading" | "signing" | "recording";

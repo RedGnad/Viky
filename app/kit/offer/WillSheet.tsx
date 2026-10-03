@@ -25,6 +25,7 @@ import { MarathonChooser } from "./MarathonChooser";
 import { WcaChooser } from "./WcaChooser";
 import { chosenUniversityTitle } from "@/src/university-choice";
 import { suggestedGrade } from "@/src/university-shown";
+import { WaitLine } from "../Waiting";
 
 /**
  * The will case: what they will do, and everything that condition itself asks (the vision of 19 Sep 2026, section 6).
@@ -512,7 +513,7 @@ export function WillSheet({
                    a reading nobody remembered to ask for left every field filled and Done grey). The button stays for
                    a reading that failed, to try again. */
                 <div data-reading="" className="flex flex-col gap-[var(--space-xs)]">
-                  {reading.busy ? <p className={HELP} role="status">{milestone.words.reading}…</p> : null}
+                  {reading.busy ? <WaitLine>{milestone.words.reading}</WaitLine> : null}
                   {!reading.busy && (reading.nameRefusal || reading.cadenceRefusal) ? (
                     <button type="button" className={SECONDARY_BUTTON} onClick={() => void readRating()}>
                       {milestone.words.read}
@@ -621,7 +622,7 @@ export function WillSheet({
                       answers there are, because on a phone the list runs past the sheet's edge and a person could take
                       the first two for all of them (ui review, 20 Sep 2026). */}
                   {search.busy ? (
-                    <p className={HELP}>{M.detail.searching}</p>
+                    <WaitLine>{M.detail.searching}</WaitLine>
                   ) : draft.course && draft.courseTitle ? (
                     <p className="font-medium">{certificate.course.named(draft.courseTitle)}</p>
                   ) : search.found.length > 0 ? (
@@ -704,7 +705,7 @@ export function WillSheet({
                   />
                   {nameLink.line ? down(nameLink.help) : null}
                   {down(nameLink.why)}
-                  {nameCheck.busy ? <p className={HELP}>{FUND.detail.checking}</p> : null}
+                  {nameCheck.busy ? <WaitLine>{FUND.detail.checking}</WaitLine> : null}
                 </>
               ) : null}
               {condition.course ? (

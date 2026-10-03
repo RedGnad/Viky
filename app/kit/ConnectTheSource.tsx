@@ -3,6 +3,7 @@ import { useState } from "react";
 import { GIFT_PAGE as W } from "@/src/sentences";
 import { BODY, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { FieldRefusal } from "./FieldRefusal";
+import { ButtonWords, StepInProgress } from "./Waiting";
 
 /**
  * Connecting the source a gift counts: the one gesture of the one moment where a person has something to do
@@ -57,6 +58,7 @@ export function ConnectTheSource({
   account,
   funderName,
   busy,
+  step,
   working,
   refusal,
   validUntil,
@@ -69,6 +71,8 @@ export function ConnectTheSource({
   funderName: string | null;
   /** Which gesture is running, so its own label says so and nothing else moves. */
   busy: "naming" | "starting" | null;
+  /** The step the running gesture is on, named under its button once the wait is long (app/kit/Waiting.tsx). */
+  step?: string | null;
   working: boolean;
   /** The refusal of the gesture that failed, under the element in cause. */
   refusal: Readonly<{ where: "name" | "start"; text: string }> | null;
@@ -97,8 +101,11 @@ export function ConnectTheSource({
         {words.firstReading ? <p className={HELP}>{words.firstReading}</p> : null}
             {words.firstReadingThen ? <p className={HELP}>{words.firstReadingThen}</p> : null}
         <button type="button" onClick={onStart} disabled={working} className={PRIMARY_BUTTON}>
-          {busy === "starting" ? W.reading : words.start}
+          <ButtonWords busy={busy === "starting"} doing={W.reading}>
+            {words.start}
+          </ButtonWords>
         </button>
+        <StepInProgress busy={busy === "starting"} step={step} />
         {refusalAt("start")}
         {words.notMine ? (
           <>
@@ -126,8 +133,11 @@ export function ConnectTheSource({
             {words.firstReading ? <p className={HELP}>{words.firstReading}</p> : null}
             {words.firstReadingThen ? <p className={HELP}>{words.firstReadingThen}</p> : null}
             <button type="button" onClick={onAskCode} disabled={working} className={PRIMARY_BUTTON}>
-              {busy === "naming" ? W.checking : account.codeExpired ? words.newCode : words.getCode}
+              <ButtonWords busy={busy === "naming"} doing={W.checking}>
+                {account.codeExpired ? words.newCode : words.getCode}
+              </ButtonWords>
             </button>
+            <StepInProgress busy={busy === "naming"} step={step} />
             {refusalAt("name")}
           </>
         ) : (
@@ -154,8 +164,11 @@ export function ConnectTheSource({
             {words.firstReading ? <p className={HELP}>{words.firstReading}</p> : null}
             {words.firstReadingThen ? <p className={HELP}>{words.firstReadingThen}</p> : null}
             <button type="button" onClick={onStart} disabled={working} className={PRIMARY_BUTTON}>
-              {busy === "starting" ? W.reading : words.added}
+              <ButtonWords busy={busy === "starting"} doing={W.reading}>
+                {words.added}
+              </ButtonWords>
             </button>
+            <StepInProgress busy={busy === "starting"} step={step} />
             {refusalAt("start")}
             {words.slowToShow ? <p className={HELP}>{words.slowToShow}</p> : null}
             <p className={HELP}>{W.removeAfter}</p>
@@ -207,8 +220,11 @@ export function ConnectTheSource({
               {refusal?.where === "name" ? refusalAt("name") : typed.trim() === "" ? <p className={HELP}>{field.typeToContinue}</p> : null}
             </div>
             <button type="submit" disabled={working || typed.trim() === ""} className={PRIMARY_BUTTON}>
-              {busy === "naming" ? W.checking : W.continue}
+              <ButtonWords busy={busy === "naming"} doing={W.checking}>
+                {W.continue}
+              </ButtonWords>
             </button>
+            <StepInProgress busy={busy === "naming"} step={step} />
           </form>
           <p className={HELP}>{field.noPassword}</p>
           {renaming ? (

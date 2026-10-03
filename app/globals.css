@@ -637,6 +637,15 @@ video {
   border-top-color: var(--accent);
 }
 
+/* The same ring inside a button or beside a line, from the press (the founder, 3 Oct 2026): at the size of the words
+   and in their own ink, since a button's ground is not the page's. It turns by the ring's own animation. */
+.working-ring-inline {
+  width: 1.05em;
+  height: 1.05em;
+  border-color: color-mix(in srgb, currentColor 28%, transparent);
+  border-top-color: currentColor;
+}
+
 @keyframes working-turn {
   to {
     transform: rotate(360deg);

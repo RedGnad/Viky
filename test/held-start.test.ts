@@ -264,6 +264,7 @@ test("every first reading goes through the hold, and the route sends nothing on 
   assert.match(route, /held\.recipient\.toLowerCase\(\) !== signed\.account\.toLowerCase\(\)\) throw new GiftApiError\("NOT_RECIPIENT"/);
   // The three presses that take a first reading give the account to sign with.
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
-  assert.match(page, /startMilestone\(giftId, ensureSigner\)\) : dailyOutcome\(await bindGoalAccount\(giftId, ensureSigner\)\)/);
+  // Each also says which step it is on, for the line a long wait shows (app/kit/Waiting.tsx).
+  assert.match(page, /startMilestone\(giftId, ensureSigner, startStep\)\) : dailyOutcome\(await bindGoalAccount\(giftId, ensureSigner, startStep\)\)/);
   assert.match(readFileSync("app/kit/ConnectTheAccount.tsx", "utf8"), /withTheStartSigned<Outcome>\(giftId, await postJson<Outcome \| StartAsked>\(`\/api\/gift\/\$\{giftId\}\/bind`, \{\}\), ensureSigner\)/);
 });

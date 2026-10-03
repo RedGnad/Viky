@@ -7,6 +7,8 @@ import { ApiError } from "@/src/client/api";
 import { certificateById, type CertificateCondition } from "@/src/milestone-conditions";
 import { CARD, FIELD, HELP, PRIMARY_BUTTON } from "../components/ui";
 import { FieldRefusal } from "./FieldRefusal";
+import { ButtonWords, StepInProgress } from "./Waiting";
+import { WAITS } from "@/src/sentences";
 
 /**
  * The recipient's half of a gift on a supervised result (U3, C3): they paste the link of their own certificate.
@@ -129,8 +131,11 @@ export function CertificateProof({
         {/* What is read, and what is not kept: said before the link is pasted, not after. */}
         <p className={HELP}>{words.whatIsRead}</p>
         <button type="submit" disabled={busy || link.trim() === ""} className={PRIMARY_BUTTON}>
-          {state.at === "reading" || state.at === "proving" ? words.checking : words.check}
+          <ButtonWords busy={state.at === "reading" || state.at === "proving"} doing={words.checking}>
+            {words.check}
+          </ButtonWords>
         </button>
+        <StepInProgress busy={state.at === "reading" || state.at === "proving"} step={WAITS.proof} />
       </form>
     </section>
   );

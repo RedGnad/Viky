@@ -177,7 +177,9 @@ export function Me() {
           }}
           data-decide="sign-out"
         >
-          <svg aria-hidden focusable="false" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {/* The wheel takes the drawing's place while the session closes (the founder, 3 Oct 2026). */}
+          {leaving ? <span className="working-ring working-ring-inline text-[26px]" aria-hidden="true" /> : null}
+          <svg aria-hidden focusable="false" className={leaving ? "hidden" : undefined} width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M10 5H6a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h4" />
             <path d="M14 8l4 4-4 4" />
             <path d="M18 12H10" />

@@ -8,6 +8,8 @@ import { conditionById } from "@/src/conditions";
 import { GIFT_PAGE as W } from "@/src/sentences";
 import { BODY, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../components/ui";
 import { FieldRefusal } from "./FieldRefusal";
+import { ButtonWords, StepInProgress } from "./Waiting";
+import { WAITS } from "@/src/sentences";
 
 /**
  * Connecting the account a gift counts, for a condition of the third nature (D188): the one gesture, in place of a
@@ -124,14 +126,22 @@ export function ConnectTheAccount({ giftId, conditionId, yours, onChanged }: Rea
         <>
           <p className={BODY}>{said ?? words.connected}</p>
           {!status.bound ? (
-            <button type="button" onClick={() => void start()} disabled={working} className={PRIMARY_BUTTON}>
-              {busy === "starting" ? W.reading : words.start}
-            </button>
+            <>
+              <button type="button" onClick={() => void start()} disabled={working} className={PRIMARY_BUTTON}>
+                <ButtonWords busy={busy === "starting"} doing={W.reading}>
+                  {words.start}
+                </ButtonWords>
+              </button>
+              <StepInProgress busy={busy === "starting"} step={WAITS.connecting(condition?.source ?? "")} />
+            </>
           ) : null}
           <p className={HELP}>{words.erase}</p>
           <button type="button" onClick={() => void erase()} disabled={working} className={SECONDARY_BUTTON}>
-            {busy === "erasing" ? W.working : words.disconnect}
+            <ButtonWords busy={busy === "erasing"} doing={W.working}>
+              {words.disconnect}
+            </ButtonWords>
           </button>
+          <StepInProgress busy={busy === "erasing"} step={WAITS.erasing} />
         </>
       ) : (
         <>

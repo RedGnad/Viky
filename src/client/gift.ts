@@ -14,7 +14,7 @@ import { ApiError, getJson, postJson } from "./api";
 import { isMilestoneGiftId, milestoneWithdrawTypedData } from "../milestone-protocol";
 import type { MilestoneStatus } from "../milestone-view";
 import { fundingNonceV2, withdrawTypedDataV2 } from "../v2-protocol";
-import { giftLinkOf, linkForTerms, secondVersionOf, versionOf, withTheStartSigned, type StartAsked } from "./v2";
+import { giftLinkOf, linkForTerms, secondVersionOf, versionOf, withTheStartSigned, type StartAsked, type StartStep } from "./v2";
 
 /** Browser-side flows of a gift. Every step that moves money is signed by the person's own account. */
 
@@ -176,8 +176,9 @@ export function nameGoalAccount(giftId: string, username: string): Promise<{ gif
 }
 
 /** The first reading. On the second version the recipient's account signs it too, which `signer` gives when asked (src/client/v2.ts). */
-export async function bindGoalAccount(giftId: string, signer: () => Promise<LocalAccount>): Promise<PublicOutcome> {
-  return withTheStartSigned<PublicOutcome>(giftId, await postJson<PublicOutcome | StartAsked>(`/api/gift/${giftId}/bind`, {}), signer);
+export async function bindGoalAccount(giftId: string, signer: () => Promise<LocalAccount>, onStep?: (step: StartStep) => void): Promise<PublicOutcome> {
+  onStep?.("reading");
+  return withTheStartSigned<PublicOutcome>(giftId, await postJson<PublicOutcome | StartAsked>(`/api/gift/${giftId}/bind`, {}), signer, onStep);
 }
 
 export function countNow(giftId: string): Promise<PublicOutcome> {
