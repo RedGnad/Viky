@@ -1,3 +1,4 @@
+import { daysWaitingOf } from "./days-waiting";
 import { DuolingoProfileError, type PublicDuolingoProfile } from "./duolingo-profile";
 import { displayNameHasCode } from "./duolingo-public-terms";
 import { utcDayOf, type GiftState } from "./gift-reader";
@@ -17,8 +18,13 @@ import { utcDayOf, type GiftState } from "./gift-reader";
  *
  * A look is never evidence. It moves no money, it is never signed and never sent, and what moves money is still read
  * again, attested. Before a count it can only answer a refusal the contract itself would give, by the contract's own
- * rule on the figures the contract holds, so it never keeps a person from a day the contract would have paid: whenever
- * it cannot say (the source did not answer, the answer carries no figure) the attested reading is taken as before.
+ * rule on the figures the contract holds, so it never keeps a person from a day the contract would have paid.
+ *
+ * When the look cannot say (the source did not answer, the answer carries no figure), no proof is taken either (the
+ * founder, 3 Oct 2026): a look that failed must never become a proof at every pass again, which is what spent 57 of
+ * them in five hours on 30 Sep. One reading goes without a look, the reading of last resort: taken by a pass, once
+ * for a gift in a day, and only when the window of the gift's oldest open day closes before the next pass that could
+ * read it. Until then the day stays open and the next pass looks again, which costs nothing.
  */
 
 type Days = Pick<GiftState, "startDay" | "endDay" | "settledThroughDay">;
@@ -64,28 +70,53 @@ function figureOf(profile: PublicDuolingoProfile, courseId: string | null): numb
 }
 
 /**
- * The look before a count. It answers the contract's refusal, with the figure that earns it when one was read, and no
- * proof is taken; or nothing, and the attested reading is taken: a day can be credited, or the look could not say. A
- * look that fails never stops a reading (the pass takes one per gift at most, as it always did).
+ * What the look before a count found: the contract's refusal, with the figure that earns it when one was read; a day
+ * the contract can credit with the figure it saw; that the source has no profile by that name, which is a fact about
+ * the account and which a proof would only repeat; or nothing it could say, because the source did not answer or its
+ * answer carries no figure.
  */
-export async function lookBeforeCount(
-  input: { username: string; courseId: string | null; gift: Counted; nowSeconds: number },
-  look: ProfileLook,
-): Promise<{ refusal: ForeseenRefusal; xp?: number } | null> {
+export type CountLook = Readonly<{ kind: "refused"; refusal: ForeseenRefusal; xp?: number } | { kind: "seen"; xp: number } | { kind: "gone" } | { kind: "unseen" }>;
+
+/**
+ * The look before a count. On a refusal, and on a profile that is gone, no proof is taken. On a day to credit the
+ * attested reading is taken. When the look could not say, none is taken either, but for the reading of last resort
+ * (`lastResortDue`).
+ */
+export async function lookBeforeCount(input: { username: string; courseId: string | null; gift: Counted; nowSeconds: number }, look: ProfileLook): Promise<CountLook> {
   // No day to credit whatever the profile shows: the source is not even asked.
   const noDay = noDayToCredit(input.gift, input.nowSeconds);
-  if (noDay) return { refusal: noDay };
+  if (noDay) return { kind: "refused", refusal: noDay };
   let profile: PublicDuolingoProfile;
   try {
     profile = await look(input.username);
   } catch (error) {
+    // No such name is the source's own answer about the account, as the attested reading would read it off the same page.
+    if (error instanceof DuolingoProfileError && error.code !== "SOURCE_UNAVAILABLE") return { kind: "gone" };
     if (!(error instanceof DuolingoProfileError)) console.error(`look before a count failed: ${error instanceof Error ? error.message : String(error)}`);
-    return null;
+    return { kind: "unseen" };
   }
   const xp = figureOf(profile, input.courseId);
-  if (xp === null) return null;
+  if (xp === null) return { kind: "unseen" };
   const refusal = foreseenRefusal(input.gift, xp, input.nowSeconds);
-  return refusal ? { refusal, xp } : null;
+  return refusal ? { kind: "refused", refusal, xp } : { kind: "seen", xp };
+}
+
+/**
+ * How far ahead the next pass that could read a gift is, at the most, for each pass that may take a reading of last
+ * resort. The second reading of the morning runs at 03:30 UTC, started anywhere inside its hour, and the next reading
+ * pass is the next day's, at 00:30: more than twenty hours on. A day whose window closes at 06:00 that morning is
+ * inside those twenty hours, and one that closes the morning after is not. The pass of half past midnight takes none:
+ * the second reading comes after it, before anything closes.
+ */
+export const LAST_RESORT_WITHIN_SECONDS = { recount: 20 * 3_600 } as const;
+
+/**
+ * Whether a reading without a look is the last chance of a day: the window of the gift's oldest open day closes
+ * within `withinSeconds`, which is before the next pass that could read it. A gift with no day open has none.
+ */
+export function lastResortDue(gift: Parameters<typeof daysWaitingOf>[0], nowSeconds: number, catchUpSeconds: number, withinSeconds: number): boolean {
+  const closes = daysWaitingOf(gift, nowSeconds, catchUpSeconds).nearestEndsAt;
+  return closes !== null && closes <= nowSeconds + withinSeconds;
 }
 
 /** Why a connection by code stops at the look, by the codes the attested reading already answers. */
