@@ -1,23 +1,24 @@
+import { readingFor, readingIs } from "./attested-calls";
 import { contactEmail } from "./contact";
-import { LIMIT } from "./sentences";
+import { CEILING, LIMIT } from "./sentences";
 import type { Hex } from "viem";
 import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
 import { signedSubjectOf } from "./subject-key";
 import { COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraProviderId } from "./coursera-certificate";
-import { attestCourseraCertificate, CourseraReadError } from "./coursera-reading";
+import { attestCourseraCertificate, CourseraReadError, readCourseraCertificate } from "./coursera-reading";
 import { EDX_GOAL_TYPE, EDX_HAS_IT, edxProviderId } from "./edx-certificate";
 import { ACCREDIBLE_GOAL_TYPE, ACCREDIBLE_HAS_IT, accredibleProviderId } from "./accredible-credential";
-import { AccredibleReadError, attestAccredibleCredential } from "./accredible-reading";
-import { attestEdxCertificate, EdxReadError } from "./edx-reading";
+import { AccredibleReadError, attestAccredibleCredential, readAccredibleCredential } from "./accredible-reading";
+import { attestEdxCertificate, EdxReadError, readEdxCertificate } from "./edx-reading";
 import { MITX_ONLINE_GOAL_TYPE, MITX_ONLINE_HAS_IT, mitxOnlineProviderId } from "./mitx-online-certificate";
-import { attestMitxOnlineCertificate, MitxOnlineReadError } from "./mitx-online-reading";
+import { attestMitxOnlineCertificate, MitxOnlineReadError, readMitxOnlineCertificate } from "./mitx-online-reading";
 import { finishInWords, MARATHON_TIMERS, marathonGoalTypeOf, marathonProviderIdOf } from "./marathon";
-import { attestMarathonResult, MarathonReadError } from "./marathon-reading";
+import { attestMarathonResult, MarathonReadError, readMarathonResult } from "./marathon-reading";
 import { WCA_GOAL_TYPE, wcaProviderId } from "./wca";
-import { attestWcaResult, WcaReadError } from "./wca-reading";
+import { attestWcaResult, readWcaResult, WcaReadError } from "./wca-reading";
 import { CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyProviderId } from "./credly-badge";
-import { attestCredlyBadge, CredlyReadError } from "./credly-reading";
-import { attestDetCertificate, DetReadError, type AttestedDetReading } from "./det-reading";
+import { attestCredlyBadge, CredlyReadError, readCredlyBadge } from "./credly-reading";
+import { attestDetCertificate, DetReadError, readDetCertificate, type AttestedDetReading } from "./det-reading";
 import { detProviderId } from "./duolingo-english-test";
 import { loadGift, type GiftRecord } from "./gift-store";
 import { certificateOfGoal } from "./milestone-conditions";
@@ -25,7 +26,7 @@ import { loadMilestoneGift, recordReading } from "./milestone-store";
 import { milestonePhase, readMilestoneGift, type MilestoneState } from "./milestone-reader";
 import { SHAPE_HAVE_OR_NOT, type MilestoneProofMessage } from "./milestone-protocol";
 import { relayProve } from "./milestone-relay";
-import { escrowOf } from "./relayer";
+import { escrowOf, RelayerError } from "./relayer";
 
 /**
  * Proving a supervised result (U3, C3). Server only.
@@ -36,6 +37,12 @@ import { escrowOf } from "./relayer";
  *
  * Every outcome is typed, because this is the money path of the whole condition: the thing that must never happen is
  * a person pasting the right certificate and being told nothing.
+ *
+ * The page is looked at plainly before a proof is paid for (the founder, 3 Oct 2026). A pasted link used to cost a
+ * proof at each try, the link that could not pay included: another name, a score short of the target, a day outside
+ * the gift. The look is the page's own answer, read as the funder's side always read it, and judged by the same
+ * rules: when it cannot pay, the person is told why and nothing is taken. When the look itself fails, nothing is
+ * taken either. The proof is taken only for a page the look says can pay, and it is judged again, attested.
  */
 
 export type CertificateOutcome =
@@ -57,6 +64,8 @@ export type CertificateRefusal =
   | "AFTER_THE_DEADLINE"
   /** The month's limit of attested readings is reached: nothing was read (src/attested-calls.ts). */
   | "LIMIT_REACHED"
+  /** A day\'s ceiling of attested readings is reached: nothing was fetched, and readings resume the next UTC day. */
+  | "CEILING_REACHED"
   | "SOURCE_UNAVAILABLE";
 
 /** How long an attestation is good for, as the contract's window expects. */
@@ -80,9 +89,14 @@ export type ReadCertificate = Readonly<{
   line?: Readonly<{ username: string; playerId: string; rating: number }>;
 }>;
 
+/** What a plain look at the page gives: what the proof would be judged on, and nothing a contract would take. */
+export type LookedCertificate = Pick<ReadCertificate, "subject" | "score" | "testDay">;
+
 export type CertificateReadingDeps = {
   loadGift: (giftId: string) => Promise<GiftRecord | null>;
   readState: (contract: Hex, giftId: string) => Promise<MilestoneState>;
+  /** The plain look at the page, before a proof is paid for; a test that omits it pays every time. */
+  look?: (goalType: number, link: string, signedSubject: Hex | undefined, subjectKey: string | null | undefined, nowSeconds: number) => Promise<LookedCertificate>;
   /** The subject the funder signed rides along for a source whose reading can match several (Accredible's domains). */
   attest: (goalType: number, link: string, signedSubject?: Hex, subjectKey?: string | null) => Promise<ReadCertificate>;
   /** The key the gift's subject was hashed with (src/subject-key.ts), or nothing for a gift made before keys. */
@@ -98,6 +112,7 @@ export function liveCertificateReadingDeps(): CertificateReadingDeps {
   return {
     loadGift,
     readState: (contract, giftId) => readMilestoneGift(contract, giftId),
+    look: lookByGoal,
     attest: attestByGoal,
     subjectKey: (giftId) => loadMilestoneGift(giftId).then((gift) => gift?.subjectKey ?? null),
     leave: readingLeave,
@@ -160,6 +175,52 @@ export async function attestByGoal(goalType: number, link: string, signedSubject
   return { subject: reading.subject, score: reading.score, testDay: reading.testDay, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: detProviderId() };
 }
 
+/** How many attested fetches the reading of a goal is made of: a Credly badge is read on two pages, the others on one. */
+export function fetchesOfGoal(goalType: number): number {
+  return goalType === CREDLY_GOAL_TYPE ? 2 : 1;
+}
+
+/**
+ * The same reading, taken plainly: what the page says, with no proof. Each source is read by the function the
+ * funder's side already reads it with, and gives the same subject, score and day the attested reading would.
+ */
+export async function lookByGoal(goalType: number, link: string, signedSubject: Hex | undefined, subjectKey: string | null | undefined, nowSeconds: number): Promise<LookedCertificate> {
+  if (goalType === ACCREDIBLE_GOAL_TYPE) {
+    const reading = await readAccredibleCredential(link);
+    const subject = reading.subjects.find((candidate) => signedSubject && signedSubjectOf(candidate, subjectKey).toLowerCase() === signedSubject.toLowerCase()) ?? reading.subjects[0];
+    return { subject, score: ACCREDIBLE_HAS_IT, testDay: reading.issuedDay };
+  }
+  if (goalType === CREDLY_GOAL_TYPE) {
+    const reading = await readCredlyBadge(link);
+    return { subject: reading.subject, score: CREDLY_HAS_IT, testDay: reading.issuedDay };
+  }
+  if (Object.values(MARATHON_TIMERS).some((timer) => timer.goalType === goalType)) {
+    const reading = await readMarathonResult(link);
+    if (marathonGoalTypeOf(reading.race.timer) !== goalType) throw new MarathonReadError("PROOF_MISMATCH", "That result is from another timing company than the one this gift reads");
+    // Judged by the day the result is read (D273), which for a look is now.
+    return { subject: reading.subject, score: reading.metric, testDay: nowSeconds };
+  }
+  if (goalType === WCA_GOAL_TYPE) {
+    const bar = link.indexOf("|");
+    const reading = await readWcaResult(bar > 0 ? link.slice(0, bar) : link, bar > 0 ? link.slice(bar + 1) : "");
+    return { subject: reading.subject, score: reading.metric, testDay: nowSeconds };
+  }
+  if (goalType === MITX_ONLINE_GOAL_TYPE) {
+    const reading = await readMitxOnlineCertificate(link);
+    return { subject: reading.subject, score: MITX_ONLINE_HAS_IT, testDay: reading.issuedDay };
+  }
+  if (goalType === EDX_GOAL_TYPE) {
+    const reading = await readEdxCertificate(link);
+    return { subject: reading.subject, score: EDX_HAS_IT, testDay: reading.issuedDay };
+  }
+  if (goalType === COURSERA_GOAL_TYPE) {
+    const reading = await readCourseraCertificate(link);
+    return { subject: reading.subject, score: COURSERA_HAS_IT, testDay: reading.grantedDay };
+  }
+  const reading = await readDetCertificate(link);
+  return { subject: reading.subject, score: reading.score, testDay: reading.testDay };
+}
+
 /** The UTC day of a moment in seconds, which is how the contract compares a granting day with a window (D49). */
 function dayOf(seconds: number): number {
   return Math.floor(seconds / 86_400);
@@ -175,10 +236,12 @@ function refuse(giftId: string, code: CertificateRefusal, message: string, score
  * The order of the refusals is the order a person would ask them in: is this a link at all, is it still public, is it
  * theirs, is it the score, was it taken inside the gift.
  */
-export async function proveCertificate(
-  input: { giftId: string; link: string },
-  deps: CertificateReadingDeps = liveCertificateReadingDeps(),
-): Promise<CertificateOutcome> {
+export function proveCertificate(input: { giftId: string; link: string }, deps: CertificateReadingDeps = liveCertificateReadingDeps()): Promise<CertificateOutcome> {
+  // Every fetch of this reading is counted and judged under its gift (src/attested-calls.ts).
+  return readingFor({ giftId: input.giftId, reason: "a certificate's link, pasted" }, () => provePasted(input, deps));
+}
+
+async function provePasted(input: { giftId: string; link: string }, deps: CertificateReadingDeps): Promise<CertificateOutcome> {
   const { giftId } = input;
   const record = await deps.loadGift(giftId);
   if (!record || !record.recipient) return { kind: "already", giftId, reason: "not_opened" };
@@ -194,12 +257,12 @@ export async function proveCertificate(
   // No reading that moves money without the recipient's yes, and none after their stop (the founder, 29 Sep 2026).
   const leave = deps.leave ? await deps.leave(giftId, state.fundedAt) : null;
   if (leave && !leave.allowed) return refuse(giftId, "NO_AGREEMENT", NO_AGREEMENT.message);
+  // While proofs are paused the contract takes none: the refusal is the one the relay would meet, with no proof paid for.
+  if (state.proofPaused) throw new RelayerError("REVERTED", "The contract refused: ProofIsPaused", "ProofIsPaused");
   const subjectKey = deps.subjectKey ? await deps.subjectKey(giftId) : null;
 
-  let reading: ReadCertificate;
-  try {
-    reading = await deps.attest(state.goalType, input.link, state.subject as Hex, subjectKey);
-  } catch (error) {
+  /** Why a reading that failed does not pay, in the register's words: the same for the look and for the proof. */
+  const refusalOf = (error: unknown): CertificateOutcome => {
     if (!(error instanceof DetReadError) && !(error instanceof CourseraReadError) && !(error instanceof CredlyReadError) && !(error instanceof EdxReadError) && !(error instanceof AccredibleReadError) && !(error instanceof MitxOnlineReadError) && !(error instanceof MarathonReadError) && !(error instanceof WcaReadError)) {
       return refuse(giftId, "SOURCE_UNAVAILABLE", words?.unavailable ?? "That could not be read right now");
     }
@@ -233,27 +296,58 @@ export async function proveCertificate(
       case "LIMIT_REACHED":
         // Nothing was read: said as it is, with where to write, and no day to count on a gift of this shape.
         return refuse(giftId, "LIMIT_REACHED", LIMIT.reading(null, contactEmail()));
+      case "CEILING_REACHED":
+        // A day's ceiling of readings: nothing was read, and the screen says when it resumes.
+        return refuse(giftId, "CEILING_REACHED", CEILING.reading(null));
       default:
         return refuse(giftId, "SOURCE_UNAVAILABLE", words?.unavailable ?? error.message);
     }
+  };
+  /**
+   * Why what a page says cannot pay this gift, or nothing when it can: the person and the thing the funder signed,
+   * hashed with the gift's key when it has one (src/subject-key.ts), the score, and the day. The contract checks each
+   * again; this is so nobody meets a revert, and so no proof is paid for a page that cannot pay.
+   */
+  const cannotPay = (read: LookedCertificate): CertificateOutcome | null => {
+    if (signedSubjectOf(read.subject, subjectKey).toLowerCase() !== state.subject.toLowerCase()) {
+      return refuse(giftId, "ANOTHER_NAME", words?.anotherName ?? "That certificate is in another name");
+    }
+    const target = Number(state.target);
+    if (read.score < target) {
+      return refuse(giftId, "BELOW_THE_TARGET", words?.below(target, read.score) ?? `That certificate is ${read.score}. This gift is for ${target}.`, read.score);
+    }
+    if (dayOf(read.testDay) < dayOf(state.fundedAt)) {
+      return refuse(giftId, "BEFORE_THE_GIFT", words?.beforeTheGift ?? "That test was taken before this gift was made", read.score);
+    }
+    if (dayOf(read.testDay) > dayOf(state.deadline)) {
+      return refuse(giftId, "AFTER_THE_DEADLINE", words?.afterTheDeadline ?? "That test was taken after this gift's last day", read.score);
+    }
+    return null;
+  };
+
+  // The look, which costs nothing: a page that cannot pay, or that cannot be read just now, takes no proof.
+  if (deps.look) {
+    let looked: LookedCertificate;
+    try {
+      looked = await deps.look(state.goalType, input.link, state.subject as Hex, subjectKey, deps.now());
+    } catch (error) {
+      return refusalOf(error);
+    }
+    const stopped = cannotPay(looked);
+    if (stopped) return stopped;
   }
 
-  // The person and the thing the funder signed, hashed with the gift's key when it has one (src/subject-key.ts). The
-  // contract checks it too; this is so nobody meets a revert.
+  let reading: ReadCertificate;
+  try {
+    readingIs({ fetches: fetchesOfGoal(state.goalType) });
+    reading = await deps.attest(state.goalType, input.link, state.subject as Hex, subjectKey);
+  } catch (error) {
+    return refusalOf(error);
+  }
+  // Judged again on what was attested: the look only kept a proof from being wasted.
+  const refused = cannotPay(reading);
+  if (refused) return refused;
   const signedSubject = signedSubjectOf(reading.subject, subjectKey);
-  if (signedSubject.toLowerCase() !== state.subject.toLowerCase()) {
-    return refuse(giftId, "ANOTHER_NAME", words?.anotherName ?? "That certificate is in another name");
-  }
-  const target = Number(state.target);
-  if (reading.score < target) {
-    return refuse(giftId, "BELOW_THE_TARGET", words?.below(target, reading.score) ?? `That certificate is ${reading.score}. This gift is for ${target}.`, reading.score);
-  }
-  if (dayOf(reading.testDay) < dayOf(state.fundedAt)) {
-    return refuse(giftId, "BEFORE_THE_GIFT", words?.beforeTheGift ?? "That test was taken before this gift was made", reading.score);
-  }
-  if (dayOf(reading.testDay) > dayOf(state.deadline)) {
-    return refuse(giftId, "AFTER_THE_DEADLINE", words?.afterTheDeadline ?? "That test was taken after this gift's last day", reading.score);
-  }
 
   const issuedAt = deps.now();
   const message: MilestoneProofMessage = {

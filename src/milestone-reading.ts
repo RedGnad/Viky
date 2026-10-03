@@ -1,12 +1,13 @@
 import { getAddress, type Hex } from "viem";
 import { contactEmail } from "./contact";
-import { LIMIT, MILESTONE_ACTIONS } from "./sentences";
+import { CEILING, LIMIT, MILESTONE_ACTIONS } from "./sentences";
 import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
-import { attestClimbRating, isClimbReadError, readClimbName, readClimbStanding, type AttestedClimbReading } from "./climb-reading";
+import { readingFor, readingIs, roomToday, tellOfTriesSpent } from "./attested-calls";
+import { attestClimbRating, climbFetches, isClimbReadError, readClimbName, readClimbStanding, type AttestedClimbReading } from "./climb-reading";
 import { climbIdentityLabel, climbOfGoal, climbProviderId, type ClimbId } from "./climbs";
 import { nameHasChessCode } from "./chess-reading";
 import { identityPseudonym } from "./gift-attestation";
-import { holdTheStart, type StartAsked } from "./held-start";
+import { heldStartStillGood, holdTheStart, type StartAsked } from "./held-start";
 import { loadGift, markBound, type GiftRecord } from "./gift-store";
 import { milestoneRefusal } from "./milestone-api";
 import { MILESTONE_ATTESTATION_TTL_SECONDS, type MilestoneProofMessage } from "./milestone-protocol";
@@ -44,6 +45,12 @@ import type { ChessStanding } from "./chess-com";
  * the server answered that the deadline had passed, and the whole gift went back to its funder six hours later. And
  * while the pause runs, one such reading is enough: no proof is paid for again at every pass.
  *
+ * What a proof is never paid for (the breaker of 3 Oct 2026, src/attested-calls.ts): a start while a first reading
+ * already waits for its signature, which is answered again; a start the plain look shows above the cap, or cannot
+ * look at; a start while the contract takes no reading. At the target a proof is taken three times a day at most:
+ * past that the sending is what fails, a fourth proof would say what the first three said, and the operator is told.
+ * And a proof taken after a look that failed never takes the room the day keeps for a reading at the target.
+ *
  * Every outcome is typed, refusals included, so the screen and the keeper's report say why.
  */
 
@@ -64,7 +71,7 @@ export type MilestoneOutcome =
  * Refusals that say something broke on our side rather than anything about the person's account. The pass holds a
  * gift whose reading failed for one of these, so nothing is settled against a reading that never happened (D57).
  */
-export const MILESTONE_OURS_TO_FIX: ReadonlySet<string> = new Set(["FETCH_FAILED", "PROOF_INVALID", "PROOF_MISMATCH", "WORKER_OUT_OF_DATE", "NOT_CONFIGURED", "LIMIT_REACHED"]);
+export const MILESTONE_OURS_TO_FIX: ReadonlySet<string> = new Set(["FETCH_FAILED", "PROOF_INVALID", "PROOF_MISMATCH", "WORKER_OUT_OF_DATE", "NOT_CONFIGURED", "LIMIT_REACHED", "CEILING_REACHED"]);
 
 /** What a person reads for each refusal of the reading itself. The contract's refusals have their own table (gift-api). */
 const MESSAGES: Readonly<Record<string, string>> = {
@@ -120,6 +127,17 @@ export type MilestoneReadingDeps = {
    * (src/pass-guard.ts). A test that omits it takes the proof every time.
    */
   claimProof?: (giftId: string, everySeconds: number) => Promise<boolean>;
+  /**
+   * One of the day's tries at the target, or nothing when the three are spent (`TRIES_AT_THE_TARGET_A_DAY`). A test
+   * that omits it tries every time.
+   */
+  claimTargetTry?: (giftId: string, day: number) => Promise<boolean>;
+  /** Tells the operator that a gift at its target was not settled by the day's tries; said once a day. */
+  tellTargetNotSettled?: (giftId: string) => Promise<void>;
+  /** Whether the day has room for this many more proofs for the gift (src/attested-calls.ts); a test that omits it has. */
+  room?: (giftId: string, proofs: number) => Promise<boolean>;
+  /** The first reading already held for the gift and still good to sign (src/held-start.ts), or nothing. */
+  heldStart?: (giftId: string, account: string, nowSeconds: number) => Promise<StartAsked | null>;
   now: () => number;
 };
 
@@ -141,6 +159,16 @@ export function liveMilestoneReadingDeps(): MilestoneReadingDeps {
     attested: attestedReadings,
     sameLookAgain: touchSameLook,
     claimProof: (giftId, everySeconds) => claimPass(`milestone-proof:${giftId}`, everySeconds),
+    claimTargetTry: async (giftId, day) => {
+      // Three places a day, each taken once: the first free one is this try's.
+      for (let place = 1; place <= TRIES_AT_THE_TARGET_A_DAY; place += 1) {
+        if (await claimPass(`milestone-target:${giftId}:${day}:${place}`, 2 * 86_400)) return true;
+      }
+      return false;
+    },
+    tellTargetNotSettled: (giftId) => tellOfTriesSpent(giftId, TRIES_AT_THE_TARGET_A_DAY),
+    room: (giftId, proofs) => roomToday(giftId, proofs),
+    heldStart: (giftId, account, nowSeconds) => heldStartStillGood(giftId, account, nowSeconds),
     now: () => Math.floor(Date.now() / 1_000),
   };
 }
@@ -155,6 +183,8 @@ export const RECENT_READING_SECONDS = 30 * 60;
 export function refusalMessage(code: string): string {
   // The month's limit of readings: a climb has no day to count, so the sentence carries no hour (src/sentences.ts).
   if (code === "LIMIT_REACHED") return LIMIT.reading(null, contactEmail());
+  // A day's ceiling of readings (src/attested-calls.ts): the screen says when it resumes, in the reader's own clock.
+  if (code === "CEILING_REACHED") return CEILING.reading(null);
   return MESSAGES[code] ?? "This could not be recorded.";
 }
 
@@ -270,7 +300,23 @@ export const LOOK_MAY_FAIL_IN_THE_LAST_SECONDS = 86_400;
  */
 export const PROOF_EVERY_SECONDS = { atTheTarget: 4 * 60, unseen: 6 * 3_600, unseenInTheLastDay: 3_600 } as const;
 
-export async function runMilestoneReading(
+/**
+ * How many proofs a gift at its target is given in a UTC day (the founder, 3 Oct 2026). A proof there settles the gift
+ * at once; when it does not, the fetch or the sending failed, and four minutes later it was tried again, for as long
+ * as it failed: up to thirty attested fetches an hour on Chess.com. Three tries, then the operator is told and the
+ * gift waits for the next day, held: nothing is settled against it.
+ */
+export const TRIES_AT_THE_TARGET_A_DAY = 3;
+
+export function runMilestoneReading(
+  input: Parameters<typeof readMilestone>[0],
+  deps: MilestoneReadingDeps = liveMilestoneReadingDeps(),
+): Promise<MilestoneOutcome> {
+  // Every fetch of this reading is counted and judged under its gift (src/attested-calls.ts).
+  return readingFor({ giftId: input.giftId, reason: input.purpose === "start" ? "the start of a climb" : "a climb, read" }, () => readMilestone(input, deps));
+}
+
+async function readMilestone(
   input: {
     giftId: string;
     purpose: "start" | "reach";
@@ -286,7 +332,7 @@ export async function runMilestoneReading(
      */
     lookMustSucceed?: boolean;
   },
-  deps: MilestoneReadingDeps = liveMilestoneReadingDeps(),
+  deps: MilestoneReadingDeps,
 ): Promise<MilestoneOutcome> {
   const { giftId, purpose } = input;
   const record = await deps.loadGift(giftId);
@@ -328,6 +374,11 @@ export async function runMilestoneReading(
   }
 
   if (purpose === "start") {
+    // A first reading that already waits for its signature is answered again: nothing is read twice.
+    const waiting = deps.heldStart ? await deps.heldStart(giftId, record.recipient, now) : null;
+    if (waiting) return waiting;
+    // While readings are paused the contract takes none, a start included: no proof is paid for one it would refuse.
+    if (state.proofPaused) return refused(giftId, "PAUSED", undefined, milestoneRefusal("ProofIsPaused")?.message);
     // D27, the rule both sources share: a code proves control only when the recipient named the account themselves.
     // When the funder named it, that name is what they signed for, and the first attested reading binds the player
     // straight away: nobody is asked to put anything in their own profile, and a profile with no name works.
@@ -350,8 +401,24 @@ export async function runMilestoneReading(
       if (!shown) return refused(giftId, "NO_NAME");
       if (!nameHasChessCode(shown, record.bindingCode ?? "")) return refused(giftId, "CODE_NOT_IN_NAME");
     }
+    // Where they stand is looked at plainly first too: a start above the cap could never settle, and a press on it
+    // used to cost a proof each time. A look that fails takes no proof either: the person tries again in a minute.
+    let standing: ChessStanding;
+    try {
+      standing = await deps.plain(username, mode);
+    } catch (error) {
+      if (isClimbReadError(error) && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);
+      if (isClimbReadError(error)) return refused(giftId, error.code);
+      throw error;
+    }
+    if (standing.rating === null) return refused(giftId, "NO_RATING");
+    if (BigInt(standing.rating) > state.maximumStart) {
+      await deps.record({ giftId, purpose: "look", attested: false, username: standing.username, playerId: standing.playerId, rating: standing.rating, ratedAt: standing.ratedAt, rd: standing.rd, observedAt: now, nullifier: null, outcome: "refused:START_TOO_HIGH", txHash: null });
+      return refused(giftId, "START_TOO_HIGH", standing.rating, MILESTONE_ACTIONS.startAboveCapMine(standing.rating, Number(state.maximumStart)).join(" "));
+    }
     let reading: AttestedClimbReading;
     try {
+      readingIs({ fetches: climbFetches(mode) });
       reading = await deps.attest({ username, mode, withName: provesItsOwn });
     } catch (error) {
       if (isClimbReadError(error) && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);
@@ -431,9 +498,21 @@ export async function runMilestoneReading(
     const every = unseen === null ? PROOF_EVERY_SECONDS.atTheTarget : lastDay ? PROOF_EVERY_SECONDS.unseenInTheLastDay : PROOF_EVERY_SECONDS.unseen;
     if (!(await deps.claimProof(giftId, every))) return unseen === null ? { kind: "already", giftId, reason: "read_recently" } : refused(giftId, unseen);
   }
+  const fetches = climbFetches(mode);
+  if (unseen === null) {
+    // At the target: three proofs a day at most. Past that the operator is told, and the gift is held until tomorrow.
+    if (deps.claimTargetTry && !(await deps.claimTargetTry(giftId, Math.floor(now / 86_400)))) {
+      await deps.tellTargetNotSettled?.(giftId);
+      return refused(giftId, "CEILING_REACHED");
+    }
+  } else if (deps.room && !(await deps.room(giftId, 2 * fetches))) {
+    // A proof after a look that failed is optional: it never takes the room the day keeps for a reading at the target.
+    return refused(giftId, unseen);
+  }
 
   let reading: AttestedClimbReading;
   try {
+    readingIs({ fetches, reason: unseen === null ? "a climb at its target" : `a climb, after a look that failed (${unseen})` });
     reading = await deps.attest({ username, mode, withName: false });
   } catch (error) {
     if (isClimbReadError(error) && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);

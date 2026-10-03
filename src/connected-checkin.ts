@@ -1,5 +1,6 @@
+import { readingFor } from "./attested-calls";
 import { contactEmail } from "./contact";
-import { LIMIT } from "./sentences";
+import { CEILING, LIMIT } from "./sentences";
 import { getAddress, type Hex } from "viem";
 import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
 import { attestedRead, AttestedReadError, reclaimAttestedReadDeps, type AttestedReadDeps } from "./attested-read";
@@ -156,7 +157,12 @@ export function verdictMetric(onChain: Pick<GiftState, "baselineValue" | "dailyT
   return onChain.baselineValue + (met ? BigInt(onChain.dailyTarget) : 0n);
 }
 
-export async function runConnectedCheckIn(input: { giftId: string; purpose: PublicCheckInPurpose; force?: boolean }, deps: ConnectedCheckInDeps = defaultDeps): Promise<PublicCheckInOutcome> {
+export function runConnectedCheckIn(input: { giftId: string; purpose: PublicCheckInPurpose; force?: boolean }, deps: ConnectedCheckInDeps = defaultDeps): Promise<PublicCheckInOutcome> {
+  // Every fetch of this reading is counted and judged under its gift (src/attested-calls.ts).
+  return readingFor({ giftId: input.giftId, reason: input.purpose === "bind" ? "the connection of a daily gift, connected source" : "a daily gift, connected source" }, () => readConnected(input, deps));
+}
+
+async function readConnected(input: { giftId: string; purpose: PublicCheckInPurpose; force?: boolean }, deps: ConnectedCheckInDeps): Promise<PublicCheckInOutcome> {
   const { giftId, purpose } = input;
   const record: GiftRecord | null = await loadGift(giftId);
   if (!record || !record.recipient) return { kind: "already", giftId, reason: "not_opened" };
@@ -213,6 +219,8 @@ export async function runConnectedCheckIn(input: { giftId: string; purpose: Publ
     NOT_FOUND: `${line.name} answered that there is no such day.`,
     // The month's limit of readings (src/attested-calls.ts). The screen adds until when the day can still be counted.
     LIMIT_REACHED: LIMIT.reading(null, contactEmail()),
+    // A day's ceiling of readings (src/attested-calls.ts). The screen says when it resumes, in the reader's own clock.
+    CEILING_REACHED: CEILING.reading(null),
   };
   let reading: Awaited<ReturnType<typeof attestedRead>>;
   try {

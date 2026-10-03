@@ -34,6 +34,8 @@ export type DetReadErrorCode =
   | "WORKER_OUT_OF_DATE"
   /** The month's limit of attested readings is reached: nothing was fetched (src/attested-calls.ts). */
   | "LIMIT_REACHED"
+  /** A day\'s ceiling of attested readings is reached: nothing was fetched, and readings resume the next UTC day. */
+  | "CEILING_REACHED"
   | "NOT_CONFIGURED";
 
 export class DetReadError extends Error {

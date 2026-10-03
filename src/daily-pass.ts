@@ -65,6 +65,9 @@ const OURS_TO_FIX: ReadonlySet<string> = new Set([
   // The month's limit of attested readings is reached (src/attested-calls.ts): no reading was taken, so nothing is
   // settled against it, and the person reads why on the gift's page.
   "LIMIT_REACHED",
+  // A day's ceiling of attested readings is reached (the breaker of src/attested-calls.ts): no reading was taken
+  // either, and it resumes the next UTC day.
+  "CEILING_REACHED",
   // A reading that threw instead of answering (see `counted` below).
   "READING_FAILED",
 ]);

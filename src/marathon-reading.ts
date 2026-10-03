@@ -13,7 +13,7 @@ import { mikaDetailAccount, mikaRowsOf, mikaRunnerIdOf, mikaSearchUrl } from "./
  * on MikaTiming the runner's page is found first from the search by bib (src/mika-timing.ts), and that page is read.
  */
 
-export type MarathonReadErrorCode = "INVALID_LINK" | "UNKNOWN_RACE" | "NO_RESULT" | "ANOTHER_BIB" | "NOT_FINISHED" | "PROOF_INVALID" | "PROOF_MISMATCH" | "FETCH_FAILED" | "WORKER_OUT_OF_DATE" | "LIMIT_REACHED" | "NOT_CONFIGURED";
+export type MarathonReadErrorCode = "INVALID_LINK" | "UNKNOWN_RACE" | "NO_RESULT" | "ANOTHER_BIB" | "NOT_FINISHED" | "PROOF_INVALID" | "PROOF_MISMATCH" | "FETCH_FAILED" | "WORKER_OUT_OF_DATE" | "LIMIT_REACHED" | "CEILING_REACHED" | "NOT_CONFIGURED";
 
 export class MarathonReadError extends Error {
   constructor(

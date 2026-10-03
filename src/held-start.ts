@@ -42,6 +42,25 @@ function asked(error: StartNotSigned): StartAsked {
   };
 }
 
+/** How long before its end a reading that waits is still worth signing: a minute for the passkey and the relay. */
+const HELD_MARGIN_SECONDS = 60;
+
+/**
+ * The first reading already held for a gift, when it can still be sent: what there is to sign, again. A person who
+ * closed their passkey's sheet and pressed a second time used to pay for a second reading, with the first still
+ * waiting (3 Oct 2026). A daily start is sent with the attestation as it was signed, which ends at its `expiresAt`; a
+ * climb's is signed again as it is sent, and what ages is the observation itself.
+ */
+export async function heldStartStillGood(giftId: string, account: string, nowSeconds: number, load: typeof loadHeldStart = loadHeldStart): Promise<StartAsked | null> {
+  const held = await load(giftId).catch(() => null);
+  if (!held || held.account.toLowerCase() !== account.toLowerCase()) return null;
+  const m = held.message;
+  const goodUntil = held.kind === "daily" ? Number(m.expiresAt) : Number(m.observedAt) + MILESTONE_ATTESTATION_TTL_SECONDS;
+  if (!(goodUntil > nowSeconds + HELD_MARGIN_SECONDS)) return null;
+  if (!/^0x[0-9a-fA-F]{64}$/.test(String(m.identityHash))) return null;
+  return { kind: "sign", giftId, start: { of: held.kind, contract: held.contract, identityHash: String(m.identityHash) as Hex, metricValue: String(m.metricValue), observedAt: String(m.observedAt) } };
+}
+
 /** Holds a first reading the relay would not send unsigned, and answers what the recipient's account is to sign. */
 export async function holdTheStart(
   error: StartNotSigned,

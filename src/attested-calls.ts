@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { neon } from "@neondatabase/serverless";
 import { databaseUrl } from "./database-guard";
 import { claimPass } from "./pass-guard";
@@ -26,6 +27,13 @@ import type { SqlExecutor } from "./proof-session-store";
  *
  * Past the limit Viky sends nothing to Reclaim and says so (`ReclaimLimitReached`, the refusal `LIMIT_REACHED`). The
  * same refusal is given when Reclaim itself answers that the quota is used up.
+ *
+ * And a breaker, since every paid reading passes here (the founder, 3 Oct 2026). The month's limit stops a month; it
+ * does not stop a loop. So each UTC day has two ceilings, counted on the proofs given like the month: one for a gift
+ * and one for all of them (`DAILY_CEILING`, each moved by a setting). At a ceiling nothing leaves for Reclaim, the
+ * refusal is `CEILING_REACHED`, which is ours and against which nothing is settled, the operator is told once with the
+ * gift and the reason, and the person reads that it resumes the next day. A reading says which gift it is for and why
+ * (`readingFor`), and the journal keeps both.
  */
 
 export const ATTESTED_CALLS_SCHEMA = `
@@ -38,6 +46,8 @@ CREATE TABLE IF NOT EXISTS viky_attested_calls (
   code text
 );
 ALTER TABLE viky_attested_calls ADD COLUMN IF NOT EXISTS ref text;
+ALTER TABLE viky_attested_calls ADD COLUMN IF NOT EXISTS gift text;
+ALTER TABLE viky_attested_calls ADD COLUMN IF NOT EXISTS reason text;
 CREATE INDEX IF NOT EXISTS viky_attested_calls_at ON viky_attested_calls (at);
 CREATE UNIQUE INDEX IF NOT EXISTS viky_attested_calls_ref ON viky_attested_calls (kind, ref) WHERE ref IS NOT NULL
 `;
@@ -62,6 +72,20 @@ export function reclaimAllowance(env: Environment = process.env): { fetches: num
     fetches: wholeNumber(env.RECLAIM_FETCH_ALLOWANCE) ?? RECLAIM_ALLOWANCE.fetches,
     verifications: wholeNumber(env.RECLAIM_VERIFICATION_ALLOWANCE) ?? RECLAIM_ALLOWANCE.verifications,
   };
+}
+
+/**
+ * The most proofs a UTC day may take: for one gift, four, which is what a Chess.com climb started and reached the
+ * same day costs (two fetches each time), and for all gifts together, eight.
+ */
+export const DAILY_CEILING = { perGift: 4, all: 8 } as const;
+
+/**
+ * The ceilings in force: `RECLAIM_DAILY_PER_GIFT` and `RECLAIM_DAILY_ALL` when they are set, a whole number each. Zero
+ * is a number: it stops every paid reading, for a gift or for all, until the setting is changed.
+ */
+export function dailyCeilings(env: Environment = process.env): { perGift: number; all: number } {
+  return { perGift: wholeNumber(env.RECLAIM_DAILY_PER_GIFT) ?? DAILY_CEILING.perGift, all: wholeNumber(env.RECLAIM_DAILY_ALL) ?? DAILY_CEILING.all };
 }
 
 /** The day of the month a cycle starts, at midnight UTC: the dashboard showed the cycle of 23 Sep to 24 Oct 2026. */
@@ -305,6 +329,9 @@ export type AttestedCall = Readonly<{
   code?: string | null;
   /** What makes a row one of its kind: a session's id, so a proof looked at twice is counted once. */
   ref?: string | null;
+  /** The gift a fetch was for and why it was taken, when the reading said so (`readingFor`). */
+  gift?: string | null;
+  reason?: string | null;
 }>;
 
 /** What happens after a row is written: the operator is told when a share of the allowance has just been reached. */
@@ -326,8 +353,9 @@ export async function noteAttestedCall(call: AttestedCall, after: () => Promise<
   try {
     await ensureAttestedCallsSchema();
     await sql()`
-      INSERT INTO viky_attested_calls (kind, source, ok, code, ref)
-      VALUES (${call.kind}, ${call.source.slice(0, 80)}, ${call.ok}, ${call.code ? call.code.slice(0, 40) : null}, ${call.ref ? call.ref.slice(0, 200) : null})
+      INSERT INTO viky_attested_calls (kind, source, ok, code, ref, gift, reason)
+      VALUES (${call.kind}, ${call.source.slice(0, 80)}, ${call.ok}, ${call.code ? call.code.slice(0, 40) : null}, ${call.ref ? call.ref.slice(0, 200) : null},
+              ${call.gift ? call.gift.slice(0, 80) : null}, ${call.reason ? call.reason.slice(0, 120) : null})
       ON CONFLICT (kind, ref) WHERE ref IS NOT NULL DO UPDATE SET ok = viky_attested_calls.ok OR EXCLUDED.ok`;
     await after();
   } catch (error) {
@@ -349,29 +377,203 @@ export function neverLeftForReclaim(error: unknown): boolean {
   return /THROTTLED/.test(message) && !/asked to slow down/.test(message);
 }
 
-export type CountedFetchDeps = Readonly<{ note: (call: AttestedCall) => Promise<void>; limits: () => Promise<{ readings: boolean }> }>;
+// --- the breaker ---------------------------------------------------------------------------------------------------
+
+/**
+ * What a reading says of itself before it pays for anything: the gift it is for, why it is taken, and how many
+ * attested fetches it is made of. A Chess.com reading is two, the profile and then the ratings: it is admitted whole
+ * or not at all, so a ceiling never leaves half a reading paid for.
+ */
+export type ReadingAbout = { giftId: string | null; reason: string; fetches: number };
+
+type ReadingInFlight = ReadingAbout & { admitted: number };
+
+const reading = new AsyncLocalStorage<ReadingInFlight>();
+
+/** Runs a reading with what it is about, which every fetch it makes is counted and judged under. */
+export function readingFor<T>(about: Readonly<{ giftId: string | null; reason: string; fetches?: number }>, run: () => Promise<T>): Promise<T> {
+  return reading.run({ giftId: about.giftId, reason: about.reason, fetches: about.fetches ?? 1, admitted: 0 }, run);
+}
+
+/** Says more of the reading under way, once it is known: its reason, and how many fetches it is made of. */
+export function readingIs(more: Readonly<{ reason?: string; fetches?: number }>): void {
+  const about = reading.getStore();
+  if (!about) return;
+  if (more.reason !== undefined) about.reason = more.reason;
+  if (more.fetches !== undefined) about.fetches = more.fetches;
+}
+
+/** The moment the next UTC day begins, in seconds: when a day's ceiling is lifted. */
+export function nextDayAt(nowMs: number): number {
+  return (Math.floor(nowMs / 86_400_000) + 1) * 86_400;
+}
+
+/** A day's ceiling is reached: nothing was sent to Reclaim. `scope` says whose ceiling, the gift's or everybody's. */
+export class ReclaimCeilingReached extends Error {
+  readonly code = "CEILING_REACHED";
+
+  constructor(
+    readonly scope: "gift" | "all",
+    /** When readings resume, in UTC seconds: the start of the next UTC day. */
+    readonly resumesAt: number,
+  ) {
+    super(scope === "gift" ? "The day's ceiling of attested readings for this gift is reached" : "The day's ceiling of attested readings is reached");
+    this.name = "ReclaimCeilingReached";
+  }
+}
+
+/** The proofs given so far in the UTC day of a moment: for one gift, and for all. */
+export type DayUse = Readonly<{ gift: number; all: number }>;
+
+export async function dayUse(giftId: string | null, nowMs: number = Date.now()): Promise<DayUse> {
+  await ensureAttestedCallsSchema();
+  const from = new Date(Math.floor(nowMs / 86_400_000) * 86_400_000).toISOString();
+  const [counted] = await sql()`
+    SELECT count(*) FILTER (WHERE gift = ${giftId})::int AS gift, count(*)::int AS everything
+      FROM viky_attested_calls
+     WHERE kind = 'fetch' AND ok AND at >= ${from}`;
+  return { gift: giftId === null ? 0 : Number(counted?.gift ?? 0), all: Number(counted?.everything ?? 0) };
+}
+
+/**
+ * Which ceiling a reading of `needs` more proofs would pass, or none. The gift's own is asked first: it is the one a
+ * loop meets, and the one whose alert names the gift.
+ */
+export function ceilingPassed(use: DayUse, giftId: string | null, needs: number, ceilings: { perGift: number; all: number }): "gift" | "all" | null {
+  if (giftId !== null && use.gift + needs > ceilings.perGift) return "gift";
+  return use.all + needs > ceilings.all ? "all" : null;
+}
+
+/**
+ * Whether the day has room for `needs` more proofs for a gift, with nobody told when it has not: asked by a reading
+ * that is optional, so that it never takes the room a reading that pays will need (src/milestone-reading.ts). A count
+ * that cannot be read stops nothing.
+ */
+export async function roomToday(giftId: string | null, needs: number, nowMs: number = Date.now(), read: typeof dayUse = dayUse): Promise<boolean> {
+  try {
+    return ceilingPassed(await read(giftId, nowMs), giftId, needs, dailyCeilings()) === null;
+  } catch (error) {
+    console.error(`day's ceiling not read: ${error instanceof Error ? error.message.slice(0, 200) : String(error).slice(0, 200)}`);
+    return true;
+  }
+}
+
+/** What the operator reads when a ceiling stops a reading: the gift, the reason, the day's count, and how to move it. */
+export function ceilingAlert(input: Readonly<{ scope: "gift" | "all"; about: ReadingAbout | null; use: DayUse; ceilings: { perGift: number; all: number }; resumesAt: number }>): Alert {
+  const { scope, about, use, ceilings } = input;
+  const gift = about?.giftId ? `gift ${about.giftId}` : "a reading that names no gift";
+  const resumes = `${new Date(input.resumesAt * 1_000).toISOString().slice(0, 16).replace("T", " ")} UTC`;
+  return {
+    subject: scope === "gift" ? `Reclaim: ${gift} reached its ceiling of ${ceilings.perGift} proofs for the day` : `Reclaim: the ceiling of ${ceilings.all} proofs for the day is reached`,
+    text: [
+      `Stopped: ${gift}, ${about?.reason ?? "no reason given"}. Nothing was sent to Reclaim for it.`,
+      `Today (UTC): ${about?.giftId ? `${use.gift} proofs for this gift, of ${ceilings.perGift} a day. ` : ""}${use.all} proofs for all gifts, of ${ceilings.all} a day.`,
+      scope === "gift" ? "Other gifts are still read. This one is read again from the next UTC day." : "No gift is read attested until the next UTC day.",
+      `Readings resume at ${resumes}. Nothing is settled against a reading that was not taken: the person reads why on the gift's page.`,
+      "",
+      "A gift that reaches its ceiling is usually a loop: look at its rows in viky_attested_calls (gift, reason, code) before raising anything.",
+      "To raise a ceiling for good or for a day, set RECLAIM_DAILY_PER_GIFT or RECLAIM_DAILY_ALL: no new code is needed.",
+    ].join("\n"),
+  };
+}
+
+/**
+ * Tells the operator of something that stopped paid readings for the day, once in that UTC day under `name`. The alert
+ * is made only when it is this call's to send. Never throws.
+ */
+export async function tellOnceToday(name: string, alert: () => Promise<Alert> | Alert, nowMs: number = Date.now()): Promise<void> {
+  try {
+    if (!(await claimPass(`${name}:${Math.floor(nowMs / 86_400_000)}`, 2 * 86_400, nowMs))) return;
+    const { sendAlert } = await import("./provider-alert");
+    await sendAlert(await alert());
+  } catch (error) {
+    console.error(`alert not sent (${name}): ${error instanceof Error ? error.message.slice(0, 200) : String(error).slice(0, 200)}`);
+  }
+}
+
+/** Tells the operator of a ceiling reached, once for a gift, or for all, in a day. */
+export function tellOfTheCeiling(scope: "gift" | "all", about: ReadingAbout | null, use: DayUse, nowMs: number = Date.now()): Promise<void> {
+  const name = scope === "gift" ? `reclaim-ceiling:gift:${about?.giftId ?? "none"}` : "reclaim-ceiling:all";
+  return tellOnceToday(name, () => ceilingAlert({ scope, about, use, ceilings: dailyCeilings(), resumesAt: nextDayAt(nowMs) }), nowMs);
+}
+
+/** What the operator reads when a gift at its target was given the day's tries and none settled it. */
+export function targetNotSettledAlert(giftId: string, tries: number, use: DayUse | null, resumesAt: number): Alert {
+  return {
+    subject: `Gift ${giftId}: at its target, and ${tries} proofs today did not settle it`,
+    text: [
+      `Gift ${giftId} was read at its target ${tries} times today, and none of those readings settled it. No more proof is taken for it until ${new Date(resumesAt * 1_000).toISOString().slice(0, 16).replace("T", " ")} UTC.`,
+      use === null ? "The day's count could not be read." : `Today (UTC): ${use.gift} proofs were given for this gift, ${use.all} for all gifts.`,
+      "A proof at the target settles a gift at once. When it does not, the fetch or the sending failed: look at the gift's readings and at its rows in viky_attested_calls (gift, reason, code) before the next day's tries.",
+      "Nothing is settled against it meanwhile: the gift is held.",
+    ].join("\n"),
+  };
+}
+
+/** Tells the operator that the day's tries at the target are spent for a gift, once in the day. */
+export function tellOfTriesSpent(giftId: string, tries: number, nowMs: number = Date.now()): Promise<void> {
+  return tellOnceToday(`milestone-target-spent:${giftId}`, async () => targetNotSettledAlert(giftId, tries, await dayUse(giftId, nowMs).catch(() => null), nextDayAt(nowMs)), nowMs);
+}
+
+/**
+ * The breaker itself: the ceiling a reading would pass now, told to the operator, or nothing. A count that cannot be
+ * read stops nothing, as for the month's limit.
+ */
+export async function ceilingNow(about: ReadingAbout | null, needs: number, nowMs: number = Date.now()): Promise<ReclaimCeilingReached | null> {
+  let use: DayUse;
+  try {
+    use = await dayUse(about?.giftId ?? null, nowMs);
+  } catch (error) {
+    console.error(`day's ceiling not read: ${error instanceof Error ? error.message.slice(0, 200) : String(error).slice(0, 200)}`);
+    return null;
+  }
+  const scope = ceilingPassed(use, about?.giftId ?? null, needs, dailyCeilings());
+  if (scope === null) return null;
+  await tellOfTheCeiling(scope, about, use, nowMs);
+  return new ReclaimCeilingReached(scope, nextDayAt(nowMs));
+}
+
+export type CountedFetchDeps = Readonly<{
+  note: (call: AttestedCall) => Promise<void>;
+  limits: () => Promise<{ readings: boolean }>;
+  /** The day's ceilings (`ceilingNow`); a test of the other things omits it. */
+  ceiling?: (about: ReadingAbout | null, needs: number) => Promise<ReclaimCeilingReached | null>;
+}>;
 
 /**
  * Runs one attested fetch and writes it down, proof or not. Past the month's limit nothing is fetched and the refusal
- * is `ReclaimLimitReached`; it is the same refusal when Reclaim answers that the quota is used up. Any other answer or
- * refusal of the fetch passes through untouched.
+ * is `ReclaimLimitReached`; it is the same refusal when Reclaim answers that the quota is used up. At a day's ceiling
+ * nothing is fetched either, and the refusal is `ReclaimCeilingReached`. Any other answer or refusal of the fetch
+ * passes through untouched.
+ *
+ * A reading made of several fetches is admitted at its first, for all of them: the ceiling is asked whether the whole
+ * reading fits, and the fetches that follow in the same reading pass.
  */
-export async function countedFetch<T>(source: string, fetch: () => Promise<T>, deps: CountedFetchDeps = { note: noteAttestedCall, limits: () => limitsNow() }): Promise<T> {
+export async function countedFetch<T>(source: string, fetch: () => Promise<T>, deps: CountedFetchDeps = { note: noteAttestedCall, limits: () => limitsNow(), ceiling: ceilingNow }): Promise<T> {
   if ((await deps.limits()).readings) throw new ReclaimLimitReached("readings");
+  const about = reading.getStore() ?? null;
+  if (deps.ceiling && !(about && about.admitted > 0)) {
+    const needs = Math.max(1, about?.fetches ?? 1);
+    const reached = await deps.ceiling(about, needs);
+    if (reached) throw reached;
+    if (about) about.admitted = needs;
+  }
+  if (about && about.admitted > 0) about.admitted -= 1;
+  const told = { gift: about?.giftId ?? null, reason: about?.reason ?? null };
   let proof: T;
   try {
     proof = await fetch();
   } catch (error) {
     if (isReclaimQuotaRefusal(error)) {
-      await deps.note({ kind: "fetch", source, ok: false, code: "LIMIT_REACHED" });
+      await deps.note({ kind: "fetch", source, ok: false, code: "LIMIT_REACHED", ...told });
       throw new ReclaimLimitReached("readings", { cause: error });
     }
     if (!neverLeftForReclaim(error)) {
       const code = typeof (error as { code?: unknown })?.code === "string" ? (error as { code: string }).code : "FAILED";
-      await deps.note({ kind: "fetch", source, ok: false, code });
+      await deps.note({ kind: "fetch", source, ok: false, code, ...told });
     }
     throw error;
   }
-  await deps.note({ kind: "fetch", source, ok: true });
+  await deps.note({ kind: "fetch", source, ok: true, ...told });
   return proof;
 }
