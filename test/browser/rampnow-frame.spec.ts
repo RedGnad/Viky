@@ -1,9 +1,11 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
-import { answerTheChain, json, profile, shot, sizesFor } from "./gift-kit";
+import { answerTheChain, json, profile, shot, sizesFor, type Holdings } from "./gift-kit";
 
 /**
  * Rampnow in a frame of our own (the founder, 3 Oct 2026): the pay press opens the wait with the sheet over it, the frame
- * filled in and locked, back in Viky when it says the order is completed, and its page beside when it fails.
+ * filled in and locked, back in Viky when it says the order is completed, and its page beside when it fails. Without a
+ * partner's key the frame may say nothing at all: the money arriving in the account, seen by the wait under the sheet,
+ * is then what closes it.
  *
  * It needs a build where the way is on: `NEXT_PUBLIC_RAMPNOW_WAY_IN=on`, `NEXT_PUBLIC_USDC_ROUTER_ADDRESS` and
  * `NEXT_PUBLIC_RAMPNOW_FRAME=on`, which no build of the product has yet; run with `VIKY_RAMPNOW_FRAME_BUILD=1` against
@@ -15,8 +17,18 @@ const SHOTS = process.env.VIKY_RAMPNOW_CAPTURES;
 const sheet = (page: Page) => page.locator("dialog.sheet[open]").last();
 const card = (page: Page) => page.locator('section[aria-labelledby="offer-card"]');
 
-/** Rampnow's page as a stand-in at its own origin: it says it is ready, then sends what its button says. */
-async function rampnowStandIn(context: BrowserContext, ending: "ORDER_COMPLETED" | "ERROR"): Promise<void> {
+type Ending = "ORDER_COMPLETED" | "ERROR" | "SILENT";
+
+/**
+ * Rampnow's page as a stand-in at its own origin: it says it is ready, then sends what its button says. "SILENT" is
+ * the public page without a partner's key as it may be: drawn, and never sending a message.
+ */
+async function rampnowStandIn(context: BrowserContext, ending: Ending): Promise<void> {
+  const says =
+    ending === "SILENT"
+      ? ""
+      : `parent.postMessage({ source: "RAMPNOW_WIDGET", type: "WIDGET_READY" }, "*");
+          document.getElementById("pay").onclick = () => parent.postMessage({ source: "RAMPNOW_WIDGET", type: "${ending}", payload: { orderUid: "o-1" } }, "*");`;
   await context.route("https://app.rampnow.io/**", (route) =>
     route.fulfill({
       status: 200,
@@ -25,15 +37,14 @@ async function rampnowStandIn(context: BrowserContext, ending: "ORDER_COMPLETED"
         <p>Rampnow, stood in for by the test.</p>
         <button id="pay">Pay 30 EUR</button>
         <script>
-          parent.postMessage({ source: "RAMPNOW_WIDGET", type: "WIDGET_READY" }, "*");
-          document.getElementById("pay").onclick = () => parent.postMessage({ source: "RAMPNOW_WIDGET", type: "${ending}", payload: { orderUid: "o-1" } }, "*");
+          ${says}
         </script></body></html>`,
     }),
   );
 }
 
-async function toTheFrame(page: Page, context: BrowserContext, ending: "ORDER_COMPLETED" | "ERROR"): Promise<void> {
-  await answerTheChain(context, { ausd: 0n, mon: 0n });
+async function toTheFrame(page: Page, context: BrowserContext, ending: Ending, holdings: Holdings = { ausd: 0n, mon: 0n }): Promise<void> {
+  await answerTheChain(context, holdings);
   // After the chain's stand-in, which refuses every other host: the route registered last is the one asked first.
   await rampnowStandIn(context, ending);
   await page.route("**/api/rails/where**", (route) =>
@@ -89,6 +100,33 @@ test.describe("Rampnow in a frame", () => {
       await expect(sheet(page).getByText(/^By paying by card, you confirm you are 18 or older and accept/)).toBeVisible();
       await beside.scrollIntoViewIfNeeded();
       await shot(SHOTS, page, size.name, "3-failed-and-the-page-beside");
+      await context.close();
+    });
+
+    test(`a frame that says nothing is closed by the money arriving, and its page is offered beside meanwhile (${size.name})`, async ({ browser, baseURL }) => {
+      const funder = await profile(browser, baseURL, size.viewport);
+      const { page, context } = funder;
+      const holdings: Holdings = { ausd: 0n, mon: 0n, usdc: 0n };
+      // The conversion the wait would then ask of the server is refused here: this test moves nothing.
+      let conversions = 0;
+      await page.route("**/api/fund/convert/**", (route) => {
+        conversions += 1;
+        return route.fulfill(json({ code: "NOT_CONFIGURED", error: "Stood in for by the test. Nothing was taken." }, 503));
+      });
+      await toTheFrame(page, context, "SILENT", holdings);
+      const frame = page.locator("iframe[data-rampnow-frame]");
+      // No message ever comes: after fifteen seconds the page beside is offered under the frame, which stays.
+      await expect(sheet(page).getByRole("link", { name: "Open the card page" })).toBeVisible({ timeout: 20_000 });
+      await expect(frame).toBeVisible();
+      await shot(SHOTS, page, size.name, "4-silent-frame-and-the-page-beside");
+      // The card paid: the dollars are in the account. The wait under the sheet sees them and closes the frame.
+      holdings.usdc = 40_000_000n;
+      await expect(frame).toHaveCount(0, { timeout: 30_000 });
+      await expect.poll(() => conversions, { timeout: 30_000 }).toBeGreaterThan(0);
+      // And it stays closed: what is left on the screen is the wait itself.
+      await page.waitForTimeout(1_500);
+      await expect(frame).toHaveCount(0);
+      await shot(SHOTS, page, size.name, "5-closed-by-the-money-arriving");
       await context.close();
     });
   }
