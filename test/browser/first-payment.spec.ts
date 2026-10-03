@@ -74,7 +74,7 @@ test.describe("the first payment, and the way back to it", () => {
       await shot(SHOTS, page, size.name, "1a-pay-sheet-before-the-press");
 
       // Press three: pay. One system sheet, which makes the passkey; the terms are kept; the wait takes over.
-      await sheet(page).getByRole("button", { name: /^(Pay \d+ EUR|Pay)$/ }).first().click();
+      await sheet(page).getByRole("button", { name: /^(Pay \S+ by card|Pay)$/ }).first().click();
       await page.waitForURL(/\/fund\?step=paying/, { timeout: 60_000 });
       await expect(page.getByRole("heading", { name: /^Waiting for your/ })).toBeVisible();
       expect(await page.evaluate(() => localStorage.getItem("test.ceremonies")), "one system sheet, and it made a passkey").toBe('{"create":1,"get":0}');
@@ -149,11 +149,12 @@ test.describe("the first payment, and the way back to it", () => {
       await sheet(page).getByRole("button", { name: "I already have an account" }).click();
       await expect.poll(() => signedIn(context), { timeout: 30_000 }).toBe(true);
       // Signed in, and the sheet is still what the person is looking at: nothing to find and press again.
-      await expect(sheet(page).getByText("Your face or your fingerprint is asked once, to sign what you are paying for.")).toBeVisible();
+      // Signed in, the phone's own prompt says what the passkey does, and the sheet says nothing about it (3 Oct 2026).
+      await expect(sheet(page).getByText(/^Your face or your fingerprint/)).toHaveCount(0);
       await expect(sheet(page).getByRole("button", { name: "I already have an account" })).toHaveCount(0);
       expect(await page.evaluate(() => localStorage.getItem("test.ceremonies")), "the passkey was asked for, and none was made").toBe('{"create":0,"get":1}');
       await shot(SHOTS, page, size.name, "1c-signed-in-from-the-sheet");
-      await sheet(page).getByRole("button", { name: /^(Pay \d+ EUR|Pay)$/ }).first().click();
+      await sheet(page).getByRole("button", { name: /^(Pay \S+ by card|Pay)$/ }).first().click();
       await page.waitForURL(/\/fund\?step=paying/, { timeout: 60_000 });
       await context.close();
     });

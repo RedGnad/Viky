@@ -31,3 +31,13 @@ export function giftNameProblem(value: string): GiftNameProblem | undefined {
 }
 
 export type GiftNames = Readonly<{ recipientName: string | null; funderName: string | null }>;
+
+/**
+ * The name this account gave on its last gift, for the pay sheet's field (the founder, 3 Oct 2026): the newest gift it
+ * funded that carries one. Nothing when it never gave one, so an empty field stays a gift from nobody.
+ */
+export function lastNameGiven(gifts: ReadonlyArray<Readonly<{ role: string; funderName: string | null; fundedAt: number }>>): string | undefined {
+  const given = gifts.filter((gift) => gift.role === "funder" && tidyGiftName(gift.funderName ?? "") !== "");
+  given.sort((left, right) => right.fundedAt - left.fundedAt);
+  return given[0] ? tidyGiftName(given[0].funderName ?? "") : undefined;
+}

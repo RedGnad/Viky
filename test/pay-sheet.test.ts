@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { chainMarginEur, eurosNeededOn, roughlyInDollars, serviceChargeDollars, serviceChargeEur, serviceChargeIsCeiling, wayInFor } from "../src/gift-amount";
+import { lastNameGiven } from "../src/gift-names";
+import { cardSum, giftTyped, heldIn, moneyIn } from "../src/pay-sum";
+import type { Rates } from "../src/rates";
 import { PAY } from "../src/sentences";
-import { WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAYS_IN, type WayIn } from "../src/rails";
+import { feeInWords, sourceOfIts, WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAY_IN_USDC, WAYS_IN, type WayIn } from "../src/rails";
 
 /**
  * Paying for the gift on the card, and the wait while it is made (the rendered mockups pay.html and paying.html of
@@ -19,11 +22,15 @@ const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
 const pay = readFileSync("app/components/PayGift.tsx", "utf8");
 const css = readFileSync("app/globals.css", "utf8");
 
-test("three lines, and the third is that Viky keeps nothing", () => {
-  assert.equal(PAY.rows.gift("Léa"), "The gift, in Léa's name");
-  // No company on the line (the founder, 20 Sep 2026): the person pays by card, and the service is named where it is met.
-  assert.equal(PAY.rows.service, "What the card service charges");
-  assert.doesNotMatch(PAY.rows.service + PAY.pay + PAY.payEuros(29), /Ramp|Mercuryo/);
+test("lines that add up, and the last is that Viky keeps nothing", () => {
+  assert.equal(PAY.rows.gift("Léa"), "Léa's gift");
+  assert.equal(PAY.rows.gift(""), "The gift");
+  assert.equal(PAY.rows.fromAccount, "From your Viky money");
+  assert.equal(PAY.rows.fee, "Card fee");
+  assert.equal(PAY.rows.stays, "Stays in your Viky money");
+  // No company on a line (the founder, 20 Sep 2026): it is named under the button, where the card goes to it.
+  assert.doesNotMatch(Object.values(PAY.rows).map((row) => (typeof row === "function" ? row("Léa") : row)).join(" ") + PAY.payByCard("€12.00"), /Ramp|Mercuryo/);
+  assert.equal(PAY.payByCard("€12.00"), "Pay €12.00 by card");
   assert.equal(PAY.rows.viky, "Viky takes");
   assert.equal(PAY.nothing, "nothing");
   // True of the code: no rail of ours takes a share, and nothing in the money path adds one.
@@ -31,12 +38,70 @@ test("three lines, and the third is that Viky keeps nothing", () => {
   assert.doesNotMatch(readFileSync("src/gift-amount.ts", "utf8"), /vikyFee|ourFee|commission/i);
 });
 
-test("what this person pays is their own figure, at a dated rate", () => {
+test("what this person pays is their own figure, in the money they typed, at a dated rate said in the fold", () => {
   assert.match(sheet, /wayInFor\(short, waysIn\(\), money\.rates\?\.usdPerEur, railIn\)/, "the euros are the offer's, on the one way chosen for the person");
-  assert.match(sheet, /serviceChargeDollars\(euros, way, money\.rates\?\.usdPerEur\)/, "and what the service charges is its own published figure on that way");
-  assert.match(sheet, /W\.atTheRate\(rateDateInWords\(money\.rates\.date\)\)/);
-  // The source named, and why a Friday's date stands on a Sunday: the line that looked stale says what it is.
-  assert.equal(PAY.atTheRate("18 Sep 2026"), "At the European Central Bank's rate of 18 Sep 2026. It sets one each working day.");
+  assert.match(sheet, /cardSum\(\{ code, gift, cardEuros: euros, feeEuros: serviceChargeEur\(euros, way\.fee\), rates: money\.rates \}\)/, "the lines are worked out from them, with the service's own fee");
+  assert.match(sheet, /W\.feeAndRate\(feeInWords\(way\), sourceOfIts\(way\), way\.read, rateDay\)/, "and the rate is said in the fold, with the fee");
+  assert.equal(
+    PAY.feeAndRate(feeInWords(WAY_IN_USDC), sourceOfIts(WAY_IN_USDC), WAY_IN_USDC.read, "2 Oct 2026"),
+    "Rampnow keeps 7 % plus €0.40, at least €1.00 (its own quotes, 1 Oct 2026). Euros at the European Central Bank's rate of 2 Oct 2026.",
+  );
+  assert.equal(PAY.chargedIn("€15.00", "$16.84", "2 Oct 2026"), "Your card is charged €15.00, which is $16.84 at the European Central Bank's rate of 2 Oct 2026.");
+  // The rate line in the open is gone from the sheet (the mockup of 3 Oct 2026); the currency sheet keeps its own.
+  assert.doesNotMatch(sheet, /W\.atTheRate/);
+});
+
+/**
+ * The sum of the mockup of 3 Oct 2026, to the cent: a gift of €19.00 typed in euros, $10.00 in the account, Rampnow's
+ * 12 EUR and its fee of 7 % plus 0.40. 19.00 less 8.24 plus 1.24 is 12.00. The card pays a whole number of euros and
+ * the account the rest, and when the card brings more, what stays is a line of its own: the sum still falls right.
+ */
+test("the lines add up to what the card pays, in one money, and what stays in the account is said", () => {
+  const rates = { date: "2026-10-02", usdPerEur: 1.1225, eurPerUsd: 1 / 1.1225, xofPerUsd: 655.957 / 1.1225, eurPer: { EUR: 1, USD: 1.1225, XOF: 655.957 }, readAtMs: 0 } as Rates;
+  const units = 21_320_000n;
+  const gift = giftTyped({ typedAmount: "19", typedIn: "EUR", units, code: "EUR", rates })!;
+  assert.equal(gift, 19, "what was typed, never the dollars brought back as €18.99");
+  const euros = eurosNeededOn(units - 10_000_000n, WAY_IN_USDC, rates.usdPerEur)!;
+  assert.equal(euros, 12);
+  const sum = cardSum({ code: "EUR", gift, cardEuros: euros, feeEuros: serviceChargeEur(euros, WAY_IN_USDC.fee), rates })!;
+  assert.deepEqual(sum, { code: "EUR", gift: 19, card: 12, fee: 1.24, cardEuros: 12, fromAccount: 8.24, stays: 0 });
+  assert.equal(moneyIn(sum.card, "EUR"), "€12.00");
+  // A card that brings more than the gift and its fee, at a floor: what is left over stays, on its own line.
+  const floor = cardSum({ code: "EUR", gift: 2, cardEuros: 5, feeEuros: serviceChargeEur(5, WAY_IN_USDC.fee), rates })!;
+  assert.deepEqual([floor.fromAccount, floor.fee, floor.stays], [0, 1, 2]);
+  assert.equal(floor.gift - floor.fromAccount + floor.fee + floor.stays, floor.card);
+  // Typed in dollars: the card's euros said in dollars at the day's rate, and the fold says what the card is charged.
+  const dollars = cardSum({ code: "USD", gift: 23, cardEuros: 15, feeEuros: serviceChargeEur(15, WAY_IN_USDC.fee), rates })!;
+  assert.deepEqual([dollars.card, dollars.fee, dollars.fromAccount], [16.84, 1.63, 7.79]);
+  assert.equal(Math.round((dollars.gift - dollars.fromAccount + dollars.fee) * 100), Math.round(dollars.card * 100));
+  // Not typed in this money: the dollars signed, in it, to its decimals; and what the account holds the same way.
+  assert.equal(giftTyped({ units, code: "EUR", rates }), 18.99);
+  assert.equal(heldIn(10_000_000n, "EUR", rates), 8.91);
+  assert.match(moneyIn(12000, "XOF"), /^F\s?CFA\s?12,000$/, "a currency without cents, whole");
+  // No rate for the money: no sum, and the sheet says only "Pay".
+  assert.equal(cardSum({ code: "GBP", gift: 19, cardEuros: 12, feeEuros: 1.24, rates }), undefined);
+});
+
+test("the name comes first, as the recipient knows the giver, filled with the last one this account gave", () => {
+  assert.equal(PAY.nameLabel("Boo"), "Your name, as Boo knows you");
+  assert.equal(PAY.nameLabel(""), "Your name, as they know you");
+  assert.equal(PAY.namePlaceholder, "Mum");
+  assert.equal(
+    lastNameGiven([
+      { role: "funder", funderName: "Mum", fundedAt: 10 },
+      { role: "recipient", funderName: "Dad", fundedAt: 30 },
+      { role: "funder", funderName: "  ", fundedAt: 40 },
+      { role: "funder", funderName: "Mama", fundedAt: 20 },
+    ]),
+    "Mama",
+  );
+  assert.equal(lastNameGiven([]), undefined, "never given: the field stays empty, a gift from nobody");
+  // Empty, no sentence breaks (it read "Boo and show on the gift").
+  assert.equal(PAY.namesSeen("Boo", false), "Boo's name shows on the gift, to whoever opens its link.");
+  assert.equal(PAY.namesSeen("Boo", true), "Boo's name and yours show on the gift, to whoever opens its link.");
+  assert.equal(PAY.missedBy("Boo", "9:00"), "A day Boo misses can be caught up the next day. If not, it comes back to you the morning after, at about 9:00 your time.");
+  assert.ok(sheet.indexOf('id="funder-name"') < sheet.indexOf("data-pay-lines"), "the field before the lines");
+  assert.match(sheet, /if \(live && last && now\.draft\.funderName\.trim\(\) === ""\) now\.onChange\(\{ \.\.\.now\.draft, funderName: last \}\);/, "only into an empty field");
 });
 
 test("the account is made at the press, and the sheet says so before it happens", () => {
@@ -44,7 +109,8 @@ test("the account is made at the press, and the sheet says so before it happens"
   assert.match(PAY.passkeyMakesTheAccount, /Nothing was asked of you until now/);
   // Said only where it is true: a device that remembers a passkey opens it, and makes nothing.
   // And only where it can happen: on another address of the app an account is not made, and the sheet says where it is.
-  assert.match(sheet, /\{address \|\| hasCredential \? W\.signedIn : madeHere \? W\.passkeyMakesTheAccount : ACCOUNT_DOOR\.madeOnTheMainSite\}/);
+  // Signed in, the phone's own prompt says it, and the sheet says nothing more (the mockup of 3 Oct 2026).
+  assert.match(sheet, /\{address \|\| hasCredential \? null : <p className=\{HELP\}>\{madeHere \? W\.passkeyMakesTheAccount : ACCOUNT_DOOR\.madeOnTheMainSite\}<\/p>\}/);
   // The passkey opens inside the press, then the terms are written, then the service's page opens: that order.
   const press = sheet.slice(sheet.indexOf("const pay = async"), sheet.indexOf("const signInFirst ="));
   assert.ok(press.indexOf("await ensureAccount()") > 0 && press.indexOf("await ensureAccount()") < press.indexOf("savePendingGift("), "the account comes before the terms are kept");
@@ -87,22 +153,22 @@ test("Home keeps the pay sheet across the account being made, and the page it is
 test("one way in, one action, and no button to another (D239)", () => {
   assert.ok(!("another" in PAY), "the second way is not a choice any more");
   assert.doesNotMatch(sheet, /another way|SECONDARY_BUTTON|setChosen/);
-  // The footer only, from its opening to its fragment's close: the body's small keys are not actions (D294's copy).
-  const footer = sheet.slice(sheet.indexOf("footer={"), sheet.indexOf("</>", sheet.indexOf("footer={")));
-  assert.equal((footer.match(/<button/g) ?? []).length, 1, "the one action, and nothing under it but a refusal or the account panel");
-  // Every other button of the sheet is a small key (the code's copy, D294; the judge code, D297), never a second action.
-  const body = sheet.slice(sheet.indexOf("</>", sheet.indexOf("footer={")), sheet.indexOf("</Sheet>"));
+  // One action in the sun, and every other button of the sheet a small key (the code's copy, D294), never a second one.
+  const body = sheet.slice(sheet.indexOf("<Sheet "), sheet.indexOf("</Sheet>"));
   const buttons = body.match(/<button[^>]*>/g) ?? [];
-  assert.ok(buttons.length >= 1);
-  for (const button of buttons) assert.match(button, /SMALL_BUTTON/, button);
+  assert.equal(buttons.filter((button) => /PRIMARY_BUTTON/.test(button)).length, 1, "the one action");
+  for (const button of buttons.filter((button) => !/PRIMARY_BUTTON/.test(button))) assert.match(button, /SMALL_BUTTON/, button);
+  // "Have a code?" stays (D297), last and folded (the mockup of 3 Oct 2026).
+  assert.ok(body.lastIndexOf("<JudgeCode") > body.indexOf("data-what-happens"), "the code after the fold");
+  assert.match(body, /<JudgeCode\s+folded/);
   // The sentence is the one place the sheet names the two services: which refused, why, and which this goes through.
   assert.equal(PAY.instead.country("Ramp", "Mercuryo"), "Ramp does not serve your country, so this goes through Mercuryo.");
   assert.equal(PAY.instead.paused("Ramp", "Mercuryo"), "Ramp is not selling right now, so this goes through Mercuryo.");
-  assert.equal(PAY.instead.floor("Ramp", 6.25, "Mercuryo"), "Ramp takes nothing under 6.25 EUR, so this goes through Mercuryo.");
+  assert.equal(PAY.instead.floor("Ramp", "€6.25", "Mercuryo"), "Ramp takes nothing under €6.25, so this goes through Mercuryo.");
   // A service that serves the country and does not sell there what a gift holds says that, never "your country" (1 Oct 2026).
   assert.equal(PAY.instead.notSold("Ramp", "Mercuryo"), "Ramp does not sell what a gift holds in your country, so this goes through Mercuryo.");
   assert.match(sheet, /first === WAY_IN_GIFT_COIN && country && RAMP_NO_GIFT_COIN_IN\.includes\(country\.toLowerCase\(\)\)\) return W\.instead\.notSold\(first\.name, offer\.way\.name\);/);
-  assert.match(sheet, /\{offer\.insteadOf && byCard \? <p className=\{HELP\}>\{insteadSentence\(offer, card\?\.country \?\? null\)\}<\/p> : null\}/, "said on the sheet, and only while there is something to pay by card");
+  assert.match(sheet, /\{offer\.insteadOf \? <p className=\{BODY\}>\{insteadSentence\(offer, card\?\.country \?\? null\)\}<\/p> : null\}/, "said in the fold, among what is said when the card pays");
   // The device's language goes with the call itself; the sheet passes nothing as if it were an answer from the person.
   assert.match(sheet, /whereTheRailsServe\(\)/);
 });
@@ -147,9 +213,9 @@ test("the first way stands unless it refuses; then the next, and the offer says 
   // and said so: 6.25 is the floor and 7 is what is paid.
   assert.deepEqual(names(wayInFor(1_000_000n, WAYS_IN, rate, france)), ["Ramp", 7, true, undefined]);
   assert.equal(eurosNeededOn(1_000_000n, WAY_IN_GIFT_COIN, rate), 5, "what it needs, before the floor");
-  assert.equal(PAY.floor(6.25, 7), "The card service takes nothing under 6.25 EUR, so you pay 7 EUR. What is left over stays in your account for your next gift.");
-  assert.match(PAY.floor(25, 25), /takes nothing under 25 EUR, so that is what you pay/);
-  assert.match(sheet, /\{offer\.atFloor && byCard && euros \? <p className=\{HELP\}>\{W\.floor\(way\.smallestEur, euros\)\}<\/p> : null\}/);
+  assert.equal(PAY.floor("€6.25", "€7.00"), "The card service takes nothing under €6.25, so you pay €7.00. What is left over stays in your account for your next gift.");
+  assert.match(PAY.floor("€25.00", "€25.00"), /takes nothing under €25\.00, so that is what you pay/);
+  assert.match(sheet, /\{offer\.atFloor && euros \? <p className=\{BODY\}>\{W\.floor\(moneyIn\(way\.smallestEur, "EUR"\), moneyIn\(euros, "EUR"\)\)\}<\/p> : null\}/);
   // A floor can send a gift to the next way too: a register whose first floor is the higher one, for the rule's sake.
   const higherFirst: readonly [WayIn, WayIn] = [WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN];
   assert.deepEqual(names(wayInFor(10_000_000n, higherFirst, rate, france)), ["Ramp", 13, false, "floor"]);
@@ -187,17 +253,15 @@ test("the charge line prints the way's own published fee, and never zero on a ra
   assert.equal(serviceChargeIsCeiling(29, WAY_IN_GIFT_COIN.fee), false, "the minimum is exact, so 'about'");
   assert.equal(serviceChargeIsCeiling(100, WAY_IN_CHAIN_COIN.fee), false, "a rate published as the rate itself");
   assert.equal(PAY.upTo("€3.90"), "up to €3.90");
-  assert.equal(PAY.aboutAmount("€2.49"), "about €2.49");
-  // Read in the reader's own money, as the gift and the total are (the founder, 29 Sep 2026).
-  assert.match(sheet, /const chargeRead = charge === undefined \? undefined : money\.led\(BigInt\(Math\.round\(charge \* 1_000_000\)\)\)\.lead;/);
-  assert.match(sheet, /serviceChargeIsCeiling\(euros, way\.fee\) \? W\.upTo\(chargeRead\) : W\.aboutAmount\(chargeRead\)/);
+  // In the sheet's one money, exact, and "up to" only where the service publishes a ceiling (the mockup of 3 Oct 2026).
+  assert.match(sheet, /line\(W\.rows\.fee, feeCeiling \? W\.upTo\(say\(sum\.fee\)\) : say\(sum\.fee\)\)/);
   assert.equal(serviceChargeDollars(29, WAY_IN_CHAIN_COIN, undefined), undefined, "no rate, no figure, never a guess");
   assert.equal(serviceChargeEur(0, WAY_IN_GIFT_COIN.fee), 0, "nothing paid, nothing charged");
 });
 
 test("the sheet stands where the mockup stands it, and the wait is the whole screen", () => {
   assert.match(css, /dialog\.sheet-tall \{\s*\n\s*max-height: 82dvh;/, "a sheet with more to say stops at 82 per cent");
-  assert.match(sheet, /tall\n/, "and this is that sheet");
+  assert.match(sheet, /<Sheet [^>]*\btall>/, "and this is that sheet");
   // The wait: the ring at the size paying.html draws it, what is being done in the title face, and the gift under it.
   assert.match(css, /\.working-ring-large \{[\s\S]*?width: 54px;/);
   assert.match(pay, /<Working says=\{phase === "converting" \? W\.arrived\.gettingReady : P\.putting\(gift, recipient\)\} and=\{P\.takesSeconds\} then=\{P\.mayClose\} large \/>/);
@@ -216,7 +280,7 @@ test("paying starts on the card, and the old way in to it is gone", () => {
   assert.match(pay, /O\.nothingToPay\.title/, "somebody who lands there with nothing running is sent back to the card");
 });
 
-test("a card that buys the chain's coin says what it asks beyond the gift and the charge, and the total in the payer's money", () => {
+test("a card that buys the chain's coin says what stays in the account, and why it brings more", () => {
   // The founder, 29 Sep 2026, from the Senegal capture: F CFA 14,995 and F CFA 646 make 23.84 EUR, and the sheet asked 26.
   // Since 1 Oct 2026 the euros are worked out at the day's rate, and it asks 27: the model alone asked a twentieth too little.
   const usdPerEur = 1.1355;
@@ -226,11 +290,11 @@ test("a card that buys the chain's coin says what it asks beyond the gift and th
   const margin = chainMarginEur(euros, short, WAY_IN_CHAIN_COIN, usdPerEur);
   assert.ok(margin > 3 && margin < 3.3, `about 3.11 EUR beyond the gift and the charge (${margin.toFixed(2)})`);
   assert.equal(chainMarginEur(33, 34_000_000n, WAY_IN_GIFT_COIN, usdPerEur), 0, "a card selling what a gift holds asks the day's rate, no margin");
+  // What stays is the sheet's own line; the fold says why a card that buys the chain's coin brings more.
   assert.equal(
-    PAY.chainMargin("F CFA 1,414"),
-    "That is about F CFA 1,414 more than the gift and the charge: this card buys MON, which is changed into what your gift holds once it arrives, so a margin covers its price moving meanwhile. What is not used stays in your account.",
+    PAY.chainMargin,
+    "This card buys MON, which is changed into what your gift holds once it arrives, so a margin covers its price moving meanwhile. What is not used stays in your account.",
   );
-  assert.equal(PAY.inYourMoney("F CFA 17,055"), "About F CFA 17,055.");
-  assert.match(sheet, /const totalRead = byCard && euros && usdPerEur && money\.currency !== "EUR" \? money\.led\(eurosAsUnits\(euros\)\)\.lead : undefined;/);
-  assert.match(sheet, /\{marginRead \? <p className=\{HELP\}>\{W\.chainMargin\(marginRead\)\}<\/p> : null\}/);
+  assert.match(sheet, /\{sum && sum\.stays > 0 && way\.arrives === "chain" \? <p className=\{BODY\}>\{W\.chainMargin\}<\/p> : null\}/);
+  assert.match(sheet, /\{sum\.stays > 0 \? line\(W\.rows\.stays, say\(sum\.stays\)\) : null\}/);
 });

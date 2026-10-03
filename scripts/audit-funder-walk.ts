@@ -471,7 +471,7 @@ async function sceneFirstPayment(w: Walk): Promise<void> {
   await photographPaySheet(w, "30", "On the card, not signed in: Send (the action of the card)");
 
   // The press that pays, with no passkey on this device: what a first funder does.
-  const payButton = sheet(w).getByRole("button", { name: /^(Pay \d+ EUR|Pay|Put .* in their name)$/ }).first();
+  const payButton = sheet(w).getByRole("button", { name: /^(Pay \S+ by card|Pay|Put .* in .* name)$/ }).first();
   await note(w, "31 the pay action", `button says "${(await payButton.innerText()).trim()}"`);
   const before = Date.now();
   await payButton.click();
@@ -510,7 +510,7 @@ async function sceneFirstPayment(w: Walk): Promise<void> {
         await openPaySheet(w);
         await shot(w, "33b pay sheet again, signed in", "On the card, signed in: Send");
       }
-      await press(w, sheet(w).getByRole("button", { name: /^(Pay \d+ EUR|Pay)$/ }).first());
+      await press(w, sheet(w).getByRole("button", { name: /^(Pay \S+ by card|Pay)$/ }).first());
       await w.page.waitForURL(/\/fund\?step=paying/, { timeout: 40_000 });
     }
   }
@@ -635,9 +635,9 @@ async function sceneFromAccount(w: Walk): Promise<void> {
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ giftId: "3", claimUrl: `${w.s.base}/g/3?t=${CLAIM_TOKEN}`, funded: true }) });
   });
   const pressed = Date.now();
-  await press(w, sheet(w).getByRole("button", { name: /^Put .* in their name$/ }));
+  await press(w, sheet(w).getByRole("button", { name: /^Put .* in .* name$/ }));
   await w.s.text("Your payment arrived", 40_000);
-  await w.s.shot(w.journey, "53 the creation refused", "On the pay sheet: Put $45.00 in their name, the creation answering a refusal", { real: "replaced: balance reads, POST /api/gift/create (a 503 with a typed sentence)" });
+  await w.s.shot(w.journey, "53 the creation refused", "On the pay sheet: Put $45.00 in Boo's name, the creation answering a refusal", { real: "replaced: balance reads, POST /api/gift/create (a 503 with a typed sentence)" });
   await note(w, "53 the creation refused", undefined, Date.now() - pressed);
   await press(w, w.page.getByRole("button", { name: "Try again", exact: true }));
   await w.s.text(/is in Boo's name\./, 40_000);
@@ -655,9 +655,9 @@ async function sceneFromAccount(w: Walk): Promise<void> {
   await openPaySheet(w);
   await w.page.unroute(new URL("/api/gift/create", w.s.base).href);
   await w.s.api("POST", "/api/gift/create", () => ({ status: 401, body: { error: "Account authentication is required", code: "SIGN_IN_REQUIRED" } }), "POST /api/gift/create (401, the session gone)");
-  await press(w, sheet(w).getByRole("button", { name: /^Put .* in their name$/ }));
+  await press(w, sheet(w).getByRole("button", { name: /^Put .* in .* name$/ }));
   await w.s.text("Your payment arrived", 40_000);
-  await shot(w, "55 the creation refused, session gone", "On the pay sheet: Put $45.00 in their name, the server answering that nobody is signed in");
+  await shot(w, "55 the creation refused, session gone", "On the pay sheet: Put $45.00 in Boo's name, the server answering that nobody is signed in");
   await w.s.forgetKept();
 }
 
@@ -694,7 +694,7 @@ async function sceneCountry(w: Walk): Promise<void> {
   await settle(w);
   await openPaySheet(w);
   await photographPaySheet(w, "63", `On the card, signed in with nothing in the account, ${w.persona.says}: Send`);
-  const pay = sheet(w).getByRole("button", { name: /^(Pay \d+ EUR|Pay)$/ });
+  const pay = sheet(w).getByRole("button", { name: /^(Pay \S+ by card|Pay)$/ });
   if ((await pay.count()) === 0) {
     await note(w, "64 no pay action on this sheet", "the card is not offered here");
     await press(w, sheet(w).getByRole("button", { name: "Close" }));
@@ -755,7 +755,7 @@ async function sceneShortest(w: Walk): Promise<void> {
   gestures.push(`press: ${(await card(w).locator("[data-card-action]").innerText()).trim()}`);
   await sheet(w).waitFor({ state: "visible" });
   await w.page.waitForTimeout(1_200);
-  const pay = sheet(w).getByRole("button", { name: /^(Pay \d+ EUR|Pay)$/ }).first();
+  const pay = sheet(w).getByRole("button", { name: /^(Pay \S+ by card|Pay)$/ }).first();
   gestures.push(`press: ${(await pay.innerText()).trim()}`);
   await pay.click();
   const refused = await w.page
@@ -778,7 +778,7 @@ async function sceneShortest(w: Walk): Promise<void> {
         await sheet(w).waitFor({ state: "visible" });
         await w.page.waitForTimeout(1_200);
       }
-      const again = sheet(w).getByRole("button", { name: /^(Pay \d+ EUR|Pay)$/ }).first();
+      const again = sheet(w).getByRole("button", { name: /^(Pay \S+ by card|Pay)$/ }).first();
       gestures.push(`press: ${(await again.innerText()).trim()} (again)`);
       await again.click();
     }

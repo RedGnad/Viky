@@ -152,44 +152,42 @@ export const OFFER = {
  */
 export const PAY = {
   title: (recipient: string) => `Pay for ${their(recipient)} gift`,
+  /** The one thing to fill in, so it comes first (the founder's mockup of 3 Oct 2026); empty, the gift is from nobody. */
+  nameLabel: (recipient: string) => (recipient.trim() ? `Your name, as ${recipient} knows you` : "Your name, as they know you"),
+  namePlaceholder: "Mum",
+  /**
+   * Lines that add up, in the one money the gift was typed in (the mockup of 3 Oct 2026, src/pay-sum.ts). The company is
+   * not named on a line (the founder, 20 Sep 2026): it is named under the button, where the card goes to it.
+   */
   rows: {
-    gift: (recipient: string) => `The gift, in ${their(recipient)} name`,
-    /** The company is not named on the line (the founder, 20 Sep 2026): the person is paying by card, and that is all
-        they need to know here. It is named where it is met, on the page that opens, and behind the fold below. */
-    service: "What the card service charges",
+    gift: (recipient: string) => (recipient.trim() ? `${recipient}'s gift` : "The gift"),
+    fromAccount: "From your Viky money",
+    fee: "Card fee",
+    stays: "Stays in your Viky money",
     viky: "Viky takes",
-    fromAccount: "From your account",
   },
   nothing: "nothing",
   about: "about",
-  /**
-   * What the card service keeps, in the money the gift and the total are read in (the founder, 29 Sep 2026: it was the
-   * one line in dollars on a sheet read in euros). Always "about": it is the service's published figure at a day's rate.
-   */
-  aboutAmount: (amount: string) => `about ${amount}`,
   /** When the service publishes its share as a ceiling and the ceiling is what applies at this amount. */
   upTo: (amount: string) => `up to ${amount}`,
-  youPay: "You pay about",
-  euros: (euros: number) => `${euros} EUR`,
-  /** The card's total in the payer's own money, under the euros the card service charges (the founder, 29 Sep 2026). */
-  inYourMoney: (amount: string) => `About ${amount}.`,
+  youPay: "You pay",
   /**
-   * Why a card that buys the chain's coin asks more than the gift and the charge (the founder, 29 Sep 2026): the coin is
+   * Why a card that buys the chain's coin brings more than the gift and its fee (the founder, 29 Sep 2026): the coin is
    * bought, then changed into what a gift holds, at a margin that covers its price moving meanwhile; some coin must also
-   * stay in the account (D53). What is not used stays in the account.
+   * stay in the account (D53). The sheet's own line says how much stays.
    */
-  chainMargin: (gap: string) =>
-    `That is about ${gap} more than the gift and the charge: this card buys MON, which is changed into what your gift holds once it arrives, so a margin covers its price moving meanwhile. What is not used stays in your account.`,
+  chainMargin:
+    "This card buys MON, which is changed into what your gift holds once it arrives, so a margin covers its price moving meanwhile. What is not used stays in your account.",
   /**
    * The rate's source, named, and why its day can be a Friday on a Sunday: the European Central Bank sets one each
    * working day and none at the weekend (the founder, 20 Sep 2026: a line that looked stale becomes a proof of care).
    */
   atTheRate: (day: string) => `At the European Central Bank's rate of ${day}. It sets one each working day.`,
-  /** When the gift needs less than the smallest payment the card service takes (D125). */
-  floor: (smallest: number, euros: number) =>
-    smallest === euros
-      ? `The card service takes nothing under ${euros} EUR, so that is what you pay. What is left over stays in your account for your next gift.`
-      : `The card service takes nothing under ${smallest} EUR, so you pay ${euros} EUR. What is left over stays in your account for your next gift.`,
+  /** When the gift needs less than the smallest payment the card service takes (D125), in the card's own money. */
+  floor: (smallest: string, pays: string) =>
+    smallest === pays
+      ? `The card service takes nothing under ${smallest}, so that is what you pay. What is left over stays in your account for your next gift.`
+      : `The card service takes nothing under ${smallest}, so you pay ${pays}. What is left over stays in your account for your next gift.`,
   /**
    * The one time the two services are named on the sheet (D239): the first refused this person, and the sentence
    * says which one, why, and which one this goes through instead. In our words, never theirs.
@@ -199,11 +197,10 @@ export const PAY = {
     /** A service that serves the country and does not sell there what a gift holds (the audit of 1 Oct 2026). */
     notSold: (first: string, second: string) => `${first} does not sell what a gift holds in your country, so this goes through ${second}.`,
     paused: (first: string, second: string) => `${first} is not selling right now, so this goes through ${second}.`,
-    floor: (first: string, euros: number, second: string) => `${first} takes nothing under ${euros} EUR, so this goes through ${second}.`,
+    floor: (first: string, smallest: string, second: string) => `${first} takes nothing under ${smallest}, so this goes through ${second}.`,
   },
   /** Said before the action, because it is what pressing it does: nothing was asked of this person until now. */
   passkeyMakesTheAccount: "Your face or your fingerprint creates your account when you press pay. Nothing was asked of you until now.",
-  signedIn: "Your face or your fingerprint is asked once, to sign what you are paying for.",
   /** For a passkey made on another device, which this one does not know of: pay would make a second account. */
   alreadyHaveAccount: "I already have an account",
   /**
@@ -239,7 +236,18 @@ export const PAY = {
    * the coin that arrives is changed by the screen that waits, with nothing to confirm (src/usdc-router.ts).
    */
   partnerLocked: (name: string) =>
-    `Our partner ${name} takes your card. The first time, it asks who you are: your details, a code by text, and your ID. Your account and the amount are already filled in. Come back here afterwards: your gift starts by itself.`,
+    `At ${name}, the first time: your details, a code by text and your ID. Your account and the amount are already filled in. Come back here: the gift starts by itself.`,
+  /**
+   * The fold's last line (the mockup of 3 Oct 2026): what the card service keeps, from its own figures, and the rate the
+   * sheet's money is read at. When the gift was typed in another money than the euro, what the card is charged too.
+   */
+  feeAndRate: (keeps: string, source: string, read: string, day: string) => `${keeps} (${source}, ${read}). Euros at the European Central Bank's rate of ${day}.`,
+  chargedIn: (euros: string, figure: string, day: string) => `Your card is charged ${euros}, which is ${figure} at the European Central Bank's rate of ${day}.`,
+  /** The fold's first lines, as the mockup says them: a day missed, and whose names the link shows. */
+  missedBy: (recipient: string, time: string) =>
+    `A day ${recipient.trim() ? `${recipient} misses` : "they miss"} can be caught up the next day. If not, it comes back to you the morning after, at about ${time} your time.`,
+  namesSeen: (recipient: string, withYours: boolean) =>
+    `${recipient.trim() ? `${recipient}'s name` : "Their name"}${withYours ? " and yours show" : " shows"} on the gift, to whoever opens its link.`,
   /** The sheet the card is paid in, and what its frame is called when read aloud. */
   card: { title: "Pay by card", frame: "Card payment" },
   /** Rampnow in a frame of our own (the founder, 3 Oct 2026), and its page beside as the fallback. */
@@ -249,6 +257,15 @@ export const PAY = {
     openPage: "Open the card page",
   },
   yourCode: "Your code",
+  /**
+   * The one line under the pay sheet's button (the mockup of 3 Oct 2026): who takes the card, what it asks the first
+   * time, and the terms, with no box to tick. Elsewhere a button that pays by card keeps `cardTerms` under it.
+   */
+  cardLine: {
+    before: (partner: string) => `${partner} takes your card, with your ID the first time. By paying you are 18 or older and accept `,
+    link: (partner: string) => `${partner}'s terms`,
+    after: ".",
+  },
   /**
    * Under every button or link that pays by card, for the payer alone (the founder, 29 Sep 2026): no box to tick and no
    * screen more. The partner is the one the card goes to, and its terms are linked on its own site.
@@ -262,8 +279,8 @@ export const PAY = {
   cardNotOffered: (country: string | null) =>
     `Card payment isn't available ${country ? `in ${country}` : "where you are"}. You can pay with money already in your Viky account, and anyone who uses Viky can send money to yours.`,
   pay: "Pay",
-  payEuros: (euros: number) => `Pay ${euros} EUR`,
-  payFromAccount: (amount: string) => `Put ${amount} in their name`,
+  payByCard: (amount: string) => `Pay ${amount} by card`,
+  payFromAccount: (amount: string, recipient: string) => `Put ${amount} in ${their(recipient)} name`,
   /** Above that action, for an account the judge code credited and only for it (D295, the founder's words of 28 Sep 2026). */
   fromJudgeCredit: "Paid from your judge credit. A funder pays by card, inside this sheet, once our payment partner is embedded.",
   /** The judge code in the pay sheet, as a code is asked at a checkout (D297, the founder's choice A of 28 Sep 2026). */

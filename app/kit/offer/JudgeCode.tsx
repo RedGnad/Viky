@@ -4,6 +4,7 @@ import { ApiError, getJson, postJson } from "@/src/client/api";
 import { formatAusd } from "@/src/gift-reader";
 import { PAY as W } from "@/src/sentences";
 import { HELP, SMALL_BUTTON } from "../../components/ui";
+import { FoldChevron } from "../GiftLive";
 import { Field } from "../Field";
 import { FieldRefusal } from "../FieldRefusal";
 
@@ -25,7 +26,15 @@ export function JudgeCode({
   held,
   onCredited,
   onMakeIt,
-}: Readonly<{ needed: bigint | null; held: bigint | null; onCredited: () => void; onMakeIt: (dollars: string) => void }>) {
+  folded = false,
+}: Readonly<{
+  needed: bigint | null;
+  held: bigint | null;
+  onCredited: () => void;
+  onMakeIt: (dollars: string) => void;
+  /** Closed as a fold under its own title, last on the pay sheet (the mockup of 3 Oct 2026), rather than behind a small key. */
+  folded?: boolean;
+}>) {
   const covered = needed !== null && held !== null && held >= needed;
   const [open, setOpen] = useState(false);
   const [credited, setCredited] = useState(false);
@@ -89,14 +98,7 @@ export function JudgeCode({
     );
   }
   if (covered || !open || credited) return null;
-  if (!shown) {
-    return (
-      <button type="button" className={`${SMALL_BUTTON} self-start`} onClick={() => setShown(true)}>
-        {W.code.have}
-      </button>
-    );
-  }
-  return (
+  const field = (
     <div className="flex flex-col gap-[var(--space-xs)]">
       <Field id="gift-code" label={W.code.label} value={code} onChange={setCode} autoComplete="off" spellCheck={false} />
       {problem ? <FieldRefusal id="gift-code-refused">{problem}</FieldRefusal> : null}
@@ -105,4 +107,23 @@ export function JudgeCode({
       </button>
     </div>
   );
+  if (folded) {
+    return (
+      <details className="said-fold" data-have-a-code="">
+        <summary className="said-fold-name">
+          {W.code.have}
+          <FoldChevron />
+        </summary>
+        <div className="said-fold-body">{field}</div>
+      </details>
+    );
+  }
+  if (!shown) {
+    return (
+      <button type="button" className={`${SMALL_BUTTON} self-start`} onClick={() => setShown(true)}>
+        {W.code.have}
+      </button>
+    );
+  }
+  return field;
 }

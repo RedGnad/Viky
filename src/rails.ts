@@ -1,6 +1,7 @@
 import type { Hex } from "viem";
 import { NATIVE_OUT } from "./exit-terms";
 import { USDC_ADDRESS } from "./monad/chain";
+import { moneyIn } from "./pay-sum";
 
 /**
  * The rails that turn euros into what a gift holds, and back.
@@ -534,6 +535,21 @@ export function feeSentence(way: { name: string; fee: PublishedFee; embedded?: t
   // nobody read (the card rail in, whose published figure is a share alone).
   if (way.fee.minimum <= 0) return `${way.name} keeps ${share}`;
   return `${way.name} keeps ${share} with a minimum of ${way.fee.minimum.toFixed(2)} ${way.fee.currency}`;
+}
+
+/**
+ * What a service keeps, in the sheet's one money format (the mockup of 3 Oct 2026): "Rampnow keeps 7 % plus €0.40, at
+ * least €1.00". `feeSentence` keeps its own form for the screens that name the currency's code.
+ */
+export function feeInWords(way: { name: string; fee: PublishedFee }): string {
+  const euro = (amount: number) => moneyIn(amount, way.fee.currency);
+  const share = `${way.fee.upTo ? "up to " : ""}${way.fee.percent} %${way.fee.plus ? ` plus ${euro(way.fee.plus)}` : ""}`;
+  return way.fee.minimum > 0 ? `${way.name} keeps ${share}, at least ${euro(way.fee.minimum)}` : `${way.name} keeps ${share}`;
+}
+
+/** Where a service's figures were read, said of it: "Rampnow's own quotes" is "its own quotes" after its name. */
+export function sourceOfIts(way: { name: string; source: string }): string {
+  return way.source.startsWith(`${way.name}'s `) ? `its ${way.source.slice(way.name.length + 3)}` : way.source;
 }
 
 /**

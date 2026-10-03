@@ -48,7 +48,7 @@ async function toTheFrame(page: Page, context: BrowserContext, ending: "ORDER_CO
   await page.getByRole("link", { name: "Offer a gift" }).first().click();
   await card(page).getByLabel("Their first name").fill("Boo");
   await card(page).locator("[data-card-action]").click();
-  await sheet(page).getByRole("button", { name: /^(Pay \d+ EUR|Pay)$/ }).first().click();
+  await sheet(page).getByRole("button", { name: /^(Pay \S+ by card|Pay)$/ }).first().click();
   await page.waitForURL(/\/fund\?step=paying&rampnow=1/, { timeout: 60_000 });
   const frame = page.locator("iframe[data-rampnow-frame]");
   await expect(frame).toBeVisible();

@@ -1,54 +1,51 @@
 "use client";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { useMadeHere } from "@/src/account/door";
 import { useAccount } from "@/src/account/provider";
 import { getJson } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
+import { loadMyGifts } from "@/src/client/gift";
 import { readAusdBalance } from "@/src/client/onchain";
 import { whereTheRailsServe } from "@/src/client/rails";
 import { conditionById } from "@/src/conditions";
 import { certificateById, milestoneById } from "@/src/milestone-conditions";
 import { settlingTimeInWords } from "@/src/pass-schedule";
 import { draftToTerms, draftUnits, isComplete, type GiftDraft } from "@/src/gift-draft";
-import { chainMarginEur, serviceChargeDollars, serviceChargeIsCeiling, wayInFor, type WayInOffer } from "@/src/gift-amount";
-import { tidyGiftName } from "@/src/gift-names";
+import { serviceChargeEur, serviceChargeIsCeiling, wayInFor, type WayInOffer } from "@/src/gift-amount";
+import { lastNameGiven, tidyGiftName } from "@/src/gift-names";
 import { judgeLineIsTrue } from "@/src/judge-line";
 import { formatAusd } from "@/src/gift-reader";
-import { ExactLine, LedFigure } from "../LedAmount";
 import { savePendingGift } from "@/src/pending-gift";
-import { rateDateInWords, spokenAmount } from "@/src/display-currency";
+import { rateDateInWords } from "@/src/display-currency";
+import { cardSum, giftTyped, heldIn, moneyIn, perEuro } from "@/src/pay-sum";
 import type { RailReach } from "@/src/rail-country";
-import { feeSentence, RAMP_NO_GIFT_COIN_IN, wayInFillsIn, wayInPage, waysIn, WAY_IN_GIFT_COIN, WAY_IN_USDC } from "@/src/rails";
+import { feeInWords, feeSentence, RAMP_NO_GIFT_COIN_IN, sourceOfIts, wayInFillsIn, wayInPage, waysIn, WAY_IN_GIFT_COIN, WAY_IN_USDC } from "@/src/rails";
 import { rampnowFrameOn } from "@/src/rampnow-frame";
 import { ACCOUNT_DOOR, CASH_OUT, FUND, MILESTONE_FUND, PAY as W } from "@/src/sentences";
 import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, PRIMARY_BUTTON, SMALL_BUTTON } from "../../components/ui";
 import { AccountPanel } from "../../components/AccountPanel";
 import { Field } from "../Field";
-import { CardNotOffered, CardTermsLine } from "./CardTerms";
+import { CardLine, CardNotOffered } from "./CardTerms";
 import { JudgeCode } from "./JudgeCode";
 import { FieldRefusal } from "../FieldRefusal";
 import { FoldChevron } from "../GiftLive";
-import { Said } from "../Said";
 import { Sheet } from "../Sheet";
 
 /**
- * Paying for the gift on the card (the rendered mockup pay.html, 19 Sep 2026, which is the specification for this
- * surface and replaces the check screen of the old assistant).
+ * Paying for the gift (the founder's mockup pay-sheet-2026-10-03, validated 3 Oct 2026, which follows pay.html of
+ * 19 Sep 2026 and adds the two things a payer needs since: their name, and the account's share).
  *
- * What it says, and nothing else: what the gift is worth in the recipient's name, what the card service charges,
- * that Viky takes nothing, what the person actually pays in their own currency and at what rate, and that their face
- * or their fingerprint makes the account at the moment they press pay. Then one action in the sun.
+ * In this order and nothing else in the open: the name, the one thing to fill in; lines that add up, in the one money
+ * the gift was typed in (the gift, what the account puts in, the card's fee, what stays, and that Viky takes nothing);
+ * the total; one action; one line under it saying who takes the card and its terms. Then one fold for a careful reader,
+ * "What happens to my money", and the judge's code, last and folded. The link's warning lives on the link's screen,
+ * the rate in the fold, and the passkey's line only where the press makes an account.
  *
- * What it does not do: ask for an account first, ask them to choose between two card services, or read anything back
- * that the card above it already says.
- *
- * One way in, chosen for the person (D239, the founder's decision of 25 Sep 2026): the rail that sells what a gift
- * holds, from 6 EUR, unless it refuses them, by its own answer about their country, its own asset list, or its
- * published floor; then the rail that sells the chain's coin, from 25 EUR, and one sentence in our words says which
- * refused, why, and which this goes through instead. That sentence is the only place the sheet names a company: on
- * its lines and its button the person is paying by card, and the service is named where it is met, on the page that
- * opens. "What the card service charges" is that service's own published figure at this amount (`serviceChargeEur`).
+ * One way in, chosen for the person (D239, the founder's decision of 25 Sep 2026): the first card service unless it
+ * refuses them, by its own answer about their country, its own asset list, or its published floor; then the next, and
+ * the fold says which refused, why, and which this goes through instead. On the lines and the button the person pays by
+ * card; the service is named under the button, where the card goes to it.
  *
  * With Swapper's id set (the founder, 1 Oct 2026), a third way stands first where it serves the payer: the card is
  * paid inside Viky, with nothing to choose and no code to paste. The press on pay opens it on the screen that waits
@@ -75,7 +72,7 @@ function insteadSentence(offer: WayInOffer, country: string | null): string {
   if (offer.insteadOf!.because === "country" && first === WAY_IN_GIFT_COIN && country && RAMP_NO_GIFT_COIN_IN.includes(country.toLowerCase())) return W.instead.notSold(first.name, offer.way.name);
   if (offer.insteadOf!.because === "country") return W.instead.country(first.name, offer.way.name);
   if (offer.insteadOf!.because === "paused") return W.instead.paused(first.name, offer.way.name);
-  return W.instead.floor(first.name, first.smallestEur, offer.way.name);
+  return W.instead.floor(first.name, moneyIn(first.smallestEur, "EUR"), offer.way.name);
 }
 
 export function PaySheet({
@@ -151,6 +148,31 @@ export function PaySheet({
     };
   }, [open, address, balanceRead]);
 
+  // The name this account gave on its last gift, put in an empty field once per opening (the founder, 3 Oct 2026). Read
+  // through refs, so a name typed while the list was being read is never written over.
+  const latest = useRef({ draft, onChange });
+  useEffect(() => {
+    latest.current = { draft, onChange };
+  });
+  const named = useRef(false);
+  useEffect(() => {
+    if (!open) named.current = false;
+    if (!open || !address || named.current) return;
+    named.current = true;
+    let live = true;
+    loadMyGifts().then(
+      ({ gifts }) => {
+        const last = lastNameGiven(gifts);
+        const now = latest.current;
+        if (live && last && now.draft.funderName.trim() === "") now.onChange({ ...now.draft, funderName: last });
+      },
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, [open, address]);
+
   const units = draftUnits(draft);
   const condition = conditionById(draft.conditionId);
   const recipient = tidyGiftName(draft.recipientName);
@@ -168,20 +190,16 @@ export function PaySheet({
   const cardClosed = card?.offered === false;
   const byCard = !enough && !cardClosed;
   const euros = units === undefined || !byCard ? 0 : offer.euros;
-  /** What the service keeps, in dollars: its own published share or minimum at this amount, at the day's rate. */
-  const charge = euros === undefined || euros === 0 ? undefined : serviceChargeDollars(euros, way, money.rates?.usdPerEur);
-  // In the reader's own money, like the gift above it and the total under it: the dollars led as every figure is.
-  const chargeRead = charge === undefined ? undefined : money.led(BigInt(Math.round(charge * 1_000_000))).lead;
-  /** A figure in euros, as the dollars it is worth at the day's rate, so it can be read in the payer's own money. */
-  const usdPerEur = money.rates?.usdPerEur;
-  const eurosAsUnits = (value: number) => BigInt(Math.round(value * (usdPerEur ?? 0) * 1_000_000));
-  // The total in the payer's own money when that is not the euro (the founder, 29 Sep 2026: F CFA in Senegal).
-  const totalRead = byCard && euros && usdPerEur && money.currency !== "EUR" ? money.led(eurosAsUnits(euros)).lead : undefined;
-  // What a card buying the chain's coin asks beyond the gift and the charge: the margin on the coin's price, the coin
-  // that stays in the account and the whole euro. Real money paid, and what is not used stays in the account.
-  const margin = byCard && euros ? chainMarginEur(euros, short, way, usdPerEur) : 0;
-  const marginRead = margin >= 0.5 ? money.led(eurosAsUnits(margin)).lead : undefined;
-  const chargeLine = chargeRead === undefined ? W.about : euros && serviceChargeIsCeiling(euros, way.fee) ? W.upTo(chargeRead) : W.aboutAmount(chargeRead);
+  // One money on the whole sheet, the one the gift was typed in (the mockup of 3 Oct 2026); dollars when no rate is read.
+  const code = money.rates && perEuro(money.currency, money.rates) !== undefined ? money.currency : "USD";
+  const say = (amount: number) => moneyIn(amount, code);
+  const gift = units === undefined ? undefined : giftTyped({ typedAmount: draft.typedAmount, typedIn: draft.typedIn, units, code, rates: money.rates });
+  // The card pays whole euros and the account the rest, so the lines add up to the card's figure (src/pay-sum.ts).
+  const sum = byCard && euros && gift !== undefined ? cardSum({ code, gift, cardEuros: euros, feeEuros: serviceChargeEur(euros, way.fee), rates: money.rates }) : undefined;
+  const feeCeiling = Boolean(euros) && serviceChargeIsCeiling(euros ?? 0, way.fee);
+  const heldRead = heldIn(inAccount, code, money.rates);
+  const giftRead = gift === undefined ? formatAusd(units ?? 0n) : say(gift);
+  const rateDay = money.rates ? rateDateInWords(money.rates.date) : undefined;
 
   /**
    * The passkey makes the account at the moment pay is pressed, which is what the sheet says it will do: a new one on
@@ -232,88 +250,75 @@ export function PaySheet({
       <span className={`${BODY} whitespace-nowrap font-medium tabular-nums`}>{value}</span>
     </div>
   );
+  /** What the account puts in, said as the part taken from the gift: "\u2212 €8.24". */
+  const less = (amount: number) => `\u2212\u2009${say(amount)}`;
+  // The figure the sheet adds up to, and the action that pays it: the card's, the account's, or none to show.
+  const total = enough ? { label: W.rows.fromAccount, amount: giftRead } : sum ? { label: W.youPay, amount: say(sum.card) } : undefined;
 
   return (
-    <Sheet
-      open={open}
-      title={W.title(recipient)}
-      onClose={onClose}
-      tall
-      footer={
-        <>
-          {/* Only when the gift is paid from a balance no larger than the judge credit, with nothing gone out of the
-              account since it arrived (D295): the balance is then the credit alone. */}
-          {judgeLineIsTrue({ gift: units, held, untouchedCredit }) ? <p className={HELP}>{W.fromJudgeCredit}</p> : null}
-          {!enough && cardClosed ? (
-            <CardNotOffered country={card?.country ?? null} />
-          ) : (
-            <>
-              <button type="button" className={PRIMARY_BUTTON} disabled={!ready || busy || status === "busy"} onClick={() => void pay()}>
-                {busy ? W.paying : enough ? W.payFromAccount(formatAusd(units ?? 0n)) : euros ? W.payEuros(euros) : W.pay}
-              </button>
-              {byCard ? <CardTermsLine way={way} /> : null}
-            </>
-          )}
-          {problem ? <FieldRefusal id="pay-refused">{problem}</FieldRefusal> : null}
-          {/* The passkey is how an account is made here. When the device cannot, or the person waved the sheet away,
-              the panel that creates one or signs an old one in appears in place, rather than on a screen of its own. */}
-          {problem && !address ? <AccountPanel /> : null}
-        </>
-      }
-    >
-      {line(W.rows.gift(recipient), spokenAmount(money.led(units ?? 0n)))}
-      {enough || cardClosed ? line(W.rows.fromAccount, spokenAmount(money.led(inAccount))) : line(W.rows.service, chargeLine)}
-      {line(W.rows.viky, W.nothing)}
+    <Sheet open={open} title={W.title(recipient)} onClose={onClose} tall>
+      {/* The one thing to fill in, so it comes first (the mockup of 3 Oct 2026). Optional: empty, the gift is from
+          nobody, which this product has always made, and no sentence breaks. */}
+      <Field
+        id="funder-name"
+        label={W.nameLabel(recipient)}
+        placeholder={W.namePlaceholder}
+        value={draft.funderName}
+        onChange={(value) => onChange({ ...draft, funderName: value })}
+        autoComplete="off"
+      />
 
-      <div className="pt-[var(--space-sm)]">
-        <p className={CARD_LABEL}>{byCard ? W.youPay : W.rows.fromAccount}</p>
-        {/* From the account, the person's currency leads and the dollars that leave are under it (the founder, 29 Sep
-            2026); by card, the euros the service charges are exact, so they lead alone. */}
-        {!byCard || euros === undefined || euros === 0 ? (
+      {/* Lines that add up (src/pay-sum.ts): the gift, less what the account puts in, plus the card's fee, plus what stays. */}
+      <div data-pay-lines="">
+        {line(W.rows.gift(recipient), giftRead)}
+        {enough ? null : cardClosed ? (
+          heldRead !== undefined && inAccount > 0n ? line(W.rows.fromAccount, less(heldRead)) : null
+        ) : sum ? (
           <>
-            <LedFigure amount={money.led(units ?? 0n)} className={`${CARD_AMOUNT} whitespace-nowrap`} />
-            <ExactLine amount={money.led(units ?? 0n)} />
+            {sum.fromAccount > 0 ? line(W.rows.fromAccount, less(sum.fromAccount)) : null}
+            {line(W.rows.fee, feeCeiling ? W.upTo(say(sum.fee)) : say(sum.fee))}
+            {sum.stays > 0 ? line(W.rows.stays, say(sum.stays)) : null}
           </>
-        ) : (
-          <>
-            <p className={`${CARD_AMOUNT} whitespace-nowrap`}>{W.euros(euros)}</p>
-            {totalRead ? <p className={HELP}>{W.inYourMoney(totalRead)}</p> : null}
-          </>
-        )}
+        ) : null}
+        {line(W.rows.viky, W.nothing)}
       </div>
-      {/* The rate, its source and why its day may be a Friday: one line, in full, rather than a label in a corner. */}
-      {money.rates && byCard ? <p className={HELP}>{W.atTheRate(rateDateInWords(money.rates.date))}</p> : null}
-      {marginRead ? <p className={HELP}>{W.chainMargin(marginRead)}</p> : null}
-      {offer.atFloor && byCard && euros ? <p className={HELP}>{W.floor(way.smallestEur, euros)}</p> : null}
-      {/* The first way refused this person, and the sheet says which, why and which this goes through instead (D239). */}
-      {offer.insteadOf && byCard ? <p className={HELP}>{insteadSentence(offer, card?.country ?? null)}</p> : null}
-      {/* What the partner's page will be, before it opens (D289), said only where it is true: the page arrives filled in. */}
-      {/* What the partner's page will ask, just before it opens (D289, D294): filled in with Ramp's key, and without it
-          what to choose there and where the code goes, with the code one press away once the account exists. */}
-      {byCard ? (
-        /* One sentence in the open, who takes the card, and what its page asks folded under it (rule 4): the wait
-           says the same settings again, one by one, where they are needed. */
-        <Said
-          text={
-            way.embedded
-              ? W.partnerEmbedded(way.name, euros)
-              : way === WAY_IN_USDC
-                ? W.partnerLocked(way.name)
-                : wayInFillsIn(way)
-                  ? W.partnerFilledIn
-                  : W.partnerPaste(way.name, way.delivers.coin, way.delivers.network, way.arrives === "gift")
-          }
-        />
+
+      {total ? (
+        <div>
+          <p className={CARD_LABEL}>{total.label}</p>
+          <p className={`${CARD_AMOUNT} whitespace-nowrap tabular-nums`} data-pay-total="">
+            {total.amount}
+          </p>
+        </div>
       ) : null}
-      {/* A judge's code (D297): only while credits are open, and the gift is not yet covered. */}
-      {address ? (
-        <JudgeCode
-          needed={units ?? null}
-          held={held}
-          onCredited={() => setBalanceRead((n) => n + 1)}
-          onMakeIt={(dollars) => onChange({ ...draft, dollars, typedAmount: dollars, typedIn: "USD" })}
-        />
+
+      {/* Only when the gift is paid from a balance no larger than the judge credit, with nothing gone out of the
+          account since it arrived (D295): the balance is then the credit alone. */}
+      {judgeLineIsTrue({ gift: units, held, untouchedCredit }) ? <p className={HELP}>{W.fromJudgeCredit}</p> : null}
+      {!enough && cardClosed ? (
+        <CardNotOffered country={card?.country ?? null} whole />
+      ) : (
+        <>
+          <button type="button" className={PRIMARY_BUTTON} disabled={!ready || busy || status === "busy"} onClick={() => void pay()}>
+            {busy ? W.paying : enough ? W.payFromAccount(giftRead, recipient) : sum ? W.payByCard(say(sum.card)) : W.pay}
+          </button>
+          {/* One line: who takes the card, its ID the first time, and its terms (the mockup of 3 Oct 2026). */}
+          {byCard ? <CardLine way={way} /> : null}
+        </>
+      )}
+      {/* What the press does where it makes something: an account, the first time. Signed in, the phone's own prompt
+          says it, and the sheet says nothing more. */}
+      {address || hasCredential ? null : <p className={HELP}>{madeHere ? W.passkeyMakesTheAccount : ACCOUNT_DOOR.madeOnTheMainSite}</p>}
+      {/* A passkey kept by another device is not known to this one, and pay would make a second account (1 Oct 2026). */}
+      {!address && !hasCredential ? (
+        <button type="button" className={`${SMALL_BUTTON} self-start`} disabled={busy || status === "busy"} onClick={() => void signInFirst()}>
+          {W.alreadyHaveAccount}
+        </button>
       ) : null}
+      {problem ? <FieldRefusal id="pay-refused">{problem}</FieldRefusal> : null}
+      {/* The passkey is how an account is made here. When the device cannot, or the person waved the sheet away,
+          the panel that creates one or signs an old one in appears in place, rather than on a screen of its own. */}
+      {problem && !address ? <AccountPanel /> : null}
       {/* Where the card is not offered, an account is what money can be sent to: somebody without one makes it here. */}
       {!enough && cardClosed && !address ? <AccountPanel /> : null}
       {/* No code where the card is paid inside Viky: that sheet is already told whose account it is. */}
@@ -341,61 +346,68 @@ export function PaySheet({
         </div>
       ) : null}
 
-      {/* Who this is from, said here because this is where a person becomes somebody to the recipient. It is the one
-          thing on the card the image did not draw, and at the card's label size it would be under a thumb and under
-          the 16 pixels a phone zooms in on. Optional: a gift from nobody is one this product has always made. */}
-      <Field
-        id="funder-name"
-        label={FUND.who.funderLabel}
-        value={draft.funderName}
-        onChange={(value) => onChange({ ...draft, funderName: value })}
-        autoComplete="off"
-      />
-
-      {/* What the press does, as it is true of this device: it makes an account only where none is remembered. */}
-      <p className={HELP}>{address || hasCredential ? W.signedIn : madeHere ? W.passkeyMakesTheAccount : ACCOUNT_DOOR.madeOnTheMainSite}</p>
-      {/* A passkey kept by another device is not known to this one, and pay would make a second account (1 Oct 2026). */}
-      {!address && !hasCredential ? (
-        <button type="button" className={`${SMALL_BUTTON} self-start`} disabled={busy || status === "busy"} onClick={() => void signInFirst()}>
-          {W.alreadyHaveAccount}
-        </button>
-      ) : null}
-
-      {/* The one sentence that changes what a person does next stays in front of everybody: a link opens the gift
-          for whoever opens it first. Everything else only some readers need, and it is one press away (GOV.UK). */}
-      <p className="font-medium">{FUND.check.linkRisk(recipient)}</p>
+      {/* One fold for everything a careful reader may want, in the order of their questions (the mockup of 3 Oct 2026):
+          a day missed, the fourteen days, whose names the link shows, what the card service asks the first time, its
+          fee, and the rate. "How it works" was a second fold, and two folds asked the reader to guess. */}
       <details className="said-fold" data-what-happens="">
         <summary className="said-fold-name">
           {W.whatHappens}
           <FoldChevron />
         </summary>
         <div className="said-fold-body flex flex-col gap-[var(--space-sm)]">
-        {milestone ? (
-          <>
-            {/* The hour is the reader's own, and the server has no idea which clock that is (D151): it is printed
-                once the browser has said, never before, or the page the server sent and the page the browser draws
-                say two different hours and React throws the whole thing away and builds it again. */}
-            {nowMs === 0 ? null : <p className={BODY}>{MILESTONE_FUND.check.howItWorks(condition?.source ?? "", target, settlingTimeInWords(nowMs))}</p>}
-            <p className={BODY}>{MILESTONE_FUND.check.whyCeiling(target)}</p>
-          </>
-        ) : certificate ? (
-          <>
-            <p className={BODY}>{certificate.words.mustShow(draft.subject.trim(), target, draft.scale)}</p>
-            <p className={BODY}>{certificate.words.ifNot}</p>
-          </>
-        ) : (
-          nowMs === 0 ? null : <p className={BODY}>{FUND.check.missed(settlingTimeInWords(nowMs))}</p>
-        )}
-        <p className={BODY}>{FUND.check.namesSeen(recipient, funder)}</p>
-        <p className={BODY}>{milestone ? MILESTONE_FUND.check.fourteenDays : certificate ? FUND.check.fourteenDaysUnopened : FUND.check.fourteenDays}</p>
-        {cardClosed ? null : (
-          <>
-            <p className={HELP}>{feeSentence(way)}.</p>
-            <p className={HELP}>{CASH_OUT.sourceLine(way.source, way.read)}</p>
-          </>
-        )}
+          {milestone ? (
+            <>
+              {/* The hour is the reader's own, and the server has no idea which clock that is (D151): it is printed
+                  once the browser has said, never before, or the page the server sent and the page the browser draws
+                  say two different hours and React throws the whole thing away and builds it again. */}
+              {nowMs === 0 ? null : <p className={BODY}>{MILESTONE_FUND.check.howItWorks(condition?.source ?? "", target, settlingTimeInWords(nowMs))}</p>}
+              <p className={BODY}>{MILESTONE_FUND.check.whyCeiling(target)}</p>
+            </>
+          ) : certificate ? (
+            <>
+              <p className={BODY}>{certificate.words.mustShow(draft.subject.trim(), target, draft.scale)}</p>
+              <p className={BODY}>{certificate.words.ifNot}</p>
+            </>
+          ) : nowMs === 0 ? null : (
+            <p className={BODY}>{W.missedBy(recipient, settlingTimeInWords(nowMs))}</p>
+          )}
+          <p className={BODY}>{milestone ? MILESTONE_FUND.check.fourteenDays : certificate ? FUND.check.fourteenDaysUnopened : FUND.check.fourteenDays}</p>
+          <p className={BODY}>{W.namesSeen(recipient, funder !== "")}</p>
+          {byCard ? (
+            <>
+              <p className={BODY}>
+                {way.embedded
+                  ? W.partnerEmbedded(way.name, euros)
+                  : way === WAY_IN_USDC
+                    ? W.partnerLocked(way.name)
+                    : wayInFillsIn(way)
+                      ? W.partnerFilledIn
+                      : W.partnerPaste(way.name, way.delivers.coin, way.delivers.network, way.arrives === "gift")}
+              </p>
+              {/* The first way refused this person, and the fold says which, why and which this goes through (D239). */}
+              {offer.insteadOf ? <p className={BODY}>{insteadSentence(offer, card?.country ?? null)}</p> : null}
+              {offer.atFloor && euros ? <p className={BODY}>{W.floor(moneyIn(way.smallestEur, "EUR"), moneyIn(euros, "EUR"))}</p> : null}
+              {sum && sum.stays > 0 && way.arrives === "chain" ? <p className={BODY}>{W.chainMargin}</p> : null}
+              <p className={HELP}>
+                {way.embedded || !rateDay ? `${feeSentence(way)}. ${CASH_OUT.sourceLine(way.source, way.read)}` : W.feeAndRate(feeInWords(way), sourceOfIts(way), way.read, rateDay)}
+              </p>
+              {sum && code !== "EUR" && rateDay ? <p className={HELP}>{W.chargedIn(moneyIn(sum.cardEuros, "EUR"), say(sum.card), rateDay)}</p> : null}
+            </>
+          ) : null}
         </div>
       </details>
+
+      {/* A judge's code (D297): only while credits are open and the gift is not yet covered, last and folded, so a
+          payer is not told they should have one (the mockup of 3 Oct 2026). */}
+      {address ? (
+        <JudgeCode
+          folded
+          needed={units ?? null}
+          held={held}
+          onCredited={() => setBalanceRead((n) => n + 1)}
+          onMakeIt={(dollars) => onChange({ ...draft, dollars, typedAmount: dollars, typedIn: "USD" })}
+        />
+      ) : null}
     </Sheet>
   );
 }
