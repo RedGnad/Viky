@@ -75,7 +75,8 @@ test("on the third contract a reading pays its own day: the look opens today, an
   const source = readFileSync("contracts/GiftEscrowV3.sol", "utf8");
   let from = 0;
   for (const line of [
-    "uint32 startDay = _readDay(a.observedAt);",
+    // The first day is the day of the block that carries the first reading (the re-read of 3 Oct 2026, C1).
+    "uint32 startDay = _dayOf(block.timestamp);",
     "if (a.metricValue < g.baselineValue) revert MetricDecreased();",
     "uint32 readDay = _readDay(a.observedAt);",
     "uint32 upper = readDay > g.endDay ? g.endDay : readDay;",

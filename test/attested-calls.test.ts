@@ -161,10 +161,12 @@ test("a fetch is written down whether it gave a proof or not, and what it answer
   const missing = new AttestedReadError("NOT_FOUND", "Nothing answers to that name");
   await assert.rejects(countedFetch("chess-ratings-bullet", async () => Promise.reject(missing), deps), (thrown) => thrown === missing);
   await assert.rejects(countedFetch("duolingo-profile", async () => Promise.reject(new Error("worker 502: no proof")), deps), /worker 502/);
+  // With no reading around it, a fetch names no gift and no reason (src/attested-calls.ts, `readingFor`).
+  const unnamed = { gift: null, reason: null };
   assert.deepEqual(noted, [
-    { kind: "fetch", source: "chess-player", ok: true },
-    { kind: "fetch", source: "chess-ratings-bullet", ok: false, code: "NOT_FOUND" },
-    { kind: "fetch", source: "duolingo-profile", ok: false, code: "FAILED" },
+    { kind: "fetch", source: "chess-player", ok: true, ...unnamed },
+    { kind: "fetch", source: "chess-ratings-bullet", ok: false, code: "NOT_FOUND", ...unnamed },
+    { kind: "fetch", source: "duolingo-profile", ok: false, code: "FAILED", ...unnamed },
   ]);
 });
 
@@ -262,7 +264,7 @@ test("a count that cannot be written or read never costs the reading: it is a li
     console.error = consoleError;
     configureAttestedCalls(executor);
   }
-  assert.deepEqual(errors, ["reclaim limit not read: the database did not answer", "attested call not counted (fetch chess-player): the database did not answer"]);
+  assert.deepEqual(errors, ["reclaim limit not read: the database did not answer", "day's ceiling not read: the database did not answer", "attested call not counted (fetch chess-player): the database did not answer"]);
 });
 
 test("each share of an allowance is told once in its cycle, only the highest one reached, and the limit with what is waiting", async () => {

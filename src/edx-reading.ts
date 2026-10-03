@@ -10,7 +10,7 @@ import { edxCertificateUrl, edxCourseKey, edxIssuedDaySeconds, edxSubject, edxTe
  * patterns out of the same page, the ones in `src/attested-sources.ts`.
  */
 
-export type EdxReadErrorCode = "INVALID_LINK" | "NO_CERTIFICATE" | "NOT_VERIFIED" | "PROOF_INVALID" | "PROOF_MISMATCH" | "FETCH_FAILED" | "WORKER_OUT_OF_DATE" | "LIMIT_REACHED" | "NOT_CONFIGURED";
+export type EdxReadErrorCode = "INVALID_LINK" | "NO_CERTIFICATE" | "NOT_VERIFIED" | "PROOF_INVALID" | "PROOF_MISMATCH" | "FETCH_FAILED" | "WORKER_OUT_OF_DATE" | "LIMIT_REACHED" | "CEILING_REACHED" | "NOT_CONFIGURED";
 
 export class EdxReadError extends Error {
   constructor(

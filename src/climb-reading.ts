@@ -17,6 +17,11 @@ export function isClimbReadError(error: unknown): error is ClimbReadError {
 /** A reading of any climb: Chess.com's, with its cadence, or Codeforces' one rating. */
 export type AttestedClimbReading = Omit<AttestedChessReading, "mode"> & Readonly<{ mode: ClimbId }>;
 
+/** How many attested fetches a reading of a climb is made of: Chess.com's profile and its ratings, or Codeforces' one page. */
+export function climbFetches(climb: ClimbId): number {
+  return climbSource(climb) === "codeforces" ? 1 : 2;
+}
+
 export async function readClimbStanding(username: string, climb: ClimbId): Promise<ChessStanding> {
   return climbSource(climb) === "codeforces" ? readCodeforcesStanding(username) : readChessStanding(username, climb === CODEFORCES_CLIMB ? "rapid" : climb);
 }

@@ -3,7 +3,8 @@ import { getAddress, isAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "./account-auth-server";
 import { assertNotTooSmall, countedIfSent, type Admission } from "./relay-admission";
 import { newChessCode } from "./chess-reading";
-import { attestClimbRating, isClimbReadError } from "./climb-reading";
+import { readingFor } from "./attested-calls";
+import { attestClimbRating, climbFetches, isClimbReadError, readClimbStanding } from "./climb-reading";
 import { GiftApiError, NO_STORE, refuseOwnGift } from "./gift-api";
 import { loadGift, loadRelayed, markClaimed, reconcileClaim, type GiftRecord } from "./gift-store";
 import { assertWithdrawStands } from "./relay-free-checks";
@@ -99,7 +100,11 @@ export async function milestoneAccount(request: Request, giftId: string, body: {
   const mode = climbOfGoal(state.goalType);
   if (!mode || !cadenceOfGoal(milestone, state.goalType)) throw new GiftApiError("NOT_CONFIGURED", "Viky is not ready for this yet. Nothing was changed.", 503);
   try {
-    const reading = await attestClimbRating({ username, mode, withName: false });
+    // The name is looked at plainly first (3 Oct 2026): a name that is another player's, or that cannot be looked at,
+    // used to cost a proof at each try, two fetches on Chess.com. The attested reading is still what follows the name.
+    const looked = await readClimbStanding(username, mode);
+    if (looked.playerId !== record.goalProfileId) throw new GiftApiError("OTHER_PLAYER", "That name belongs to another Chess.com player than the one this gift is for.", 409);
+    const reading = await readingFor({ giftId, reason: "a climb's new name, followed", fetches: climbFetches(mode) }, () => attestClimbRating({ username, mode, withName: false }));
     if (reading.playerId !== record.goalProfileId) throw new GiftApiError("OTHER_PLAYER", "That name belongs to another Chess.com player than the one this gift is for.", 409);
     await followRename(giftId, reading.playerId, reading.username);
     return NextResponse.json({ giftId, username: reading.username }, { headers: NO_STORE });
