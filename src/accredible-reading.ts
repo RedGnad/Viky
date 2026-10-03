@@ -10,7 +10,7 @@ import { accredibleIssuedDaySeconds, accredibleRecordUrl, accredibleSubject, isV
  * is "www.cfte.education" or "courses.cfte.education"; the certificate path compares the one the funder signed.
  */
 
-export type AccredibleReadErrorCode = "INVALID_LINK" | "NO_CERTIFICATE" | "CERTIFICATE_PRIVATE" | "CERTIFICATE_EXPIRED" | "PROOF_INVALID" | "PROOF_MISMATCH" | "FETCH_FAILED" | "WORKER_OUT_OF_DATE" | "NOT_CONFIGURED";
+export type AccredibleReadErrorCode = "INVALID_LINK" | "NO_CERTIFICATE" | "CERTIFICATE_PRIVATE" | "CERTIFICATE_EXPIRED" | "PROOF_INVALID" | "PROOF_MISMATCH" | "FETCH_FAILED" | "WORKER_OUT_OF_DATE" | "LIMIT_REACHED" | "NOT_CONFIGURED";
 
 export class AccredibleReadError extends Error {
   constructor(

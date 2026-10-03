@@ -1,5 +1,7 @@
 /** Browser-side calls to Viky's own routes: same origin, cookie included, typed refusals surfaced. */
 
+import { withTheLimitSaid } from "./limit";
+
 export type ApiFailure = Readonly<{ status: number; code: string; message: string; detail?: string }>;
 
 export class ApiError extends Error {
@@ -63,5 +65,6 @@ async function unwrap<T>(response: Response): Promise<T> {
       detail: failure.detail,
     });
   }
-  return data as T;
+  // A reading refused for the month's limit says so in this reader's clock (src/client/limit.ts).
+  return withTheLimitSaid(data as T);
 }

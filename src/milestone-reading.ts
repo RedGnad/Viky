@@ -1,5 +1,6 @@
 import { getAddress, type Hex } from "viem";
-import { MILESTONE_ACTIONS } from "./sentences";
+import { contactEmail } from "./contact";
+import { LIMIT, MILESTONE_ACTIONS } from "./sentences";
 import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
 import { attestClimbRating, isClimbReadError, readClimbStanding, type AttestedClimbReading } from "./climb-reading";
 import { climbIdentityLabel, climbOfGoal, climbProviderId, type ClimbId } from "./climbs";
@@ -12,6 +13,7 @@ import { MILESTONE_ATTESTATION_TTL_SECONDS, type MilestoneProofMessage } from ".
 import { milestonePhase, readingTakenBy, readMilestoneGift, type MilestoneState } from "./milestone-reader";
 import { relayProve, type ProvedReading } from "./milestone-relay";
 import { attestedReadings, lastReading, readSince, recordReading, touchSameLook, type MilestoneReading, type ReadingPurpose } from "./milestone-store";
+import { claimPass } from "./pass-guard";
 import { escrowOf, RelayerError } from "./relayer";
 import { StartNotSigned } from "./v2-start";
 import type { ChessStanding } from "./chess-com";
@@ -28,9 +30,10 @@ import type { ChessStanding } from "./chess-com";
  *
  * A reach reading looks before it pays for a proof. A plain read of the page says where the person stands; below the
  * target nothing could move, because the contract refuses a reading short of the target and keeps no trace of it, so
- * an attested reading there would cost a proof and change nothing. At or past the target, or when the plain read
- * fails for any reason, an attested reading is taken, and only that one is ever sent. The plain read can therefore
- * cost the recipient nothing: it never stops an attested reading, it only skips one that could not have mattered.
+ * an attested reading there would cost a proof and change nothing. At or past the target an attested reading is
+ * taken, and only that one is ever sent. When the plain read fails, the proof is taken without it, but for one gift
+ * once in six hours at most, and once an hour in its last day (`PROOF_EVERY_SECONDS`): each proof is two attested
+ * fetches of a month's hundred, and the page that reads each minute would spend them in an hour.
  *
  * A reading a pause kept from being sent is not lost (the review of 2 Oct 2026, R-14). While readings are paused the
  * contract takes none, so a reading that reached the target then was refused and written down here. When they
@@ -59,7 +62,7 @@ export type MilestoneOutcome =
  * Refusals that say something broke on our side rather than anything about the person's account. The pass holds a
  * gift whose reading failed for one of these, so nothing is settled against a reading that never happened (D57).
  */
-export const MILESTONE_OURS_TO_FIX: ReadonlySet<string> = new Set(["FETCH_FAILED", "PROOF_INVALID", "PROOF_MISMATCH", "WORKER_OUT_OF_DATE", "NOT_CONFIGURED"]);
+export const MILESTONE_OURS_TO_FIX: ReadonlySet<string> = new Set(["FETCH_FAILED", "PROOF_INVALID", "PROOF_MISMATCH", "WORKER_OUT_OF_DATE", "NOT_CONFIGURED", "LIMIT_REACHED"]);
 
 /** What a person reads for each refusal of the reading itself. The contract's refusals have their own table (gift-api). */
 const MESSAGES: Readonly<Record<string, string>> = {
@@ -105,6 +108,11 @@ export type MilestoneReadingDeps = {
    * (the audit of 1 Oct 2026, F-02); the first reading of a gift, which the journal page reads, is never touched.
    */
   sameLookAgain?: (look: MilestoneReading) => Promise<boolean>;
+  /**
+   * Whether a proof may be taken for this gift now: true once per `everySeconds`, whichever instance asks first
+   * (src/pass-guard.ts). A test that omits it takes the proof every time.
+   */
+  claimProof?: (giftId: string, everySeconds: number) => Promise<boolean>;
   now: () => number;
 };
 
@@ -124,6 +132,7 @@ export function liveMilestoneReadingDeps(): MilestoneReadingDeps {
     last: lastReading,
     attested: attestedReadings,
     sameLookAgain: touchSameLook,
+    claimProof: (giftId, everySeconds) => claimPass(`milestone-proof:${giftId}`, everySeconds),
     now: () => Math.floor(Date.now() / 1_000),
   };
 }
@@ -136,6 +145,8 @@ export const RECENT_READING_SECONDS = 30 * 60;
 
 /** What one refusal says, so a test can hold a sentence to what it promises without going through a whole reading. */
 export function refusalMessage(code: string): string {
+  // The month's limit of readings: a climb has no day to count, so the sentence carries no hour (src/sentences.ts).
+  if (code === "LIMIT_REACHED") return LIMIT.reading(null, contactEmail());
   return MESSAGES[code] ?? "This could not be recorded.";
 }
 
@@ -236,6 +247,21 @@ async function heldByAPause(record: GiftRecord, state: MilestoneState, target: n
  */
 export const LOOK_MAY_FAIL_IN_THE_LAST_SECONDS = 86_400;
 
+/**
+ * How often a proof is taken for one gift when it reaches the target by a pass or a page, in seconds (3 Oct 2026). A
+ * proof is two attested fetches out of a hundred a month.
+ *
+ * - `atTheTarget`: the look shows the target reached. The first proof is taken at once, and it settles the gift. One
+ *   that did not, because the fetch failed or read a lower figure, is taken again four minutes later at the soonest,
+ *   which is every pass and not every minute of an open page.
+ * - `unseen`: the look failed, or showed no rating. A proof often fails the same way, so one is taken in six hours.
+ * - `unseenInTheLastDay`: the same in the gift's last day, when a reading missed can cost the whole gift: one an hour.
+ *
+ * Before this, the open page took a proof each minute for as long as its look failed, and so did the pass of every
+ * five minutes through a gift's last day.
+ */
+export const PROOF_EVERY_SECONDS = { atTheTarget: 4 * 60, unseen: 6 * 3_600, unseenInTheLastDay: 3_600 } as const;
+
 export async function runMilestoneReading(
   input: {
     giftId: string;
@@ -247,7 +273,8 @@ export async function runMilestoneReading(
      * look fails, a limit met, a wait that ran out, a body that cannot be read, no proof is paid for and the reading
      * stops there. Otherwise a source that falters for an hour costs two attested fetches per gift every five minutes
      * and uses up the month's allowance, after which nothing attested can be read for anybody. It is lifted in a
-     * gift's last day, and never set for a reading a person asks for: there the proof is still taken.
+     * gift's last day, and never set for a reading a person's page asks for: there the proof is still taken, as often
+     * as `PROOF_EVERY_SECONDS` lets it.
      */
     lookMustSucceed?: boolean;
   },
@@ -335,7 +362,10 @@ export async function runMilestoneReading(
   // A pass skips a gift read this recently; the frequent pass looks back less far than the nightly ones.
   if (!input.force && (await deps.readRecently(giftId, now - (input.recentSeconds ?? RECENT_READING_SECONDS)))) return { kind: "already", giftId, reason: "read_recently" };
 
-  // Look first. Below the target nothing can move, so no proof is paid for; any failure to look goes on to the proof.
+  // Look first. Below the target nothing can move, so no proof is paid for. What the look did not settle goes on to a
+  // proof: a rating at the target or past it, or a look that showed none, whose refusal is kept here.
+  let unseen: string | null = null;
+  const lastDay = state.deadline > 0 && now >= state.deadline - LOOK_MAY_FAIL_IN_THE_LAST_SECONDS;
   try {
     const standing = await deps.plain(username, mode);
     if (standing.playerId !== record.goalProfileId) return refused(giftId, "OTHER_PLAYER", standing.rating ?? undefined);
@@ -358,6 +388,8 @@ export async function runMilestoneReading(
       if (!deps.sameLookAgain || !(await deps.sameLookAgain(look))) await deps.record(look);
       return { kind: "notYet", giftId, rating: standing.rating, target, attested: false };
     }
+    // A page that answered and carries no rating in this cadence says no more than a look that failed.
+    if (standing.rating === null) unseen = "NO_RATING";
   } catch (error) {
     // A name that no longer resolves, or an account Chess.com has closed, is a fact about the account: the proof would
     // say the same thing, so no proof is paid for.
@@ -365,8 +397,16 @@ export async function runMilestoneReading(
     if (isClimbReadError(error) && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);
     if (!isClimbReadError(error)) throw error;
     // The look itself failed. A pass that asked for it stops here, except in the gift's last day.
-    const lastDay = state.deadline > 0 && now >= state.deadline - LOOK_MAY_FAIL_IN_THE_LAST_SECONDS;
     if (input.lookMustSucceed && !lastDay) return refused(giftId, error.code);
+    unseen = error.code;
+  }
+
+  // A proof is claimed before it is paid for, so the page that reads each minute and the pass of every five cannot
+  // both take one, nor one of them take one at every ask (`PROOF_EVERY_SECONDS`). Refused the claim, the reading
+  // answers what the look said and changes nothing: whoever asked comes back.
+  if (deps.claimProof) {
+    const every = unseen === null ? PROOF_EVERY_SECONDS.atTheTarget : lastDay ? PROOF_EVERY_SECONDS.unseenInTheLastDay : PROOF_EVERY_SECONDS.unseen;
+    if (!(await deps.claimProof(giftId, every))) return unseen === null ? { kind: "already", giftId, reason: "read_recently" } : refused(giftId, unseen);
   }
 
   let reading: AttestedClimbReading;
