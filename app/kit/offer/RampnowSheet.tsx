@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { getJson } from "@/src/client/api";
-import { RAMPNOW_FRAME_ALLOW, rampnowEventOf, rampnowOutcome } from "@/src/rampnow-frame";
+import { FRAME_HEIGHT, frameHeightFor, RAMPNOW_FRAME_ALLOW, rampnowEventOf, rampnowOutcome } from "@/src/rampnow-frame";
 import { WAY_IN_USDC, rampnowPage } from "@/src/rails";
 import { PAY as W } from "@/src/sentences";
 import { HELP, SMALL_BUTTON } from "../../components/ui";
@@ -22,6 +22,10 @@ const READY_WITHIN_MS = 15_000;
  *
  * The page beside stays the fallback: it is offered when the frame has not said it is ready within fifteen seconds,
  * which without a key is every time, when its address cannot be had, and when it says the payment failed.
+ *
+ * The frame is held to what the sheet has left, so that it and the link under it stand whole inside the sheet whatever
+ * the window; on a window too short even for the frame's least height, the sheet scrolls by what is beside and under
+ * the frame.
  */
 export function RampnowSheet({
   open,
@@ -32,6 +36,9 @@ export function RampnowSheet({
 }: Readonly<{ open: boolean; account: string | undefined; euros?: number; onArrived: () => void; onClose: () => void }>) {
   const [address, setAddress] = useState<string | null>(null);
   const [fallback, setFallback] = useState<"slow" | "failed" | null>(null);
+  const frame = useRef<HTMLIFrameElement>(null);
+  const under = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number>(FRAME_HEIGHT.most);
   // The two handlers as they stand now, without listening anew each time the screen under it is drawn.
   const arrived = useRef(onArrived);
   const closed = useRef(onClose);
@@ -76,12 +83,43 @@ export function RampnowSheet({
     };
   }, [open]);
 
+  // The frame's height, read from the sheet itself: its cap in pixels, its head, the air of its body, and the block
+  // under the frame once it is there. Read again when the window changes and when that block comes or changes.
+  useEffect(() => {
+    if (!open || !address) return;
+    const fit = () => {
+      const dialog = frame.current?.closest("dialog");
+      const body = frame.current?.closest(".sheet-body");
+      if (!dialog || !body) return;
+      const cap = parseFloat(getComputedStyle(dialog).maxHeight);
+      const air = getComputedStyle(body);
+      const below = under.current;
+      setHeight(
+        frameHeightFor({
+          cap: Number.isFinite(cap) ? cap : window.innerHeight,
+          head: dialog.querySelector("header")?.offsetHeight ?? 0,
+          padding: parseFloat(air.paddingTop) + parseFloat(air.paddingBottom),
+          // The block under the frame and the air between the two, measured as drawn rather than read from a rule.
+          under: below && frame.current ? below.getBoundingClientRect().bottom - frame.current.getBoundingClientRect().bottom : 0,
+        }),
+      );
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    const watch = new ResizeObserver(fit);
+    if (under.current) watch.observe(under.current);
+    return () => {
+      window.removeEventListener("resize", fit);
+      watch.disconnect();
+    };
+  }, [open, address, fallback]);
+
   return (
     <Sheet open={open} title={W.card.title} onClose={onClose} tall>
       {/* Drawn only while the sheet is open: closed, the frame and whatever Rampnow was showing go with it. */}
-      {open && address ? <iframe src={address} title={W.card.frame} allow={RAMPNOW_FRAME_ALLOW} className="h-[600px] w-full rounded-[var(--radius-control)] border-0" data-rampnow-frame="" /> : null}
+      {open && address ? <iframe src={address} title={W.card.frame} allow={RAMPNOW_FRAME_ALLOW} ref={frame} style={{ height }} className="block w-full rounded-[var(--radius-control)] border-0" data-rampnow-frame="" /> : null}
       {open && fallback ? (
-        <div className="flex flex-col gap-[var(--space-xs)]">
+        <div ref={under} className="flex flex-col gap-[var(--space-xs)]" data-rampnow-beside="">
           <p className={HELP} role="status">
             {fallback === "failed" ? W.rampnow.failed : W.rampnow.notShowing}
           </p>
