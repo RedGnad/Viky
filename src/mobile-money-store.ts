@@ -94,6 +94,16 @@ async function db(): Promise<SqlExecutor> {
   return sql();
 }
 
+/**
+ * One statement, once the table exists. A tag of its own rather than the statement tagged on the awaited db() in one
+ * expression: the production build drops that expression's parentheses, which hands the statement to the promise
+ * instead of the database, so every call failed on viky.cash while every test passed (found on 3 Oct 2026).
+ */
+async function ledger(strings: TemplateStringsArray, ...values: unknown[]): Promise<Record<string, unknown>[]> {
+  const run = await db();
+  return run(strings, ...values);
+}
+
 function rowOf(row: Record<string, unknown>): MobilePayout {
   const date = (value: unknown) => (value === null || value === undefined ? null : new Date(String(value)));
   return {
@@ -119,7 +129,7 @@ function rowOf(row: Record<string, unknown>): MobilePayout {
 }
 
 export async function recordPayout(payout: Omit<MobilePayout, "depositSentAt" | "depositTx" | "checkedAt" | "createdAt">): Promise<MobilePayout> {
-  const rows = await (await db())`
+  const rows = await ledger`
     INSERT INTO viky_mobile_payouts (reference, account, country, network, number_end, exit_tx, units, deposit_address, deposit_units, local_amount, local_currency, rate, status, expires_at)
     VALUES (${payout.reference}, ${payout.account.toLowerCase()}, ${payout.country}, ${payout.network}, ${payout.numberEnd}, ${payout.exitTx.toLowerCase()}, ${payout.units.toString()}, ${payout.depositAddress}, ${payout.depositUnits.toString()}, ${String(payout.localAmount)}, ${payout.localCurrency}, ${String(payout.rate)}, ${payout.status}, ${payout.expiresAt.toISOString()})
     RETURNING *`;
@@ -127,19 +137,19 @@ export async function recordPayout(payout: Omit<MobilePayout, "depositSentAt" | 
 }
 
 export async function loadPayout(reference: string): Promise<MobilePayout | null> {
-  const rows = await (await db())`SELECT * FROM viky_mobile_payouts WHERE reference = ${reference}`;
+  const rows = await ledger`SELECT * FROM viky_mobile_payouts WHERE reference = ${reference}`;
   return rows[0] ? rowOf(rows[0]) : null;
 }
 
 /** The payout opened for an exchange, if one was: an exchange's dollars are paid out once. */
 export async function payoutOfExit(exitTx: string): Promise<MobilePayout | null> {
-  const rows = await (await db())`SELECT * FROM viky_mobile_payouts WHERE exit_tx = ${exitTx.toLowerCase()}`;
+  const rows = await ledger`SELECT * FROM viky_mobile_payouts WHERE exit_tx = ${exitTx.toLowerCase()}`;
   return rows[0] ? rowOf(rows[0]) : null;
 }
 
 /** Forgets a payout opened and never paid into, once its window has closed, so the same exchange's dollars can be paid out again. */
 export async function dropUnpaidPayout(reference: string): Promise<boolean> {
-  const rows = await (await db())`
+  const rows = await ledger`
     DELETE FROM viky_mobile_payouts
      WHERE reference = ${reference} AND deposit_sent_at IS NULL AND status = 'AWAITING_DEPOSIT' AND expires_at < now()
      RETURNING reference`;
@@ -147,7 +157,7 @@ export async function dropUnpaidPayout(reference: string): Promise<boolean> {
 }
 
 export async function markDepositSent(reference: string, account: string): Promise<boolean> {
-  const rows = await (await db())`
+  const rows = await ledger`
     UPDATE viky_mobile_payouts SET deposit_sent_at = now(), updated_at = now()
      WHERE reference = ${reference} AND account = ${account.toLowerCase()} AND deposit_sent_at IS NULL
      RETURNING reference`;
@@ -162,7 +172,7 @@ export async function markDepositSent(reference: string, account: string): Promi
  */
 export async function usedToday(account: string, now: Date = new Date()): Promise<bigint> {
   const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
-  const rows = await (await db())`
+  const rows = await ledger`
     SELECT COALESCE(sum(units::numeric), 0)::text AS units FROM viky_mobile_payouts
      WHERE account = ${account.toLowerCase()} AND created_at >= ${day}
        AND status NOT IN ('FAILED', 'REVERSED')
@@ -172,7 +182,7 @@ export async function usedToday(account: string, now: Date = new Date()): Promis
 
 /** What Switch last said of a payout, by its webhook or its status route. The local amount is its own, once it says it. */
 export async function notePayoutState(reference: string, state: Readonly<{ status: string; local: number | null; depositHash: string | null }>): Promise<boolean> {
-  const rows = await (await db())`
+  const rows = await ledger`
     UPDATE viky_mobile_payouts
        SET status = ${state.status},
            local_amount = COALESCE(${state.local === null ? null : String(state.local)}::text, local_amount),
