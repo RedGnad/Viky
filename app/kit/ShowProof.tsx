@@ -5,8 +5,7 @@ import { ApiError } from "@/src/client/api";
 import { awaitShownProof, openShownProof } from "@/src/client/gift";
 import { verdictOnly } from "@/src/condition-privacy";
 import { conditionById } from "@/src/conditions";
-import { contactEmail } from "@/src/contact";
-import { LIMIT, SHOW_PROOF as W } from "@/src/sentences";
+import { SHOW_PROOF as W } from "@/src/sentences";
 import { BODY, HELP, PRIMARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { Said } from "./Said";
 
@@ -95,17 +94,9 @@ export function ShowProof({
     );
   }
 
-  // The month's limit of proofs: said in the button's place, before anything is opened or asked of the person.
-  if (limitReached && state.at !== "waiting") {
-    return (
-      <section className={CARD} role="status" data-proof-limit>
-        <p className="font-medium">{W.title(condition.source)}</p>
-        {/* The whole of it in the open, once, short and in the red (the founder, 3 Oct 2026): it is what the person
-            needs before starting. */}
-        <p className="limit-said">{LIMIT.proof(contactEmail())}</p>
-      </section>
-    );
-  }
+  // The month's reserve of proofs is used up: the card says so above, in the red, with what the person can do (the
+  // founder, 3 Oct 2026). Nothing is offered here, so nothing is opened or asked of them.
+  if (limitReached && state.at !== "waiting") return null;
 
   return (
     <section className={CARD}>

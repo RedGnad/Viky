@@ -44,14 +44,39 @@ export const CEILING = {
   reading: (resumes: string | null) => `Viky has read this as often as it does in one day. It resumes ${resumes ?? "tomorrow"}. Nothing is lost.`,
 } as const;
 
-const LIMIT_READING = "Monthly reading limit reached.";
-const LIMIT_PROOF = "Monthly proof limit reached.";
+/**
+ * A month's reserve is used up (the founder, 3 Oct 2026). Viky asks an outside service for each attested reading and
+ * for each proof a person shows, and that service gives two reserves a month (src/attested-calls.ts): the readings Viky
+ * takes by itself, and the proofs people show.
+ *
+ * One sentence in the open, in the one red of the product: which service is not checked, named by the gift's own
+ * source, and the day it starts again, which is the cycle's own first day. Everything else is folded under "What you
+ * can do": until when the open day can still be counted, that what is already theirs is taken out as usual, what the
+ * empty reserve does not touch, and where to write. A sentence of that length is not left in the open (rule 4).
+ *
+ * The same sentence is said before a gift is paid for, on the card and in the choice of what they will do: a
+ * condition whose reserve is empty says so, and stays offered beside those that work.
+ */
+export type Reserve = "readings" | "proofs";
 export const LIMIT = {
-  reading: (until: string | null, email: string | null) =>
-    [LIMIT_READING, until ? `Your day can still be counted until ${until}.` : "Nothing is lost.", email ? `Write to ${email}.` : ""].filter(Boolean).join(" "),
-  proof: (email: string | null) => [LIMIT_PROOF, "Nothing was taken.", email ? `Write to ${email}.` : ""].filter(Boolean).join(" "),
-  /** Whether a sentence is one of the two, wherever a screen prints what it was answered: it is then set in the red. */
-  isSaid: (text: string | null | undefined) => Boolean(text && (text.startsWith(LIMIT_READING) || text.startsWith(LIMIT_PROOF))),
+  /** The two sentences said in the open, each kept apart so that each is measured for itself (rule 4). */
+  service: (source: string, reserve: Reserve) => `Viky can't check ${source} right now: this month's ${reserve} are used up.`,
+  startsAgain: (again: string) => `It starts again on ${again}.`,
+  /** `yours`: said to the person the gift is for, whose source is then theirs to read ("your university"). */
+  said: (source: string, reserve: Reserve, again: string, yours = false): string => `${LIMIT.service(yours ? spokenTo(source) : source, reserve)} ${LIMIT.startsAgain(again)}`,
+  /** The fold's name, and what it holds, a line each. */
+  can: "What you can do",
+  dayYours: (until: string) => `Your day can still be counted until ${until}.`,
+  dayTheirs: (name: string | null, until: string) => `${name ? `${name}'s` : "Their"} day can still be counted until ${until}.`,
+  takeYours: "What is already yours can be taken out as usual.",
+  takeTheirs: "What is already theirs can be taken out as usual.",
+  /** What an empty reserve does not touch: the gifts that draw on the other one. */
+  untouched: { readings: "Gifts proved by a document someone shows are not touched.", proofs: "Gifts that Viky reads by itself are not touched." } as Record<Reserve, string>,
+  write: (email: string) => `Write to ${email}: we can reopen it sooner.`,
+  /** Beside a condition in a list, where a sentence has no room: four words (rule 5). */
+  backOn: (again: string) => `Back on ${again}`,
+  /** Whether a sentence is the one said in the open, wherever a screen prints what it was answered: it is then set in the red. */
+  isSaid: (text: string | null | undefined) => Boolean(text && /^Viky can't check .+ right now: this month's (readings|proofs) are used up\./.test(text)),
 } as const;
 
 /** The three destinations of the bar and the rail, and the mark. */

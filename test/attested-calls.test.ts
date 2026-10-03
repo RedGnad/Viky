@@ -33,6 +33,7 @@ import {
   reclaimAllowance,
   ReclaimLimitReached,
   spentOn,
+  startsAgainInWords,
   type AttestedCall,
   type CycleUse,
 } from "../src/attested-calls";
@@ -41,6 +42,7 @@ import { CHESS_PLAYER } from "../src/attested-sources";
 import { countableUntil, daysWaiting, daysWaitingOf } from "../src/days-waiting";
 import { fetchPublicProfile, PublicProfileError } from "../src/duolingo-public";
 import { giftLimitFor } from "../src/gift-limit";
+import { emptyReserveOf, reserveOf } from "../src/reserves";
 import { MILESTONE_OURS_TO_FIX, PROOF_EVERY_SECONDS, refusalMessage } from "../src/milestone-reading";
 import type { SqlExecutor } from "../src/proof-session-store";
 import { momentInWords } from "../src/moments";
@@ -459,7 +461,9 @@ test("a person's proof: the limit is looked at before Reclaim is asked, the sess
   const init = session.indexOf("await ReclaimProofRequest.init(");
   assert.ok(limit > 0 && init > limit, "the limit before the session is opened at Reclaim");
   assert.match(session, /if \(isReclaimQuotaRefusal\(error\)\) throw new ReclaimLimitReached\("proofs", \{ cause: error \}\);/, "and Reclaim's own refusal is the same one");
-  assert.match(session, /if \(error instanceof ReclaimLimitReached\) \{\n\s*return NextResponse\.json\(\{ code: error\.code, error: LIMIT\.proof\(contactEmail\(\)\) \}, \{ status: 409,/);
+  // The refusal names the source of the condition that was asked for, and the day the proofs start again.
+  assert.match(session, /source = conditionById\(entry\.condition\.conditionId\)\?\.source \?\? source;/);
+  assert.match(session, /if \(error instanceof ReclaimLimitReached\) \{\n\s*return NextResponse\.json\(\{ code: error\.code, error: LIMIT\.said\(source, "proofs", startsAgainInWords\(\), true\) \}, \{ status: 409,/);
   assert.match(session, /await noteAttestedCall\(\{ kind: "asked", source: entry\.condition\.conditionId, ok: true, ref: sessionId \}\);/);
   const verify = readFileSync("app/api/proof/verify/route.ts", "utf8");
   assert.match(verify, /const cameBack = \(ok: boolean\) => noteAttestedCall\(\{ kind: "verification", source: session\?\.conditionId \?\? "unknown", ok, ref: sessionId \}\);/);
@@ -468,28 +472,50 @@ test("a person's proof: the limit is looked at before Reclaim is asked, the sess
 
 // --- the two sentences, and where a person reads them ----------------------------------------------------------------
 
-test("the two sentences are short, the hour is the day's own window, and no address is named where none is set", () => {
-  // Shortened on the founder's word of 3 Oct 2026: what happened, what it means for the day, where to write.
-  assert.equal(LIMIT.reading("tomorrow, 5 Oct, at 08:00", "hello@viky.cash"), "Monthly reading limit reached. Your day can still be counted until tomorrow, 5 Oct, at 08:00. Write to hello@viky.cash.");
-  assert.equal(LIMIT.reading(null, "hello@viky.cash"), "Monthly reading limit reached. Nothing is lost. Write to hello@viky.cash.", "a gift not counted by days has no hour");
-  assert.equal(LIMIT.reading(null, null), "Monthly reading limit reached. Nothing is lost.");
-  assert.equal(LIMIT.proof("hello@viky.cash"), "Monthly proof limit reached. Nothing was taken. Write to hello@viky.cash.");
-  assert.equal(LIMIT.proof(null), "Monthly proof limit reached. Nothing was taken.");
-  // Each is known for what it is wherever a screen prints an answer, and nothing else is taken for one.
-  assert.equal(LIMIT.isSaid(LIMIT.reading("today, 4 Oct, at 9:00", null)), true);
-  assert.equal(LIMIT.isSaid(LIMIT.proof("hello@viky.cash")), true);
-  for (const other of ["Duolingo could not be read just now. Try again in a minute.", "", null, undefined]) assert.equal(LIMIT.isSaid(other), false);
-  // A climb's refusal is the same sentence, without a day.
-  const before = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
-  process.env.NEXT_PUBLIC_CONTACT_EMAIL = "hello@viky.cash";
-  try {
-    assert.equal(refusalMessage("LIMIT_REACHED"), LIMIT.reading(null, "hello@viky.cash"));
-    process.env.NEXT_PUBLIC_CONTACT_EMAIL = "not an address";
-    assert.equal(refusalMessage("LIMIT_REACHED"), LIMIT.reading(null, null), "a setting that is no address is not printed");
-  } finally {
-    if (before === undefined) delete process.env.NEXT_PUBLIC_CONTACT_EMAIL;
-    else process.env.NEXT_PUBLIC_CONTACT_EMAIL = before;
-  }
+test("one sentence in the open names the service by the gift's own source and the day it starts again, and the rest is folded", () => {
+  // The founder's own words of 3 Oct 2026, for a reading and for a proof.
+  assert.equal(LIMIT.said("Duolingo", "readings", "23 Oct"), "Viky can't check Duolingo right now: this month's readings are used up. It starts again on 23 Oct.");
+  // A source named from the funder's side is said to its own person as theirs; a proper name is said as it is.
+  assert.equal(LIMIT.said("their university", "proofs", "23 Oct"), "Viky can't check their university right now: this month's proofs are used up. It starts again on 23 Oct.");
+  assert.equal(LIMIT.said("their university", "proofs", "23 Oct", true), "Viky can't check your university right now: this month's proofs are used up. It starts again on 23 Oct.");
+  assert.equal(LIMIT.said("Duolingo", "readings", "23 Oct", true), LIMIT.said("Duolingo", "readings", "23 Oct"));
+  assert.ok(LIMIT.isSaid(LIMIT.said("their university", "proofs", "23 Oct", true)));
+  assert.equal(LIMIT.said("their university", "proofs", "23 Oct"), "Viky can't check their university right now: this month's proofs are used up. It starts again on 23 Oct.");
+  // What is folded under "What you can do", a line each.
+  assert.equal(LIMIT.can, "What you can do");
+  assert.equal(LIMIT.dayYours("tomorrow, 5 Oct, at 08:00"), "Your day can still be counted until tomorrow, 5 Oct, at 08:00.");
+  assert.equal(LIMIT.dayTheirs("Boo", "tomorrow, 5 Oct, at 08:00"), "Boo's day can still be counted until tomorrow, 5 Oct, at 08:00.");
+  assert.equal(LIMIT.dayTheirs(null, "tomorrow, 5 Oct, at 08:00"), "Their day can still be counted until tomorrow, 5 Oct, at 08:00.");
+  assert.equal(LIMIT.takeYours, "What is already yours can be taken out as usual.");
+  assert.equal(LIMIT.takeTheirs, "What is already theirs can be taken out as usual.");
+  assert.equal(LIMIT.untouched.readings, "Gifts proved by a document someone shows are not touched.");
+  assert.equal(LIMIT.untouched.proofs, "Gifts that Viky reads by itself are not touched.");
+  assert.equal(LIMIT.write("hello@viky.cash"), "Write to hello@viky.cash: we can reopen it sooner.");
+  // Beside a condition in a list: four words.
+  assert.equal(LIMIT.backOn("23 Oct"), "Back on 23 Oct");
+  assert.ok(LIMIT.backOn("23 Oct").split(" ").length <= 4);
+  // The sentence in the open is known for what it is wherever a screen prints an answer, and nothing else is taken for it.
+  assert.equal(LIMIT.isSaid(LIMIT.said("Chess.com", "readings", "23 Oct")), true);
+  assert.equal(LIMIT.isSaid(`${LIMIT.said("Duolingo", "readings", "23 Oct")} ${LIMIT.dayYours("today, 4 Oct, at 9:00")}`), true, "with the hour after it, under a press");
+  assert.equal(LIMIT.isSaid(LIMIT.said("ETS", "proofs", "23 Oct")), true);
+  for (const other of ["Duolingo could not be read just now. Try again in a minute.", "Viky has read this as often as it does in one day. It resumes tomorrow. Nothing is lost.", "", null, undefined]) assert.equal(LIMIT.isSaid(other), false);
+  // The day it starts again is the cycle's own first day, in UTC, written the same on the server and in every browser.
+  assert.equal(startsAgainInWords(Date.UTC(2026, 9, 3, 18, 0)), "23 Oct");
+  assert.equal(startsAgainInWords(Date.UTC(2026, 9, 22, 23, 59)), "23 Oct");
+  assert.equal(startsAgainInWords(Date.UTC(2026, 9, 23, 0, 0)), "23 Nov");
+  assert.equal(startsAgainInWords(Date.UTC(2026, 11, 30, 12, 0)), "23 Jan");
+  // A climb's refusal names its own source, and "this" where a caller has none to name.
+  assert.equal(refusalMessage("LIMIT_REACHED", "Chess.com"), LIMIT.said("Chess.com", "readings", startsAgainInWords()));
+  assert.equal(refusalMessage("LIMIT_REACHED"), LIMIT.said("this", "readings", startsAgainInWords()));
+  // Which reserve a condition draws on, and which conditions say so when one is used up.
+  assert.deepEqual([reserveOf("read"), reserveOf("connected"), reserveOf("shown")], ["readings", "readings", "proofs"]);
+  const readingsEmpty = { readings: true, proofs: false, again: "23 Oct" };
+  assert.equal(emptyReserveOf("read", readingsEmpty), "readings");
+  assert.equal(emptyReserveOf("connected", readingsEmpty), "readings");
+  assert.equal(emptyReserveOf("shown", readingsEmpty), null, "a document shown draws on the other reserve: it stays as it was");
+  assert.equal(emptyReserveOf("shown", { readings: false, proofs: true, again: "23 Oct" }), "proofs");
+  assert.equal(emptyReserveOf("read", null), null);
+  assert.equal(emptyReserveOf(undefined, readingsEmpty), null);
 });
 
 const DAY = 86_400;
@@ -534,8 +560,9 @@ test("the alert's count walks every connected daily gift, and one that cannot be
 test("a gift's page is told of the limit only while the gift runs, with the hour for its day", async () => {
   const until = () => day(104, 6);
   assert.equal(await giftLimitFor(true, until, async () => ({ readings: false, proofs: false })), null);
-  assert.deepEqual(await giftLimitFor(true, until, async () => ({ readings: true, proofs: false })), { readings: true, proofs: false, countableUntil: day(104, 6) });
-  assert.deepEqual(await giftLimitFor(true, until, async () => ({ readings: false, proofs: true })), { readings: false, proofs: true, countableUntil: null }, "the proofs' limit has no day");
+  const cycle = Date.UTC(2026, 9, 3, 18, 0);
+  assert.deepEqual(await giftLimitFor(true, until, async () => ({ readings: true, proofs: false }), cycle), { readings: true, proofs: false, countableUntil: day(104, 6), again: "23 Oct" });
+  assert.deepEqual(await giftLimitFor(true, until, async () => ({ readings: false, proofs: true }), cycle), { readings: false, proofs: true, countableUntil: null, again: "23 Oct" }, "the proofs' limit has no day");
   assert.equal(await giftLimitFor(false, until, async () => ({ readings: true, proofs: true })), null, "a gift that is over waits for nothing");
   assert.match(readFileSync("src/gift-status.ts", "utf8"), /limit: await giftLimitFor\(!gift\.finalised && !gift\.cancelled, \(\) => countableUntil\(gift, now, catchUpSecondsOf\(escrow\)\)\),/);
   assert.match(readFileSync("src/milestone-status.ts", "utf8"), /limit: await giftLimitFor\(!state\.settled && !state\.cancelled, \(\) => null\)/);
@@ -544,46 +571,62 @@ test("a gift's page is told of the limit only while the gift runs, with the hour
   assert.match(count, /if \(outcome\.kind === "refused" && outcome\.code === "LIMIT_REACHED" && record\) return \{ \.\.\.outcome, countableUntil: await untilOf\(record\) \};/);
 });
 
-test("the browser says the sentence in the reader's own clock, and leaves every other answer as it is", async () => {
-  const { readingLimitInWords, withTheLimitSaid } = await import("../src/client/limit");
-  const before = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
-  process.env.NEXT_PUBLIC_CONTACT_EMAIL = "hello@viky.cash";
-  try {
-    const now = new Date(2026, 9, 4, 10, 0).getTime();
-    const until = new Date(2026, 9, 5, 8, 0).getTime() / 1_000;
-    // The hour is written by the reader's own machine (src/moments.ts): "tomorrow, 5 Oct, at" and its eight o'clock.
-    assert.equal(readingLimitInWords(until, now), LIMIT.reading(momentInWords(until * 1_000, now), "hello@viky.cash"));
-    assert.match(readingLimitInWords(until, now), /^Monthly reading limit reached\. Your day can still be counted until tomorrow, 5 Oct, at 0?8:00\. Write to hello@viky\.cash\.$/);
-    assert.equal(readingLimitInWords(null, now), LIMIT.reading(null, "hello@viky.cash"));
-    const refused = { kind: "refused", giftId: "4", code: "LIMIT_REACHED", message: "the server's own words", countableUntil: until };
-    assert.match(withTheLimitSaid(refused).message, /^Monthly reading limit reached\. Your day can still be counted until /);
-    const other = { kind: "refused", giftId: "4", code: "FETCH_FAILED", message: "Duolingo could not be read just now." };
-    assert.equal(withTheLimitSaid(other), other);
-    const counted = { kind: "counted", giftId: "4", creditedDays: 1 };
-    assert.equal(withTheLimitSaid(counted), counted);
-    assert.equal(withTheLimitSaid(null), null);
-  } finally {
-    if (before === undefined) delete process.env.NEXT_PUBLIC_CONTACT_EMAIL;
-    else process.env.NEXT_PUBLIC_CONTACT_EMAIL = before;
-  }
+test("the browser adds the hour of the open day in the reader's own clock, and leaves every other answer as it is", async () => {
+  const { openDayInWords, withTheLimitSaid } = await import("../src/client/limit");
+  const now = new Date(2026, 9, 4, 10, 0).getTime();
+  const until = new Date(2026, 9, 5, 8, 0).getTime() / 1_000;
+  // The hour is written by the reader's own machine (src/moments.ts): "tomorrow, 5 Oct, at" and its eight o'clock.
+  assert.equal(openDayInWords(until, true, null, now), LIMIT.dayYours(momentInWords(until * 1_000, now)));
+  assert.match(openDayInWords(until, true, null, now), /^Your day can still be counted until tomorrow, 5 Oct, at 0?8:00\.$/);
+  assert.match(openDayInWords(until, false, "Boo", now), /^Boo's day can still be counted until tomorrow, 5 Oct, at 0?8:00\.$/);
+  // Under a press there is no fold: the server's own sentence, then until when the day can still be counted.
+  const said = LIMIT.said("Duolingo", "readings", "23 Oct");
+  const refused = { kind: "refused", giftId: "4", code: "LIMIT_REACHED", message: said, countableUntil: Math.floor(Date.now() / 1_000) + 3_600 };
+  assert.match(withTheLimitSaid(refused).message, /^Viky can't check Duolingo right now: this month's readings are used up\. It starts again on 23 Oct\. Your day can still be counted until /);
+  assert.equal(LIMIT.isSaid(withTheLimitSaid(refused).message), true, "and it is still set in the red");
+  // A gift not counted by days has no hour: the server's sentence is left as it is.
+  const climb = { kind: "refused", giftId: "1000004", code: "LIMIT_REACHED", message: said };
+  assert.equal(withTheLimitSaid(climb), climb);
+  const other = { kind: "refused", giftId: "4", code: "FETCH_FAILED", message: "Duolingo could not be read just now." };
+  assert.equal(withTheLimitSaid(other), other);
+  const counted = { kind: "counted", giftId: "4", creditedDays: 1 };
+  assert.equal(withTheLimitSaid(counted), counted);
+  assert.equal(withTheLimitSaid(null), null);
   assert.match(readFileSync("src/client/api.ts", "utf8"), /return withTheLimitSaid\(data as T\);/, "every answer of Viky's own routes passes through it");
 });
 
-test("the gift's page says the limit where it says where the gift stands, and asks for no reading meanwhile", () => {
+test("the gift's page says the limit where it says where the gift stands, folds what can be done, and asks for no reading meanwhile", () => {
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
-  assert.match(page, /const readingsStopped = Boolean\(limit\?\.readings && status\.opened && condition\?\.nature !== "shown"\);/);
+  // The reserve this gift draws on, when it is the one used up: the other one being empty changes nothing for it.
+  assert.match(page, /const emptyReserve = limit && status\.opened && condition \? \(limit\[reserveOf\(condition\.nature\)\] \? reserveOf\(condition\.nature\) : null\) : null;/);
+  assert.match(page, /const readingsStopped = emptyReserve === "readings";/);
   assert.match(page, /&& \(voice === "recipient" \|\| voice === "funder"\) && !readingsStopped\);/, "no live reading while the limit stands");
   assert.match(page, /const nextReading = nowMs === 0 \|\| gift\.finished \|\| gift\.cancelled \|\| readingsStopped \? null :/, "and no next reading is announced");
-  assert.match(page, /readingLimitInWords\(mine \? \(limit\?\.countableUntil \?\? null\) : null, nowMs\)/, "the hour is said to the person whose day it is");
-  assert.match(page, /limit=\{limitLine\}/, "in the card, where the state is said");
-  assert.match(readFileSync("app/kit/GiftLive.tsx", "utf8"), /\{limit \? \(\n\s*<p className="limit-said" role="status" data-reading-limit>/, "short and in the red");
+  // In the open: the source and the day. Folded: the open day's hour, what is theirs, what is not touched, where to write.
+  assert.match(page, /said: LIMIT\.said\(source, emptyReserve, limit\.again, mine\),/);
+  assert.match(page, /openDayInWords\(limit\.countableUntil, mine, recipientName, nowMs\)/, "the hour in the reader's own clock, to each of the two people");
+  assert.match(page, /mine \? LIMIT\.takeYours : LIMIT\.takeTheirs,\n\s*LIMIT\.untouched\[emptyReserve\],\n\s*contactEmail\(\) \? LIMIT\.write\(contactEmail\(\) as string\) : null,/);
+  assert.match(page, /limit=\{limitSaid\}/, "in the card, where the state is said");
+  const card = readFileSync("app/kit/GiftLive.tsx", "utf8");
+  assert.match(card, /\{limit \? \(\n\s*<p className="limit-said" role="status" data-limit-said>\n\s*\{limit\.said\}/, "one sentence, in the red");
+  assert.match(card, /<details className="gift-fold" data-limit-can>\n\s*<summary className="gift-fold-name">\n\s*\{LIMIT\.can\}/, "the rest folded under its own name");
+  assert.ok(card.indexOf("data-limit-can") < card.indexOf("{L.agreed}"), "before what was agreed: it is what the person came to ask");
   assert.match(page, /&& !gift\.sourceClosed && !readingsStopped \? \(/, "and no count is offered");
-  assert.match(page, /limitReached=\{Boolean\(limit\?\.proofs\)\}/);
-  const proof = readFileSync("app/kit/ShowProof.tsx", "utf8");
-  assert.match(proof, /if \(limitReached && state\.at !== "waiting"\) \{/);
-  assert.match(proof, /<p className="limit-said">\{LIMIT\.proof\(contactEmail\(\)\)\}<\/p>/, "said before the person starts, in the button's place");
+  // A proof a person shows: the card says it too, and nothing is offered to start one.
+  assert.match(page, /limitReached=\{emptyReserve === "proofs"\}/);
+  assert.match(readFileSync("app/kit/ShowProof.tsx", "utf8"), /if \(limitReached && state\.at !== "waiting"\) return null;/);
   // Under a press it reads the same: the one refusal that takes a colour, where every other carries a mark.
   assert.match(readFileSync("app/kit/FieldRefusal.tsx", "utf8"), /if \(LIMIT\.isSaid\(children\)\) \{\n\s*return \(\n\s*<p id=\{id\} role="alert" className="limit-said">/);
+  // Before a gift is paid for: the route says which reserves are used up, and the card and the chooser say it.
+  const route = readFileSync("app/api/conditions/route.ts", "utf8");
+  assert.match(route, /const reserves: Reserves = \{ readings: limits\.readings, proofs: limits\.proofs, again: startsAgainInWords\(\) \};/);
+  const offer = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
+  assert.match(offer, /const emptyReserve = emptyReserveOf\(condition\?\.nature, reserves\);/);
+  assert.match(offer, /\{LIMIT\.said\(condition\.source, emptyReserve, reserves\.again\)\}/);
+  assert.ok(!/disabled=\{[^}]*emptyReserve/.test(offer), "the gift can still be made: nothing is shut for an empty reserve");
+  const chooser = readFileSync("app/kit/offer/WillSheet.tsx", "utf8");
+  assert.match(chooser, /\{LIMIT\.backOn\(reserves\.again\)\}/, "beside the condition in its list");
+  assert.match(chooser, /\{LIMIT\.said\(condition\.source, emptyReserveOf\(condition\.nature, reserves\)!, reserves\.again\)\}/, "and in full over its questions");
 });
 
 test("the judges page says the cycle's count from the journal, the limit when it is reached, and what a proof is held to", () => {
@@ -595,8 +638,8 @@ test("the judges page says the cycle's count from the journal, the limit when it
   const page = readFileSync("app/judges/page.tsx", "utf8").replace(/\s+/g, " ");
   assert.match(page, /const reclaimUse = await cycleUse\(\)\.catch\(\(\) => null\); const reclaimLimits = reclaimUse \? limitsOf\(reclaimUse\) : null;/);
   assert.match(page, /allows up to \{RECLAIM_ALLOWANCE\.fetches\} attested fetches and \{RECLAIM_ALLOWANCE\.verifications\} verifications a month, and gives more on request only\. \{cycleInWords\(reclaimUse\)\}/);
-  assert.match(page, /\{reclaimLimits\?\.readings \? ` The limit of readings is reached: [^`]*"\$\{LIMIT\.reading\(null, contactEmail\(\)\)\}"` : ""\}/, "the same sentence a person reads");
-  assert.match(page, /\{reclaimLimits\?\.proofs \? ` The limit of proofs is reached: [^`]*"\$\{LIMIT\.proof\(contactEmail\(\)\)\}"` : ""\}/);
+  assert.match(page, /\{reclaimLimits\?\.readings \? ` The limit of readings is reached: [^`]*"\$\{LIMIT\.said\("Duolingo", "readings", startsAgainInWords\(\)\)\}"` : ""\}/, "the same sentence a person reads");
+  assert.match(page, /\{reclaimLimits\?\.proofs \? ` The limit of proofs is reached: [^`]*"\$\{LIMIT\.said\("their university", "proofs", startsAgainInWords\(\)\)\}"` : ""\}/);
   assert.match(page, /once in \{PROOF_EVERY_SECONDS\.unseen \/ 3_600\} hours after a look that failed or showed no rating, once an hour in the gift&apos;s last day, and every \{PROOF_EVERY_SECONDS\.atTheTarget \/ 60\} minutes at the target/);
   assert.equal(PROOF_EVERY_SECONDS.unseenInTheLastDay, 3_600, "once an hour, as the page says in words");
   // The floor and the day it was counted are said only for the cycle they are about.

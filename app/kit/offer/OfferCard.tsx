@@ -12,7 +12,9 @@ import { figureIn } from "@/src/currencies";
 import { startingFigure } from "@/src/starting-amount";
 import { dollarsHeld, type Holdings } from "../money";
 import { AmountError } from "@/src/money";
-import { OFFER as W } from "@/src/sentences";
+import { useReserves } from "@/src/client/reserves";
+import { emptyReserveOf } from "@/src/reserves";
+import { LIMIT, OFFER as W } from "@/src/sentences";
 import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, HELP, PRIMARY_BUTTON, ROW_BUTTON } from "../../components/ui";
 import { CardFace } from "../GiftCard";
 import { Character } from "../Character";
@@ -83,6 +85,12 @@ export function OfferCard({
 
   const units = draftUnits(draft);
   const condition = conditionById(draft.conditionId);
+  /**
+   * A month's reserve used up (the founder, 3 Oct 2026): the condition on the card says so before the gift is paid
+   * for, by its own source and with the day it starts again. The gift can still be made: it is read from that day.
+   */
+  const reserves = useReserves();
+  const emptyReserve = emptyReserveOf(condition?.nature, reserves);
   const shape = shapeOf(draft.conditionId);
   const lengthFor = shape === "stamp" || shape === "climb" ? W.lengthFor[shape] : undefined;
   const bounds = durationBounds(draft.conditionId);
@@ -182,7 +190,7 @@ export function OfferCard({
           /* A real choice, with families and a sentence under the one being considered: this one keeps its sheet. */
           under={
             /* Centred in the card on a phone, at its own width; at the card's left on a large screen (the founder, 29 Sep 2026). */
-            <span className="flex justify-center [@media(min-width:1024px)]:justify-start">
+            <span className="flex flex-wrap justify-center [@media(min-width:1024px)]:justify-start">
             <button
               type="button"
               /* One line. It opens the four families (D233, the founder: pressing it is to change what they will do),
@@ -203,6 +211,12 @@ export function OfferCard({
                 <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
+            {/* Under what they will do, where it is chosen: in the red, the one sentence the gift's page will say too. */}
+            {condition && emptyReserve && reserves ? (
+              <span className="limit-said mt-[var(--space-sm)] block w-full" role="status" data-limit-said>
+                {LIMIT.said(condition.source, emptyReserve, reserves.again)}
+              </span>
+            ) : null}
             </span>
           }
           /* The shape of the gift in the middle of the card (D226, the founder's direction A of 24 Sep 2026): the days,

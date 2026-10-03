@@ -253,6 +253,15 @@ export function utcDayInWords(iso: string): string {
 }
 
 /**
+ * The day a cycle's reserves start again, as a screen says it: "23 Oct", the first day of the next cycle, in UTC, so it
+ * is written the same on the server and in every browser. West of UTC the reserves are back the evening before.
+ */
+export function startsAgainInWords(nowMs: number = Date.now()): string {
+  const until = cycleOf(nowMs).until;
+  return `${until.getUTCDate()} ${MONTHS[until.getUTCMonth()]}`;
+}
+
+/**
  * The cycle's count as the judges page says it: readings and proofs against their allowances, and the cycle's dates.
  * Every figure is the journal's at the moment the page is served.
  */
