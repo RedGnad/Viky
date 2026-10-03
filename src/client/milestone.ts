@@ -1,3 +1,4 @@
+import type { Reserves } from "../reserves";
 import { getAddress, type Hex, type LocalAccount } from "viem";
 import { receiveAuthorizationMessage, receiveAuthorizationTypedData, toContractAuthorization } from "../ausd-authorization";
 import { NO_CONTACT_HASH } from "../contact-hash";
@@ -26,8 +27,11 @@ export function readStanding(path: string, username: string, cadence: string): P
   return getJson(`${path}?username=${encodeURIComponent(username)}&mode=${encodeURIComponent(cadence)}`);
 }
 
-/** The ids of the conditions this viewer may offer: the live ones, and for an account that runs Viky, the wired ones. */
-export function loadOfferedConditions(): Promise<{ ids: string[]; preview: string[] }> {
+/**
+ * The ids of the conditions this viewer may offer: the live ones, and for an account that runs Viky, the wired ones.
+ * And which of the month's reserves are used up (src/reserves.ts); absent from an answer made before that existed.
+ */
+export function loadOfferedConditions(): Promise<{ ids: string[]; preview: string[]; reserves?: Reserves }> {
   return getJson("/api/conditions");
 }
 
