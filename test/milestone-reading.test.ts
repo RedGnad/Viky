@@ -7,7 +7,7 @@ import { chessProviderId } from "../src/chess-com";
 import { ChessReadError, nameHasChessCode, newChessCode, CHESS_CODE_ALPHABET, CHESS_CODE_LENGTH, type AttestedChessReading } from "../src/chess-reading";
 import type { GiftRecord } from "../src/gift-store";
 import type { MilestoneState } from "../src/milestone-reader";
-import { MILESTONE_OURS_TO_FIX, PROOF_EVERY_SECONDS, runMilestoneReading, type MilestoneReadingDeps } from "../src/milestone-reading";
+import { MILESTONE_OURS_TO_FIX, PROOF_EVERY_SECONDS, runMilestoneReading, TRIES_AT_THE_TARGET_A_DAY, type MilestoneReadingDeps } from "../src/milestone-reading";
 import type { MilestoneProofMessage } from "../src/milestone-protocol";
 import { milestoneStatusOf } from "../src/milestone-status";
 import type { MilestoneReading } from "../src/milestone-store";
@@ -145,7 +145,7 @@ test("the funder named the account, so the first reading binds it with no code a
   const run = harness(RECORD, OPENED, { attest: async () => attested(1904, { name: null }) });
   const outcome = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, run.deps);
   assert.equal(outcome.kind, "started");
-  assert.deepEqual(run.calls, ["prove", "bind"], "read without the name, then proved");
+  assert.deepEqual(run.calls, ["plain", "prove", "bind"], "looked at, read without the name, then proved");
 
   // A code sitting on that record changes nothing: it is not what binds this gift.
   const withCode = harness({ ...RECORD, bindingCode: "KXQPRT" }, OPENED, { attest: async () => attested(1904, { name: null }) });
@@ -173,7 +173,7 @@ test("on the second version the start is read, held and not sent: it waits for t
   const outcome = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, run.deps);
   assert.deepEqual(outcome, { kind: "sign", giftId: "1000000", start: { of: "milestone", contract: CONTRACT, identityHash: IDENTITY, metricValue: "1904", observedAt: String(NOW - 5) } });
   // Read once and asked for: nothing is bound and nothing is written in the journal until the contract has taken it.
-  assert.deepEqual(run.calls, ["prove"]);
+  assert.deepEqual(run.calls, ["plain", "prove"]);
   assert.deepEqual(run.recorded, []);
   assert.equal(held.length, 1);
   assert.equal(held[0].account, RECORD.recipient);
@@ -283,7 +283,7 @@ test("the recipient named their own account, so the code in the name is what bin
   const run = harness(THEIR_OWN, OPENED);
   const outcome = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, run.deps);
   assert.equal(outcome.kind, "started");
-  assert.deepEqual(run.calls, ["attest:withName", "prove", "bind"]);
+  assert.deepEqual(run.calls, ["plain", "attest:withName", "prove", "bind"]);
   const message = run.proved[0];
   assert.equal(message.metricValue, 1904n);
   assert.equal(message.eventAt, 0n, "a climb never carries a granting day");
@@ -301,7 +301,7 @@ test("a first reading above the most the funder accepted records no start, and s
   assert.equal(above.kind === "refused" && above.code, "START_TOO_HIGH");
   assert.equal(above.kind === "refused" && above.message, "You are at 1990, above the 1914 this gift may start from. Nothing was recorded and it has not started. It starts with a reading at 1914 or below.");
   assert.deepEqual(high.proved, [], "nothing is sent to the contract");
-  assert.deepEqual(high.calls, [], "nothing is proved and nothing is bound");
+  assert.deepEqual(high.calls, ["plain"], "nothing is proved and nothing is bound");
   assert.deepEqual(high.recorded, ["look:plain:refused:START_TOO_HIGH"], "written down unsent, so both pages can say it");
 
   // At the cap exactly, it starts.
@@ -352,7 +352,7 @@ test("a start by code looks for the code plainly first: no proof until it is in 
   // The code is there: the proof is taken, and its own name is still the one that binds.
   const seen = harness(THEIR_OWN, OPENED, { plainName: async () => "Erik kxq-prt" });
   assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "start" }, seen.deps)).kind, "started");
-  assert.deepEqual(seen.calls, ["attest:withName", "prove", "bind"]);
+  assert.deepEqual(seen.calls, ["plain", "attest:withName", "prove", "bind"]);
   const lagging = harness(THEIR_OWN, OPENED, { plainName: async () => "Erik KXQPRT", attest: async () => attested(1904, { name: "Erik" }) });
   const notYet = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, lagging.deps);
   assert.equal(notYet.kind === "refused" && notYet.code, "CODE_NOT_IN_NAME");
@@ -492,6 +492,106 @@ test("a proof is claimed before it is paid for: once in six hours after a look t
   assert.match(readFileSync("src/milestone-reading.ts", "utf8"), /claimProof: \(giftId, everySeconds\) => claimPass\(`milestone-proof:\$\{giftId\}`, everySeconds\),/);
 });
 
+test("at the target a proof is taken three times a day at most: then the operator is told, and the gift is held until the next day (3 Oct 2026)", async () => {
+  assert.equal(TRIES_AT_THE_TARGET_A_DAY, 3);
+  const atTarget = { plain: async () => ({ username: "erik", playerId: "41", status: "basic", rating: 1960, ratedAt: NOW - 60, rd: 42, best: 1960 }) };
+  // A proof whose sending fails is not a reason for a fourth: the fetch gave what it had to give.
+  const asked: Array<[string, number]> = [];
+  const told: string[] = [];
+  let left = 3;
+  const tries = {
+    claimTargetTry: async (giftId: string, day: number) => {
+      asked.push([giftId, day]);
+      left -= 1;
+      return left >= 0;
+    },
+    tellTargetNotSettled: async (giftId: string) => void told.push(giftId),
+  };
+  let proofs = 0;
+  const failingSend = {
+    ...atTarget,
+    ...tries,
+    attest: async () => {
+      proofs += 1;
+      return attested(1960);
+    },
+    prove: async () => Promise.reject(new Error("the endpoint did not answer")),
+  };
+  for (let turn = 1; turn <= 3; turn += 1) {
+    const run = harness(BOUND, CLIMBING, failingSend);
+    await assert.rejects(runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, run.deps), /the endpoint did not answer/);
+    assert.equal(proofs, turn, `try ${turn} pays for its proof`);
+  }
+  // The fourth ask of the day: no proof, the refusal is ours, and the operator is told.
+  const fourth = harness(BOUND, CLIMBING, { ...failingSend, attest: async () => assert.fail("no fourth proof") });
+  const stopped = await runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, fourth.deps);
+  assert.deepEqual(stopped, { kind: "refused", giftId: "1000000", code: "CEILING_REACHED", message: "Viky has read this as often as it does in one day. It resumes tomorrow. Nothing is lost.", rating: undefined });
+  assert.ok(MILESTONE_OURS_TO_FIX.has("CEILING_REACHED"), "the pass holds the gift: nothing is settled against it");
+  assert.deepEqual(told, ["1000000"]);
+  assert.deepEqual(asked.map(([, day]) => day), Array.from({ length: 4 }, () => Math.floor(NOW / 86_400)), "claimed by the UTC day");
+  // The live claim is three places a day, each taken once, and the live telling is the day's own alert.
+  const source = readFileSync("src/milestone-reading.ts", "utf8");
+  assert.match(source, /for \(let place = 1; place <= TRIES_AT_THE_TARGET_A_DAY; place \+= 1\) \{\n\s*if \(await claimPass\(`milestone-target:\$\{giftId\}:\$\{day\}:\$\{place\}`, 2 \* 86_400\)\) return true;/);
+  assert.match(source, /tellTargetNotSettled: \(giftId\) => tellOfTriesSpent\(giftId, TRIES_AT_THE_TARGET_A_DAY\),/);
+});
+
+test("a proof after a look that failed never takes the room the day keeps for a reading at the target", async () => {
+  const failing = { plain: async () => Promise.reject(new ChessReadError("FETCH_FAILED", "Chess.com answered 404")) };
+  const rooms: Array<[string, number]> = [];
+  const room = (has: boolean) => ({
+    room: async (giftId: string, proofs: number) => {
+      rooms.push([giftId, proofs]);
+      return has;
+    },
+  });
+  // Room for this reading and for one more after it: taken.
+  let run = harness(BOUND, CLIMBING, { ...failing, ...room(true), attest: async () => attested(1960) });
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, run.deps)).kind, "reached");
+  // No such room: the look's own refusal, and no proof. Chess.com is two fetches a reading, so four are asked for.
+  run = harness(BOUND, CLIMBING, { ...failing, ...room(false), attest: async () => assert.fail("no optional proof without room") });
+  const refused = await runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, run.deps);
+  assert.equal(refused.kind === "refused" && refused.code, "FETCH_FAILED");
+  assert.deepEqual(rooms, [["1000000", 4], ["1000000", 4]]);
+  // At the target the room is not asked for: that reading is the one the room is kept for.
+  rooms.length = 0;
+  run = harness(BOUND, CLIMBING, { plain: async () => ({ username: "erik", playerId: "41", status: "basic", rating: 1960, ratedAt: NOW - 60, rd: 42, best: 1960 }), ...room(false), attest: async () => attested(1960) });
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, run.deps)).kind, "reached");
+  assert.deepEqual(rooms, []);
+});
+
+test("a start pays for no proof it could not use: one already waits, the contract takes none, the look is above the cap or failed", async () => {
+  // A first reading already waits for its signature: it is answered again, and nothing is looked at or read.
+  const waiting = { kind: "sign", giftId: "1000000", start: { of: "milestone", contract: CONTRACT, identityHash: IDENTITY, metricValue: "1904", observedAt: String(NOW - 120) } } as const;
+  const asked: Array<[string, string, number]> = [];
+  let run = harness(RECORD, OPENED, {
+    heldStart: async (giftId, account, nowSeconds) => {
+      asked.push([giftId, account, nowSeconds]);
+      return waiting;
+    },
+  });
+  assert.deepEqual(await runMilestoneReading({ giftId: "1000000", purpose: "start" }, run.deps), waiting);
+  assert.deepEqual(run.calls, []);
+  assert.deepEqual(asked, [["1000000", RECORD.recipient, NOW]]);
+  // While proofs are paused the contract takes no start: said in its own words, with no look and no proof.
+  run = harness(RECORD, { ...OPENED, proofPaused: true });
+  const paused = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, run.deps);
+  assert.equal(paused.kind === "refused" && paused.code, "PAUSED");
+  assert.deepEqual(run.calls, []);
+  // The plain look shows a start above the cap: written down for both pages, as before, and no proof.
+  run = harness(RECORD, OPENED, { plain: async () => ({ username: "erik", playerId: "41", status: "basic", rating: 1990, ratedAt: NOW - 60, rd: 42, best: 1990 }), attest: async () => assert.fail("no proof for a start that could never settle") });
+  const above = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, run.deps);
+  assert.equal(above.kind === "refused" && above.code, "START_TOO_HIGH");
+  assert.equal(above.kind === "refused" && above.message, "You are at 1990, above the 1914 this gift may start from. Nothing was recorded and it has not started. It starts with a reading at 1914 or below.");
+  assert.deepEqual(run.recorded, ["look:plain:refused:START_TOO_HIGH"]);
+  // The look failed, or shows no rating: no proof either, and the person tries again.
+  run = harness(RECORD, OPENED, { plain: async () => Promise.reject(new ChessReadError("FETCH_FAILED", "Chess.com is not answering")), attest: async () => assert.fail("no proof after a look that failed") });
+  const down = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, run.deps);
+  assert.equal(down.kind === "refused" && down.code, "FETCH_FAILED");
+  run = harness(RECORD, OPENED, { plain: async () => ({ username: "erik", playerId: "41", status: "basic", rating: null, ratedAt: null, rd: null, best: null }), attest: async () => assert.fail("no proof with no rating") });
+  const unrated = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, run.deps);
+  assert.equal(unrated.kind === "refused" && unrated.code, "NO_RATING");
+});
+
 test("a look that finds what the last one found is not a new line of the journal", async () => {
   const looks: number[] = [];
   let same = true;
@@ -556,7 +656,7 @@ test("an account Chess.com has closed is bound to nothing, earns nothing, and is
   const start = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, first.deps);
   assert.equal(start.kind === "refused" && start.code, "ACCOUNT_CLOSED");
   assert.equal(start.kind === "refused" && start.message, "Chess.com has closed this account, so this gift can no longer be earned.");
-  assert.deepEqual(first.calls, [], "nothing was proved, and nothing bound");
+  assert.deepEqual(first.calls, ["plain"], "nothing was proved, and nothing bound");
   assert.deepEqual(first.recorded, ["look:plain:refused:ACCOUNT_CLOSED"], "the pages read it from here");
 
   // A later reading, closed while the plain read looks: no proof is paid for, because the proof would say the same.

@@ -1,5 +1,5 @@
 import { keccak256, stringToHex, type Hex } from "viem";
-import { countedFetch, ReclaimLimitReached } from "./attested-calls";
+import { countedFetch, ReclaimCeilingReached, ReclaimLimitReached } from "./attested-calls";
 import { attestedSource, headersFor, matchesOf, type AttestedSource, type ResponseMatch } from "./attested-sources";
 import { allowedAttestors, attestorAccepted, type ZkFetchProof } from "./duolingo-public";
 import { localProofVerified, proofVerifierMode } from "./proof-verification";
@@ -34,6 +34,8 @@ export type AttestedReadErrorCode =
   | "WORKER_OUT_OF_DATE"
   /** The month's limit of attested readings is reached: nothing was fetched (src/attested-calls.ts). */
   | "LIMIT_REACHED"
+  /** A day\'s ceiling of attested readings is reached: nothing was fetched, and readings resume the next UTC day. */
+  | "CEILING_REACHED"
   | "NOT_CONFIGURED";
 
 export class AttestedReadError extends Error {
@@ -158,6 +160,7 @@ export async function attestedRead(sourceId: string, account: string, deps: Atte
     if (error instanceof AttestedReadError) throw error;
     // The month's limit, by Viky's own count or by Reclaim's answer: its own refusal, never a failure to read the page.
     if (error instanceof ReclaimLimitReached) throw new AttestedReadError("LIMIT_REACHED", error.message, undefined, { cause: error });
+    if (error instanceof ReclaimCeilingReached) throw new AttestedReadError("CEILING_REACHED", error.message, undefined, { cause: error });
     throw classifyFetchFailure(error instanceof Error ? error.message : String(error), source, account);
   }
   let valid = false;

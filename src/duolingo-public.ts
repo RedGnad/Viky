@@ -1,5 +1,5 @@
 import { keccak256, stringToHex, type Hex } from "viem";
-import { countedFetch, ReclaimLimitReached } from "./attested-calls";
+import { countedFetch, ReclaimCeilingReached, ReclaimLimitReached } from "./attested-calls";
 import { duolingoProfileUrl, isValidDuolingoUsername } from "./duolingo-public-terms";
 import { localProofVerified, proofVerifierMode } from "./proof-verification";
 
@@ -61,6 +61,8 @@ export type PublicProfileErrorCode =
   | "PROOF_MISMATCH"
   /** The month's limit of attested readings is reached: nothing was fetched (src/attested-calls.ts). */
   | "LIMIT_REACHED"
+  /** A day\'s ceiling of attested readings is reached: nothing was fetched, and readings resume the next UTC day. */
+  | "CEILING_REACHED"
   | "NOT_CONFIGURED";
 
 export class PublicProfileError extends Error {
@@ -193,6 +195,8 @@ export async function fetchPublicProfile(username: string, deps: PublicProfileDe
   } catch (error) {
     // The month's limit, by Viky's own count or by Reclaim's answer: its own refusal, never a failure to read Duolingo.
     if (error instanceof ReclaimLimitReached) throw new PublicProfileError("LIMIT_REACHED", error.message, { cause: error });
+    // A day's ceiling: its own refusal too, and never a failure to read Duolingo.
+    if (error instanceof ReclaimCeilingReached) throw new PublicProfileError("CEILING_REACHED", error.message, { cause: error });
     const message = error instanceof Error ? error.message : String(error);
     // zkFetch rejects when a responseMatch finds nothing: an unknown username answers `{"users":[]}`.
     if (/match|regex|not found/i.test(message)) {
