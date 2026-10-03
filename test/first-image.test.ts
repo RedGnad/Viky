@@ -27,7 +27,10 @@ test("the server draws the starting state: the days to come not there, the amoun
   const css = readFileSync("app/globals.css", "utf8");
   assert.match(css, /\.arrival-pending svg,\n\.arrival-pending\.climb-walker,\n\.arrival-pending\.climb-done \{\n  opacity: 0;\n\}/);
   // Reduced motion never moves, so its first image is the final state: the pending days are shown where they are.
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\n  \.arrival-pending svg,\n  \.arrival-pending\.climb-walker,\n  \.arrival-pending\.climb-done \{\n    opacity: 1;\n  \}\n\}/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\n  \.arrival-pending svg,\n  \.arrival-pending\.climb-walker,\n  \.arrival-pending\.climb-done \{\n    opacity: 1;\n  \}/);
+  // A day earned is the one thing there from the first image, asleep (test/days-sleep.test.ts): a day gone back, and a
+  // climb's walker, are still not there.
+  assert.match(css, /\.arrival-pending svg\[data-character="earned"\] \{\n  opacity: 1;\n\}/);
 });
 
 test("the dated things are in the first image: the server's render minute is the clock of its render and of hydration", () => {

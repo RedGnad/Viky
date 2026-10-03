@@ -427,20 +427,24 @@ export const MOTION = {
    * emphasized decelerate. The one movement on a clock outside the working ring, named, and still under reduced motion.
    */
   rotate: { holdMs: 2800, outMs: 200, inMs: 300, outEasing: EASING.emphasizedAccelerate, inEasing: EASING.emphasizedDecelerate, rise: "0.45em" },
-  /** A day earned, on arrival: it gathers, jumps once, lands, and its face opens on the landing spring. */
+  /**
+   * A day earned, on arrival: it gathers, jumps once, lands, and its face opens on the landing spring.
+   *
+   * A day sleeps until it is done (the founder, 4 Oct 2026): so a day earned since the last visit stands with its eyes
+   * shut until its turn, jumps with one small turn in the air, as the landing's character whirls out (`hero.turns`),
+   * and opens its eyes as it lands. `eyesShut` is how flat an open eye is drawn while it sleeps, the closed eye's 2.4
+   * over the open eye's height; `mouthShut` how small its smile, as the landing's character's before it opens.
+   */
   earned: {
     gatherMs: 80,
     riseMs: 170,
     fallMs: 130,
     riseBy: 0.38,
     landing: SPRING.expressiveFastSpatial,
+    turns: 1,
+    eyesShut: 0.36,
+    mouthShut: 0.4,
   },
-  /**
-   * The days wake when a gift is opened (the founder, 3 Oct 2026; the motion roadmap, section 6): their eyes open one
-   * by one from the left, on the spring a day earned lands on, 40 ms apart, and the whole row has woken in 600 ms
-   * whatever its length, so the days past the first few open together. Material's long4 for the budget.
-   */
-  wake: { staggerMs: 40, budgetMs: 600, eyes: SPRING.expressiveFastSpatial },
   /** A day gone back, on arrival: it slides to the left and fades to its resting opacity. Material's medium2. */
   returned: { durationMs: 300, easing: EASING.standard, fromOffset: 0.22 },
   /** The amount, on arrival and last: it counts to its value once, in under a second. Material's extra-long1. */
