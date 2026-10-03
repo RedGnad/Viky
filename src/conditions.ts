@@ -339,6 +339,26 @@ export type RecipientWords = Readonly<{
   catchUpTheirs: (deadline: string) => string;
   /** The outcome of a reading that found nothing new today. */
   alreadyRead: string;
+  /**
+   * The same gift read as the day goes (the third daily contract, 3 Oct 2026): a day is paid the day it is done, its
+   * page looks as it opens, and nothing is pressed. Absent on a condition that is read each morning on every version.
+   */
+  asItGoes?: Readonly<{
+    /** Connected: the first day is the day of the connection. */
+    countingFrom: (firstDay: string) => string;
+    /** How it is read, in "How this is checked", to the person it is for and to anybody else. */
+    reads: string;
+    readsTheirs: string;
+    /** Today is open and what is done each day has not been seen yet. */
+    notIn: string;
+    /** It has been seen, and the attested reading is under way. */
+    inYours: string;
+    inTheirs: (name: string | null) => string;
+    /** An earlier day is still open: what the next one pays, and what one more pays. `day` is "yesterday", "today" or a date. */
+    nextPaysYours: (day: string) => string;
+    nextPaysTheirs: (name: string | null, day: string) => string;
+    oneMorePays: (day: string) => string;
+  }>;
 }>;
 
 export const DUOLINGO_DAILY: Condition = {
@@ -419,6 +439,17 @@ export const DUOLINGO_DAILY: Condition = {
     catchUpYours: (deadline) => `Yesterday is not counted yet, and not lost either. Do a lesson before ${deadline} your time and it still counts.`,
     catchUpTheirs: (deadline) => `Yesterday is not counted yet, and not lost either: a lesson before ${deadline} your time still earns that day.`,
     alreadyRead: "Viky already read your Duolingo today. Come back tomorrow.",
+    asItGoes: {
+      countingFrom: (firstDay) => `Done. From today, ${firstDay}, every day with your lesson is yours, counted the day you do it.`,
+      reads: "Viky looks at your Duolingo when this page opens, and through the day. A lesson is counted the day you do it.",
+      readsTheirs: "Viky looks at their Duolingo when this page opens, and through the day. A lesson is counted the day it is done.",
+      notIn: "Today's lesson is not in yet.",
+      inYours: "Your lesson is in.",
+      inTheirs: (name) => (name ? `${name}'s lesson is in.` : "Their lesson is in."),
+      nextPaysYours: (day) => `Your next lesson pays ${day}.`,
+      nextPaysTheirs: (name, day) => `${name ? `${name}'s` : "Their"} next lesson pays ${day}.`,
+      oneMorePays: (day) => `One more pays ${day}.`,
+    },
   },
 };
 

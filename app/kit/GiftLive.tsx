@@ -38,6 +38,7 @@ export function GiftLive({
   closed,
   reading,
   limit = null,
+  waiting = null,
   action,
   agreed,
   checked,
@@ -61,6 +62,11 @@ export function GiftLive({
   reading?: ReactNode;
   /** The month's limit of readings is reached: the short sentence that says so, in the red (src/sentences.ts, LIMIT). */
   limit?: string | null;
+  /**
+   * A reading that started by itself is under way (a gift read as its page opens): the wheel and the step, under the
+   * state, where the next moment would have been said. Nothing was pressed, so no button carries it.
+   */
+  waiting?: string | null;
   /** The one action of this moment, or nothing. Never two of the same weight. */
   action?: ReactNode;
   /** What was agreed, folded under its name, and open at the one moment a person is discovering it. */
@@ -94,7 +100,14 @@ export function GiftLive({
             {limit}
           </p>
         ) : null}
-        {live.next ? <p className="gift-next">{live.next}</p> : null}
+        {waiting ? (
+          <p className="gift-next inline-flex items-center gap-[var(--space-sm)]" role="status" data-waiting="">
+            <span className="working-ring working-ring-inline" aria-hidden="true" />
+            <span>{waiting}</span>
+          </p>
+        ) : live.next ? (
+          <p className="gift-next">{live.next}</p>
+        ) : null}
 
         {live.figure ? (
           <div className="gift-figures">

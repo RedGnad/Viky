@@ -643,7 +643,7 @@ export const FUND = {
       ends: "Ends",
     },
     dayEarned: (perDay: string, exact: boolean, days: number) => `${exact ? "" : "about "}${perDay}, over ${days} days`,
-    firstDay: (source: string) => `The day after they connect ${source}`,
+    firstDay: (source: string, sameDay = false) => `The day ${sameDay ? "" : "after "}they connect ${source}`,
     ends: (days: number) => `${days} days after that`,
     missed: (time: string) =>
       `A day they miss can still be caught up the next day. If it is not, it comes back to you by itself the morning after, at about ${time} your time.`,
@@ -770,7 +770,7 @@ export const FUND = {
     about: "about ",
     aDay: "A day",
     days: (count: number) => (count === 1 ? "Day" : "Days"),
-    firstDay: (source: string) => `First day counted the day after they connect ${source}.`,
+    firstDay: (source: string, sameDay = false) => `First day counted the day ${sameDay ? "" : "after "}they connect ${source}.`,
     reference: (when: string, giftId: string) => `Made ${when}. Reference: gift ${giftId}.`,
     linkTitle: "The link",
     copy: "Copy the link",
@@ -782,9 +782,9 @@ export const FUND = {
     findItAgain: "Lose this link and the gift's page makes you a new one, as long as nobody has opened it.",
     nextTitle: "What happens next",
     theyConnectAny: "connects what they will do",
-    next: (recipient: string, theyConnect: string, eachDay: string, perDay: string, time: string) => [
+    next: (recipient: string, theyConnect: string, eachDay: string, perDay: string, time: string, sameDay = false) => [
       `${recipient} opens the link and ${theyConnect}.`,
-      `From the day after, ${eachDay} puts ${perDay} in ${their(recipient)} name.`,
+      `From ${sameDay ? "that day" : "the day after"}, ${eachDay} puts ${perDay} in ${their(recipient)} name.`,
       `A day they miss and do not catch up the next day comes back to your account the morning after, at about ${time} your time. If nobody opens the link within 14 days, it all comes back.`,
     ],
     seeIt: "See this gift",
@@ -831,7 +831,8 @@ export const GIFT_PAGE = {
   notYours: "This gift is not yours. You can read where it stands; nothing here is yours to do.",
   becomesYours: (perDay: string, eachDay: string, when: string) => `It becomes yours as you go: ${perDay} for ${eachDay}, ${when}.`,
   becomesTheirs: (perDay: string, eachDay: string, when: string) => `It becomes theirs as they go: ${perDay} for ${eachDay}, ${when}.`,
-  forDaysFromConnecting: (count: number) => `for ${days(count)} from the day after it is connected`,
+  /** On the third daily contract the first day is the day of the connection; before it, the day after. */
+  forDaysFromConnecting: (count: number, sameDay = false) => `for ${days(count)} from the day ${sameDay ? "" : "after "}it is connected`,
   goesBackToThem: (funder: string | null) =>
     sentence(`The same goes back to ${funder ?? "them"} for each day without it that is not caught up the next day. Nobody else ever profits from a missed day.`),
   comesBackToYou: sentence("The same comes back to you for each day without it that is not caught up the next day. Nobody else ever profits from a missed day."),
@@ -1135,6 +1136,31 @@ export const GIFT_LIVE = {
   dayOfDays: (day: number, total: number) => `Day ${day} of ${total}`,
   /** The next reading as a figure beside the money, where nothing has gone back yet: the hour, and what it is. */
   nextReading: "Next reading",
+  /**
+   * A gift read as the day goes (the founder's mockup of 3 Oct 2026, the day on the third daily contract). There is
+   * no next reading to announce: the page looked as it opened. What stands in its place is how long is left, at the
+   * reader's own clock, and once today is counted, what today added. What is waited for and what was seen are the
+   * register's words (src/conditions.ts, `asItGoes`), since they name what the person does.
+   */
+  asItGoes: {
+    counted: "Today counted.",
+    /** `day` begins the sentence: "Yesterday", or a date when the open day is older. */
+    catchUp: (day: string) => `${day} can still be caught up.`,
+    leftToday: "Left today",
+    leftFor: (day: string) => `Left for ${day}`,
+    today: "Today",
+    plus: (amount: string) => `+ ${amount}`,
+    /** The same as a sentence, once what has gone back takes the right column. */
+    leftTodayLine: (left: string) => `${left} left today.`,
+    leftForLine: (left: string, day: string) => `${left} left for ${day}.`,
+    yesterday: "yesterday",
+    thisDay: "today",
+    /** A look or a reading that failed on our side: the day stays open, and until when it can still be counted. */
+    notReadNow: (source: string) => `${source} could not be read just now.`,
+    stillOpenUntil: (until: string) => `The day stays open: it can still be counted until ${until}.`,
+    /** Past the last day, every day settled, in the hours before the gift is closed. */
+    over: "Its days are over.",
+  },
   /** The line above the name, to a reader nobody gave the names to: neither "your" nor anybody's. */
   aGift: "A gift",
   /** The card's title, to a reader given no name for the person it is for. */

@@ -474,11 +474,12 @@ test("the gift's page says the limit where it says where the gift stands, and as
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
   assert.match(page, /const readingsStopped = Boolean\(limit\?\.readings && status\.opened && condition\?\.nature !== "shown"\);/);
   assert.match(page, /&& \(voice === "recipient" \|\| voice === "funder"\) && !readingsStopped\);/, "no live reading while the limit stands");
-  assert.match(page, /const nextReading = nowMs === 0 \|\| gift\.finished \|\| gift\.cancelled \|\| readingsStopped \? null :/, "and no next reading is announced");
+  assert.match(page, /const nextReading = nowMs === 0 \|\| gift\.finished \|\| gift\.cancelled \|\| readingsStopped \|\| asItGoes \? null :/, "and no next reading is announced");
   assert.match(page, /readingLimitInWords\(mine \? \(limit\?\.countableUntil \?\? null\) : null, nowMs\)/, "the hour is said to the person whose day it is");
   assert.match(page, /limit=\{limitLine\}/, "in the card, where the state is said");
   assert.match(readFileSync("app/kit/GiftLive.tsx", "utf8"), /\{limit \? \(\n\s*<p className="limit-said" role="status" data-reading-limit>/, "short and in the red");
-  assert.match(page, /&& !gift\.sourceClosed && !readingsStopped \? \(/, "and no count is offered");
+  assert.match(page, /&& !gift\.sourceClosed && !readingsStopped && !asItGoes \? \(/, "and no count is offered");
+  assert.match(page, /const readsTheDay = Boolean\(asItGoes && \(mine \|\| readerIsFunder\) && !readingsStopped && lessonWouldPay\(today\)\);/, "nor does a habit read as its page opens look");
   assert.match(page, /limitReached=\{Boolean\(limit\?\.proofs\)\}/);
   const proof = readFileSync("app/kit/ShowProof.tsx", "utf8");
   assert.match(proof, /if \(limitReached && state\.at !== "waiting"\) \{/);
