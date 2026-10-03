@@ -18,7 +18,8 @@ import { liveCreationDeps } from "@/src/gift-creation-live";
 import { MAX_GIFT_UNITS, MIN_GIFT_UNITS } from "@/src/money";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { admitRelay, countedIfSent } from "@/src/relay-admission";
-import { fundingNonceV2 } from "@/src/v2-protocol";
+import { newDailyGiftsContract } from "@/src/v2";
+import { fundingNonceOn } from "@/src/v2-protocol";
 import { answeredLink, requestedLink } from "@/src/v2-request";
 
 export const runtime = "nodejs";
@@ -136,8 +137,10 @@ export async function POST(request: Request) {
     };
     // The link the funder's browser made, on the second version: its opening key is part of what was signed.
     const link = requestedLink(body, "daily");
-    const signedFor = link
-      ? fundingNonceV2({ funder: params.funder, refundTo: params.refundTo, openingKey: link.openingKey, goalType, dailyTarget, durationDays, amount, salt: params.salt })
+    // Each daily contract takes only a nonce made with its own tag: the one new gifts are made on is the one signed for.
+    const madeOn = newDailyGiftsContract();
+    const signedFor = link && madeOn
+      ? fundingNonceOn(madeOn, { funder: params.funder, refundTo: params.refundTo, openingKey: link.openingKey, goalType, dailyTarget, durationDays, amount, salt: params.salt })
       : fundingNonce(params);
     if (String(a.nonce).toLowerCase() !== signedFor.toLowerCase()) {
       throw new GiftApiError("TERMS_MISMATCH", "The signed terms do not match the gift");

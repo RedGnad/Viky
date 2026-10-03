@@ -1,6 +1,7 @@
 import { DuolingoProfileError, type PublicDuolingoProfile } from "./duolingo-profile";
 import { displayNameHasCode } from "./duolingo-public-terms";
 import { utcDayOf, type GiftState } from "./gift-reader";
+import { paysTheSameDay } from "./v2";
 
 /**
  * The look a daily gift takes before it pays for an attested reading (3 Oct 2026). Server only.
@@ -21,7 +22,8 @@ import { utcDayOf, type GiftState } from "./gift-reader";
  * it cannot say (the source did not answer, the answer carries no figure) the attested reading is taken as before.
  */
 
-type Days = Pick<GiftState, "startDay" | "endDay" | "settledThroughDay">;
+/** The days a contract holds for a gift, and which version of the daily contract holds them: the rule is the version's. */
+type Days = Pick<GiftState, "startDay" | "endDay" | "settledThroughDay"> & Partial<Pick<GiftState, "version">>;
 type Counted = Days & Pick<GiftState, "baselineValue" | "dailyTarget">;
 
 /** The contract's own refusals of a check-in that a look can foresee, by the names the contract gives them. */
@@ -29,7 +31,8 @@ export type ForeseenRefusal = "MetricDecreased" | "OutsideWindow" | "NothingToCr
 
 /**
  * Whether a reading taken now has no day it could credit, whatever it reads: the contract's `OutsideWindow` and
- * `NothingToCredit`, as `checkIn` writes them on the first two versions (a reading credits through the day before it).
+ * `NothingToCredit`, as `checkIn` writes them. On the first two versions a reading credits through the day before
+ * it; on the third, through its own day, and `OutsideWindow` no longer exists there.
  *
  * It is judged on the days the contract holds as settled. The contract first settles the days whose window has run
  * out, which can only leave fewer days open than this counts, never more: a refusal here is one the contract gives.
@@ -37,9 +40,10 @@ export type ForeseenRefusal = "MetricDecreased" | "OutsideWindow" | "NothingToCr
  */
 export function noDayToCredit(gift: Days, nowSeconds: number): "OutsideWindow" | "NothingToCredit" | null {
   if (!gift.startDay) return null;
-  const lastCompleteDay = utcDayOf(nowSeconds) - 1;
-  if (lastCompleteDay < gift.startDay) return "OutsideWindow";
-  const upper = Math.min(lastCompleteDay, gift.endDay);
+  const sameDay = paysTheSameDay(gift.version);
+  const lastDayPaid = sameDay ? utcDayOf(nowSeconds) : utcDayOf(nowSeconds) - 1;
+  if (lastDayPaid < gift.startDay) return sameDay ? "NothingToCredit" : "OutsideWindow";
+  const upper = Math.min(lastDayPaid, gift.endDay);
   return upper <= gift.settledThroughDay ? "NothingToCredit" : null;
 }
 
@@ -64,28 +68,33 @@ function figureOf(profile: PublicDuolingoProfile, courseId: string | null): numb
 }
 
 /**
- * The look before a count. It answers the contract's refusal, with the figure that earns it when one was read, and no
- * proof is taken; or nothing, and the attested reading is taken: a day can be credited, or the look could not say. A
- * look that fails never stops a reading (the pass takes one per gift at most, as it always did).
+ * What the look before a count found: the contract's refusal, with the figure that earns it when one was read; a day
+ * the contract can credit with the figure it saw; or nothing it could say, because the source did not answer or its
+ * answer carries no figure.
  */
-export async function lookBeforeCount(
-  input: { username: string; courseId: string | null; gift: Counted; nowSeconds: number },
-  look: ProfileLook,
-): Promise<{ refusal: ForeseenRefusal; xp?: number } | null> {
+export type CountLook = Readonly<{ kind: "refused"; refusal: ForeseenRefusal; xp?: number } | { kind: "seen"; xp: number } | { kind: "unseen" }>;
+
+/**
+ * The look before a count. On a refusal no proof is taken. On a day to credit the attested reading is taken. When the
+ * look could not say, whoever asked decides: the nightly pass takes the reading all the same, one per gift at most, as
+ * it always did, so a look that fails never costs a person a day; an open page and the pass of every quarter of an
+ * hour take none and come back.
+ */
+export async function lookBeforeCount(input: { username: string; courseId: string | null; gift: Counted; nowSeconds: number }, look: ProfileLook): Promise<CountLook> {
   // No day to credit whatever the profile shows: the source is not even asked.
   const noDay = noDayToCredit(input.gift, input.nowSeconds);
-  if (noDay) return { refusal: noDay };
+  if (noDay) return { kind: "refused", refusal: noDay };
   let profile: PublicDuolingoProfile;
   try {
     profile = await look(input.username);
   } catch (error) {
     if (!(error instanceof DuolingoProfileError)) console.error(`look before a count failed: ${error instanceof Error ? error.message : String(error)}`);
-    return null;
+    return { kind: "unseen" };
   }
   const xp = figureOf(profile, input.courseId);
-  if (xp === null) return null;
+  if (xp === null) return { kind: "unseen" };
   const refusal = foreseenRefusal(input.gift, xp, input.nowSeconds);
-  return refusal ? { refusal, xp } : null;
+  return refusal ? { kind: "refused", refusal, xp } : { kind: "seen", xp };
 }
 
 /** Why a connection by code stops at the look, by the codes the attested reading already answers. */

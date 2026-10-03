@@ -5,6 +5,7 @@ import { useMinute } from "../kit/clock";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { openWithTheLinkSecret, type StartStep } from "@/src/client/v2";
 import { openingSecretOf } from "@/src/v2-protocol";
+import { opensByItsLink } from "@/src/v2";
 import { useMoneySession } from "@/src/account/money-session";
 import { isAccountError } from "@/src/account/errors";
 import { useDoor } from "@/src/account/door";
@@ -415,7 +416,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
 
   // What opens the gift: on the first version the key the link carries in `?t=`, which the server compares; on the
   // second the secret after the link's `#`, which no server is sent and which signs the opening here.
-  const openingKey = status.version === 2 ? openingSecret : linkKey;
+  const linkOpened = opensByItsLink(status.version);
+  const openingKey = linkOpened ? openingSecret : linkKey;
   const open = () =>
     run(
       "opening",
@@ -426,7 +428,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         // the contract the gift is on and that account are what it needs (src/client/v2.ts).
         const contract = milestone ? milestone.escrow : daily?.escrow;
         // The secret after the `#` signs here or goes nowhere: it is never handed to the function that posts a key.
-        if (status.version === 2) await openWithTheLinkSecret({ giftId, linkSecret: openingKey, contract, recipient: address });
+        if (linkOpened) await openWithTheLinkSecret({ giftId, linkSecret: openingKey, contract, recipient: address });
         else await claimGift(giftId, openingKey);
         return null;
       },
@@ -669,7 +671,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         );
       case "linkAgain":
         // Shared with who gave it, how much in the reader's own currency (the funder's), and what it is.
-        return <LinkAgain giftId={giftId} found={status.version === 2} shareText={sharedWith(funderName, spokenAmount(money.led(BigInt(status.amount))), previewLine(condition, Boolean(milestone)))} />;
+        return <LinkAgain giftId={giftId} found={linkOpened} shareText={sharedWith(funderName, spokenAmount(money.led(BigInt(status.amount))), previewLine(condition, Boolean(milestone)))} />;
       case "askAgain":
         return <AskAgain funderName={funderName} />;
       case "offerAgain":
@@ -738,7 +740,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       {/* The ending (the audit of 1 Oct 2026): only a gift of the second version of the contracts has one. The funder
           reads here that it can happen, before as after the gift is opened; the person it is for has the gesture,
           under the card, in "You decide". */}
-      {readerIsFunder && status.version === 2 && !gift.finished && !gift.cancelled ? <p className={HELP}>{E.funderMay(recipientName)}</p> : null}
+      {readerIsFunder && linkOpened && !gift.finished && !gift.cancelled ? <p className={HELP}>{E.funderMay(recipientName)}</p> : null}
       {/* Where money already theirs goes: a sentence, so it is read here and not in the card's small capitals (rule 5). */}
       {live.quiet ? <p className={HELP}>{live.quiet}</p> : null}
     </>

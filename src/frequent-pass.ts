@@ -1,5 +1,10 @@
+import { readAsTheDayGoes, readDailyGift } from "./daily-count";
+import type { PublicCheckInOutcome } from "./duolingo-public-checkin";
+import { loadBoundGifts, type GiftRecord } from "./gift-store";
 import { liveMilestonePassDeps, milestonePass, type MilestonePassDeps, type MilestonePassLine } from "./milestone-pass";
+import { isMilestoneGiftId } from "./milestone-protocol";
 import { runMilestoneReading } from "./milestone-reading";
+import { RelayerError } from "./relayer";
 
 // The guard has a module of its own since other things are claimed with it too; its names are still read from here.
 export { claimPass, configurePassGuard, ensurePassGuardSchema, lastGuardedPass } from "./pass-guard";
@@ -35,4 +40,59 @@ function frequentPassDeps(): MilestonePassDeps {
     // Creations left half made are the nightly passes' to complete.
     completeCreations: undefined,
   };
+}
+
+/**
+ * The same for the daily gifts read as the day goes (src/daily-count.ts, the founder, 3 Oct 2026): on the third daily
+ * contract a reading pays its own day, so a lesson done at noon is paid within the quarter of an hour rather than at
+ * the next night's pass. Every quarter of an hour, each such gift is looked at plainly, which costs nothing, and an
+ * attested reading is taken only for a lesson the look saw: one proof for a day credited, none for a day without a
+ * lesson, none when the look fails. It reads and credits, nothing else: settling, sending back and the reading
+ * without a look stay with the nightly passes, and a day it credits is told as any credited day is (src/gift-relay.ts).
+ *
+ * It has no address of its own. The scheduler's one call every five minutes (`/api/cron/milestones`) claims it under
+ * its own guard, fourteen minutes: a call can arrive a little early, which a guard of fifteen would drop.
+ */
+export const FREQUENT_DAILY_PASS_EVERY_SECONDS = 14 * 60;
+
+export type FrequentDailyLine = Readonly<{ giftId: string; result: string }>;
+
+export type FrequentDailyDeps = Readonly<{
+  /** Every connected daily gift; the pass keeps those read as the day goes. */
+  gifts: () => Promise<ReadonlyArray<Pick<GiftRecord, "giftId" | "escrow" | "goalType">>>;
+  count: (giftId: string) => Promise<PublicCheckInOutcome>;
+}>;
+
+const liveFrequentDailyDeps: FrequentDailyDeps = {
+  gifts: loadBoundGifts,
+  count: (giftId) => readDailyGift({ giftId, purpose: "count", onlyOnALook: true }),
+};
+
+function dailyLine(outcome: PublicCheckInOutcome): string {
+  switch (outcome.kind) {
+    case "counted":
+      return `counted, ${outcome.creditedDays} day(s) credited`;
+    case "refused":
+      return `${outcome.looked ? "looked" : "refused"}: ${outcome.code}`;
+    case "already":
+      return `skipped: ${outcome.reason}`;
+    default:
+      return outcome.kind;
+  }
+}
+
+/** The pass itself: one gift after another, and a gift whose reading fails is one line, never the end of the pass. */
+export async function frequentDailyPass(deps: FrequentDailyDeps = liveFrequentDailyDeps): Promise<FrequentDailyLine[]> {
+  const lines: FrequentDailyLine[] = [];
+  for (const record of await deps.gifts()) {
+    if (isMilestoneGiftId(record.giftId) || !readAsTheDayGoes(record)) continue;
+    try {
+      lines.push({ giftId: record.giftId, result: dailyLine(await deps.count(record.giftId)) });
+    } catch (error) {
+      // What every later relay would meet as well ends the pass: the relayer below its reserve, or not set up.
+      if (error instanceof RelayerError && (error.code === "RESERVE_TOO_LOW" || error.code === "WRONG_CHAIN" || error.code === "NOT_CONFIGURED")) throw error;
+      lines.push({ giftId: record.giftId, result: `failed: ${error instanceof Error ? error.message.slice(0, 120) : String(error)}` });
+    }
+  }
+  return lines;
 }

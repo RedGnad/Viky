@@ -56,6 +56,40 @@ test("a figure that earns no day is foreseen in the order the contract refuses, 
   for (const name of ["MetricDecreased", "OutsideWindow", "NothingToCredit", "InsufficientProgress"]) assert.notEqual(contractRefusal(name)?.code, "REFUSED");
 });
 
+test("on the third contract a reading pays its own day: the look opens today, and the day of the connection is the first", () => {
+  // Connected on a day, that day is the first: a lesson later that day can be paid by a reading that same day.
+  const third = { ...GIFT, version: 3 as const, startDay: CONNECTED, endDay: CONNECTED + 6, settledThroughDay: CONNECTED - 1 };
+  const noon = (day: number) => day * DAY + 12 * 3_600;
+  assert.equal(noDayToCredit(third, noon(CONNECTED)), null, "the day of the connection is open to a reading that day");
+  assert.equal(noDayToCredit({ ...GIFT, version: 2, startDay: CONNECTED + 1 }, noon(CONNECTED + 1)), "OutsideWindow", "on the second, its own day is never open to it");
+  // Today paid: nothing more today, and tomorrow's reading opens tomorrow.
+  assert.equal(noDayToCredit({ ...third, settledThroughDay: CONNECTED }, noon(CONNECTED)), "NothingToCredit");
+  assert.equal(noDayToCredit({ ...third, settledThroughDay: CONNECTED }, noon(CONNECTED + 1)), null);
+  // The last day is paid on the last day, and after it only a day still unsettled is open.
+  assert.equal(noDayToCredit({ ...third, settledThroughDay: CONNECTED + 5 }, noon(CONNECTED + 6)), null);
+  assert.equal(noDayToCredit({ ...third, settledThroughDay: CONNECTED + 6 }, noon(CONNECTED + 7)), "NothingToCredit");
+  // The figure is judged as before: one full target since the last reading, or nothing is taken.
+  assert.equal(foreseenRefusal(third, 1_009, noon(CONNECTED)), "InsufficientProgress");
+  assert.equal(foreseenRefusal(third, 1_010, noon(CONNECTED)), null);
+  // And it is the third contract's own rule, in its own words.
+  const source = readFileSync("contracts/GiftEscrowV3.sol", "utf8");
+  let from = 0;
+  for (const line of [
+    "uint32 startDay = _readDay(a.observedAt);",
+    "if (a.metricValue < g.baselineValue) revert MetricDecreased();",
+    "uint32 readDay = _readDay(a.observedAt);",
+    "uint32 upper = readDay > g.endDay ? g.endDay : readDay;",
+    "if (upper <= g.settledThroughDay) revert NothingToCredit();",
+    "uint256 possible = uint256(a.metricValue - g.baselineValue) / g.dailyTarget;",
+    "if (credit == 0) revert InsufficientProgress();",
+  ]) {
+    const at = source.indexOf(line, from);
+    assert.ok(at >= 0, line);
+    from = at;
+  }
+  assert.ok(!source.includes("OutsideWindow"), "the third contract has no such refusal");
+});
+
 test("the rule the look mirrors is the one both contracts in service write, in the order they write it", () => {
   const rule = [
     "if (a.metricValue < g.baselineValue) revert MetricDecreased();",
@@ -79,21 +113,21 @@ test("the rule the look mirrors is the one both contracts in service write, in t
 
 test("before a count, the look answers the refusal and its figure, or nothing: and nothing whenever it cannot say", async () => {
   const input = { username: "Ama", courseId: null, gift: GIFT, nowSeconds: morning(CONNECTED + 2) };
-  assert.deepEqual(await lookBeforeCount(input, async () => profile({ totalXp: 1_004 })), { refusal: "InsufficientProgress", xp: 1_004 });
-  assert.equal(await lookBeforeCount(input, async () => profile({ totalXp: 1_010 })), null, "a day to credit: the proof is taken");
+  assert.deepEqual(await lookBeforeCount(input, async () => profile({ totalXp: 1_004 })), { kind: "refused", refusal: "InsufficientProgress", xp: 1_004 });
+  assert.deepEqual(await lookBeforeCount(input, async () => profile({ totalXp: 1_010 })), { kind: "seen", xp: 1_010 }, "a day to credit: the proof is taken");
   // No day to credit whatever the profile shows: refused without asking the source, even one that is not answering.
   const never = async () => Promise.reject(new Error("never asked"));
-  assert.deepEqual(await lookBeforeCount({ ...input, nowSeconds: morning(CONNECTED + 1) }, never), { refusal: "OutsideWindow" });
-  assert.deepEqual(await lookBeforeCount({ ...input, gift: { ...GIFT, settledThroughDay: CONNECTED + 7 }, nowSeconds: morning(CONNECTED + 9) }, never), { refusal: "NothingToCredit" });
-  // The look failed, or its answer carries no figure: the attested reading is taken, as it always was.
-  assert.equal(await lookBeforeCount(input, async () => Promise.reject(new DuolingoProfileError("SOURCE_UNAVAILABLE", "down"))), null);
-  assert.equal(await lookBeforeCount(input, async () => Promise.reject(new DuolingoProfileError("NO_SUCH_PROFILE", "none"))), null);
-  assert.equal(await lookBeforeCount(input, async () => profile({ totalXp: null })), null);
+  assert.deepEqual(await lookBeforeCount({ ...input, nowSeconds: morning(CONNECTED + 1) }, never), { kind: "refused", refusal: "OutsideWindow" });
+  assert.deepEqual(await lookBeforeCount({ ...input, gift: { ...GIFT, settledThroughDay: CONNECTED + 7 }, nowSeconds: morning(CONNECTED + 9) }, never), { kind: "refused", refusal: "NothingToCredit" });
+  // The look failed, or its answer carries no figure: it says so, and whoever asked decides whether a proof is taken.
+  assert.deepEqual(await lookBeforeCount(input, async () => Promise.reject(new DuolingoProfileError("SOURCE_UNAVAILABLE", "down"))), { kind: "unseen" });
+  assert.deepEqual(await lookBeforeCount(input, async () => Promise.reject(new DuolingoProfileError("NO_SUCH_PROFILE", "none"))), { kind: "unseen" });
+  assert.deepEqual(await lookBeforeCount(input, async () => profile({ totalXp: null })), { kind: "unseen" });
   // A gift on one course is judged on that course's experience, never on the whole profile's.
   const courses = [{ id: "DUOLINGO_ES_EN", title: "Spanish", xp: 1_003 }];
   const onCourse = { ...input, courseId: "DUOLINGO_ES_EN" };
-  assert.deepEqual(await lookBeforeCount(onCourse, async () => profile({ totalXp: 9_000, courses })), { refusal: "InsufficientProgress", xp: 1_003 });
-  assert.equal(await lookBeforeCount({ ...input, courseId: "DUOLINGO_IT_EN" }, async () => profile({ totalXp: 1_000, courses })), null, "a course the look does not show");
+  assert.deepEqual(await lookBeforeCount(onCourse, async () => profile({ totalXp: 9_000, courses })), { kind: "refused", refusal: "InsufficientProgress", xp: 1_003 });
+  assert.deepEqual(await lookBeforeCount({ ...input, courseId: "DUOLINGO_IT_EN" }, async () => profile({ totalXp: 1_000, courses })), { kind: "unseen" }, "a course the look does not show");
 });
 
 test("before a connection by code, the look stops a try the code is not in, and a look that failed takes no proof", async () => {

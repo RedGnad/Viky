@@ -34,7 +34,8 @@ export async function liveFacts(giftId: string): Promise<GiftFacts | null> {
   const names = { recipientName: record.recipientName, funderName: record.funderName };
   // The daily register is asked by the goal type, which only the daily contract numbers: a milestone gift's own
   // number means something else there, and no milestone sentence carries a word for yesterday anyway.
-  const words = { yesterday: isMilestoneGiftId(giftId) ? undefined : conditionOfGoal(record.goalType)?.words.yesterday };
+  const said = isMilestoneGiftId(giftId) ? undefined : conditionOfGoal(record.goalType)?.words;
+  const words = { yesterday: said?.yesterday, today: said?.today };
   try {
     const gift = await readGift(escrowOf(record), giftId);
     return { funder: record.funder, names, words, perDayDisplay: formatAusd(gift.perDay), amountDisplay: formatAusd(gift.amount), perDayUnits: gift.perDay, amountUnits: gift.amount };

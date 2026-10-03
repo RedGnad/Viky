@@ -501,6 +501,9 @@ function describe(outcome: PublicCheckInOutcome): DailyPassLine {
     case "refused":
       // A refusal a plain look foresaw says so: no attested reading was taken for it (src/daily-look.ts).
       return { giftId: outcome.giftId, step: "count", result: `refused: ${outcome.code}${outcome.xp !== undefined ? ` (${outcome.xp} XP)` : ""}${outcome.looked ? ", by a look, no proof taken" : ""}` };
+    // A pass never asks for a look alone: named all the same, should one ever answer it.
+    case "seen":
+      return { giftId: outcome.giftId, step: "count", result: `seen: a lesson is in (${outcome.xp} XP), no proof taken` };
     // A pass counts, it never takes a first reading: named all the same, should one ever answer it.
     case "sign":
       return { giftId: outcome.giftId, step: "count", result: "held: the first reading waits for the recipient's signature" };
