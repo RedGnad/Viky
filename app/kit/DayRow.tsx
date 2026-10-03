@@ -22,6 +22,10 @@ import { CARD_LABEL } from "../components/ui";
  * circle, a triangle, a resting capsule (WCAG 1.4.1).
  *
  * It opens on today rather than on the first day, because today is what a person came to see.
+ *
+ * Under each character, small, what one day is worth, as on the card being filled in (D304; on a gift's page since
+ * the founder's word of 3 Oct 2026, for the person it is for as for the one who offered it). The figure is the page's
+ * own, the day's share of the gift; a reader of the screen hears it once, in "What was agreed", not thirty times.
  */
 
 type Shape = Readonly<{ startDay: number; endDay: number; durationDays: number; creditedDays: number; missedDays: number; givenBackDays?: number }>;
@@ -34,6 +38,7 @@ export function DayRow({
   records,
   voice,
   silent = false,
+  each,
 }: Readonly<{
   id: string;
   gift: Shape;
@@ -43,6 +48,8 @@ export function DayRow({
   voice: "funder" | "recipient" | "reader";
   /** The row alone, without the line under it: the card says something else there (the day a gift was ended). */
   silent?: boolean;
+  /** What one day is worth, written small under each character. */
+  each?: string;
 }>) {
   const nowMs = useMinute();
   const drawn = nowMs !== 0 && gift.startDay !== 0;
@@ -70,8 +77,9 @@ export function DayRow({
       <div className="day-row" aria-hidden>
         <ol className="day-row-days">
           {Array.from({ length: gift.durationDays }, (_, index) => (
-            <li key={index} className="day-row-day">
+            <li key={index} className="day-row-day" data-worth={each ? "" : undefined}>
               <Character state="toCome" variant={index} standing={false} className="h-auto w-full" />
+              {each ? <span className="day-row-worth">{each}</span> : null}
             </li>
           ))}
         </ol>
@@ -97,12 +105,18 @@ export function DayRow({
             ref={index === at ? today : null}
             aria-label={`${contractDayInWords(numbers[index])}, ${words(state)}`}
             className="day-row-day"
+            data-worth={each ? "" : undefined}
           >
             <ArrivalDay gift={id} index={index}>
               {/* A day earned jumps and a day gone back leaves, in the arrival: those two are written into the page (D206);
                   the others name their drawing, since nothing follows the pointer any more (D216). */}
               <Character state={characterOf(state)} variant={index} standing={false} drawn={characterOf(state) === "earned" || characterOf(state) === "returned" ? "inline" : "referenced"} className="h-auto w-full" />
             </ArrivalDay>
+            {each ? (
+              <span aria-hidden className="day-row-worth">
+                {each}
+              </span>
+            ) : null}
           </li>
         ))}
       </ol>

@@ -640,7 +640,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       <Climb giftId={giftId} status={milestone} />
     )
   ) : daily ? (
-    <DayRow id={giftId} gift={daily} catchUpSeconds={daily.catchUpSeconds} records={daily.days} voice={voice} silent={Boolean(live.when)} />
+    <DayRow id={giftId} gift={daily} catchUpSeconds={daily.catchUpSeconds} records={daily.days} voice={voice} silent={Boolean(live.when)} each={daily.perDayDisplay} />
   ) : null;
 
   /** What was agreed: the amount, what it counts, how long, and what happens to what is not earned. Read once. */
