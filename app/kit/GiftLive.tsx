@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { Live } from "@/src/gift-live";
-import { GIFT_LIVE as L } from "@/src/sentences";
+import { GIFT_LIVE as L, LIMIT } from "@/src/sentences";
 import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE } from "../components/ui";
 
 /**
@@ -17,7 +17,8 @@ import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE } from "../components/ui";
  *   the hour of the next reading while nothing has (the mockup you-decide.html of 1 Oct 2026): each a figure over
  *   its label, and never a sentence in small capitals (rule 5);
  * - one action in the sun colour, or none;
- * - what was agreed and how it is checked, folded, each under its own name.
+ * - what was agreed and how it is checked, folded, each under its own name; and before them, while a month's reserve
+ *   is used up, what the person can do.
  *
  * Nothing stands under the card but the round controls of the person it is for (app/kit/YouDecide.tsx, rule 6).
  *
@@ -61,8 +62,11 @@ export function GiftLive({
   closed?: readonly string[] | null;
   /** When the source last updated what was read as the page opened, quietly under the figure, or nothing. */
   reading?: ReactNode;
-  /** The month's limit of readings is reached: the short sentence that says so, in the red (src/sentences.ts, LIMIT). */
-  limit?: string | null;
+  /**
+   * A month's reserve is used up (src/sentences.ts, LIMIT): the one sentence said in the open, in the quiet colour of the labels, and what
+   * the person can do, a line each, folded under its own name with the card's other folds.
+   */
+  limit?: Readonly<{ said: string; can: readonly string[] }> | null;
   /**
    * A reading that started by itself is under way (a gift read as its page opens): the wheel and the step, under the
    * state, where the next moment would have been said. Nothing was pressed, so no button carries it.
@@ -108,10 +112,10 @@ export function GiftLive({
             {line}
           </p>
         ))}
-        {/* A monthly limit is reached: said here, where the next reading would have been announced. */}
+        {/* A month's reserve is used up: said here, where the next reading would have been announced. */}
         {limit ? (
-          <p className="limit-said" role="status" data-reading-limit>
-            {limit}
+          <p className="limit-said" role="status" data-limit-said>
+            {limit.said}
           </p>
         ) : null}
         {waiting ? (
@@ -140,6 +144,21 @@ export function GiftLive({
         ) : null}
 
         {action ? <div className="gift-action">{action}</div> : null}
+
+        {/* What the person can do while the reserve is empty: the first fold, since it is what they came to ask. */}
+        {limit && limit.can.length > 0 ? (
+          <details className="gift-fold" data-limit-can>
+            <summary className="gift-fold-name">
+              {LIMIT.can}
+              <FoldChevron />
+            </summary>
+            <div className="gift-fold-body">
+              {limit.can.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+            </div>
+          </details>
+        ) : null}
 
         <details className="gift-fold" open={agreed.open}>
           <summary className="gift-fold-name">

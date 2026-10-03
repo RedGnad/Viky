@@ -40,7 +40,8 @@ import type { AnyGiftStatus } from "@/src/gift-status";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { contractDayInWords, contractRangeInWords, dateInWords, hourInWords, momentInWords, nextPassMs } from "@/src/moments";
 import { COUNTING_PASS_UTC, settlingTimeInWords } from "@/src/pass-schedule";
-import { ACCOUNT_DOOR, CONSENT as C, END_GIFT as E, GIFT_LIVE as L, GIFT_PAGE as W, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M, WAITS } from "@/src/sentences";
+import { reserveOf } from "@/src/reserves";
+import { ACCOUNT_DOOR, CONSENT as C, END_GIFT as E, GIFT_LIVE as L, GIFT_PAGE as W, LIMIT, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M, WAITS } from "@/src/sentences";
 import { AskAgain } from "../kit/AskAgain";
 import { CertificateProof } from "../kit/CertificateProof";
 import { MarathonProof, MarathonStanding } from "../kit/MarathonProof";
@@ -66,7 +67,8 @@ import { Climb } from "../kit/Climb";
 import { HadOrNot } from "../kit/HadOrNot";
 import type { ToldAbout } from "../kit/MorningMessage";
 import { LiveLine, useLiveReading } from "../kit/LiveReading";
-import { readingLimitInWords } from "@/src/client/limit";
+import { openDayInWords } from "@/src/client/limit";
+import { contactEmail } from "@/src/contact";
 import { Arrival, ArrivalAmount, useLastSeen } from "../kit/Motion";
 import { Sheet } from "../kit/Sheet";
 import { Shell } from "../kit/Shell";
@@ -242,7 +244,10 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
    * limit, said where the proof starts (ShowProof).
    */
   const limit = status.limit ?? null;
-  const readingsStopped = Boolean(limit?.readings && status.opened && condition?.nature !== "shown");
+  // The reserve this gift draws on, when it is the one used up: the proofs of people for a document shown, the
+  // readings for everything Viky reads by itself. The other one being empty changes nothing for this gift.
+  const emptyReserve = limit && status.opened && condition ? (limit[reserveOf(condition.nature)] ? reserveOf(condition.nature) : null) : null;
+  const readingsStopped = emptyReserve === "readings";
   const readsLive = Boolean(milestone && milestone.shape !== "certificate" && moment === "climbing" && (voice === "recipient" || voice === "funder") && !readingsStopped);
   const shownReading = milestone?.todayReading ?? null;
   const liveState = useLiveReading(
@@ -302,9 +307,21 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
   const lastJudged = daily && daily.days.length > 0 ? [...daily.days].sort((a, b) => b.day - a.day)[0].outcome : null;
   // A gift read as the day goes announces no next reading: its page looked as it opened.
   const nextReading = nowMs === 0 || gift.finished || gift.cancelled || readingsStopped || asItGoes ? null : W.nextReading(momentInWords(nextPassMs(COUNTING_PASS_UTC, nowMs), nowMs));
-  // Said to the person the gift is for with the hour their day can still be counted until, in their own clock; to
-  // anybody else without it, since the day is not theirs.
-  const limitLine = readingsStopped && !gift.finished && !gift.cancelled && nowMs !== 0 ? readingLimitInWords(mine ? (limit?.countableUntil ?? null) : null, nowMs) : null;
+  // One sentence in the open: which service is not checked, by this gift's own source, and the day it starts again.
+  // The rest is folded: until when the open day can still be counted, in the reader's clock, that what is theirs is
+  // taken out as usual, what the empty reserve does not touch, and where to write.
+  const limitSaid =
+    emptyReserve && limit && !gift.finished && !gift.cancelled
+      ? {
+          said: LIMIT.said(source, emptyReserve, limit.again, mine),
+          can: [
+            emptyReserve === "readings" && limit.countableUntil && nowMs !== 0 && (mine || readerIsFunder) ? openDayInWords(limit.countableUntil, mine, recipientName, nowMs) : null,
+            mine ? LIMIT.takeYours : LIMIT.takeTheirs,
+            LIMIT.untouched[emptyReserve],
+            contactEmail() ? LIMIT.write(contactEmail() as string) : null,
+          ].filter((line): line is string => Boolean(line)),
+        }
+      : null;
   // Both contracts give an unopened gift back 14 days after it was funded, and an opened gift nothing started 14 days
   // after it was opened (GiftEscrow's UNCLAIMED_REFUND_DELAY, MilestoneGift's DORMANT_REFUND_DELAY).
   const openBy = moment === "unopened" ? dateInWords((status.createdAtChain + 14 * 86_400) * 1000, zone) : null;
@@ -656,7 +673,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         if (milestone.conditionId === "marathon-finish") return <MarathonProof giftId={giftId} status={milestone} yours={mine} onChanged={reloadAll} />;
         if (milestone.conditionId === "wca-time") return <WcaProof giftId={giftId} status={milestone} yours={mine} onChanged={reloadAll} />;
         return conditionById(milestone.conditionId)?.nature === "shown" ? (
-          <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} review={milestone.review?.status ?? null} reviewMessage={milestone.review?.message ?? null} limitReached={Boolean(limit?.proofs)} onShown={reloadAll} />
+          <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} review={milestone.review?.status ?? null} reviewMessage={milestone.review?.message ?? null} limitReached={emptyReserve === "proofs"} onShown={reloadAll} />
         ) : (
           <CertificateProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} onProved={reloadAll} />
         );
@@ -900,7 +917,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
                 : null
           }
           /* The month's limit of readings: in the place a reading would have been told. */
-          limit={limitLine}
+          limit={limitSaid}
           /* A lesson was seen: the attested reading runs by itself, and says what it is doing. */
           waiting={dayReading.phase === "certifying" ? WAITS.counting(source) : null}
           looking={dayReading.phase === "looking"}
