@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { formatEther, parseEther, type Hex } from "viem";
+import { cycleUse, type CycleUse } from "./attested-calls";
 import { workerFingerprint } from "./attested-read";
 import { databaseUrl } from "./database-guard";
 import { exitExchangeAddress, exitRouterAddress } from "./exit-relay";
@@ -18,7 +19,8 @@ import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT } from "./viky-contrac
 /**
  * Whether the things a gift depends on are standing (the audit of 1 Oct 2026): the database, the network, the worker
  * that reads the sources, the relayer's balance, the exchange's pin, the evidence key, and the passes. It is what
- * `/api/health` answers, and what the alerts of src/watch.ts read.
+ * `/api/health` answers, and what the alerts of src/watch.ts read. Since 3 Oct 2026 it also counts what the month has
+ * used of Reclaim's allowance (src/attested-calls.ts), which Reclaim's own dashboard does not show for the fetches.
  *
  * It carries no secret and nothing of any gift: a balance, a block number, the times of the last passes, and for
  * everything else whether it holds, in one of five fixed words. The reason a check failed is written to the logs and
@@ -53,6 +55,12 @@ export type Health = Readonly<{
   exitPin: { ok: boolean; fault?: HealthFault };
   evidenceKey: { ok: boolean; fault?: HealthFault };
   passes: { ok: boolean } & Record<PassKind, { ok: boolean; fault?: HealthFault; last: string | null }>;
+  /**
+   * The cycle's use of Reclaim's allowance. `ok` says the count could be read, and nothing else: an allowance used up
+   * is said by `over` and by an email (src/watch.ts), because readings have gone on past it and a monitor that turned
+   * red for the rest of the month would say nothing anybody could act on.
+   */
+  reclaim: { ok: boolean; fault?: HealthFault; over?: boolean } & Partial<CycleUse>;
 }>;
 
 export type ExitPin = Readonly<{ pinned: Hex; pointsAt: Hex }>;
@@ -68,6 +76,7 @@ export type HealthDeps = Readonly<{
   exitPin: () => Promise<ExitPin>;
   evidenceKeys: () => Promise<EvidenceKeys>;
   lastPasses: () => Promise<Record<PassKind, Date | null>>;
+  reclaimUse: (nowMs: number) => Promise<CycleUse>;
   now?: () => number;
   log?: (line: string) => void;
 }>;
@@ -110,7 +119,7 @@ export async function readHealth(deps: HealthDeps = liveHealthDeps()): Promise<H
     }
   };
 
-  const [database, rpc, worker, relayer, exitPin, evidenceKey, passes] = await Promise.all([
+  const [database, rpc, worker, relayer, exitPin, evidenceKey, passes, reclaim] = await Promise.all([
     check("database", async () => {
       await deps.database();
       return { ok: true };
@@ -141,12 +150,17 @@ export async function readHealth(deps: HealthDeps = liveHealthDeps()): Promise<H
       const each = { counting: one("counting"), settling: one("settling"), milestones: one("milestones") };
       return { ok: each.counting.ok && each.settling.ok && each.milestones.ok, ...each };
     }),
+    check("reclaim", async () => {
+      const use = await deps.reclaimUse(now);
+      return { ok: true, over: use.fetches.started >= use.fetches.allowed || use.verifications.asked >= use.verifications.allowed, ...use };
+    }),
   ]);
 
   const unread = { ok: false, fault: "unreachable" as const, last: null };
   const allPasses = "counting" in passes ? passes : { ok: false, counting: unread, settling: unread, milestones: unread };
+  // The count of Reclaim's allowance is told and is no part of whether Viky stands: a gift does not depend on it.
   const ok = database.ok && rpc.ok && worker.ok && relayer.ok && exitPin.ok && evidenceKey.ok && allPasses.ok;
-  return { ok, at: new Date(now).toISOString(), database, rpc, worker, relayer, exitPin, evidenceKey, passes: allPasses };
+  return { ok, at: new Date(now).toISOString(), database, rpc, worker, relayer, exitPin, evidenceKey, passes: allPasses, reclaim };
 }
 
 /** The exchange's pin, read from the two contracts themselves. */
@@ -203,5 +217,6 @@ export function liveHealthDeps(): HealthDeps {
       const [nightly, milestones] = await Promise.all([lastPasses(), lastGuardedPass("milestones")]);
       return { ...nightly, milestones };
     },
+    reclaimUse: (nowMs) => cycleUse(nowMs),
   };
 }

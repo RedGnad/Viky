@@ -5,6 +5,7 @@ import { readJsonBody } from "@/src/api-guard";
 import { DUOLINGO_MAX_DAY_INDEX } from "@/src/duolingo-proof-policy";
 import { resolvePublicDuolingoProfile } from "@/src/duolingo-profile";
 import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
+import { noteAttestedCall } from "@/src/attested-calls";
 import { loadLatestEvidence, pruneExpiredProofSessions, saveProofSession, type ProofSessionPhase } from "@/src/proof-session-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { reclaimChannelInitOptions, reclaimChannelLaunchOptions, resolveReclaimChannel } from "@/src/reclaim-channel";
@@ -111,6 +112,9 @@ export async function POST(request: Request) {
       dayIndex,
       ...(bound ? { duolingoUsername: bound.username, duolingoProfileId: bound.profileId } : {}),
     });
+    // Counted against the month's allowance of verifications from the moment it is opened: a session that never comes
+    // back is deleted from its table after a day, and this row is what still says it was asked (src/attested-calls.ts).
+    await noteAttestedCall({ kind: "verification", source: entry.condition.conditionId, ok: true });
 
     return NextResponse.json({ sessionId, phase, dayIndex, requestUrl }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {

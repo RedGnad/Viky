@@ -1,4 +1,5 @@
 import { keccak256, stringToHex, type Hex } from "viem";
+import { countedFetch } from "./attested-calls";
 import { attestedSource, headersFor, matchesOf, type AttestedSource, type ResponseMatch } from "./attested-sources";
 import { allowedAttestors, attestorAccepted, type ZkFetchProof } from "./duolingo-public";
 import { localProofVerified, proofVerifierMode } from "./proof-verification";
@@ -280,16 +281,22 @@ export function verifyWithPin(proof: ZkFetchProof): Promise<boolean> {
   return localProofVerified(proof, allowedAttestors());
 }
 
+/** The same fetch, written down in the journal of the month's allowance each time it leaves (src/attested-calls.ts). */
+function counted(fetch: AttestedReadDeps["zkFetch"]): AttestedReadDeps["zkFetch"] {
+  return (source, account, bearer) => countedFetch(source.id, () => fetch(source, account, bearer));
+}
+
 /**
  * The dependencies the routes and the passes use: the worker when configured, the local client otherwise. The
- * verifier is Reclaim's unless PROOF_VERIFIER says `local` (src/proof-verification.ts).
+ * verifier is Reclaim's unless PROOF_VERIFIER says `local` (src/proof-verification.ts). Every fetch made through them
+ * is counted; the reading service's own, below, is not, because whoever asked it counts.
  */
 export function reclaimAttestedReadDeps(): AttestedReadDeps {
   const local = proofVerifierMode() === "local";
   if (process.env.ZKFETCH_WORKER_URL?.trim()) {
-    return { zkFetch: workerZkFetch, verify: local ? verifyWithPin : verifyWithReclaimBundled };
+    return { zkFetch: counted(workerZkFetch), verify: local ? verifyWithPin : verifyWithReclaimBundled };
   }
-  return { zkFetch: localZkFetch, verify: local ? verifyWithPin : verifyWithReclaimAtRuntime };
+  return { zkFetch: counted(localZkFetch), verify: local ? verifyWithPin : verifyWithReclaimAtRuntime };
 }
 
 /** The fetch half alone, for the worker process: it returns the proof and leaves every check to whoever asked. */

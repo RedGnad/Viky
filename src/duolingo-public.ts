@@ -1,4 +1,5 @@
 import { keccak256, stringToHex, type Hex } from "viem";
+import { countedFetch } from "./attested-calls";
 import { duolingoProfileUrl, isValidDuolingoUsername } from "./duolingo-public-terms";
 import { localProofVerified, proofVerifierMode } from "./proof-verification";
 
@@ -11,6 +12,9 @@ import { localProofVerified, proofVerifierMode } from "./proof-verification";
  */
 
 export type ResponseMatch = { type: "regex"; value: string };
+
+/** How this reading is named in the journal of attested fetches: it predates the list of sources and has no id there. */
+const DUOLINGO_PROFILE_FETCH = "duolingo-profile";
 
 /** Each first match is the user-level field: checked on real responses on 11 Sep 2026 (`id` is the first key). */
 export const PROFILE_RESPONSE_MATCHES: readonly ResponseMatch[] = [
@@ -243,13 +247,15 @@ export async function reclaimPublicProfileDeps(): Promise<PublicProfileDeps> {
     const { verifyProof } = await import("@reclaimprotocol/js-sdk");
     const local = proofVerifierMode() === "local";
     return {
-      zkFetch: (url) => workerZkFetch(url),
+      // Counted in the journal of the month's allowance each time it leaves (src/attested-calls.ts).
+      zkFetch: (url) => countedFetch(DUOLINGO_PROFILE_FETCH, () => workerZkFetch(url)),
       verify: local
         ? verifyProfileWithPin
         : async (proof) => (await verifyProof(proof as never, { dangerouslyDisableContentValidation: true } as never)).isVerified === true,
     };
   }
-  return reclaimLocalProfileDeps();
+  const own = await reclaimLocalProfileDeps();
+  return { ...own, zkFetch: (url, matches) => countedFetch(DUOLINGO_PROFILE_FETCH, () => own.zkFetch(url, matches)) };
 }
 
 /**

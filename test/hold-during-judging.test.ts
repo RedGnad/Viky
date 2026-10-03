@@ -76,11 +76,15 @@ function standingDeps(over: Partial<HealthDeps> = {}): HealthDeps {
     exitPin: async () => ({ pinned: PINNED, pointsAt: PINNED.toLowerCase() as Hex }),
     evidenceKeys: async () => ({ ours: KEY, named: [{ contract: A, signer: KEY }, { contract: B, signer: KEY.toLowerCase() as Hex }] }),
     lastPasses: async () => ({ counting: new Date(NOW - 3_600_000), settling: new Date(NOW - 19 * 3_600_000), milestones: new Date(NOW - 120_000) }),
+    reclaimUse: async () => USE,
     now: () => NOW,
     log: () => {},
     ...over,
   };
 }
+
+/** A cycle a third used: 31 fetches of 100, 2 proofs asked of 25. */
+const USE = { from: "2026-09-23T00:00:00.000Z", until: "2026-10-23T00:00:00.000Z", fetches: { started: 31, proved: 29, allowed: 100 }, verifications: { asked: 2, verified: 1, allowed: 25 } } as const;
 
 test("everything standing answers ok, with a balance, a block and the times of the last passes, and nothing else", async () => {
   const health = await readHealth(standingDeps());
@@ -126,6 +130,22 @@ test("a relayer under the alert line still works: it is said, and it is not a fa
   assert.equal(health.relayer.underAlert, true);
 });
 
+test("the health answer counts the cycle's use of Reclaim's allowance, and an allowance used up is said without failing", async () => {
+  const health = await readHealth(standingDeps());
+  assert.deepEqual(health.reclaim, { ok: true, over: false, ...USE });
+  // Past the allowance readings have gone on (3 Oct 2026: 128 fetches started, and the next one gave its proof), so
+  // it is said, and the monitor does not turn red for the rest of the month.
+  const over = await readHealth(standingDeps({ reclaimUse: async () => ({ ...USE, fetches: { started: 128, proved: 70, allowed: 100 } }) }));
+  assert.equal(over.reclaim.over, true);
+  assert.equal(over.ok, true);
+  assert.equal((await readHealth(standingDeps({ reclaimUse: async () => ({ ...USE, verifications: { asked: 25, verified: 3, allowed: 25 } }) }))).reclaim.over, true);
+  // A count that cannot be read is said in the fixed word, and does not fail the whole answer either.
+  const unread = await readHealth(standingDeps({ reclaimUse: async () => Promise.reject(new Error("postgres://user:secret@host refused the connection")) }));
+  assert.deepEqual(unread.reclaim, { ok: false, fault: "unreachable" });
+  assert.equal(unread.ok, true);
+  assert.doesNotMatch(JSON.stringify(unread), /secret|postgres/);
+});
+
 test("a pass is late after the longest gap its schedule allows", () => {
   // The nightly passes run inside the hour their schedule names, once a day: two runs are at most 25 hours apart.
   assert.equal(PASS_LATE_AFTER_SECONDS.counting, 26 * 3_600);
@@ -161,6 +181,7 @@ function watchDeps(sent: Alert[], over: Partial<WatchDeps> = {}): WatchDeps {
     exitPin: async () => ({ pinned: PINNED, pointsAt: PINNED }),
     evidenceKeys: async () => ({ ours: KEY, named: [{ contract: A, signer: KEY }] }),
     lastCountingPass: async () => new Date("2026-10-02T00:35:00Z"),
+    allowanceDue: async () => [],
     alert: async (alert) => {
       sent.push(alert);
       return "sent";
@@ -203,6 +224,7 @@ test("the watch after the morning sends what it sees, and what it cannot read ne
     { watched: "exit pin", result: "holds" },
     { watched: "evidence key", result: "holds" },
     { watched: "announced signer", result: "holds" },
+    { watched: "reclaim allowance", result: "holds" },
   ]);
   assert.equal(quiet.length, 0);
   const sent: Alert[] = [];
@@ -215,7 +237,7 @@ test("the watch after the morning sends what it sees, and what it cannot read ne
       evidenceKeys: async () => ({ ours: KEY, named: [{ contract: A, signer: B }] }),
     }),
   );
-  assert.deepEqual(lines.map((line) => line.result), ["alert sent", "not read", "alert sent", "holds"]);
+  assert.deepEqual(lines.map((line) => line.result), ["alert sent", "not read", "alert sent", "holds", "holds"]);
   assert.deepEqual(sent.map((alert) => alert.subject), ["The morning pass has not run today", "The evidence key of this environment is not the one the contracts name"]);
 });
 
@@ -241,12 +263,12 @@ test("a signer announced on a contract of the second version is told while it wa
       },
     }),
   );
-  assert.deepEqual(lines.slice(-2), [{ watched: "evidence key", result: "holds" }, { watched: "announced signer", result: "alert sent" }]);
+  assert.deepEqual(lines.slice(-3, -1), [{ watched: "evidence key", result: "holds" }, { watched: "announced signer", result: "alert sent" }]);
   assert.deepEqual(sent.map((alert) => alert.subject), ["A new evidence signer is announced on a gift contract"]);
   assert.equal(reads, 1);
   // The contracts that could not be read are said so twice, and nothing is thrown.
   const unread = await watchAfterMorning(watchDeps([], { evidenceKeys: async () => Promise.reject(new Error("the network did not answer")) }));
-  assert.deepEqual(unread.slice(-2).map((line) => line.result), ["not read", "not read"]);
+  assert.deepEqual(unread.slice(-3, -1).map((line) => line.result), ["not read", "not read"]);
   // What reads them: the two contracts of the second version alone, once they are set, by the views both expose.
   const health = readFileSync("src/health.ts", "utf8");
   assert.match(health, /if \(!second\.includes\(contract\)\) return \{ contract, signer \};/);
@@ -292,7 +314,7 @@ test("a pass tells the operator of a low relayer at its start, and goes on whate
   const sent: Alert[] = [];
   const report = await dailyPass(COUNTING_PASS, passDeps({ watch: (relayer, pass) => watchAtPassStart(relayer, pass, watchDeps(sent)) }));
   assert.deepEqual(sent.map((alert) => alert.subject), ["Relayer under 25.00 MON: 20.00 MON left"]);
-  assert.deepEqual(report.watch.map((line) => line.result), ["alert sent", "holds", "holds", "holds"]);
+  assert.deepEqual(report.watch.map((line) => line.result), ["alert sent", "holds", "holds", "holds", "holds"]);
   const broken = await dailyPass(
     COUNTING_PASS,
     passDeps({

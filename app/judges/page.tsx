@@ -1,3 +1,5 @@
+import { BEFORE_THE_JOURNAL, cycleInWords, cycleUse, RECLAIM_ALLOWANCE } from "@/src/attested-calls";
+import { PROOF_EVERY_SECONDS } from "@/src/milestone-reading";
 import { formatAusd } from "@/src/gift-reader";
 import { judgeCreditConfig, judgeCreditsStanding, standingInWords } from "@/src/judge-credit";
 import { rampHostApiKey, rampnowWayIn } from "@/src/rails";
@@ -109,6 +111,8 @@ export default async function JudgesPage() {
   // Gifts created before the D30 corrections keep running on the contract that holds them, and every
   // gift record names its own contract, so both are listed here for as long as the older one holds one.
   const earlierEscrow = process.env.NEXT_PUBLIC_EARLIER_GIFT_ESCROW_ADDRESS?.trim();
+  // What the month has used of Reclaim's allowance, counted from the journal of attested fetches as the page is served.
+  const reclaimUse = await cycleUse().catch(() => null);
   // The judge credit's amount, said on the page; its code is never read here (D291).
   const judgeCredit = judgeCreditConfig();
   // How many were given and how many the ceiling still allows, counted from the journal at each reading of the page.
@@ -394,6 +398,20 @@ export default async function JudgesPage() {
           is looked at plainly, not through Reclaim, in both of the day&apos;s passes and at each ask, and read attested
           only to connect the account or when that look does not show it below its target. Private sources keep the
           user-proof path through the Reclaim verifier app.
+        </p>
+        <p className={HELP} data-reclaim-cycle>
+          How many are left, counted here because Reclaim&apos;s dashboard shows no count of the fetches: its free tier
+          allows up to {RECLAIM_ALLOWANCE.fetches} attested fetches and {RECLAIM_ALLOWANCE.verifications} verifications a
+          month, and gives more on request only. {cycleInWords(reclaimUse)}
+          {reclaimUse?.from === BEFORE_THE_JOURNAL.cycleFrom
+            ? ` Of those fetches, ${BEFORE_THE_JOURNAL.started} were counted on 3 Oct 2026 from the reading service's logs, which start on 28 Sep, and from the gifts' journal, so the figure is a floor. 114 of them went in five hours on 30 Sep 2026, on one gift whose plain look kept failing, half of them without a proof: the pass of every five minutes tried a proof at each failed look. It stops at a failed look since 1 Oct 2026.`
+            : ""}{" "}
+          Since 3 Oct 2026 every fetch is written down as it leaves, proof or not, and a proof is claimed before it is
+          paid for: for one gift, once in {PROOF_EVERY_SECONDS.unseen / 3_600} hours after a look that failed or showed no
+          rating, once an hour in the gift&apos;s last day, and every {PROOF_EVERY_SECONDS.atTheTarget / 60} minutes at the
+          target until one settles it. The operator is told by email at half of an allowance, at four fifths, and when it
+          is used up. What is not closed: each attempt to connect an account by a code in its name is still a proof,
+          whether the code is there yet or not.
         </p>
       </Fold>
 
