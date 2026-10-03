@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic";
 
 /**
  * The address of Rampnow's frame for the signed-in account (src/rampnow-frame.ts): the locked page, with the partner's
- * public key read from `RAMPNOW_API_KEY` here. The account is the session's, never one the browser names, so the frame
- * can only ever pay into the payer's own account.
+ * public key when `RAMPNOW_API_KEY` holds one here, and as it is when it holds none. The account is the session's,
+ * never one the browser names, so the frame can only ever pay into the payer's own account.
  */
 export async function GET(request: Request) {
   try {
