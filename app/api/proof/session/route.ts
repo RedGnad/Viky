@@ -5,8 +5,8 @@ import { readJsonBody } from "@/src/api-guard";
 import { DUOLINGO_MAX_DAY_INDEX } from "@/src/duolingo-proof-policy";
 import { resolvePublicDuolingoProfile } from "@/src/duolingo-profile";
 import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
-import { isReclaimQuotaRefusal, limitsNow, noteAttestedCall, ReclaimLimitReached } from "@/src/attested-calls";
-import { contactEmail } from "@/src/contact";
+import { isReclaimQuotaRefusal, limitsNow, noteAttestedCall, ReclaimLimitReached, startsAgainInWords } from "@/src/attested-calls";
+import { conditionById } from "@/src/conditions";
 import { LIMIT } from "@/src/sentences";
 import { loadLatestEvidence, pruneExpiredProofSessions, saveProofSession, type ProofSessionPhase } from "@/src/proof-session-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
@@ -32,6 +32,8 @@ export const maxDuration = 30;
  * recipient is signed into.
  */
 export async function POST(request: Request) {
+  // The source a refusal names, once the condition is known: the register's own word for it.
+  let source = "this";
   try {
     const body = await readJsonBody<Record<string, unknown>>(request, 4 * 1_024);
     // The account comes from the signed session cookie, never from the body.
@@ -48,6 +50,7 @@ export async function POST(request: Request) {
     if (!/^\d{1,78}$/.test(giftId)) throw new Error("Unknown gift");
     const entry = shownConditionById(String(body.conditionId ?? "duolingo-daily").trim());
     if (!entry) throw new Error("Unknown condition");
+    source = conditionById(entry.condition.conditionId)?.source ?? source;
 
     const asked = String(body.phase ?? "");
     const phase: ProofSessionPhase = entry.kind === "milestone" ? "reach" : asked === "check-in" ? "check-in" : "baseline";
@@ -127,7 +130,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ sessionId, phase, dayIndex, requestUrl }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof ReclaimLimitReached) {
-      return NextResponse.json({ code: error.code, error: LIMIT.proof(contactEmail()) }, { status: 409, headers: { "Cache-Control": "no-store" } });
+      return NextResponse.json({ code: error.code, error: LIMIT.said(source, "proofs", startsAgainInWords(), true) }, { status: 409, headers: { "Cache-Control": "no-store" } });
     }
     const authStatus = accountAuthErrorStatus(error);
     return NextResponse.json(

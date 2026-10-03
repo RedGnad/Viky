@@ -1,5 +1,4 @@
-import { BEFORE_THE_JOURNAL, cycleInWords, cycleUse, dailyCeilings, JUDGING, leftOf, limitsOf, LOST_ON_30_SEP_2026, RECLAIM_ALERT_LEFT, RECLAIM_ALLOWANCE, utcDayInWords, type CycleUse } from "@/src/attested-calls";
-import { contactEmail } from "@/src/contact";
+import { BEFORE_THE_JOURNAL, cycleInWords, cycleUse, dailyCeilings, JUDGING, leftOf, limitsOf, LOST_ON_30_SEP_2026, RECLAIM_ALERT_LEFT, RECLAIM_ALLOWANCE, startsAgainInWords, utcDayInWords, type CycleUse } from "@/src/attested-calls";
 import { LIMIT } from "@/src/sentences";
 import { PROOF_EVERY_SECONDS } from "@/src/milestone-reading";
 import { formatAusd } from "@/src/gift-reader";
@@ -450,15 +449,17 @@ export default async function JudgesPage() {
         <p className={HELP} data-reclaim-cycle>
           The month&apos;s count, kept here because Reclaim&apos;s dashboard shows no count of the fetches: its free tier
           allows up to {RECLAIM_ALLOWANCE.fetches} attested fetches and {RECLAIM_ALLOWANCE.verifications} verifications a
-          month, and gives more on request only. {cycleInWords(reclaimUse)}
+          month, and gives more on request only. {cycleInWords(reclaimUse)} Reclaim&apos;s dashboard shows its cycle
+          as 23/09 to 24/10: the count here holds what was spent from the 23rd and starts again on the 24th, the later
+          day, so that it never starts again before theirs.
           {reclaimUse && (reclaimUse.fetches.allowed !== RECLAIM_ALLOWANCE.fetches || reclaimUse.verifications.allowed !== RECLAIM_ALLOWANCE.verifications)
             ? " Reclaim has granted more than the free tier, and the limits in force are the ones counted against."
             : ""}
           {reclaimLimits?.readings
-            ? ` The limit of readings is reached: Viky sends no attested reading to Reclaim until the next cycle or until more is granted, nothing is settled against a reading that was not taken, and a person whose gift waits for one reads this on its page, with the hour their day can still be counted until: "${LIMIT.reading(null, contactEmail())}"`
+            ? ` The limit of readings is reached: Viky sends no attested reading to Reclaim until the next cycle or until more is granted, nothing is settled against a reading that was not taken, and a person whose gift waits for one reads this on its page, by the gift's own source, with what they can do folded under it: "${LIMIT.said("Duolingo", "readings", startsAgainInWords())}"`
             : ""}
           {reclaimLimits?.proofs
-            ? ` The limit of proofs is reached: Viky opens no new proof at Reclaim, and a person reads this before starting one: "${LIMIT.proof(contactEmail())}"`
+            ? ` The limit of proofs is reached: Viky opens no new proof at Reclaim, and a person reads this before starting one, by the gift's own source: "${LIMIT.said("their university", "proofs", startsAgainInWords())}"`
             : ""}{" "}
           The limit Viky holds itself to goes by the readings that gave a proof and by the proofs that came back, not by
           what was started or asked: what Reclaim counts is not published, and on 3 Oct 2026 fetches still passed at 126
