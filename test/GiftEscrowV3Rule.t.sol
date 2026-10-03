@@ -305,9 +305,8 @@ contract GiftEscrowV3RuleTest is V3Kit {
                 uint64 taken = uint64((seed >> 96) % 4);
                 uint256 offset = (seed >> 128) % 1260;
                 uint256 observed = offset < 60 ? clock + offset : clock - (offset - 60);
-                GiftEscrowV3.CheckInAttestation memory a = _dailyReading(
-                    escrow, id, recipient, IDENTITY, PROVIDER, metric + taken * TARGET, uint64(observed)
-                );
+                GiftEscrowV3.CheckInAttestation memory a =
+                    _dailyReading(escrow, id, recipient, IDENTITY, PROVIDER, metric + taken * TARGET, uint64(observed));
                 try escrow.checkIn(id, a) {
                     metric += taken * TARGET;
                     lessons += taken;
@@ -315,9 +314,14 @@ contract GiftEscrowV3RuleTest is V3Kit {
             }
             GiftEscrowV3.Gift memory g = escrow.getGift(id);
             uint32 today = uint32(clock / DAY);
-            require(g.settledThroughDay <= (today < g.endDay ? today : g.endDay), "a day that has not begun was settled");
+            require(
+                g.settledThroughDay <= (today < g.endDay ? today : g.endDay), "a day that has not begun was settled"
+            );
             require(g.creditedDays + g.drainedDays <= DURATION, "more days settled than the gift has");
-            require(g.creditedDays + g.drainedDays == g.settledThroughDay + 1 - g.startDay, "a day settled twice, or skipped");
+            require(
+                g.creditedDays + g.drainedDays == g.settledThroughDay + 1 - g.startDay,
+                "a day settled twice, or skipped"
+            );
             require(g.creditedDays <= lessons, "more days credited than lessons read");
             require(escrow.earnedBalance(id) + escrow.refundableBalance(id) <= AMOUNT, "more money than the gift holds");
         }
