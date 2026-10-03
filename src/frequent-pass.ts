@@ -47,8 +47,10 @@ function frequentPassDeps(): MilestonePassDeps {
  * contract a reading pays its own day, so a lesson done at noon is paid within the quarter of an hour rather than at
  * the next night's pass. Every quarter of an hour, each such gift is looked at plainly, which costs nothing, and an
  * attested reading is taken only for a lesson the look saw: one proof for a day credited, none for a day without a
- * lesson, none when the look fails. It reads and credits, nothing else: settling, sending back and the reading
- * without a look stay with the nightly passes, and a day it credits is told as any credited day is (src/gift-relay.ts).
+ * lesson, and none when the look fails, but for the reading of last resort (src/daily-look.ts): once for a gift in a
+ * day, when the window of its oldest open day closes before the next pass. It reads and credits, nothing else:
+ * settling and sending back stay with the nightly passes, and a day it credits is told as any credited day is
+ * (src/gift-relay.ts).
  *
  * It has no address of its own. The scheduler's one call every five minutes (`/api/cron/milestones`) claims it under
  * its own guard, fourteen minutes: a call can arrive a little early, which a guard of fifteen would drop.
@@ -65,7 +67,7 @@ export type FrequentDailyDeps = Readonly<{
 
 const liveFrequentDailyDeps: FrequentDailyDeps = {
   gifts: loadBoundGifts,
-  count: (giftId) => readDailyGift({ giftId, purpose: "count", onlyOnALook: true }),
+  count: (giftId) => readDailyGift({ giftId, purpose: "count", pass: "frequent" }),
 };
 
 function dailyLine(outcome: PublicCheckInOutcome): string {
