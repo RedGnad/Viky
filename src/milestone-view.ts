@@ -1,6 +1,7 @@
 import type { GiftLimit } from "./gift-limit";
 import type { EndOffer, Ended } from "./gift-ending";
 import type { MilestonePhase } from "./milestone-reader";
+import type { ContractVersion } from "./v2";
 
 /**
  * What a milestone gift's page reads (C2 wires it; S3 builds the page against it). Browser safe.
@@ -107,7 +108,7 @@ export type MilestoneStatus = Readonly<{
   asked?: string | null;
   review: Readonly<{ status: "building" | "pending" | "refused"; /** The refusal in its own words, where it has them: a scale that does not match. */ message?: string }> | null;
   /** Which version of its contract holds the gift (src/v2.ts). Absent on an answer made before the second existed. */
-  version?: 1 | 2;
+  version?: ContractVersion;
   /** The second version only: what ending the gift now would do, for the person it is for (src/gift-ending.ts). */
   end?: EndOffer | null;
   /** The second version only: the ending, once the person it is for has ended it. */

@@ -14,8 +14,9 @@ import { fundingNonce, giftSalt, withdrawIntentTypedData, type GiftParams } from
 import { ApiError, getJson, postJson } from "./api";
 import { isMilestoneGiftId, milestoneWithdrawTypedData } from "../milestone-protocol";
 import type { MilestoneStatus } from "../milestone-view";
-import { fundingNonceV2, withdrawTypedDataV2 } from "../v2-protocol";
+import { fundingNonceOn, withdrawTypedDataV2 } from "../v2-protocol";
 import { giftLinkOf, linkForTerms, secondVersionOf, versionOf, withTheStartSigned, type StartAsked, type StartStep } from "./v2";
+import { opensByItsLink, type ContractVersion } from "../v2";
 
 /** Browser-side flows of a gift. Every step that moves money is signed by the person's own account. */
 
@@ -116,8 +117,8 @@ export async function prepareGift(input: CreateGiftInput): Promise<GiftRequest> 
     salt: giftSalt({ account: input.duolingoUsername, course: input.course, seed: saltSeed }),
   };
   const link = second ? await linkForTerms(input.account, params.salt) : null;
-  const nonce = link
-    ? fundingNonceV2({ funder, refundTo: params.refundTo, openingKey: link.openingKey, goalType: params.goalType, dailyTarget: params.dailyTarget, durationDays: params.durationDays, amount: params.amount, salt: params.salt })
+  const nonce = link && second
+    ? fundingNonceOn(second, { funder, refundTo: params.refundTo, openingKey: link.openingKey, goalType: params.goalType, dailyTarget: params.dailyTarget, durationDays: params.durationDays, amount: params.amount, salt: params.salt })
     : fundingNonce(params);
   const message = receiveAuthorizationMessage({ funder, escrow, amount: input.amount, nonce });
   const signature = await input.account.signTypedData(receiveAuthorizationTypedData(message));
@@ -225,7 +226,7 @@ export type GiftStatus = {
   /** Given only to whoever holds the link, or to the funder or the recipient signed in. */
   names: { recipientName: string | null; funderName: string | null } | null;
   /** Which version of its contract holds the gift (src/v2.ts). Absent on an answer made before the second existed. */
-  version?: 1 | 2;
+  version?: ContractVersion;
   /** The second version only: what ending the gift now would do, for the person it is for (src/gift-ending.ts). */
   end?: EndOffer | null;
   /** The second version only: the ending, once the person it is for has ended it. */
@@ -452,7 +453,7 @@ export async function withdrawEarned(input: { account: LocalAccount; giftId: str
   // own, so the contract's address decides that (src/v2.ts).
   const milestone = isMilestoneGiftId(input.giftId);
   const typedData =
-    versionOf(input.giftId, escrow) === 2
+    opensByItsLink(versionOf(input.giftId, escrow))
       ? withdrawTypedDataV2(milestone ? "milestone" : "daily", escrow, message)
       : milestone
         ? milestoneWithdrawTypedData(escrow, message)

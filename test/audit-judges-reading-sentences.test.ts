@@ -44,8 +44,8 @@ test("the morning pass reads each daily gift, so two gifts on one account are tw
 
   // The day's guard is keyed by the gift, and a count the person asks for passes it.
   assert.match(source("src/duolingo-public-checkin.ts"), /startsWith\(`public:\$\{giftId\}:count:\$\{today\}:`\)/);
-  assert.match(source("app/api/gift/[id]/count/route.ts"), /readDailyGift\(\{ giftId: id, purpose: "count", force: true \}\)/, "by the condition's nature, a connected source read with its own key");
-  assert.match(source("app/api/gift/[id]/count/route.ts"), /checkRateLimit\(isMilestoneGiftId\(id\) \? "reading" : "verify", request\)/, "keyed by the IP address alone");
+  assert.match(source("app/api/gift/[id]/count/route.ts"), /: \{ giftId: id, purpose: "count", force: true \}\)/, "by the condition's nature, a connected source read with its own key");
+  assert.match(source("app/api/gift/[id]/count/route.ts"), /checkRateLimit\(isMilestoneGiftId\(id\) \|\| look \? "reading" : "verify", request\)/, "keyed by the IP address alone");
 
   assert.ok(!page.includes("per recipient per day"), "no read per recipient per day");
   assert.ok(!page.includes("one profile per recipient"), "no profile per recipient");

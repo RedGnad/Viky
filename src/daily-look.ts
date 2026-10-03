@@ -2,6 +2,7 @@ import { daysWaitingOf } from "./days-waiting";
 import { DuolingoProfileError, type PublicDuolingoProfile } from "./duolingo-profile";
 import { displayNameHasCode } from "./duolingo-public-terms";
 import { utcDayOf, type GiftState } from "./gift-reader";
+import { paysTheSameDay } from "./v2";
 
 /**
  * The look a daily gift takes before it pays for an attested reading (3 Oct 2026). Server only.
@@ -24,10 +25,13 @@ import { utcDayOf, type GiftState } from "./gift-reader";
  * founder, 3 Oct 2026): a look that failed must never become a proof at every pass again, which is what spent 57 of
  * them in five hours on 30 Sep. One reading goes without a look, the reading of last resort: taken by a pass, once
  * for a gift in a day, and only when the window of the gift's oldest open day closes before the next pass that could
- * read it. Until then the day stays open and the next pass looks again, which costs nothing.
+ * read it. Until then the day stays open and the next pass looks again, which costs nothing. On the first two
+ * versions that pass is the second reading of the morning; on the third, the last pass of the quarter of an hour
+ * before the window closes.
  */
 
-type Days = Pick<GiftState, "startDay" | "endDay" | "settledThroughDay">;
+/** The days a contract holds for a gift, and which version of the daily contract holds them: the rule is the version's. */
+type Days = Pick<GiftState, "startDay" | "endDay" | "settledThroughDay"> & Partial<Pick<GiftState, "version">>;
 type Counted = Days & Pick<GiftState, "baselineValue" | "dailyTarget">;
 
 /** The contract's own refusals of a check-in that a look can foresee, by the names the contract gives them. */
@@ -35,7 +39,8 @@ export type ForeseenRefusal = "MetricDecreased" | "OutsideWindow" | "NothingToCr
 
 /**
  * Whether a reading taken now has no day it could credit, whatever it reads: the contract's `OutsideWindow` and
- * `NothingToCredit`, as `checkIn` writes them on the first two versions (a reading credits through the day before it).
+ * `NothingToCredit`, as `checkIn` writes them. On the first two versions a reading credits through the day before
+ * it; on the third, through its own day, and `OutsideWindow` no longer exists there.
  *
  * It is judged on the days the contract holds as settled. The contract first settles the days whose window has run
  * out, which can only leave fewer days open than this counts, never more: a refusal here is one the contract gives.
@@ -43,9 +48,10 @@ export type ForeseenRefusal = "MetricDecreased" | "OutsideWindow" | "NothingToCr
  */
 export function noDayToCredit(gift: Days, nowSeconds: number): "OutsideWindow" | "NothingToCredit" | null {
   if (!gift.startDay) return null;
-  const lastCompleteDay = utcDayOf(nowSeconds) - 1;
-  if (lastCompleteDay < gift.startDay) return "OutsideWindow";
-  const upper = Math.min(lastCompleteDay, gift.endDay);
+  const sameDay = paysTheSameDay(gift.version);
+  const lastDayPaid = sameDay ? utcDayOf(nowSeconds) : utcDayOf(nowSeconds) - 1;
+  if (lastDayPaid < gift.startDay) return sameDay ? "NothingToCredit" : "OutsideWindow";
+  const upper = Math.min(lastDayPaid, gift.endDay);
   return upper <= gift.settledThroughDay ? "NothingToCredit" : null;
 }
 
@@ -107,8 +113,12 @@ export async function lookBeforeCount(input: { username: string; courseId: strin
  * pass is the next day's, at 00:30: more than twenty hours on. A day whose window closes at 06:00 that morning is
  * inside those twenty hours, and one that closes the morning after is not. The pass of half past midnight takes none:
  * the second reading comes after it, before anything closes.
+ *
+ * A gift read as the day goes (the third daily contract) is read by a pass every quarter of an hour, whichever pass
+ * asks. The scheduler calls every five minutes and the pass guards itself for fourteen (src/frequent-pass.ts), so the
+ * next one comes fifteen to twenty minutes later: twenty.
  */
-export const LAST_RESORT_WITHIN_SECONDS = { recount: 20 * 3_600 } as const;
+export const LAST_RESORT_WITHIN_SECONDS = { recount: 20 * 3_600, frequent: 20 * 60 } as const;
 
 /**
  * Whether a reading without a look is the last chance of a day: the window of the gift's oldest open day closes

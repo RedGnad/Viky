@@ -18,6 +18,7 @@ import { admitWayOut, countedIfSent } from "@/src/relay-admission";
 import { assertEndStands } from "@/src/relay-free-checks";
 import { assertGiftContractConfigured, escrowOf } from "@/src/relayer";
 import { canonicalSignature } from "@/src/signature";
+import { opensByItsLink } from "@/src/v2";
 import { versionOfGift } from "@/src/v2-opening";
 
 export const runtime = "nodejs";
@@ -67,7 +68,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     assertGiftContractConfigured();
     const record = await loadGift(id);
     if (!record) throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);
-    if (versionOfGift(record) !== 2) throw new GiftApiError("CANNOT_BE_ENDED", "This gift cannot be ended. Nothing was changed.", 409);
+    if (!opensByItsLink(versionOfGift(record))) throw new GiftApiError("CANNOT_BE_ENDED", "This gift cannot be ended. Nothing was changed.", 409);
     const contract = escrowOf(record);
     const milestone = isMilestoneGiftId(id);
     const isRecipient = (recipient: string | null) => recipient !== null && recipient.toLowerCase() === auth.account.toLowerCase();

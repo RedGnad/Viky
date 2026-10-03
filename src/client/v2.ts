@@ -1,7 +1,7 @@
 import { getAddress, type Hex, type LocalAccount } from "viem";
 import type { EndOffer } from "../gift-ending";
 import { isMilestoneGiftId } from "../milestone-protocol";
-import { dailyVersionOf, giftEscrowV2Address, milestoneGiftV2Address, milestoneVersionOf, type ContractVersion } from "../v2";
+import { dailyVersionOf, linkOpenedDailyContracts, milestoneGiftV2Address, milestoneVersionOf, newDailyGiftsContract, type ContractVersion } from "../v2";
 import { endTypedData, giftLink, giftLinkTypedData, linkFingerprint, linkSecretFrom, openingAccount, OPEN_TTL_SECONDS, openTypedData, previewTokenOf, startTypedData, type V2Kind } from "../v2-protocol";
 import { GIFT_PAGE } from "../sentences";
 import { ApiError, postJson } from "./api";
@@ -29,9 +29,18 @@ import { ApiError, postJson } from "./api";
  * - **The recipient can end the gift**, signing the two amounts the screen showed.
  */
 
-/** Where new gifts of each kind are made once the second version is set, or nothing while it is not. */
+/**
+ * Where new gifts of each kind are made once the second version is set, or nothing while it is not. A daily gift is
+ * made on the third daily contract once that one is set (src/v2.ts).
+ */
 export function secondVersionOf(kind: V2Kind): Hex | null {
-  return kind === "daily" ? giftEscrowV2Address() : milestoneGiftV2Address();
+  return kind === "daily" ? newDailyGiftsContract() : milestoneGiftV2Address();
+}
+
+/** The contracts of a kind that a link's key opens, as this build knows them: where a gift already made may be. */
+function linkOpenedContracts(kind: V2Kind): readonly Hex[] {
+  const milestone = milestoneGiftV2Address();
+  return kind === "daily" ? linkOpenedDailyContracts() : milestone ? [milestone] : [];
 }
 
 /** Which version of its contract holds a gift, from the contract's own address. */
@@ -87,9 +96,11 @@ export async function openWithLinkKey(input: { giftId: string; contract: Hex; re
  * refused before anything is signed, and so is a page with no account to open the gift for.
  */
 export async function openWithTheLinkSecret(input: { giftId: string; linkSecret: string; contract: string | null | undefined; recipient: string | null | undefined; nowMs?: number }): Promise<{ giftId: string; opened: boolean }> {
-  const ours = secondVersionOf(kindOf(input.giftId));
   const named = input.contract && /^0x[0-9a-fA-F]{40}$/.test(input.contract) ? getAddress(input.contract) : null;
-  if (!ours || named !== ours || !input.recipient) throw new ApiError({ status: 409, code: "OUT_OF_DATE", message: GIFT_PAGE.cannotOpenHere });
+  // One of this build's own contracts, by its own settings: a gift made before the third daily contract was set is
+  // still on the second, and is opened there.
+  const ours = named ? (linkOpenedContracts(kindOf(input.giftId)).find((contract) => contract === named) ?? null) : null;
+  if (!ours || !input.recipient) throw new ApiError({ status: 409, code: "OUT_OF_DATE", message: GIFT_PAGE.cannotOpenHere });
   return openWithLinkKey({ giftId: input.giftId, contract: ours, recipient: input.recipient, linkSecret: input.linkSecret, nowMs: input.nowMs });
 }
 
