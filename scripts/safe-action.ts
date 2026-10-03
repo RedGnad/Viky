@@ -13,7 +13,7 @@ import { signWithHiddenPhrase } from "../src/safe-phrase";
  * contracts' owner can still do once the Safe holds them: pausing, changing the evidence signer, and, for a contract
  * of the second version, accepting its ownership (src/safe-actions.ts names every action and every target).
  *
- *   TARGET=escrow | earlier-escrow | milestone | router | escrow-v2 | milestone-v2 | anchor
+ *   TARGET=escrow | earlier-escrow | milestone | router | escrow-v2 | milestone-v2 | anchor | escrow-v3
  *   ACTION=creation-paused | checkin-paused | proof-paused (with PAUSED=true|false), evidence-signer | anchorer (with
  *          VALUE=0x…), accept-ownership, raw (with TO and DATA)
  *   TARGET_ADDRESS=0x…  a contract of the second version the app does not know yet, as its deployment printed it
