@@ -1,5 +1,7 @@
 import { after, NextResponse } from "next/server";
+import { morningSummaryDue } from "@/src/attested-calls";
 import { NO_STORE } from "@/src/gift-api";
+import { sendAlert } from "@/src/provider-alert";
 import { claimPass, FREQUENT_DAILY_PASS_EVERY_SECONDS, FREQUENT_PASS_EVERY_SECONDS, frequentDailyPass, frequentMilestonePass } from "@/src/frequent-pass";
 
 export const runtime = "nodejs";
@@ -13,6 +15,8 @@ export const maxDuration = 300;
  *
  * Two passes ride that one call: the milestones', every four minutes at most, and the pass of the daily gifts read as
  * the day goes, every fourteen. The address keeps the name the scheduler knows.
+ *
+ * The same call carries the morning's summary of the month's readings to the operator, during the judging.
  */
 export async function GET() {
   try {
@@ -38,6 +42,16 @@ export async function GET() {
         }
       });
     }
+    // The morning's summary of what Reclaim was asked the day before, during the judging (src/attested-calls.ts): this
+    // call arrives every five minutes, so it leaves within minutes of six o'clock UTC, once.
+    after(async () => {
+      try {
+        const summary = await morningSummaryDue();
+        if (summary) await sendAlert(summary);
+      } catch (error) {
+        console.error(`morning summary not sent: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    });
     return NextResponse.json({ ok: true }, { headers: NO_STORE });
   } catch (error) {
     console.error(`frequent milestone pass not claimed: ${error instanceof Error ? error.message : String(error)}`);
