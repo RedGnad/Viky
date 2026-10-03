@@ -305,11 +305,35 @@ export const PAY = {
     `${recipient.trim() ? `${recipient}'s name` : "Their name"}${withYours ? " and yours show" : " shows"} on the gift, to whoever opens its link.`,
   /** The sheet the card is paid in, and what its frame is called when read aloud. */
   card: { title: "Pay by card", frame: "Card payment" },
-  /** Rampnow in a frame of our own (the founder, 3 Oct 2026), and its page beside as the fallback. */
+  /**
+   * Rampnow in a frame of our own, one payment for one gift (the founder, 3 Oct 2026, src/rampnow-frame.ts). Its page
+   * beside stays the fallback.
+   */
   rampnow: {
-    failed: "The card payment did not go through. Nothing was taken.",
+    /** The frame said the payment failed, and nothing left: said on the screen that waits, where paying starts again. */
+    failed: "The payment did not go through. Nothing was taken.",
+    /** The frame's address could not be had: its page beside is the way. */
     notShowing: "If the payment does not show, open its page instead.",
     openPage: "Open the card page",
+    /** Under the frame while no payment is known: the one way out, and the page beside for a sign-in the frame refuses. */
+    notPaidBack: "I have not paid: go back",
+    cantSignIn: "Can't sign in here?",
+    /** Under the frame once a payment is known: no way out, and why. */
+    keepOpen: "Keep this window open: Rampnow is finishing your payment.",
+    /** Five minutes without the money: a way out, to the screen that waits. */
+    late: "This is taking longer than usual.",
+    lateOut: "Close this window",
+    /** On the screen that waits, on Home and on Gifts, once the frame was left: where the payment is, since when, and the way back. */
+    atRampnow: "Your payment is at Rampnow.",
+    maybeAtRampnow: "If you paid, your payment is at Rampnow.",
+    needsItsPage: "It finishes on Rampnow's page, which has to be open for it.",
+    since: (minutes: number) =>
+      minutes < 1 ? "Started less than a minute ago." : minutes < 60 ? `Started ${minutes} ${minutes === 1 ? "minute" : "minutes"} ago.` : `Started ${Math.floor(minutes / 60)} ${Math.floor(minutes / 60) === 1 ? "hour" : "hours"} ago.`,
+    finish: "Finish my payment",
+    notPaid: "I have not paid",
+    /** The same, for the gift named on Home and on Gifts. */
+    giftAtRampnow: (amount: string, recipient: string) => `${amount}${forThem(recipient)}: your payment is at Rampnow.`,
+    giftMaybeAtRampnow: (amount: string, recipient: string) => `${amount}${forThem(recipient)}: if you paid, your payment is at Rampnow.`,
   },
   yourCode: "Your code",
   /**

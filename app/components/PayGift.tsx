@@ -36,7 +36,11 @@ import { JudgeCode } from "../kit/offer/JudgeCode";
 import { CardNotOffered, CardTermsLine } from "../kit/offer/CardTerms";
 import { SwapperSheet } from "../kit/offer/SwapperSheet";
 import { RampnowSheet } from "../kit/offer/RampnowSheet";
+import { RampnowWaiting } from "../kit/offer/RampnowWaiting";
 import { rampnowFrameOn } from "@/src/rampnow-frame";
+import { clearRampnowPending, noteRampnowPending, readRampnowPending, useRampnowPending } from "@/src/client/rampnow-pending";
+import { noteInRampnowJournal } from "@/src/client/rampnow-journal";
+import { moneyIn } from "@/src/pay-sum";
 import { FunderControls } from "../kit/FunderControls";
 import { Said } from "../kit/Said";
 import { FoldChevron } from "../kit/GiftLive";
@@ -174,8 +178,30 @@ export function PayGift() {
   const wayIn: WayIn = chosenWay ?? waysIn().find((entry) => entry.name === kept?.wayIn) ?? waysIn()[0];
   /** The card paid inside Viky (`SwapperSheet`), open over this screen: at once when the pay press sent the person here for it. */
   const [cardOpen, setCardOpen] = useState(params.get("card") === "1");
-  /** Rampnow in a frame (`RampnowSheet`), open over this screen: at once when the pay press sent the person here for it. */
-  const [rampnowOpen, setRampnowOpen] = useState(params.get("rampnow") === "1");
+  /**
+   * A card payment that may have left through Rampnow and has not arrived (src/client/rampnow-pending.ts): the screen
+   * then says where the payment is, and its main action leads back to it. One gift, one payment (the founder, 3 Oct
+   * 2026): a new payment starts only after the person says they have not paid.
+   */
+  const rampnowPending = useRampnowPending(address);
+  /**
+   * Rampnow in a frame (`RampnowSheet`), open over this screen: on a new payment, or on one already started, to finish
+   * it. Nothing closes it but this screen: the money arriving, or one of the ways out under the frame.
+   */
+  const [frame, setFrame] = useState<Readonly<{ mode: "new" } | { mode: "finish"; orderUid: string | null }> | null>(null);
+  /**
+   * What the address asked for on arrival, answered once, when the account and what this device waits for are known:
+   * the pay press opens the frame on a new payment only if none is waited for, and "Finish my payment", pressed on
+   * Home or on Gifts, opens it on the payment that is. Arriving again at the same address never starts a second one.
+   */
+  const [arrival, setArrival] = useState<"new" | "finish" | null>(params.get("rampnow") === "1" ? "new" : params.get("finish") === "1" ? "finish" : null);
+  if (arrival && browser && address) {
+    setArrival(null);
+    if (arrival === "new" && !rampnowPending) setFrame({ mode: "new" });
+    if (arrival === "finish" && rampnowPending?.via === "frame") setFrame({ mode: "finish", orderUid: rampnowPending.orderUid });
+  }
+  /** The frame said the payment failed and nothing left: said once, above the button that pays. */
+  const [rampnowFailed, setRampnowFailed] = useState(false);
   /** Whether the card is offered to this payer (src/card-rail.ts): not in a country its providers' terms exclude. */
   const [card, setCard] = useState<Readonly<{ offered: boolean; country: string | null }> | null>(null);
   useEffect(() => {
@@ -362,7 +388,12 @@ export function PayGift() {
         const next = nextFundingStep({ held: read.held, arriving: read.arriving, arrivingUsdc: read.usdc, wanted, failedAtMs: failedAtMs.current, nowMs: Date.now() });
         // The money is in the account: the frame it was paid in closes, whatever the frame said or did not say.
         // Without a partner's key Rampnow's messages may never come, so nothing waits for them (3 Oct 2026).
-        if (next.do !== "wait") setRampnowOpen(false);
+        if (next.do !== "wait") {
+          setFrame(null);
+          // And nothing is waited for at Rampnow any more. Written down with its time: the length of a real payment.
+          if (readRampnowPending(address)) noteInRampnowJournal("Viky: the money arrived in the account");
+          clearRampnowPending(address);
+        }
         if (next.do === "give") {
           working.current = true;
           setPhase("giving");
@@ -676,7 +707,8 @@ export function PayGift() {
                 type="button"
                 onClick={() => {
                   if (wayIn.embedded) setCardOpen(true);
-                  else if (wayIn === WAY_IN_USDC && rampnowFrameOn()) setRampnowOpen(true);
+                  // What arrived fell short: paying the rest is a new payment, asked for by this press.
+                  else if (wayIn === WAY_IN_USDC && rampnowFrameOn()) setFrame({ mode: "new" });
                   else window.open(wayInPage(wayIn, { account: address, euros: more }), "_blank", "noopener,noreferrer");
                   setPhase("waiting");
                 }}
@@ -786,10 +818,13 @@ export function PayGift() {
         )}
         {/* A dollar coin that arrives is changed by this screen, with nothing to confirm: said before it lands. */}
         {wayIn.arrives === "usdc" && !cardClosed ? <p className={HELP}>{W.waiting.thenConfirmed}</p> : null}
-        <p className={BODY}>
-          {wayIn.takes && !cardClosed ? `${W.check.delay(wayIn.name, wayIn.takes)} ` : ""}
-          {keptOnDevice ? W.waiting.leave : W.waiting.stay}
-        </p>
+        {/* Not said while a payment is at Rampnow: the gift is kept, but that payment finishes only on Rampnow's page. */}
+        {wayIn === WAY_IN_USDC && rampnowFrameOn() && rampnowPending ? null : (
+          <p className={BODY}>
+            {wayIn.takes && !cardClosed ? `${W.check.delay(wayIn.name, wayIn.takes)} ` : ""}
+            {keptOnDevice ? W.waiting.leave : W.waiting.stay}
+          </p>
+        )}
         {cardClosed ? (
           <CardNotOffered country={card?.country ?? null} />
         ) : wayIn.embedded ? (
@@ -806,17 +841,30 @@ export function PayGift() {
             </button>
             <CardTermsLine way={wayIn} />
           </>
+        ) : wayIn === WAY_IN_USDC && rampnowFrameOn() && rampnowPending ? (
+          // A payment may have left and the frame was left: the screen says where the payment is, and its main action
+          // leads back to it. Paying is not offered: a new payment starts only once the person says they have not paid.
+          <RampnowWaiting
+            pending={rampnowPending}
+            says={rampnowPending.known ? P.rampnow.atRampnow : P.rampnow.maybeAtRampnow}
+            onFinish={() => setFrame({ mode: "finish", orderUid: rampnowPending.orderUid })}
+            onNotPaid={() => {
+              noteInRampnowJournal("Viky: said not paid, on the screen that waits");
+              clearRampnowPending(address);
+            }}
+          />
         ) : wayIn === WAY_IN_USDC && rampnowFrameOn() ? (
           <>
+            {rampnowFailed ? <FieldRefusal id="rampnow-failed">{P.rampnow.failed}</FieldRefusal> : null}
             <button
               type="button"
               className={PRIMARY_BUTTON}
               onClick={() => {
-                setPartnerOpened(true);
-                setRampnowOpen(true);
+                setRampnowFailed(false);
+                setFrame({ mode: "new" });
               }}
             >
-              {partnerOpened ? W.waiting.openCardAgain : W.waiting.openCard}
+              {toBuy ? P.payByCard(moneyIn(toBuy, "EUR")) : W.waiting.openCard}
             </button>
             <CardTermsLine way={wayIn} />
           </>
@@ -838,14 +886,30 @@ export function PayGift() {
           onClose={() => setCardOpen(false)}
         />
         <RampnowSheet
-          open={rampnowOpen}
+          open={frame !== null}
           account={address}
           euros={toBuy}
-          onArrived={() => {
-            setRampnowOpen(false);
-            void refresh();
+          finish={frame?.mode === "finish" ? { orderUid: frame.orderUid } : null}
+          known={rampnowPending?.known ?? false}
+          onSaid={(what, orderUid) => noteRampnowPending(address, { orderUid, known: what === "paying", via: "frame" })}
+          onNotPaid={() => {
+            clearRampnowPending(address);
+            setFrame(null);
           }}
-          onClose={() => setRampnowOpen(false)}
+          onFailed={() => {
+            noteInRampnowJournal("Viky: the frame said the payment failed");
+            clearRampnowPending(address);
+            setFrame(null);
+            setRampnowFailed(true);
+          }}
+          onLate={() => {
+            noteRampnowPending(address);
+            setFrame(null);
+          }}
+          onBeside={() => {
+            noteRampnowPending(address, { via: "tab" });
+            setFrame(null);
+          }}
         />
         <div className="flex flex-col gap-[var(--space-xs)]">
           <button type="button" onClick={differentGift} className={`${SMALL_BUTTON} self-start`}>
