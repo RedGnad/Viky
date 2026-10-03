@@ -28,7 +28,7 @@ function spokenTo(source: string): string {
 
 /**
  * The month's limit of readings is reached (the founder, 3 Oct 2026): said in place, where a reading or a proof would
- * have gone, short, and in the one red of the product (`.limit-said`). Viky asks an outside service for each attested
+ * have gone, short, and in the quiet colour of the labels (`.limit-said`); the red is kept for a press it refuses. Viky asks an outside service for each attested
  * reading and for each proof a person shows, and that service counts them by the month (src/attested-calls.ts).
  * `until` is the real end of the window of the day that can still be counted, in the reader's own clock; a gift that
  * is not counted by days has none, and reads that nothing is lost instead. `email` is where to write, and the
@@ -44,14 +44,39 @@ export const CEILING = {
   reading: (resumes: string | null) => `Viky has read this as often as it does in one day. It resumes ${resumes ?? "tomorrow"}. Nothing is lost.`,
 } as const;
 
-const LIMIT_READING = "Monthly reading limit reached.";
-const LIMIT_PROOF = "Monthly proof limit reached.";
+/**
+ * A month's reserve is used up (the founder, 3 Oct 2026). Viky asks an outside service for each attested reading and
+ * for each proof a person shows, and that service gives two reserves a month (src/attested-calls.ts): the readings Viky
+ * takes by itself, and the proofs people show.
+ *
+ * One sentence in the open, in the quiet colour of the labels: which service is not checked, named by the gift's own
+ * source, and the day it starts again, which is the cycle's own first day. Everything else is folded under "What you
+ * can do": until when the open day can still be counted, that what is already theirs is taken out as usual, what the
+ * empty reserve does not touch, and where to write. A sentence of that length is not left in the open (rule 4).
+ *
+ * The same sentence is said before a gift is paid for, on the card and in the choice of what they will do: a
+ * condition whose reserve is empty says so, and stays offered beside those that work.
+ */
+export type Reserve = "readings" | "proofs";
 export const LIMIT = {
-  reading: (until: string | null, email: string | null) =>
-    [LIMIT_READING, until ? `Your day can still be counted until ${until}.` : "Nothing is lost.", email ? `Write to ${email}.` : ""].filter(Boolean).join(" "),
-  proof: (email: string | null) => [LIMIT_PROOF, "Nothing was taken.", email ? `Write to ${email}.` : ""].filter(Boolean).join(" "),
-  /** Whether a sentence is one of the two, wherever a screen prints what it was answered: it is then set in the red. */
-  isSaid: (text: string | null | undefined) => Boolean(text && (text.startsWith(LIMIT_READING) || text.startsWith(LIMIT_PROOF))),
+  /** The two sentences said in the open, each kept apart so that each is measured for itself (rule 4). */
+  service: (source: string, reserve: Reserve) => `Viky can't check ${source} right now: this month's ${reserve} are used up.`,
+  startsAgain: (again: string) => `It starts again on ${again}.`,
+  /** `yours`: said to the person the gift is for, whose source is then theirs to read ("your university"). */
+  said: (source: string, reserve: Reserve, again: string, yours = false): string => `${LIMIT.service(yours ? spokenTo(source) : source, reserve)} ${LIMIT.startsAgain(again)}`,
+  /** The fold's name, and what it holds, a line each. */
+  can: "What you can do",
+  dayYours: (until: string) => `Your day can still be counted until ${until}.`,
+  dayTheirs: (name: string | null, until: string) => `${name ? `${name}'s` : "Their"} day can still be counted until ${until}.`,
+  takeYours: "What is already yours can be taken out as usual.",
+  takeTheirs: "What is already theirs can be taken out as usual.",
+  /** What an empty reserve does not touch: the gifts that draw on the other one. */
+  untouched: { readings: "Gifts proved by a document someone shows are not touched.", proofs: "Gifts that Viky reads by itself are not touched." } as Record<Reserve, string>,
+  write: (email: string) => `Write to ${email}: we can reopen it sooner.`,
+  /** Beside a condition in a list, where a sentence has no room: four words (rule 5). */
+  backOn: (again: string) => `Back on ${again}`,
+  /** Whether a sentence is the one said in the open, wherever a screen prints what it was answered to a press: it is then set in the red. */
+  isSaid: (text: string | null | undefined) => Boolean(text && /^Viky can't check .+ right now: this month's (readings|proofs) are used up\./.test(text)),
 } as const;
 
 /** The three destinations of the bar and the rail, and the mark. */
@@ -653,7 +678,7 @@ export const FUND = {
       ends: "Ends",
     },
     dayEarned: (perDay: string, exact: boolean, days: number) => `${exact ? "" : "about "}${perDay}, over ${days} days`,
-    firstDay: (source: string) => `The day after they connect ${source}`,
+    firstDay: (source: string, sameDay = false) => `The day ${sameDay ? "" : "after "}they connect ${source}`,
     ends: (days: number) => `${days} days after that`,
     missed: (time: string) =>
       `A day they miss can still be caught up the next day. If it is not, it comes back to you by itself the morning after, at about ${time} your time.`,
@@ -780,7 +805,7 @@ export const FUND = {
     about: "about ",
     aDay: "A day",
     days: (count: number) => (count === 1 ? "Day" : "Days"),
-    firstDay: (source: string) => `First day counted the day after they connect ${source}.`,
+    firstDay: (source: string, sameDay = false) => `First day counted the day ${sameDay ? "" : "after "}they connect ${source}.`,
     reference: (when: string, giftId: string) => `Made ${when}. Reference: gift ${giftId}.`,
     linkTitle: "The link",
     copy: "Copy the link",
@@ -792,9 +817,9 @@ export const FUND = {
     findItAgain: "Lose this link and the gift's page makes you a new one, as long as nobody has opened it.",
     nextTitle: "What happens next",
     theyConnectAny: "connects what they will do",
-    next: (recipient: string, theyConnect: string, eachDay: string, perDay: string, time: string) => [
+    next: (recipient: string, theyConnect: string, eachDay: string, perDay: string, time: string, sameDay = false) => [
       `${recipient} opens the link and ${theyConnect}.`,
-      `From the day after, ${eachDay} puts ${perDay} in ${their(recipient)} name.`,
+      `From ${sameDay ? "that day" : "the day after"}, ${eachDay} puts ${perDay} in ${their(recipient)} name.`,
       `A day they miss and do not catch up the next day comes back to your account the morning after, at about ${time} your time. If nobody opens the link within 14 days, it all comes back.`,
     ],
     seeIt: "See this gift",
@@ -841,7 +866,8 @@ export const GIFT_PAGE = {
   notYours: "This gift is not yours. You can read where it stands; nothing here is yours to do.",
   becomesYours: (perDay: string, eachDay: string, when: string) => `It becomes yours as you go: ${perDay} for ${eachDay}, ${when}.`,
   becomesTheirs: (perDay: string, eachDay: string, when: string) => `It becomes theirs as they go: ${perDay} for ${eachDay}, ${when}.`,
-  forDaysFromConnecting: (count: number) => `for ${days(count)} from the day after it is connected`,
+  /** On the third daily contract the first day is the day of the connection; before it, the day after. */
+  forDaysFromConnecting: (count: number, sameDay = false) => `for ${days(count)} from the day ${sameDay ? "" : "after "}it is connected`,
   goesBackToThem: (funder: string | null) =>
     sentence(`The same goes back to ${funder ?? "them"} for each day without it that is not caught up the next day. Nobody else ever profits from a missed day.`),
   comesBackToYou: sentence("The same comes back to you for each day without it that is not caught up the next day. Nobody else ever profits from a missed day."),
@@ -1145,6 +1171,33 @@ export const GIFT_LIVE = {
   dayOfDays: (day: number, total: number) => `Day ${day} of ${total}`,
   /** The next reading as a figure beside the money, where nothing has gone back yet: the hour, and what it is. */
   nextReading: "Next reading",
+  /**
+   * A gift read as the day goes (the founder's mockup of 3 Oct 2026, the day on the third daily contract). There is
+   * no next reading to announce: the page looked as it opened. What stands in its place is how long is left, at the
+   * reader's own clock, and once today is counted, what today added. What is waited for and what was seen are the
+   * register's words (src/conditions.ts, `asItGoes`), since they name what the person does.
+   */
+  asItGoes: {
+    counted: "Today counted.",
+    /** `day` begins the sentence: "Yesterday", or a date when the open day is older. */
+    catchUp: (day: string) => `${day} can still be caught up.`,
+    leftToday: "Left today",
+    leftFor: (day: string) => `Left for ${day}`,
+    today: "Today",
+    plus: (amount: string) => `+ ${amount}`,
+    /** The same as a sentence, once what has gone back takes the right column. */
+    leftTodayLine: (left: string) => `${left} left today.`,
+    leftForLine: (left: string, day: string) => `${left} left for ${day}.`,
+    yesterday: "yesterday",
+    thisDay: "today",
+    /** The wheel beside the state has no word on the screen: this is its name, for a reader that speaks the page. */
+    looking: "Looking for today's lesson",
+    /** A look or a reading that failed on our side: the day stays open, and until when it can still be counted. */
+    notReadNow: (source: string) => `${source} could not be read just now.`,
+    stillOpenUntil: (until: string) => `The day stays open: it can still be counted until ${until}.`,
+    /** Past the last day, every day settled, in the hours before the gift is closed. */
+    over: "Its days are over.",
+  },
   /** The line above the name, to a reader nobody gave the names to: neither "your" nor anybody's. */
   aGift: "A gift",
   /** The card's title, to a reader given no name for the person it is for. */

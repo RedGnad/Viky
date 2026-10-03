@@ -1,5 +1,4 @@
-import { readingFor, readingIs } from "./attested-calls";
-import { contactEmail } from "./contact";
+import { readingFor, readingIs, startsAgainInWords } from "./attested-calls";
 import { CEILING, LIMIT } from "./sentences";
 import type { Hex } from "viem";
 import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
@@ -295,7 +294,7 @@ async function provePasted(input: { giftId: string; link: string }, deps: Certif
         return refuse(giftId, "BELOW_THE_TARGET", words?.below(1, 0) ?? error.message);
       case "LIMIT_REACHED":
         // Nothing was read: said as it is, with where to write, and no day to count on a gift of this shape.
-        return refuse(giftId, "LIMIT_REACHED", LIMIT.reading(null, contactEmail()));
+        return refuse(giftId, "LIMIT_REACHED", LIMIT.said(certificate?.condition.source ?? "this", "readings", startsAgainInWords(deps.now() * 1_000)));
       case "CEILING_REACHED":
         // A day's ceiling of readings: nothing was read, and the screen says when it resumes.
         return refuse(giftId, "CEILING_REACHED", CEILING.reading(null));

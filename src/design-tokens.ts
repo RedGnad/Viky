@@ -175,9 +175,10 @@ export type Appearance = "light" | "dark";
  * colours of the characters are their own roles (CHARACTERS), never a background and never text.
  */
 /**
- * The one red (the founder, 3 Oct 2026): the sentence that says a monthly limit is reached, and nothing else. The look
- * has three colours, and a refusal carries a mark and never a colour of its own (app/kit/FieldRefusal.tsx); this is
- * the one sentence the founder asked to stand out from them. It is not taken by eye: it is the error role of
+ * The one red (the founder, 3 Oct 2026): a press refused because a month's reserve is used up, and nothing else. The
+ * look has three colours, and a refusal carries a mark and never a colour of its own (app/kit/FieldRefusal.tsx); this
+ * is the one refusal the founder asked to stand out from them. The same sentence said in place, where nothing was
+ * pressed, takes the quiet colour of the labels: nothing is lost and it is not the person's doing. It is not taken by eye: it is the error role of
  * Material 3's baseline scheme at its documented tones, 40 by day and 80 after dark, measured on the paper it is read
  * on, 6.08:1 on the day's cream and 7.67:1 on the night's paper. It is a colour of words only, never a background.
  */
