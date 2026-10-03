@@ -41,8 +41,8 @@ const FOLDED: Readonly<Record<string, string>> = {
   "GIFT_PAGE.notYetBody": 'under "I do not have Duolingo yet", once it is pressed',
   "GIFT_PAGE.linkAgainWhy": 'the sheet "Get the link again"',
   "GIFT_PAGE.linkFindWhy": 'the sheet "Find the link again"',
-  "GIFT_LIVE.climbing.alertRefused": 'the sheet "Messages"',
-  "MORNING.refused": 'the sheet "Messages"',
+  "GIFT_LIVE.climbing.alertRefused": 'the sheet "Notifications"',
+  "MORNING.refused": 'the sheet "Notifications"',
   "CONSENT.funderBefore": HOW_CHECKED,
   "END_GIFT.funderMay": 'the fold "What was agreed" of a gift',
   "FUND.made.next": 'the fold "What happens next", under the link of a gift just made',
@@ -238,7 +238,7 @@ test("no sentence of a screen runs past 90 characters outside a fold, a sheet or
 test("the labels of the recipient's controls are four words at most", () => {
   const source = readFileSync("src/sentences.ts", "utf8");
   const group = source.slice(source.indexOf("export const YOU_DECIDE = {"), source.indexOf("} as const;", source.indexOf("export const YOU_DECIDE = {")));
-  const labels = ["title", "messages", "on", "off", "stop", "anytime", "onABreak", "yours", "cannotBeUndone"];
+  const labels = ["title", "notifications", "on", "off", "stop", "anytime", "onABreak", "yours", "cannotBeUndone"];
   for (const label of labels) {
     const found = new RegExp(`\\n  ${label}: "([^"]+)"`).exec(group);
     assert.ok(found, `${label} is not a label of YOU_DECIDE`);

@@ -37,7 +37,7 @@ export function Act({
   );
 }
 
-/** The drawing of "Messages": a bell. */
+/** The drawing of "Notifications": a bell. */
 export function BellMark() {
   return (
     <svg aria-hidden focusable="false" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

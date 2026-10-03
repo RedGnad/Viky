@@ -47,7 +47,7 @@ export function FunderControls({
     <>
       <RoundControls label={Y.title}>
         {tells ? (
-          <Act name={Y.messages} state={told.step === "on" ? Y.on : Y.off} onPress={() => setOpen("messages")} data-decide="messages">
+          <Act name={Y.notifications} state={told.step === "on" ? Y.on : Y.off} onPress={() => setOpen("messages")} data-decide="messages">
             <BellMark />
           </Act>
         ) : null}
