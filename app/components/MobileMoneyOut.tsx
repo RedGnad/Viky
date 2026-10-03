@@ -9,6 +9,7 @@ import { delayInWords, localInWords, MOBILE_REFUSALS } from "@/src/mobile-money"
 import { MOBILE_OUT as W, USE_MONEY } from "@/src/sentences";
 import { ChoiceList } from "../kit/ChoiceList";
 import { BODY, CARD, CARD_AMOUNT, CARD_LABEL, FIELD, HELP, PRIMARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
+import { ButtonWords, WaitLine } from "../kit/Waiting";
 
 /**
  * Your mobile money, the third way out (the founder, 2 Oct 2026), on one card: the operator, the number, the name on the
@@ -223,7 +224,7 @@ export function MobileMoneyOut(props: Readonly<{ offer: Offered; ausd: bigint; e
       </label>
       {/* The figure on the number, and when it was priced: Switch's quote, never a rate of ours. */}
       <div aria-live="polite" className="flex flex-col gap-[var(--space-xs)]" data-mobile-figure>
-        {within && price === null ? <p className={HELP}>{W.pricing}</p> : null}
+        {within && price === null ? <WaitLine>{W.pricing}</WaitLine> : null}
         {price === "unpriced" ? <p className={HELP}>{W.unpriced}</p> : null}
         {price && price !== "unpriced" ? (
           <>
@@ -238,7 +239,9 @@ export function MobileMoneyOut(props: Readonly<{ offer: Offered; ausd: bigint; e
         </p>
       ) : null}
       <button type="button" onClick={() => void send()} disabled={!ready} className={PRIMARY_BUTTON}>
-        {step ? W.steps[step] : operatorName ? W.send(operatorName) : USE_MONEY.mobile.action}
+        <ButtonWords busy={step !== null} doing={step ? W.steps[step] : ""}>
+          {operatorName ? W.send(operatorName) : USE_MONEY.mobile.action}
+        </ButtonWords>
       </button>
       <button type="button" onClick={props.onBack} disabled={busy} className={`${SMALL_BUTTON} self-start`}>
         {W.back}

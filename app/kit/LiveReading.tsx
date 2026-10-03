@@ -93,7 +93,15 @@ export function LiveLine({ state, source }: Readonly<{ state: LiveState; source:
     const clock = window.setInterval(() => setNowMs(Date.now()), 1_000);
     return () => window.clearInterval(clock);
   }, [checkedAt]);
-  if (state.phase === "checking") return <>{L.checking(source)}</>;
+  // Read as the page opens: the wheel turns beside the words while it is (the founder, 3 Oct 2026).
+  if (state.phase === "checking") {
+    return (
+      <span className="inline-flex items-center gap-[var(--space-sm)]" data-waiting="">
+        <span className="working-ring working-ring-inline" aria-hidden="true" />
+        <span>{L.checking(source)}</span>
+      </span>
+    );
+  }
   if (state.phase === "failed") return <>{state.text}</>;
   return <>{checkedAgo(Math.max(0, Math.floor(((nowMs || state.atMs) - state.atMs) / 1_000)))}</>;
 }

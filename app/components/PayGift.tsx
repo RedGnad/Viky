@@ -51,6 +51,7 @@ import { previewLine, sharedWith } from "@/src/preview-line";
 import { AccountPanel } from "./AccountPanel";
 import { DoorNotice } from "../kit/AccountDoor";
 import { BODY, CARD, CARD_LABEL, CARD_TITLE, HELP, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
+import { WaitLine } from "../kit/Waiting";
 
 /**
  * Paying for the gift that was filled in on the card (the product vision of 19 Sep 2026, section 5, surface Pay).
@@ -479,7 +480,7 @@ export function PayGift() {
   if (!browser) {
     return (
       <Shell kind="task">
-        <p className={HELP}>{O.oneMoment}</p>
+        <WaitLine>{O.oneMoment}</WaitLine>
       </Shell>
     );
   }

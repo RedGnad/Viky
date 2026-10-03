@@ -7,6 +7,7 @@ import { MARATHON_PROOF as R, WCA_PROOF as W } from "@/src/sentences";
 import { countryInWords } from "@/src/rail-country";
 import { CHIP, HELP } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
+import { WaitLine } from "../Waiting";
 
 /**
  * "Which competition?" then "Which event?" (the founder, 27 Sep 2026): the WCA's coming competitions, all countries,
@@ -33,7 +34,7 @@ export function WcaChooser({ open, draft, named, onChoose }: Readonly<{ open: bo
       live = false;
     };
   }, [open]);
-  if (competitions === null) return <p className={HELP}>{W.readingCompetitions}</p>;
+  if (competitions === null) return <WaitLine>{W.readingCompetitions}</WaitLine>;
   if (competitions === "unreadable") return <p className={HELP}>{W.competitionsUnreadable}</p>;
   const [chosenId, chosenEvent] = (draft.course ?? "").split("/");
   const competitionId = picked ?? (chosenId || null);

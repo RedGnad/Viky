@@ -30,6 +30,7 @@ import { charactersOf } from "./DayStrip";
 import { holdsAnything, useHoldings, useSawMoney, type Holdings } from "./money";
 import type { HeldAmounts } from "@/src/reader-holdings";
 import type { GiftSummary } from "@/src/client/gift";
+import { WaitLine } from "./Waiting";
 
 /**
  * Home: a gift to fill in, and nothing in front of it (the product vision of 19 Sep 2026, sections 1 and 5).
@@ -196,7 +197,7 @@ export function Home({
         <section className="arrives-in-turn flex flex-col gap-[var(--space-md)]">
           <h2 className={TITLE}>{W.moving}</h2>
           {problem ? <p className={BODY}>{problem}</p> : null}
-          {!problem && gifts === null ? <p className={HELP}>{W.loading}</p> : null}
+          {!problem && gifts === null ? <WaitLine>{W.loading}</WaitLine> : null}
           {gifts !== null && gifts.length === 0 ? <EmptyState>{W.empty}</EmptyState> : null}
           {moving.map((gift) => (
             <Reveal key={gift.giftId}>

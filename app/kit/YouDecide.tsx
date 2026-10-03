@@ -15,6 +15,8 @@ import { FieldRefusal } from "./FieldRefusal";
 import { MessagesSheet, useTold, type ToldAbout } from "./MorningMessage";
 import { Act, BellMark, RoundControls } from "./RoundControls";
 import { Sheet } from "./Sheet";
+import { ButtonWords, StepInProgress } from "./Waiting";
+import { WAITS } from "@/src/sentences";
 
 /**
  * "You decide": the standing controls of the person a gift is for, under the card (the founder, 1 Oct 2026, the
@@ -203,8 +205,11 @@ export function YouDecide({
             step === "break" ? (
               <>
                 <button type="button" className={PRIMARY_BUTTON} disabled={busy} onClick={() => void takeABreak()}>
-                  {busy ? C.working : Y.takeABreak}
+                  <ButtonWords busy={busy} doing={C.working}>
+                    {Y.takeABreak}
+                  </ButtonWords>
                 </button>
+                <StepInProgress busy={busy} step={WAITS.choice} />
                 <button type="button" className={SECONDARY_BUTTON} disabled={busy} onClick={close}>
                   {Y.notNow}
                 </button>
@@ -213,8 +218,11 @@ export function YouDecide({
             ) : step === "end" ? (
               <>
                 <button type="button" className={PRIMARY_BUTTON} disabled={ending.busy} onClick={() => void endIt()}>
-                  {ending.busy ? E.working : Y.endTheGift}
+                  <ButtonWords busy={ending.busy} doing={E.working}>
+                    {Y.endTheGift}
+                  </ButtonWords>
                 </button>
+                <StepInProgress busy={ending.busy} step={WAITS.ending} />
                 <button type="button" className={SECONDARY_BUTTON} disabled={ending.busy} onClick={close}>
                   {Y.notNow}
                 </button>
@@ -252,7 +260,7 @@ export function YouDecide({
                 </Option>
               ) : null}
               {stopped && !connected && state ? (
-                <Option character="today" name={busy ? C.working : Y.startAgain} disabled={busy} onPress={() => void startAgain()} data-option="again">
+                <Option character="today" name={<ButtonWords busy={busy} doing={C.working}>{Y.startAgain}</ButtonWords>} disabled={busy} onPress={() => void startAgain()} data-option="again">
                   <span className="decide-option-help">{C.stoppedLine(what, dateInWords(Date.parse(state.signedAt), zone))}</span>
                 </Option>
               ) : null}
@@ -280,7 +288,7 @@ function Option({
   disabled = false,
   children,
   ...rest
-}: Readonly<{ character: CharacterState; name: string; onPress: () => void; disabled?: boolean; children: ReactNode; "data-option": string }>) {
+}: Readonly<{ character: CharacterState; name: ReactNode; onPress: () => void; disabled?: boolean; children: ReactNode; "data-option": string }>) {
   return (
     <button type="button" className="decide-option control-relief" onClick={onPress} disabled={disabled} {...rest}>
       <span className="decide-option-character">

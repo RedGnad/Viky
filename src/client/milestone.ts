@@ -9,7 +9,7 @@ import { getJson, postJson } from "./api";
 import { randomSalt, type CreatedGift } from "./gift";
 import { giftSalt } from "../gift-terms";
 import { milestoneFundingNonceV2 } from "../v2-protocol";
-import { linkForTerms, secondVersionOf, withTheStartSigned, type StartAsked } from "./v2";
+import { linkForTerms, secondVersionOf, withTheStartSigned, type StartAsked, type StartStep } from "./v2";
 
 /** Browser-side steps of a milestone gift (C2). Every step that moves money is signed by the person's own account. */
 
@@ -148,8 +148,9 @@ export function requestMilestoneCode(giftId: string): Promise<{ giftId: string; 
  * The first reading: the code in the name, and where they start. On the second version the recipient's account signs
  * it too, which `signer` gives when asked (src/client/v2.ts).
  */
-export async function startMilestone(giftId: string, signer: () => Promise<LocalAccount>): Promise<MilestoneOutcome> {
-  return withTheStartSigned<MilestoneOutcome>(giftId, await postJson<MilestoneOutcome | StartAsked>(`/api/gift/${giftId}/bind`, {}), signer);
+export async function startMilestone(giftId: string, signer: () => Promise<LocalAccount>, onStep?: (step: StartStep) => void): Promise<MilestoneOutcome> {
+  onStep?.("reading");
+  return withTheStartSigned<MilestoneOutcome>(giftId, await postJson<MilestoneOutcome | StartAsked>(`/api/gift/${giftId}/bind`, {}), signer, onStep);
 }
 
 /** A reading on demand. */

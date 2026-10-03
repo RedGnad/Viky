@@ -11,6 +11,8 @@ import { twoDecimalsDown } from "@/src/exit-steps";
 import { PHONE_OUT as W } from "@/src/sentences";
 import { BODY, CARD, CARD_AMOUNT, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
 import { Said } from "../kit/Said";
+import { ButtonWords, StepInProgress } from "../kit/Waiting";
+import { WAITS } from "@/src/sentences";
 
 /**
  * Your phone, the third way out (D238), in three screens at most: where (the number and its phone company), how much
@@ -218,9 +220,14 @@ export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; ensure
               {busy ? W.confirming : W.confirm}
             </button>
           ) : (
-            <button type="button" onClick={() => void askPrice()} disabled={busy || (!chosenPackage && (!typedFits || typedFar))} className={PRIMARY_BUTTON}>
-              {busy ? W.pricing : W.getPrice}
-            </button>
+            <>
+              <button type="button" onClick={() => void askPrice()} disabled={busy || (!chosenPackage && (!typedFits || typedFar))} className={PRIMARY_BUTTON}>
+                <ButtonWords busy={busy} doing={W.pricing}>
+                  {W.getPrice}
+                </ButtonWords>
+              </button>
+              <StepInProgress busy={busy} step={WAITS.price("Bitrefill")} />
+            </>
           )}
           <button type="button" onClick={() => { setScreen("where"); setProblem(null); setPrice(null); }} disabled={busy} className={SMALL_BUTTON}>
             {W.back}
@@ -263,8 +270,11 @@ export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; ensure
       {alert}
       <div className="flex flex-wrap gap-[var(--tap-gap)]">
         <button type="button" onClick={() => void find()} disabled={busy || phone.trim().length < 8} className={PRIMARY_BUTTON}>
-          {busy ? W.finding : W.find}
+          <ButtonWords busy={busy} doing={W.finding}>
+            {W.find}
+          </ButtonWords>
         </button>
+        <StepInProgress busy={busy} step={WAITS.operator} />
         <button type="button" onClick={props.onBack} disabled={busy} className={SMALL_BUTTON}>
           {W.back}
         </button>

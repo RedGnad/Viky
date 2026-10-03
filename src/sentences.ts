@@ -1346,6 +1346,37 @@ export const END_GIFT = {
   card: { yours: "You ended this gift.", theirs: "They ended this gift." },
 } as const;
 
+/**
+ * The step in progress, named under a button once its wait has passed ten seconds (the founder, 3 Oct 2026;
+ * app/kit/Waiting.tsx). Each says what this page is waiting on at that moment and nothing it cannot know: a request it
+ * sent, or the person's own passkey, never a guess at where a server is inside a request.
+ */
+export const WAITS = {
+  passkey: "Waiting for your face or your fingerprint.",
+  opening: "Writing down that you opened it. It can take a few more seconds.",
+  agreeing: "Writing down your yes.",
+  firstReading: (source: string) => `Asking ${source} for your profile, and certifying its answer.`,
+  recordingStart: "Writing down the first reading.",
+  counting: (source: string) => `Asking ${source}, certifying its answer, then writing it down.`,
+  naming: (source: string) => `Asking ${source} for that name.`,
+  taking: "Moving it into your account.",
+  takingBack: "Bringing it back into your account.",
+  newLink: "Making the new link.",
+  choice: "Writing down your choice.",
+  ending: "Ending the gift, and sending each of you your part.",
+  signingOut: "Closing your session.",
+  account: "Waiting for your face or your fingerprint, then opening your session.",
+  code: "Checking the code, then sending its credit to your account.",
+  price: (who: string) => `Asking ${who} for its price.`,
+  operator: "Asking which operator this number is with.",
+  amount: "Asking what your money gives right now.",
+  changing: "Changing your money. It can take a few more seconds.",
+  proof: "Reading the result and certifying it. This can take a minute.",
+  registration: "Asking the WCA for the competitors list.",
+  connecting: (source: string) => `Asking ${source} for your activity.`,
+  erasing: "Erasing the connection.",
+} as const;
+
 /** The name of a fold that holds what a block says beyond its first sentence (app/kit/Said.tsx, the founder's rule 4). */
 export const KIT = {
   how: "How it works",

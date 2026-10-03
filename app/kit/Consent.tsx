@@ -9,6 +9,8 @@ import { CONSENT as C, YOU_DECIDE as Y } from "@/src/sentences";
 import { BODY, CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { FieldRefusal } from "./FieldRefusal";
 import { Sheet } from "./Sheet";
+import { ButtonWords, StepInProgress } from "./Waiting";
+import { WAITS } from "@/src/sentences";
 
 /**
  * The recipient's yes and stop, where the gift is (the founder, 29 Sep 2026, the mockup consent.html; redrawn on
@@ -82,8 +84,11 @@ export function StopSheet({
       footer={
         <>
           <button type="button" className={PRIMARY_BUTTON} disabled={busy} onClick={onStop}>
-            {busy ? C.working : C.stopReading}
+            <ButtonWords busy={busy} doing={C.working}>
+              {C.stopReading}
+            </ButtonWords>
           </button>
+          <StepInProgress busy={busy} step={WAITS.choice} />
           <button type="button" className={SECONDARY_BUTTON} disabled={busy} onClick={onClose}>
             {C.keepGoing}
           </button>
@@ -168,7 +173,9 @@ export function ConsentLine({
       <div className="flex items-center justify-between gap-[var(--space-md)]">
         <p className={HELP}>{line}</p>
         <button type="button" onClick={() => void agree()} disabled={busy} className={SMALL_BUTTON}>
-          {busy ? C.working : label}
+          <ButtonWords busy={busy} doing={C.working}>
+            {label}
+          </ButtonWords>
         </button>
       </div>
       {problem ? <p className={HELP}>{problem}</p> : null}

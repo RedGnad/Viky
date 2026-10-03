@@ -11,6 +11,8 @@ import { wcaResultInWords } from "@/src/wca";
 import { BODY, CARD, FIELD, HELP, PRIMARY_BUTTON } from "../components/ui";
 import { Said } from "./Said";
 import { FieldRefusal } from "./FieldRefusal";
+import { ButtonWords, StepInProgress } from "./Waiting";
+import { WAITS } from "@/src/sentences";
 
 /**
  * The competitor's half of "Set a time at a WCA competition" (the founder, 27 Sep 2026), in two moments on the gift's
@@ -91,8 +93,11 @@ export function WcaProof({ giftId, status, yours, onChanged }: Readonly<{ giftId
           <Said under className={HELP} text={W.whoHelp(wca.title)} />
           <FieldRefusal id="wca-who-refusal">{state.at === "refused" ? state.message : undefined}</FieldRefusal>
           <button type="submit" className={PRIMARY_BUTTON} disabled={busy || who.trim() === ""}>
-            {state.at === "checking" ? W.checking : W.checkRegistration}
+            <ButtonWords busy={state.at === "checking"} doing={W.checking}>
+              {W.checkRegistration}
+            </ButtonWords>
           </button>
+          <StepInProgress busy={state.at === "checking"} step={WAITS.registration} />
         </form>
       </section>
     );
@@ -103,8 +108,11 @@ export function WcaProof({ giftId, status, yours, onChanged }: Readonly<{ giftId
       <p className="font-medium">{W.registered(wca.registered.who, wca.title)}</p>
       <p className={HELP}>{W.beforeTheDay}</p>
       <button type="button" onClick={() => void read()} disabled={busy} className={PRIMARY_BUTTON}>
-        {state.at === "reading" || state.at === "proving" ? W.reading : W.readMyResult}
+        <ButtonWords busy={state.at === "reading" || state.at === "proving"} doing={W.reading}>
+          {W.readMyResult}
+        </ButtonWords>
       </button>
+      <StepInProgress busy={state.at === "reading" || state.at === "proving"} step={WAITS.proof} />
       <FieldRefusal id="wca-read-refusal">{state.at === "refused" ? state.message : undefined}</FieldRefusal>
     </section>
   );

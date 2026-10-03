@@ -22,7 +22,7 @@ import { cardSum, giftTyped, heldIn, moneyIn, perEuro } from "@/src/pay-sum";
 import type { RailReach } from "@/src/rail-country";
 import { feeInWords, feeSentence, RAMP_NO_GIFT_COIN_IN, sourceOfIts, wayInFillsIn, wayInPage, waysIn, WAY_IN_GIFT_COIN, WAY_IN_USDC } from "@/src/rails";
 import { rampnowFrameOn } from "@/src/rampnow-frame";
-import { ACCOUNT_DOOR, CASH_OUT, FUND, MILESTONE_FUND, PAY as W } from "@/src/sentences";
+import { ACCOUNT_DOOR, CASH_OUT, FUND, MILESTONE_FUND, PAY as W, WAITS } from "@/src/sentences";
 import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, PRIMARY_BUTTON, SMALL_BUTTON } from "../../components/ui";
 import { AccountPanel } from "../../components/AccountPanel";
 import { Field } from "../Field";
@@ -31,6 +31,7 @@ import { JudgeCode } from "./JudgeCode";
 import { FieldRefusal } from "../FieldRefusal";
 import { FoldChevron } from "../GiftLive";
 import { Sheet } from "../Sheet";
+import { ButtonWords, StepInProgress } from "../Waiting";
 
 /**
  * Paying for the gift (the founder's mockup pay-sheet-2026-10-03, validated 3 Oct 2026, which follows pay.html of
@@ -300,8 +301,11 @@ export function PaySheet({
       ) : (
         <>
           <button type="button" className={PRIMARY_BUTTON} disabled={!ready || busy || status === "busy"} onClick={() => void pay()}>
-            {busy ? W.paying : enough ? W.payFromAccount(giftRead, recipient) : sum ? W.payByCard(say(sum.card)) : W.pay}
+            <ButtonWords busy={busy} doing={W.paying}>
+              {enough ? W.payFromAccount(giftRead, recipient) : sum ? W.payByCard(say(sum.card)) : W.pay}
+            </ButtonWords>
           </button>
+          <StepInProgress busy={busy} step={WAITS.account} />
           {/* One line: who takes the card, its ID the first time, and its terms (the mockup of 3 Oct 2026). */}
           {byCard ? <CardLine way={way} /> : null}
         </>

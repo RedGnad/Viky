@@ -6,6 +6,7 @@ import { WHERE_YOU_LIVE as WORDS } from "@/src/sentences";
 import { CHIP, FIELD, HELP } from "../components/ui";
 import { ChoiceList } from "./ChoiceList";
 import { Sheet } from "./Sheet";
+import { ButtonWords } from "./Waiting";
 
 /**
  * Where the person lives, chosen from every country where at least one way out works (D274): the same list in Me and
@@ -94,7 +95,11 @@ export function CountryPicker({
         </button>
       ) : (
         <button id={id} type="button" aria-labelledby={`${id}-label ${id}`} aria-haspopup="dialog" className={`${FIELD} text-left`} disabled={countries === null} onClick={() => setOpen(true)}>
-          {chosen ?? (countries === null ? WORDS.reading : WORDS.choose)}
+          {chosen ?? (
+            <ButtonWords busy={countries === null} doing={WORDS.reading}>
+              {WORDS.choose}
+            </ButtonWords>
+          )}
         </button>
       )}
       <Sheet open={open} title={label} onClose={close} tall view={wanted}>

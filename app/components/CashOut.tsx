@@ -33,6 +33,9 @@ import { mobileMoneyOffer, type AccountOffer } from "@/src/client/mobile-money";
 import { delayInWords, operatorsInWords } from "@/src/mobile-money";
 import { GiftCardOut } from "./GiftCardOut";
 import { AMOUNT_IN_TITLE, BODY, CARD, CARD_LABEL, CARD_TITLE, FIELD, HELP, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE, TITLE_IN_FACE } from "./ui";
+import { ButtonWords, StepInProgress, WaitLine } from "../kit/Waiting";
+import { WAITS } from "@/src/sentences";
+import { Working } from "../kit/Working";
 
 /**
  * The way out, rebuilt from docs/design/flows.md (states W1 to W13) on 17 Sep 2026.
@@ -607,9 +610,7 @@ export function CashOut() {
       <div className="flex flex-col gap-[var(--space-xl)]">
         {heading}
         {moneyCard}
-        <p role="status" className={BODY}>
-          {W.gathering}
-        </p>
+        <Working says={W.gathering} />
       </div>
     );
   }
@@ -803,8 +804,11 @@ export function CashOut() {
               {alert("amount")}
               <div className="flex flex-wrap gap-[var(--tap-gap)]">
                 <button type="button" onClick={() => void askPrice()} disabled={busy || changing.units === undefined} className={PRIMARY_BUTTON}>
-                  {busy ? W.asking : W.seeWhatYouWillGet}
+                  <ButtonWords busy={busy} doing={W.asking}>
+                    {W.seeWhatYouWillGet}
+                  </ButtonWords>
                 </button>
+                <StepInProgress busy={busy} step={WAITS.amount} />
                 <button type="button" onClick={() => { setStage("base"); setChosen(null); setProblem(null); }} className={SMALL_BUTTON}>
                   {W.notNow}
                 </button>
@@ -863,9 +867,9 @@ export function CashOut() {
                   </button>
                 ) : (
                   <button type="button" onClick={() => void getReady()} disabled={busy || stage === "getting"} className={PRIMARY_BUTTON}>
-                    {stage === "getting"
-                      ? W.gettingReady(bank ? `$${orderNumber}` : formatAusd(changing.units ?? 0n))
-                      : W.getReady(bank ? `$${orderNumber}` : formatAusd(changing.units ?? 0n))}
+                    <ButtonWords busy={stage === "getting"} doing={W.gettingReady(bank ? `$${orderNumber}` : formatAusd(changing.units ?? 0n))}>
+                      {W.getReady(bank ? `$${orderNumber}` : formatAusd(changing.units ?? 0n))}
+                    </ButtonWords>
                   </button>
                 )}
                 {stage !== "getting" ? (
@@ -1017,7 +1021,7 @@ export function CashOut() {
             ) : null}
           </section>
         ) : (
-          <p className={HELP}>{W.oneMoment}</p>
+          <WaitLine>{W.oneMoment}</WaitLine>
         )}
       </div>
     );

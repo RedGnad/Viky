@@ -7,6 +7,8 @@ import { useAccount } from "@/src/account/provider";
 import { DOOR as W } from "@/src/sentences";
 import { CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { MadeOnTheMainSite } from "./AccountDoor";
+import { ButtonWords, StepInProgress } from "./Waiting";
+import { WAITS } from "@/src/sentences";
 
 /**
  * The one door into an account (the art direction brief of 17 Sep 2026, section 7): a small outlined button in the
@@ -81,7 +83,11 @@ export function SignInDoor() {
       >
         {/* One width whatever it says (the founder, 21 Sep 2026): "Sign in" and "One moment" are the same button,
             and a header control that grows while it works moves the mark beside it. */}
-        <span className="inline-block min-w-[10ch] text-center">{busy ? W.busy : W.open}</span>
+        <span className="inline-flex min-w-[10ch] justify-center text-center">
+          <ButtonWords busy={busy} doing={W.busy}>
+            {W.open}
+          </ButtonWords>
+        </span>
       </button>
       {open ? (
         <div
@@ -93,9 +99,14 @@ export function SignInDoor() {
           <p className={HELP}>{W.how}</p>
           {/* On an address that is not Viky's own no account is made: the way to viky.cash stands in the button's place. */}
           {madeHere ? (
-            <button type="button" onClick={() => void make()} disabled={busy} className={PRIMARY_BUTTON}>
-              {busy ? W.busy : W.create}
-            </button>
+            <>
+              <button type="button" onClick={() => void make()} disabled={busy} className={PRIMARY_BUTTON}>
+                <ButtonWords busy={busy} doing={W.busy}>
+                  {W.create}
+                </ButtonWords>
+              </button>
+              <StepInProgress busy={busy} step={WAITS.account} />
+            </>
           ) : (
             <MadeOnTheMainSite />
           )}

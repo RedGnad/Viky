@@ -3,7 +3,7 @@ import Link from "next/link";
 import { agreeFirst } from "@/src/client/consent";
 import { useMinute } from "../kit/clock";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { openWithTheLinkSecret } from "@/src/client/v2";
+import { openWithTheLinkSecret, type StartStep } from "@/src/client/v2";
 import { openingSecretOf } from "@/src/v2-protocol";
 import { useMoneySession } from "@/src/account/money-session";
 import { isAccountError } from "@/src/account/errors";
@@ -38,7 +38,7 @@ import type { AnyGiftStatus } from "@/src/gift-status";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { contractDayInWords, contractRangeInWords, dateInWords, hourInWords, momentInWords, nextPassMs } from "@/src/moments";
 import { COUNTING_PASS_UTC, settlingTimeInWords } from "@/src/pass-schedule";
-import { ACCOUNT_DOOR, CONSENT as C, END_GIFT as E, GIFT_LIVE as L, GIFT_PAGE as W, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M } from "@/src/sentences";
+import { ACCOUNT_DOOR, CONSENT as C, END_GIFT as E, GIFT_LIVE as L, GIFT_PAGE as W, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M, WAITS } from "@/src/sentences";
 import { AskAgain } from "../kit/AskAgain";
 import { CertificateProof } from "../kit/CertificateProof";
 import { MarathonProof, MarathonStanding } from "../kit/MarathonProof";
@@ -66,6 +66,7 @@ import { LiveLine, useLiveReading } from "../kit/LiveReading";
 import { Arrival, ArrivalAmount, useLastSeen } from "../kit/Motion";
 import { Sheet } from "../kit/Sheet";
 import { Shell } from "../kit/Shell";
+import { ButtonWords, StepInProgress, WaitLine } from "../kit/Waiting";
 import { YouDecide } from "../kit/YouDecide";
 import { AccountPanel } from "./AccountPanel";
 import { BODY, CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "./ui";
@@ -158,7 +159,7 @@ export function GiftPage({ giftId, linkKey, initialStatus, openTake = false }: R
   if (!status) {
     return (
       <Shell kind="task" back="/gifts" backLabel={W.backToGifts}>
-        <p className={HELP}>{W.loading}</p>
+        <WaitLine>{W.loading}</WaitLine>
       </Shell>
     );
   }
@@ -189,6 +190,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
   const zone = useReaderZone();
   const nowMs = useMinute();
   const [busy, setBusy] = useState<Busy>("idle");
+  /** The step a running gesture is on, named under its button once the wait has passed ten seconds (app/kit/Waiting.tsx). */
+  const [step, setStep] = useState<string | null>(null);
   const [answer, setAnswer] = useState<{ at: Where; text: string; failed: boolean } | null>(null);
   // The moment's "Take" arrives here with the review open, which is the one press left (app/kit/ReachedMoment.tsx).
   const [reviewing, setReviewing] = useState(openTake);
@@ -343,8 +346,9 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
     await reload();
   };
 
-  const run = async (kind: Busy, where: Where, action: () => Promise<string | null>) => {
+  const run = async (kind: Busy, where: Where, action: () => Promise<string | null>, firstStep: string | null = null) => {
     setBusy(kind);
+    setStep(firstStep);
     setAnswer(null);
     try {
       const message = await action();
@@ -354,6 +358,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       setAnswer({ at: where, text: screenMessage(error), failed: true });
     } finally {
       setBusy("idle");
+      setStep(null);
     }
   };
 
@@ -401,54 +406,83 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
   // second the secret after the link's `#`, which no server is sent and which signs the opening here.
   const openingKey = status.version === 2 ? openingSecret : linkKey;
   const open = () =>
-    run("opening", "open", async () => {
-      if (!openingKey) throw new ApiError({ status: 400, code: "NO_KEY", message: W.missingKey });
-      // On the second version of the contracts the link's own key signs the opening, here, for the signed-in account:
-      // the contract the gift is on and that account are what it needs (src/client/v2.ts).
-      const contract = milestone ? milestone.escrow : daily?.escrow;
-      // The secret after the `#` signs here or goes nowhere: it is never handed to the function that posts a key.
-      if (status.version === 2) await openWithTheLinkSecret({ giftId, linkSecret: openingKey, contract, recipient: address });
-      else await claimGift(giftId, openingKey);
-      return null;
-    });
-  const name = (username: string) => run("naming", "name", async () => {
-    await nameGoalAccount(giftId, username);
-    return null;
-  });
-  const askCode = () =>
-    run("naming", "name", async () => {
-      if (milestone) {
-        await requestMilestoneCode(giftId);
+    run(
+      "opening",
+      "open",
+      async () => {
+        if (!openingKey) throw new ApiError({ status: 400, code: "NO_KEY", message: W.missingKey });
+        // On the second version of the contracts the link's own key signs the opening, here, for the signed-in account:
+        // the contract the gift is on and that account are what it needs (src/client/v2.ts).
+        const contract = milestone ? milestone.escrow : daily?.escrow;
+        // The secret after the `#` signs here or goes nowhere: it is never handed to the function that posts a key.
+        if (status.version === 2) await openWithTheLinkSecret({ giftId, linkSecret: openingKey, contract, recipient: address });
+        else await claimGift(giftId, openingKey);
         return null;
-      }
-      if (account.username) await nameGoalAccount(giftId, account.username);
-      return null;
-    });
+      },
+      WAITS.opening,
+    );
+  const name = (username: string) =>
+    run(
+      "naming",
+      "name",
+      async () => {
+        await nameGoalAccount(giftId, username);
+        return null;
+      },
+      WAITS.naming(source),
+    );
+  const askCode = () =>
+    run(
+      "naming",
+      "name",
+      async () => {
+        if (milestone) {
+          await requestMilestoneCode(giftId);
+          return null;
+        }
+        if (account.username) await nameGoalAccount(giftId, account.username);
+        return null;
+      },
+      WAITS.naming(source),
+    );
+  /** The first reading's steps, each one thing this page awaits: the source asked, the passkey, the reading written. */
+  const startStep = (at: StartStep) => setStep(at === "reading" ? WAITS.firstReading(source) : at === "signing" ? WAITS.passkey : WAITS.recordingStart);
   // Starting is the gesture that asks for the first reading, so it is where the yes is signed (the founder, 29 Sep 2026).
   const start = () =>
-    run("starting", "start", async () => {
-      await agreeFirst(giftId);
-      // On the second version the account signs the first reading too: with no gesture when its session is open.
-      return milestone ? milestoneOutcome(await startMilestone(giftId, ensureSigner)) : dailyOutcome(await bindGoalAccount(giftId, ensureSigner));
-    });
+    run(
+      "starting",
+      "start",
+      async () => {
+        await agreeFirst(giftId);
+        // On the second version the account signs the first reading too: with no gesture when its session is open.
+        return milestone ? milestoneOutcome(await startMilestone(giftId, ensureSigner, startStep)) : dailyOutcome(await bindGoalAccount(giftId, ensureSigner, startStep));
+      },
+      WAITS.agreeing,
+    );
   const countToday = () =>
-    run("counting", "count", async () => (milestone ? milestoneOutcome(await checkMilestone(giftId)) : dailyOutcome(await countNow(giftId))));
+    run("counting", "count", async () => (milestone ? milestoneOutcome(await checkMilestone(giftId)) : dailyOutcome(await countNow(giftId))), WAITS.counting(source));
   const take = () =>
-    run("taking", "take", async () => {
-      // The passkey is opened here, at the one moment a signature is needed, rather than assumed to be open.
-      const signer = await ensureSigner();
-      const takeNumber = Number(milestone ? milestone.withdrawNonce : (daily?.withdrawNonce ?? "0")) + 1;
-      await withdrawEarned({
-        account: signer,
-        giftId,
-        escrow: milestone ? milestone.escrow : (daily?.escrow as `0x${string}`),
-        amount: earned,
-        nonce: BigInt(milestone ? milestone.withdrawNonce : (daily?.withdrawNonce ?? "0")),
-      });
-      setReviewing(false);
-      setTaken({ amount: earnedDisplay, atMs: Date.now(), take: takeNumber });
-      return null;
-    });
+    run(
+      "taking",
+      "take",
+      async () => {
+        // The passkey is opened here, at the one moment a signature is needed, rather than assumed to be open.
+        const signer = await ensureSigner();
+        const takeNumber = Number(milestone ? milestone.withdrawNonce : (daily?.withdrawNonce ?? "0")) + 1;
+        setStep(WAITS.taking);
+        await withdrawEarned({
+          account: signer,
+          giftId,
+          escrow: milestone ? milestone.escrow : (daily?.escrow as `0x${string}`),
+          amount: earned,
+          nonce: BigInt(milestone ? milestone.withdrawNonce : (daily?.withdrawNonce ?? "0")),
+        });
+        setReviewing(false);
+        setTaken({ amount: earnedDisplay, atMs: Date.now(), take: takeNumber });
+        return null;
+      },
+      WAITS.passkey,
+    );
 
   const answerAt = (where: Where): ReactNode =>
     answer && answer.at === where ? (
@@ -547,8 +581,11 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         return (
           <>
             <button type="button" onClick={open} disabled={working || !openingKey} className={PRIMARY_BUTTON}>
-              {busy === "opening" ? W.opening : W.openMyGift}
+              <ButtonWords busy={busy === "opening"} doing={W.opening}>
+                {W.openMyGift}
+              </ButtonWords>
             </button>
+            <StepInProgress busy={busy === "opening"} step={step} />
             {openingKey ? answerAt("open") : <FieldRefusal id="gift-no-key">{W.missingKey}</FieldRefusal>}
           </>
         );
@@ -561,6 +598,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
             account={account}
             funderName={funderName}
             busy={busy === "naming" ? "naming" : busy === "starting" ? "starting" : null}
+            step={step}
             working={working}
             refusal={
               answer?.failed && (answer.at === "name" || answer.at === "start") ? { where: answer.at, text: answer.text } : null
@@ -601,8 +639,11 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
               footer={
                 <>
                   <button type="button" onClick={take} disabled={working} className={PRIMARY_BUTTON}>
-                    {busy === "taking" ? W.taking : W.take(earnedDisplay)}
+                    <ButtonWords busy={busy === "taking"} doing={W.taking}>
+                      {W.take(earnedDisplay)}
+                    </ButtonWords>
                   </button>
+                  <StepInProgress busy={busy === "taking"} step={step} />
                   <button type="button" onClick={() => setReviewing(false)} disabled={working} className={SECONDARY_BUTTON}>
                     {W.notNow}
                   </button>
@@ -721,8 +762,11 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       {(mine || readerIsFunder) && !milestone && !gift.finished && gift.connected && !gift.sourceClosed ? (
         <>
           <button type="button" onClick={countToday} disabled={working} className={`${SMALL_BUTTON} self-start`}>
-            {busy === "counting" ? W.reading : W.countNow}
+            <ButtonWords busy={busy === "counting"} doing={W.reading}>
+              {W.countNow}
+            </ButtonWords>
           </button>
+          <StepInProgress busy={busy === "counting"} step={step} />
           {answerAt("count")}
         </>
       ) : null}

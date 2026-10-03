@@ -2,7 +2,7 @@
 import { useAccount } from "@/src/account/provider";
 import { GIFTS as W, HOME } from "@/src/sentences";
 import { AccountPanel } from "../components/AccountPanel";
-import { BODY, HELP, TITLE } from "../components/ui";
+import { BODY, TITLE } from "../components/ui";
 import { EmptyState } from "./EmptyState";
 import { FinishTheGift } from "./FinishTheGift";
 import { useMinute } from "./clock";
@@ -13,6 +13,7 @@ import { Arrival, Reveal, type ArrivalGift } from "./Motion";
 import { Shell } from "./Shell";
 import { useMyGifts } from "./my-gifts";
 import type { GiftSummary } from "@/src/client/gift";
+import { WaitLine } from "./Waiting";
 
 /** Gifts: everything given and received, in two groups, each card opening its gift (structure, section 4). */
 export function Gifts({ initialGifts }: Readonly<{ initialGifts?: GiftSummary[] | null }> = {}) {
@@ -42,7 +43,7 @@ export function Gifts({ initialGifts }: Readonly<{ initialGifts?: GiftSummary[] 
       {/* A gift whose payment was started and which is not made yet is no line of either list: it is said above them. */}
       <FinishTheGift />
       {problem ? <p className={BODY}>{problem}</p> : null}
-      {!problem && gifts === null ? <p className={HELP}>{HOME.loading}</p> : null}
+      {!problem && gifts === null ? <WaitLine>{HOME.loading}</WaitLine> : null}
       {gifts !== null ? (
         <>
           <section className="arrives-in-turn flex flex-col gap-[var(--space-md)]">
