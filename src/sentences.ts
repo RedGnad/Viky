@@ -34,6 +34,16 @@ function spokenTo(source: string): string {
  * is not counted by days has none, and reads that nothing is lost instead. `email` is where to write, and the
  * sentence that names it is left out where none is set.
  */
+/**
+ * A day's ceiling of attested readings is reached (the founder, 3 Oct 2026; src/attested-calls.ts): Viky holds itself
+ * to a number of them a day, for one gift and for all, so that a reading that keeps failing cannot spend the month.
+ * Nothing was read and nothing is settled against it. Readings resume with the next UTC day, which the browser says
+ * in the reader's own clock (src/client/limit.ts); a place with no clock says "tomorrow".
+ */
+export const CEILING = {
+  reading: (resumes: string | null) => `Viky has read this as often as it does in one day. It resumes ${resumes ?? "tomorrow"}. Nothing is lost.`,
+} as const;
+
 const LIMIT_READING = "Monthly reading limit reached.";
 const LIMIT_PROOF = "Monthly proof limit reached.";
 export const LIMIT = {

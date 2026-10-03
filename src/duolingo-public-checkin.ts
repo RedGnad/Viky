@@ -5,21 +5,22 @@ import { fetchPublicProfile, PublicProfileError, reclaimPublicProfileDeps, type 
 import { checkInSubject, displayNameHasCode, DUOLINGO_PUBLIC_PROVIDER_LABEL } from "./duolingo-public-terms";
 import { DUOLINGO_DAILY } from "./conditions";
 import { contactEmail } from "./contact";
+import { readingFor } from "./attested-calls";
 import { catchUpSecondsOf } from "./catch-up";
 import { LAST_RESORT_WITHIN_SECONDS, lastResortDue, lookBeforeCount, lookForCode, type ProfileLook } from "./daily-look";
 import { resolvePublicDuolingoProfile } from "./duolingo-profile";
-import { LIMIT } from "./sentences";
+import { CEILING, LIMIT } from "./sentences";
 import { contractRefusal } from "./gift-api";
 import { ATTESTATION_TTL_SECONDS, identityPseudonym, serialiseMessage, signCheckIn, type CheckInMessage } from "./gift-attestation";
-import { checkInDayIndex, readGift, utcDayOf } from "./gift-reader";
+import { checkInDayIndex, giftPublicClient, readGift, utcDayOf } from "./gift-reader";
 import { assertReadingInProportion, ReadingOutOfProportion } from "./reading-proportion";
 import { relayCheckIn } from "./gift-relay";
 import { loadGift, loadRelayed, markBound, type GiftRecord } from "./gift-store";
-import { holdTheStart, type StartAsked } from "./held-start";
+import { heldStartStillGood, holdTheStart, type StartAsked } from "./held-start";
 import { consumeAndSaveVerification, saveProofSession } from "./proof-session-store";
 import { escrowOf, RelayerError } from "./relayer";
 import { claimPass } from "./pass-guard";
-import { paysTheSameDay, type ContractVersion } from "./v2";
+import { dailyAbiOf, paysTheSameDay, type ContractVersion } from "./v2";
 import { StartNotSigned } from "./v2-start";
 
 /**
@@ -98,6 +99,13 @@ export type PublicCheckInDeps = {
    * first (src/pass-guard.ts). A test that omits it takes it every time it is due.
    */
   claimLastResort?: (giftId: string, day: number) => Promise<boolean>;
+  /**
+   * Whether check-ins are paused on the gift's contract: while they are it takes no reading, so none is paid for
+   * (3 Oct 2026). A test that omits it reads; a pause that cannot be read is taken as none, and the relay refuses.
+   */
+  paused?: (escrow: Hex) => Promise<boolean>;
+  /** The first reading already held for the gift and still good to sign (src/held-start.ts), or nothing. */
+  heldStart?: (giftId: string, account: string, nowSeconds: number) => Promise<StartAsked | null>;
 };
 
 /** Two days: the name carries the day, so a claim never comes back for it. */
@@ -107,6 +115,8 @@ const defaultDeps: PublicCheckInDeps = {
   look: resolvePublicDuolingoProfile,
   claimProof: (giftId, everySeconds) => claimPass(`daily-proof:${giftId}`, everySeconds),
   claimLastResort: (giftId, day) => claimPass(`daily-last-resort:${giftId}:${day}`, LAST_RESORT_CLAIMED_FOR_SECONDS),
+  paused: (escrow) => giftPublicClient().readContract({ address: escrow, abi: dailyAbiOf(escrow), functionName: "checkInPaused" }) as Promise<boolean>,
+  heldStart: (giftId, account, nowSeconds) => heldStartStillGood(giftId, account, nowSeconds),
   profile: reclaimPublicProfileDeps,
   course: (username, courseId) => readDuolingoCourse({ username, courseId }),
   now: () => Math.floor(Date.now() / 1_000),
@@ -124,7 +134,13 @@ async function countedToday(giftId: string, nowSeconds: number): Promise<boolean
   return relayed.some((entry) => entry.kind === "check-in" && entry.sessionId?.startsWith(`public:${giftId}:count:${today}:`));
 }
 
-export async function runPublicCheckIn(
+export function runPublicCheckIn(input: Parameters<typeof readPublicly>[0], deps: PublicCheckInDeps = defaultDeps): Promise<PublicCheckInOutcome> {
+  // Every fetch of this reading is counted and judged under its gift (src/attested-calls.ts).
+  const reason = input.purpose === "bind" ? "the connection of a daily gift" : input.pass ? `a daily gift, by the ${input.pass} pass` : "a daily gift, asked by a person";
+  return readingFor({ giftId: input.giftId, reason }, () => readPublicly(input, deps));
+}
+
+async function readPublicly(
   input: {
     giftId: string;
     purpose: PublicCheckInPurpose;
@@ -141,7 +157,7 @@ export async function runPublicCheckIn(
      */
     lookOnly?: boolean;
   },
-  deps: PublicCheckInDeps = defaultDeps,
+  deps: PublicCheckInDeps,
 ): Promise<PublicCheckInOutcome> {
   const { giftId, purpose } = input;
   const record: GiftRecord | null = await loadGift(giftId);
@@ -161,6 +177,14 @@ export async function runPublicCheckIn(
   // One reading a day is the rule of the first two versions, where a reading pays through the day before it. On the
   // third a day is paid the day it is earned, and yesterday can be caught up the same day: the look decides instead.
   if (purpose === "count" && !input.force && !paysTheSameDay(onChain.version) && (await countedToday(giftId, now))) return { kind: "already", giftId, reason: "counted_today" };
+  // A first reading that already waits for its signature is answered again: nothing is read twice.
+  const waiting = purpose === "bind" && deps.heldStart ? await deps.heldStart(giftId, record.recipient, now) : null;
+  if (waiting) return waiting;
+  // While check-ins are paused the contract takes no reading: none is paid for, and the refusal is the contract's own.
+  if (deps.paused && (await deps.paused(escrow).catch(() => false))) {
+    const paused = contractRefusal("CheckInIsPaused");
+    return refusal(giftId, paused?.code ?? "PAUSED", paused?.message ?? "Check-ins are paused for a moment. Try again later.");
+  }
   if (purpose === "bind" && record.usernameSource === "recipient") {
     if (!record.bindingCode || !record.bindingCodeExpiresAt || record.bindingCodeExpiresAt.getTime() < now * 1_000) {
       return refusal(giftId, "CODE_EXPIRED", "The code has expired. Ask for a new one.");
@@ -182,6 +206,8 @@ export async function runPublicCheckIn(
     NOT_CONFIGURED: "Counting is not switched on yet.",
     // The month's limit of readings (src/attested-calls.ts). The screen adds until when the day can still be counted.
     LIMIT_REACHED: LIMIT.reading(null, contactEmail()),
+    // A day's ceiling of readings (src/attested-calls.ts). The screen says when it resumes, in the reader's own clock.
+    CEILING_REACHED: CEILING.reading(null),
   };
   const codeNotInName = (shown: string) => refusal(giftId, "CODE_NOT_IN_NAME", `The code is not in that profile's name yet (it reads "${shown}"). Add it, wait a moment, and try again.`);
   // Look first, which costs nothing: an attested reading is one of a month's hundred (src/daily-look.ts).
