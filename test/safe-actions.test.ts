@@ -8,6 +8,7 @@ import test from "node:test";
 import { decodeFunctionData, toFunctionSelector, type Abi } from "viem";
 import { consentAnchorAbi } from "../src/consent-anchor-abi";
 import { giftEscrowV2Abi } from "../src/gift-escrow-v2-abi";
+import { giftEscrowV3Abi } from "../src/gift-escrow-v3-abi";
 import { milestoneGiftV2Abi } from "../src/milestone-gift-v2-abi";
 import { isLocalRpc, scriptTransport } from "../src/monad/chain";
 import { SAFE_ACTIONS, SAFE_TARGETS, safeActionCall, safeTarget } from "../src/safe-actions";
@@ -25,7 +26,7 @@ const called = (abi: unknown, data: `0x${string}`) => {
 };
 
 test("the tool knows the three contracts of the second version, by a name each", () => {
-  assert.deepEqual(SAFE_TARGETS, ["escrow", "earlier-escrow", "milestone", "router", "escrow-v2", "milestone-v2", "anchor"]);
+  assert.deepEqual(SAFE_TARGETS, ["escrow", "earlier-escrow", "milestone", "router", "escrow-v2", "milestone-v2", "anchor", "escrow-v3"]);
   assert.deepEqual(SAFE_ACTIONS, ["creation-paused", "checkin-paused", "proof-paused", "evidence-signer", "anchorer", "accept-ownership", "raw"]);
   // Before the app is told where they are, which is when their ownership is accepted: named on the command line.
   assert.equal(safeTarget({ TARGET: "escrow-v2", TARGET_ADDRESS: DAILY_V2 }).address, DAILY_V2);
@@ -38,7 +39,7 @@ test("the tool knows the three contracts of the second version, by a name each",
   // Two addresses that disagree, no address at all, and an address given for a contract in service: each is refused.
   assert.throws(() => safeTarget({ ...set, TARGET: "escrow-v2", TARGET_ADDRESS: MILESTONE_V2 }), /one of the two is wrong/);
   assert.throws(() => safeTarget({ TARGET: "escrow-v2" }), /give TARGET_ADDRESS, as the deployment printed it/);
-  assert.throws(() => safeTarget({ ...V1, TARGET: "escrow", TARGET_ADDRESS: DAILY_V2 }), /second version only/);
+  assert.throws(() => safeTarget({ ...V1, TARGET: "escrow", TARGET_ADDRESS: DAILY_V2 }), /second version or the third only/);
   assert.throws(() => safeTarget({ TARGET: "escrow-v2", TARGET_ADDRESS: "0x1234" }), /not an address/);
   assert.throws(() => safeTarget({ TARGET: "vault" }), /is none of them/);
   // The contracts in service are found where they always were, and the default is the daily one.
@@ -57,6 +58,27 @@ test("accepting an ownership is an action of its own, on the three contracts who
   }
   // The contracts in service moved in one step, with nothing to accept.
   assert.throws(() => safeActionCall({ ...V1, ACTION: "accept-ownership", TARGET: "escrow" }), /is not an action of the gift escrow/);
+});
+
+test("the third daily contract is a target of its own: accepted, paused and given a signer as the second version's is", () => {
+  const DAILY_V3 = "0x00000000000000000000000000000000000000E3";
+  // Named on the command line before the app knows it, and by its own setting after.
+  assert.equal(safeTarget({ TARGET: "escrow-v3", TARGET_ADDRESS: DAILY_V3 }).address, DAILY_V3);
+  assert.equal(safeTarget({ NEXT_PUBLIC_GIFT_ESCROW_V3_ADDRESS: DAILY_V3, TARGET: "escrow-v3" }).address, DAILY_V3);
+  assert.throws(() => safeTarget({ TARGET: "escrow-v3" }), /give TARGET_ADDRESS, as the deployment printed it/);
+  assert.throws(() => safeTarget({ NEXT_PUBLIC_GIFT_ESCROW_V3_ADDRESS: DAILY_V3, TARGET: "escrow-v3", TARGET_ADDRESS: DAILY_V2 }), /one of the two is wrong/);
+  let call = safeActionCall({ ACTION: "accept-ownership", TARGET: "escrow-v3", TARGET_ADDRESS: DAILY_V3 });
+  assert.deepEqual([call.to, call.data, call.step], [DAILY_V3, "0x79ba5097", `accept the ownership of the gift escrow, third version at ${DAILY_V3}`]);
+  const env = { NEXT_PUBLIC_GIFT_ESCROW_V3_ADDRESS: DAILY_V3, TARGET: "escrow-v3" };
+  call = safeActionCall({ ...env, ACTION: "checkin-paused", PAUSED: "true" });
+  assert.deepEqual([call.to, called(giftEscrowV3Abi, call.data), call.step], [DAILY_V3, "setCheckInPaused(true)", "pause checkin on the gift escrow, third version"]);
+  call = safeActionCall({ ...env, ACTION: "creation-paused", PAUSED: "true" });
+  assert.equal(called(giftEscrowV3Abi, call.data), "setCreationPaused(true)");
+  call = safeActionCall({ ...env, ACTION: "evidence-signer", VALUE: SIGNER });
+  assert.equal(call.step, `announce ${SIGNER} as the evidence signer of the gift escrow, third version, to stand in 24 hours`);
+  // It proves nothing of a milestone and anchors nothing.
+  assert.throws(() => safeActionCall({ ...env, ACTION: "proof-paused", PAUSED: "true" }), /is not an action of the gift escrow, third version/);
+  assert.throws(() => safeActionCall({ ...env, ACTION: "anchorer", VALUE: SIGNER }), /is not an action of the gift escrow, third version/);
 });
 
 test("the emergency actions of the second version are named, each on the contract that has it", () => {
