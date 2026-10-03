@@ -20,7 +20,7 @@ import { Sheet } from "./Sheet";
  * "You decide": the standing controls of the person a gift is for, under the card (the founder, 1 Oct 2026, the
  * mockup you-decide.html and rule 6 of kit-rules.html).
  *
- * Three round buttons with two words each, and no sentence on the page: being told ("Messages"), what the person who
+ * Three round buttons with two words each, and no sentence on the page: being told ("Notifications"), what the person who
  * offered the gift sees of it, and "Stop". Each opens a sheet, and what there is to say is said there, after the
  * press. They replace three things that stood in three places and three manners: a wide button under the card ("Tell
  * me each morning"), a line of help with a small "Stop" beside it, and an underlined "End this gift" at the foot of
@@ -143,7 +143,7 @@ export function YouDecide({
     <>
       <RoundControls label={Y.title}>
         {tells ? (
-          <Act name={Y.messages} state={told.step === "on" ? Y.on : Y.off} onPress={() => setOpen("messages")} data-decide="messages">
+          <Act name={Y.notifications} state={told.step === "on" ? Y.on : Y.off} onPress={() => setOpen("messages")} data-decide="messages">
             <BellMark />
           </Act>
         ) : null}

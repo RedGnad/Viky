@@ -42,7 +42,7 @@ test("no hero character on a gift in progress, no nature label and no 'where you
 
 test("being told the moment it is reached, outside the card, and how to allow it when the phone refused", () => {
   assert.equal(L.alert.yours("1430"), "Get a message when you reach 1430.");
-  // Behind "Messages", a round control under the card, for either of the gift's two people (rule 6, 1 Oct 2026).
+  // Behind "Notifications", a round control under the card, for either of the gift's two people (rule 6, 1 Oct 2026).
   assert.match(PAGE, /\? \{ kind: "reach", target: String\(milestone\.targetWords \?\? milestone\.target\) \}/);
   assert.match(PAGE, /<YouDecide[\s\S]{0,400}about=\{about\}/);
   assert.match(PAGE, /<FunderControls giftId=\{giftId\} about=\{about\}/);

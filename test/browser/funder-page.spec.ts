@@ -162,12 +162,12 @@ test.describe("the funder's page", () => {
     await expect(page.locator(".gift-figures")).toHaveText(/\$2\.00Theirs so far\$1\.00Back to you/);
     await expect(page.getByText(/^Next reading: /)).toBeVisible();
     await expect(controls(page).getByRole("button")).toHaveCount(1);
-    await expect(act(page, "messages")).toHaveText("MessagesOff");
+    await expect(act(page, "messages")).toHaveText("NotificationsOff");
     await expect(page.getByRole("button", { name: "Tell me each morning" })).toHaveCount(0);
     await expect(page.getByText("Check this day yourself")).toBeHidden();
     await shot(page, "05-habit-under-way");
     await act(page, "messages").click();
-    const messages = page.getByRole("dialog", { name: "Messages" });
+    const messages = page.getByRole("dialog", { name: "Notifications" });
     await expect(messages.getByRole("button", { name: "Tell me each morning" })).toBeEnabled();
     await shot(page, "05b-habit-messages-sheet", false);
     await messages.getByRole("button", { name: "Close" }).click();
@@ -177,12 +177,12 @@ test.describe("the funder's page", () => {
     await shot(page, "06-habit-folds-open");
 
     await page.goto(`/g/1999954`);
-    await expect(act(page, "messages")).toHaveText("MessagesOff");
+    await expect(act(page, "messages")).toHaveText("NotificationsOff");
     await expect(page.getByText(/^Get a message when they reach/)).toBeHidden();
     await shot(page, "07-climb-under-way");
     await act(page, "messages").click();
-    await expect(page.getByRole("dialog", { name: "Messages" }).getByText("Get a message when they reach 1500.")).toBeVisible();
-    await expect(page.getByRole("dialog", { name: "Messages" }).getByRole("button", { name: "Turn on" })).toBeEnabled();
+    await expect(page.getByRole("dialog", { name: "Notifications" }).getByText("Get a message when they reach 1500.")).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Notifications" }).getByRole("button", { name: "Turn on" })).toBeEnabled();
     await shot(page, "07b-climb-messages-sheet", false);
     await device.context.close();
 
@@ -195,8 +195,8 @@ test.describe("the funder's page", () => {
     await expect(refuses.page.getByText(/Your phone is not letting Viky tell you/)).toBeHidden();
     await shot(refuses.page, "08-habit-phone-refuses");
     await act(refuses.page, "messages").click();
-    await expect(refuses.page.getByRole("dialog", { name: "Messages" }).getByText("Your phone is not letting Viky tell you. Turn notifications on for Viky in your phone's settings.")).toBeVisible();
-    await expect(refuses.page.getByRole("dialog", { name: "Messages" }).getByRole("button", { name: "Tell me each morning" })).toBeDisabled();
+    await expect(refuses.page.getByRole("dialog", { name: "Notifications" }).getByText("Your phone is not letting Viky tell you. Turn notifications on for Viky in your phone's settings.")).toBeVisible();
+    await expect(refuses.page.getByRole("dialog", { name: "Notifications" }).getByRole("button", { name: "Tell me each morning" })).toBeDisabled();
     await shot(refuses.page, "08b-phone-refuses-sheet", false);
     await refuses.context.close();
   });

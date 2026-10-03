@@ -107,7 +107,7 @@ test("nothing asks for the permission except a press", () => {
  * Being told, offered in the open after the first thing that worked (the founder, 1 Oct 2026, the audit's P-31). It
  * sat in the fold "How this is checked", was never offered to the funder, and a gift had or not offered nothing at all.
  *
- * Since the founder's rule 6 of the same day (you-decide.html) the person a gift is for finds it behind "Messages",
+ * Since the founder's rule 6 of the same day (you-decide.html) the person a gift is for finds it behind "Notifications",
  * one of the round controls under the card: still in the open, never in a fold, and what the phone refuses or what an
  * iPhone needs first is said in its sheet, after the press, rather than standing on every page.
  */
@@ -126,7 +126,7 @@ test("the messages are offered under the card and under the funder's link, never
   assert.match(open, /\{readerIsFunder \? \(\s+<FunderControls giftId=\{giftId\} about=\{about\}/);
   // The sheet says where it stands, what the phone refuses and what an iPhone needs first, in the words of before.
   const decide = readFileSync("app/kit/YouDecide.tsx", "utf8");
-  assert.match(decide, /<Act name=\{Y\.messages\} state=\{told\.step === "on" \? Y\.on : Y\.off\}/);
+  assert.match(decide, /<Act name=\{Y\.notifications\} state=\{told\.step === "on" \? Y\.on : Y\.off\}/);
   assert.match(decide, /const tells = about !== null && told\.step !== "unsupported";/, "no button where the browser has nothing to grant at all");
   // Under the link the funder has just been given, the three shapes of gift each with their own.
   const link = readFileSync("app/components/PayGift.tsx", "utf8");

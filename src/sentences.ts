@@ -1356,7 +1356,8 @@ export const KIT = {
  */
 export const YOU_DECIDE = {
   title: "You decide",
-  messages: "Messages",
+  /** "Notifications" since 3 Oct 2026 (the founder, on gift 4): it read "Messages", which is what a chat is called. */
+  notifications: "Notifications",
   on: "On",
   off: "Off",
   sees: (funder: string | null) => (funder ? `${funder} sees` : "They see"),
