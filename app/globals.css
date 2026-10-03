@@ -1226,6 +1226,15 @@ dialog.sheet[open] {
   margin: 2px 0 4px;
 }
 
+/* The wheel of a look still under way, on the state's own line and at half its height: it comes and goes and nothing moves. */
+.gift-state-wheel {
+  display: inline-block;
+  width: 0.6em;
+  height: 0.6em;
+  margin-left: 0.45em;
+  vertical-align: 0.02em;
+}
+
 /* With no dated line under the state, the money keeps the same air from it as the next moment would have had. */
 .gift-state + .gift-figures,
 .gift-state-closed + .gift-figures {

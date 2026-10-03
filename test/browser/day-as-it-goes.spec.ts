@@ -215,3 +215,94 @@ test.describe("the day read as its page opens, when the reading fails on our sid
     await shot(page, "5-reading-failed-day-stays-open");
   });
 });
+
+/** Whether the wheel of a look was ever drawn, kept by the page itself from before its first paint. A string: a function sent to the page loses its name on the way. */
+const WATCH_THE_WHEEL = "window.__wheelSeen = false; new MutationObserver(function () { if (document.querySelector('[data-looking]')) window.__wheelSeen = true; }).observe(document, { subtree: true, childList: true });";
+
+test.describe("the look taken as the page opens, said only when it is slow", () => {
+  test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each test opens its own windows");
+
+  /** The look held until it is let go, with the moment it was asked. Nothing else is asked of the count route. */
+  async function heldLook(page: Page, giftId: string) {
+    const asked = { looks: 0, counts: 0, firstAtMs: 0 };
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    await page.route(new RegExp(`/api/gift/${giftId}/count(\\?.*)?$`), async (route) => {
+      if (new URL(route.request().url()).searchParams.get("look") !== "1") {
+        asked.counts += 1;
+        return route.fulfill(json({ kind: "already", giftId, reason: "read_recently" }));
+      }
+      asked.looks += 1;
+      if (asked.looks === 1) {
+        asked.firstAtMs = Date.now();
+        await held;
+      }
+      return route.fulfill(json(NOT_IN(giftId)));
+    });
+    return { asked, release };
+  }
+
+  test("a look that answers within a second is never seen", async ({ browser, baseURL }) => {
+    test.setTimeout(120_000);
+    const GIFT = "55";
+    const device = await aWindow(browser, baseURL);
+    const { page } = device;
+    await neverAskedToBeTold(device.context);
+    await serve(page, GIFT, () => dayTwo(GIFT, "recipient"), TERMS.daily);
+    const { asked, release } = await heldLook(page, GIFT);
+    await makeAnAccount(device);
+    await page.addInitScript(WATCH_THE_WHEEL);
+    await page.goto(`/g/${GIFT}`);
+    await expect(card(page).locator(".gift-state")).toHaveText("Today's lesson is not in yet.");
+    await expect.poll(() => asked.looks).toBe(1);
+    // Answered four tenths of a second after it was asked, then left well past the second: no wheel was ever drawn.
+    await page.waitForTimeout(Math.max(0, 400 - (Date.now() - asked.firstAtMs)));
+    release();
+    await page.waitForTimeout(1_500);
+    expect(await page.evaluate("window.__wheelSeen")).toBe(false);
+    await expect(card(page).locator("[data-looking]")).toHaveCount(0);
+    expect(asked.counts).toBe(0);
+  });
+
+  test("past a second the wheel turns beside the state, without a word, and the card waits for nothing", async ({ browser, baseURL }) => {
+    test.setTimeout(120_000);
+    const GIFT = "56";
+    const device = await aWindow(browser, baseURL);
+    const { page } = device;
+    await neverAskedToBeTold(device.context);
+    await serve(page, GIFT, () => dayTwo(GIFT, "recipient"), TERMS.daily);
+    const { asked, release } = await heldLook(page, GIFT);
+    await makeAnAccount(device);
+    await page.goto(`/g/${GIFT}`);
+    const state = card(page).locator(".gift-state");
+    const wheel = card(page).locator("[data-looking]");
+    const figures = card(page).locator(".gift-figures");
+    // The card is drawn at once, whole, while the look has not answered: the state, the days, the money.
+    await expect(state).toHaveText("Today's lesson is not in yet.");
+    await expect(card(page).locator(".day-row-where")).toHaveText("Day 2 of 7");
+    await expect(figures).toContainText("Yours so far");
+    // Past the second, the wheel: on the state's own line, turning, and with no word on the screen.
+    await expect(wheel).toBeVisible();
+    expect(Date.now() - asked.firstAtMs, "silent for a second first").toBeGreaterThanOrEqual(900);
+    await expect(wheel).toHaveText("");
+    await expect(wheel).toHaveAttribute("aria-label", "Looking for today's lesson");
+    await expect(card(page).locator(".gift-state > [data-looking]")).toHaveCount(1);
+    await expect(state).toHaveText("Today's lesson is not in yet.");
+    await expect(card(page).locator("[data-waiting]")).toHaveCount(0);
+    // Where the money stands while the wheel turns, the page's arrival long over: measured again once it is gone.
+    const during = await figures.boundingBox();
+    await shot(page, "6-look-still-under-way");
+    // And nothing waits for it: a fold opens, and what the person decides is theirs to press.
+    await page.getByText("What was agreed").click();
+    await expect(card(page).locator("details.gift-fold[open]")).not.toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Stop/ })).toBeEnabled();
+    await page.getByText("What was agreed").click();
+    // Answered: the wheel goes, the state stays, and no proof was taken for a lesson that is not in.
+    release();
+    await expect(wheel).toHaveCount(0);
+    await expect(state).toHaveText("Today's lesson is not in yet.");
+    // Nothing on the card moved when it went: it sits on the state's own line.
+    expect(await figures.boundingBox()).toEqual(during);
+    expect(asked.counts).toBe(0);
+  });
+});

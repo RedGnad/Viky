@@ -39,6 +39,7 @@ export function GiftLive({
   reading,
   limit = null,
   waiting = null,
+  looking = false,
   action,
   agreed,
   checked,
@@ -67,6 +68,11 @@ export function GiftLive({
    * state, where the next moment would have been said. Nothing was pressed, so no button carries it.
    */
   waiting?: string | null;
+  /**
+   * The look taken as the page came to the front is still under way after a second: the wheel beside the state, and
+   * no word. It sits on the state's own line, so nothing on the card moves when it comes or goes.
+   */
+  looking?: boolean;
   /** The one action of this moment, or nothing. Never two of the same weight. */
   action?: ReactNode;
   /** What was agreed, folded under its name, and open at the one moment a person is discovering it. */
@@ -88,7 +94,10 @@ export function GiftLive({
         {shape ? <div className="gift-shape">{shape}</div> : null}
 
         {live.when ? <p className={`${CARD_LABEL} gift-when`}>{live.when}</p> : null}
-        <p className="gift-state">{live.headline}</p>
+        <p className="gift-state">
+          {live.headline}
+          {looking && !waiting ? <span className="working-ring working-ring-inline gift-state-wheel" role="status" aria-label={L.asItGoes.looking} data-looking="" /> : null}
+        </p>
         {closed?.map((line) => (
           <p key={line} className="gift-state-closed">
             {line}

@@ -903,6 +903,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
           limit={limitLine}
           /* A lesson was seen: the attested reading runs by itself, and says what it is doing. */
           waiting={dayReading.phase === "certifying" ? WAITS.counting(source) : null}
+          looking={dayReading.phase === "looking"}
           action={action}
           agreed={{ open: read.agreementOpen, children: agreed }}
           checked={checked}

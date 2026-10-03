@@ -198,3 +198,16 @@ test("the page reads as it opens, and nothing is pressed", () => {
   // The status says which gifts are read so, from the server's own rule.
   assert.match(readFileSync("src/gift-status.ts", "utf8"), /readLive: readAsTheDayGoes\(record\),/);
 });
+
+test("the look taken as the page comes to the front is silent for a second, then a wheel beside the state, without a word", () => {
+  const hook = readFileSync("app/kit/DayReading.tsx", "utf8");
+  assert.match(hook, /export const LOOK_SILENT_MS = 1_000;/);
+  // Only that look may show itself, and only over a card that was saying nothing: a failure stays said.
+  assert.match(hook, /if \(cameToFront\) \{[\s\S]*?slow = window\.setTimeout\(\(\) => \{\s*if \(live\) setState\(\(before\) => \(before\.phase === "quiet" \? \{ phase: "looking" \} : before\)\);\s*\}, LOOK_SILENT_MS\);\s*cameToFront = false;/);
+  // The looks of each minute stay silent: the mark is set again only when the page comes back to the front.
+  assert.equal(hook.match(/cameToFront = true/g)?.length, 2, "as the page opens, and as it is brought back");
+  // On the state's own line, with a name for a reader that speaks the page and no word on the screen.
+  const card = readFileSync("app/kit/GiftLive.tsx", "utf8");
+  assert.match(card, /<p className="gift-state">\s*\{live\.headline\}\s*\{looking && !waiting \? <span className="working-ring working-ring-inline gift-state-wheel" role="status" aria-label=\{L\.asItGoes\.looking\} data-looking="" \/> : null\}\s*<\/p>/);
+  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /looking=\{dayReading\.phase === "looking"\}/);
+});

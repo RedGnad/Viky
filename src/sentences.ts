@@ -1165,6 +1165,8 @@ export const GIFT_LIVE = {
     leftForLine: (left: string, day: string) => `${left} left for ${day}.`,
     yesterday: "yesterday",
     thisDay: "today",
+    /** The wheel beside the state has no word on the screen: this is its name, for a reader that speaks the page. */
+    looking: "Looking for today's lesson",
     /** A look or a reading that failed on our side: the day stays open, and until when it can still be counted. */
     notReadNow: (source: string) => `${source} could not be read just now.`,
     stillOpenUntil: (until: string) => `The day stays open: it can still be counted until ${until}.`,
