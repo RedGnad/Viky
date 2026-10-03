@@ -6,8 +6,9 @@ import { databaseUrl } from "../src/database-guard";
 import { giftPublicClient, readGift, theirsSoFar } from "../src/gift-reader";
 import { readMilestoneGift } from "../src/milestone-reader";
 import { AUSD_ADDRESS, USDC_ADDRESS } from "../src/monad/chain";
-import { buildReport, fundingOf, kindOfAccount, reportInWords, shortAccount, type Arrival, type Outcome, type Outflow, type PilotGift } from "../src/pilot-report";
-import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT } from "../src/viky-contracts";
+import { buildReport, fundingOf, heldBy, kindOfAccount, reportInWords, shortAccount, type Arrival, type Outcome, type Outflow, type PilotGift } from "../src/pilot-report";
+import { giftEscrowV2Address, giftEscrowV3Address, milestoneGiftV2Address } from "../src/v2";
+import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT, USDC_ROUTER } from "../src/viky-contracts";
 
 /**
  * `pnpm pilot:report` (the founder, 1 Oct 2026): what the pilot did, gift by gift, for the traction file. Read only:
@@ -19,6 +20,11 @@ import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT } from "../src/viky-co
  *
  * No first name, no source account and no whole account is read into the report: the queries do not select them.
  * Against production, the operator command of "The test database" applies (`VIKY_ALLOW_PRODUCTION_DATABASE=1`).
+ *
+ * Each gift is read with the shape of the contract that holds it, and counted under that contract's version. The
+ * addresses of the second and third versions are settings (`NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS`,
+ * `NEXT_PUBLIC_MILESTONE_GIFT_V2_ADDRESS`, `NEXT_PUBLIC_GIFT_ESCROW_V3_ADDRESS`): a gift on a contract this run was
+ * not told of stops the report, with the setting to give, rather than being read as a gift of the first version.
  */
 
 type Row = Record<string, unknown>;
@@ -52,11 +58,16 @@ async function main() {
   // When a reading first counted is the day its transaction was sent: a day's row in the database can be written later.
   const counted = by(await optional(`SELECT gift_id, min(created_at) AS first FROM viky_relayed WHERE kind IN ('check-in', 'prove') GROUP BY gift_id`));
   const createdIn = by(await optional(`SELECT gift_id, min(block_number) AS block FROM viky_relayed WHERE kind = 'create' AND block_number IS NOT NULL GROUP BY gift_id`));
-  const exits = await optional(`SELECT account, amount, token_out, sent_at FROM viky_exits WHERE state = 'sent'`);
+  // A conversion of a card's dollars into what a gift holds is written in the same table as a way out (src/exit-store.ts),
+  // and it takes nothing out: what it gives back is what a gift holds, which no way out ever does. Left out here, where
+  // it was counted as money taken out by card.
+  const exits = (await optional(`SELECT account, amount, token_out, sent_at FROM viky_exits WHERE state = 'sent'`)).filter((row) => String(row.token_out).toLowerCase() !== AUSD_ADDRESS.toLowerCase());
   const sends = await optional(`SELECT account, amount, sent_at FROM viky_sends`);
   const orders = await optional(`SELECT account, kind, ausd_units, updated_at FROM viky_phone_orders WHERE state IN ('paid', 'delivered')`);
   const known = new Set([...gifts.flatMap((row) => [row.funder, row.recipient]), ...(await optional(`SELECT account FROM viky_accounts`)).map((row) => row.account)].filter(Boolean).map((one) => String(one).toLowerCase()));
-  const giftContracts = new Set([GIFT_ESCROW, EARLIER_GIFT_ESCROW, MILESTONE_GIFT].map((one) => one.toLowerCase()));
+  // The contracts that hold gifts, each list in the order of its versions: the first daily contract has two addresses.
+  const holders = { daily: [EARLIER_GIFT_ESCROW, GIFT_ESCROW, giftEscrowV2Address(), giftEscrowV3Address()], milestone: [MILESTONE_GIFT, milestoneGiftV2Address()] };
+  const giftContracts = new Set([...holders.daily, ...holders.milestone].filter((one): one is NonNullable<typeof one> => one !== null).map((one) => one.toLowerCase()));
 
   // The chain's own pace, read rather than assumed, to turn hours into blocks.
   const head = await client.getBlock();
@@ -97,7 +108,11 @@ async function main() {
     const funder = getAddress(String(row.funder));
     const recipient = row.recipient ? getAddress(String(row.recipient)) : null;
     const escrow = getAddress(String(row.escrow ?? GIFT_ESCROW));
-    const milestone = escrow === MILESTONE_GIFT;
+    const held = heldBy(escrow, holders);
+    if (!held) {
+      throw new Error(`Gift ${id} is on a contract this run does not know (${shortAccount(escrow)}). Give the settings of the second and third versions and run it again: nothing was reported.`);
+    }
+    const milestone = held.kind === "milestone";
     const state = milestone ? await readMilestoneGift(escrow, id, client) : await readGift(escrow, id, client);
     const earned = "earned" in state ? state.earned : theirsSoFar(state);
     const over = "settled" in state ? state.settled || state.cancelled : state.finalised || state.cancelled;
@@ -110,13 +125,14 @@ async function main() {
     built.push({
       gift: id,
       condition: row.condition_id ? `${row.condition_id}${row.mode ? `, ${row.mode}` : ""}` : (CONDITIONS.find((condition) => condition.goalType === Number(row.goal_type))?.id ?? `goal ${row.goal_type}`),
+      heldBy: held,
       funder: { account: shortAccount(funder), kind: kindOfAccount(funder, founders, judged) },
       recipient: recipient ? { account: shortAccount(recipient), kind: kindOfAccount(recipient, founders, judged) } : null,
       put: dollars(state.amount),
       earned: dollars(earned),
       returned: dollars(state.refundedToFunder),
       createdAt,
-      funding: fundingOf({ funder, arrivals: await arrivalsBefore(funder, block), judgeCreditBefore, giftContracts, vikyAccounts: known, hours }),
+      funding: fundingOf({ funder, arrivals: await arrivalsBefore(funder, block), judgeCreditBefore, giftContracts, vikyAccounts: known, hours, converter: USDC_ROUTER }),
       openedAt,
       connectedAt: iso(connections.get(id)?.connected_at ?? row.bound_at),
       firstCountedAt: firstCounted,
