@@ -4,8 +4,7 @@ import { readDuolingoCourse, CourseReadError, type CourseReading } from "./duoli
 import { fetchPublicProfile, PublicProfileError, reclaimPublicProfileDeps, type PublicProfile, type PublicProfileDeps } from "./duolingo-public";
 import { checkInSubject, displayNameHasCode, DUOLINGO_PUBLIC_PROVIDER_LABEL } from "./duolingo-public-terms";
 import { DUOLINGO_DAILY } from "./conditions";
-import { contactEmail } from "./contact";
-import { readingFor } from "./attested-calls";
+import { readingFor, startsAgainInWords } from "./attested-calls";
 import { catchUpSecondsOf } from "./catch-up";
 import { LAST_RESORT_WITHIN_SECONDS, lastResortDue, lookBeforeCount, lookForCode, type ProfileLook } from "./daily-look";
 import { resolvePublicDuolingoProfile } from "./duolingo-profile";
@@ -164,7 +163,7 @@ async function readPublicly(
     PROOF_MISMATCH: "The reading could not be verified. Try again in a minute.",
     NOT_CONFIGURED: "Counting is not switched on yet.",
     // The month's limit of readings (src/attested-calls.ts). The screen adds until when the day can still be counted.
-    LIMIT_REACHED: LIMIT.reading(null, contactEmail()),
+    LIMIT_REACHED: LIMIT.said(DUOLINGO_DAILY.source, "readings", startsAgainInWords(now * 1_000)),
     // A day's ceiling of readings (src/attested-calls.ts). The screen says when it resumes, in the reader's own clock.
     CEILING_REACHED: CEILING.reading(null),
   };

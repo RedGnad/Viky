@@ -10,7 +10,8 @@ import { searchCertifications, type CertificationFound } from "@/src/client/cert
 import { ApiError } from "@/src/client/api";
 import { suggestedTarget } from "@/src/milestone-terms";
 import { helpLine } from "@/src/help-line";
-import { FUND, GIFT_LIVE, GRADE_SCALE, MILESTONE_FUND as M, OFFER as W } from "@/src/sentences";
+import { emptyReserveOf, type Reserves } from "@/src/reserves";
+import { FUND, GIFT_LIVE, GRADE_SCALE, LIMIT, MILESTONE_FUND as M, OFFER as W } from "@/src/sentences";
 import { CARD_LABEL, CHOICE, HELP, META, PRIMARY_BUTTON, ROW_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TILE } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
 import { FamilyArt } from "../FamilyArt";
@@ -75,6 +76,8 @@ export function WillSheet({
   const open = openAt !== null;
   const { address } = useAccount();
   const [preview, setPreview] = useState<readonly string[]>([]);
+  /** Which of the month's reserves are used up (src/reserves.ts): a condition that draws on an empty one says so here. */
+  const [reserves, setReserves] = useState<Reserves | null>(null);
   /**
    * Which face the sheet shows, and it opens on the catalogue every time (the founder, 20 Sep 2026): the card's
    * line is "what they will do", and the first question inside it is which one. Choosing opens that condition's own
@@ -123,6 +126,7 @@ export function WillSheet({
     loadOfferedConditions()
       .then((answer) => {
         if (live) setPreview(answer.preview);
+        if (live) setReserves(answer.reserves ?? null);
       })
       .catch(() => {
         if (live) setPreview([]);
@@ -404,6 +408,12 @@ export function WillSheet({
                             its questions, where the detail is decided, not in the button, which grew when pressed. */}
                         {/* A line listed while it is being built says so in the meta voice, beside its nature (D311). */}
                         {option.live ? null : <span className={`block ${META}`}>{M.building}</span>}
+                        {/* Its reserve is used up: when it starts again, in four words and in the labels' quiet colour. It stays offered. */}
+                        {emptyReserveOf(option.nature, reserves) && reserves ? (
+                          <span className="limit-said block" data-limit-back>
+                            {LIMIT.backOn(reserves.again)}
+                          </span>
+                        ) : null}
                       </span>
                       <svg aria-hidden focusable="false" width="20" height="20" viewBox="0 0 24 24" className="shrink-0 text-[var(--on-surface-muted)]">
                         <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
@@ -474,6 +484,12 @@ export function WillSheet({
                paragraph over the questions. */
             down(condition.help)
           )}
+          {/* Its reserve is used up: said over its questions, before anything is answered and long before the payment. */}
+          {emptyReserveOf(condition.nature, reserves) && reserves ? (
+            <p className="limit-said" role="status" data-limit-said>
+              {LIMIT.said(condition.source, emptyReserveOf(condition.nature, reserves)!, reserves.again)}
+            </p>
+          ) : null}
 
           {/* A climb: the account, the cadence, today's reading, then what they reach. */}
           {milestone ? (

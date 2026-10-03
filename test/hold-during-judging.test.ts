@@ -84,7 +84,7 @@ function standingDeps(over: Partial<HealthDeps> = {}): HealthDeps {
 }
 
 /** A cycle a third used: 29 readings of 100, 1 proof come back of 25. */
-const USE = { from: "2026-09-23T00:00:00.000Z", until: "2026-10-23T00:00:00.000Z", fetches: { started: 31, proved: 29, allowed: 100 }, verifications: { asked: 2, shown: 1, verified: 1, allowed: 25 } } as const;
+const USE = { from: "2026-09-24T00:00:00.000Z", until: "2026-10-24T00:00:00.000Z", fetches: { started: 31, proved: 29, allowed: 100 }, verifications: { asked: 2, shown: 1, verified: 1, allowed: 25 } } as const;
 
 test("everything standing answers ok, with a balance, a block and the times of the last passes, and nothing else", async () => {
   const health = await readHealth(standingDeps());

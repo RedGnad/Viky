@@ -1,5 +1,4 @@
-import { readingFor } from "./attested-calls";
-import { contactEmail } from "./contact";
+import { readingFor, startsAgainInWords } from "./attested-calls";
 import { CEILING, LIMIT } from "./sentences";
 import { getAddress, type Hex } from "viem";
 import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
@@ -218,7 +217,7 @@ async function readConnected(input: { giftId: string; purpose: PublicCheckInPurp
     WORKER_OUT_OF_DATE: "The reading service is being updated.",
     NOT_FOUND: `${line.name} answered that there is no such day.`,
     // The month's limit of readings (src/attested-calls.ts). The screen adds until when the day can still be counted.
-    LIMIT_REACHED: LIMIT.reading(null, contactEmail()),
+    LIMIT_REACHED: LIMIT.said(line.name, "readings", startsAgainInWords(now * 1_000)),
     // A day's ceiling of readings (src/attested-calls.ts). The screen says when it resumes, in the reader's own clock.
     CEILING_REACHED: CEILING.reading(null),
   };

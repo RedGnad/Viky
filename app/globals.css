@@ -27,7 +27,7 @@
   --divider: #C5C2CF;
   /* What a sheet lays over the screen behind it: the ink, thinned, so the card is still read through it. */
   --scrim: rgba(30, 22, 51, 0.32);
-  /* The one red: the sentence that says a monthly limit is reached, and nothing else (src/design-tokens.ts, LIMIT_RED). */
+  /* The one red: a reading refused under a press because a month's reserve is used up, and nothing else (src/design-tokens.ts, LIMIT_RED). */
   --limit-red: #B3261E;
 
   /*
@@ -1240,9 +1240,18 @@ dialog.sheet[open] {
   margin-bottom: 4px;
 }
 
-/* A monthly limit is reached (the founder, 3 Oct 2026): short, at the small size, and in the one red. On the card it
-   stands where the state is said; in a block that offers a proof, where its button was. */
+/* A month's reserve is used up (the founder, 3 Oct 2026): short, at the small size, and in the quiet colour of the
+   labels. Nothing is lost and it is not the person's doing, so it is not said in the red. On the card it stands where
+   the state is said; on the card a gift is filled in on and in the choice, under the condition it holds back. */
 .limit-said {
+  color: var(--muted);
+  font-size: var(--type-help);
+  line-height: var(--type-help-leading);
+  font-weight: 600;
+}
+
+/* The same sentence as the answer to a press, which is a refusal: the red stays there, and only there. */
+.limit-refused {
   color: var(--limit-red);
   font-size: var(--type-help);
   line-height: var(--type-help-leading);

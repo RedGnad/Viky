@@ -1,10 +1,10 @@
 import { getAddress, type Hex } from "viem";
-import { contactEmail } from "./contact";
 import { CEILING, LIMIT, MILESTONE_ACTIONS } from "./sentences";
 import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
-import { readingFor, readingIs, roomToday, tellOfTriesSpent } from "./attested-calls";
+import { readingFor, readingIs, roomToday, startsAgainInWords, tellOfTriesSpent } from "./attested-calls";
 import { attestClimbRating, climbFetches, isClimbReadError, readClimbName, readClimbStanding, type AttestedClimbReading } from "./climb-reading";
-import { climbIdentityLabel, climbOfGoal, climbProviderId, type ClimbId } from "./climbs";
+import { climbIdentityLabel, climbOfGoal, climbProviderId, climbSource, type ClimbId } from "./climbs";
+import { CHESS_RATING, CODEFORCES_RATING } from "./conditions";
 import { nameHasChessCode } from "./chess-reading";
 import { identityPseudonym } from "./gift-attestation";
 import { heldStartStillGood, holdTheStart, type StartAsked } from "./held-start";
@@ -180,9 +180,9 @@ export function liveMilestoneReadingDeps(): MilestoneReadingDeps {
 export const RECENT_READING_SECONDS = 30 * 60;
 
 /** What one refusal says, so a test can hold a sentence to what it promises without going through a whole reading. */
-export function refusalMessage(code: string): string {
+export function refusalMessage(code: string, source: string = "this"): string {
   // The month's limit of readings: a climb has no day to count, so the sentence carries no hour (src/sentences.ts).
-  if (code === "LIMIT_REACHED") return LIMIT.reading(null, contactEmail());
+  if (code === "LIMIT_REACHED") return LIMIT.said(source, "readings", startsAgainInWords());
   // A day's ceiling of readings (src/attested-calls.ts): the screen says when it resumes, in the reader's own clock.
   if (code === "CEILING_REACHED") return CEILING.reading(null);
   return MESSAGES[code] ?? "This could not be recorded.";
@@ -359,6 +359,9 @@ async function readMilestone(
   if (!mode) return refused(giftId, "NOT_CONFIGURED");
   const username = record.goalUsername;
   const target = Number(state.target);
+  /** An attested reading the source could not give: where the sentence names the source, by the source's own name. */
+  const sourceName = climbSource(mode) === "codeforces" ? CODEFORCES_RATING.source : CHESS_RATING.source;
+  const notRead = (code: string) => refused(giftId, code, undefined, code === "LIMIT_REACHED" ? refusalMessage(code, sourceName) : undefined);
 
   if (purpose === "reach" && (phase === "overdue" || state.proofPaused)) {
     const held = await heldByAPause(record, state, target, deps);
@@ -422,7 +425,7 @@ async function readMilestone(
       reading = await deps.attest({ username, mode, withName: provesItsOwn });
     } catch (error) {
       if (isClimbReadError(error) && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);
-      if (isClimbReadError(error)) return refused(giftId, error.code);
+      if (isClimbReadError(error)) return notRead(error.code);
       throw error;
     }
     if (provesItsOwn && !nameHasChessCode(reading.name, record.bindingCode ?? "")) return refused(giftId, "CODE_NOT_IN_NAME", reading.rating);
@@ -516,7 +519,7 @@ async function readMilestone(
     reading = await deps.attest({ username, mode, withName: false });
   } catch (error) {
     if (isClimbReadError(error) && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);
-    if (isClimbReadError(error)) return refused(giftId, error.code);
+    if (isClimbReadError(error)) return notRead(error.code);
     throw error;
   }
   if (reading.playerId !== record.goalProfileId) return refused(giftId, "OTHER_PLAYER", reading.rating);

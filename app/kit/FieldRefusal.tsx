@@ -7,11 +7,11 @@ import { LIMIT } from "@/src/sentences";
  */
 export function FieldRefusal({ id, children }: Readonly<{ id: string; children: string | undefined | null }>) {
   if (!children) return null;
-  // The one exception (the founder, 3 Oct 2026): a monthly limit reached is said short and in the red, wherever a
-  // screen prints what it was answered, so it reads the same under a press as on the card.
+  // The one exception (the founder, 3 Oct 2026): a press refused because a month's reserve is used up is said short
+  // and in the red. The same sentence said in place, where nothing was pressed, is quiet (`.limit-said`).
   if (LIMIT.isSaid(children)) {
     return (
-      <p id={id} role="alert" className="limit-said">
+      <p id={id} role="alert" className="limit-refused">
         {children}
       </p>
     );

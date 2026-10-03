@@ -88,8 +88,13 @@ export function dailyCeilings(env: Environment = process.env): { perGift: number
   return { perGift: wholeNumber(env.RECLAIM_DAILY_PER_GIFT) ?? DAILY_CEILING.perGift, all: wholeNumber(env.RECLAIM_DAILY_ALL) ?? DAILY_CEILING.all };
 }
 
-/** The day of the month a cycle starts, at midnight UTC: the dashboard showed the cycle of 23 Sep to 24 Oct 2026. */
-export const RECLAIM_CYCLE_DAY = 23;
+/**
+ * The day of the month the count starts again, at midnight UTC. Reclaim's dashboard shows the cycle as "23/09 -
+ * 24/10": it began on the 23rd and is shown to end on the 24th, and which of the two days theirs starts again on is
+ * not published. Ours takes the later one (the founder, 3 Oct 2026), for the screen as for the limit: our count never
+ * starts again before theirs.
+ */
+export const RECLAIM_CYCLE_DAY = 24;
 
 /**
  * What is left of an allowance when the operator is told: fifteen, ten, five, and none, which is the limit (the
@@ -106,12 +111,14 @@ export const JUDGING = { from: "2026-10-14", until: "2026-10-27" } as const;
 export const MORNING_SUMMARY_HOUR_UTC = 6;
 
 /**
- * What was already spent in the cycle that began on 23 Sep 2026 when this journal began, counted on 3 Oct 2026: 126
+ * What was already spent in the cycle Reclaim began on 23 Sep 2026 when this journal began, counted on 3 Oct 2026: 126
  * fetches of which 68 gave a proof in the reading service's own logs, which start on 28 Sep at 20:40 UTC, and the two
  * readings of 23 and 24 Sep that the gifts' journal holds. A fetch that failed before 28 Sep 20:40 is in neither, so
- * this is a floor. One proof was asked of a person, on 27 Sep, and never came back. It counts for that cycle alone.
+ * this is a floor. One proof was asked of a person, on 27 Sep, and never came back. It counts for that cycle alone,
+ * which in this count is the one that starts again on 24 Oct (`RECLAIM_CYCLE_DAY`): the reading of 23 Sep is in the
+ * figure, so nothing Reclaim counted in its cycle is left out of ours.
  */
-export const BEFORE_THE_JOURNAL = { cycleFrom: "2026-09-23T00:00:00.000Z", started: 128, proved: 70, asked: 1, shown: 0 } as const;
+export const BEFORE_THE_JOURNAL = { cycleFrom: "2026-09-24T00:00:00.000Z", started: 128, proved: 70, asked: 1, shown: 0 } as const;
 
 /**
  * Of what was counted before the journal began, what one fault of ours cost on 30 Sep 2026: a Chess.com gift whose
@@ -150,7 +157,7 @@ export function ensureAttestedCallsSchema(): Promise<void> {
   return ready;
 }
 
-/** The cycle a moment falls in: from the 23rd at midnight UTC to the next 23rd. */
+/** The cycle a moment falls in: from the 24th at midnight UTC to the next 24th. */
 export function cycleOf(nowMs: number): { from: Date; until: Date } {
   const now = new Date(nowMs);
   const before = now.getUTCDate() < RECLAIM_CYCLE_DAY ? 1 : 0;
@@ -250,6 +257,15 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 export function utcDayInWords(iso: string): string {
   const date = new Date(iso);
   return `${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
+}
+
+/**
+ * The day a cycle's reserves start again, as a screen says it: "24 Oct", the first day of the next cycle, in UTC, so it
+ * is written the same on the server and in every browser. West of UTC the reserves are back the evening before.
+ */
+export function startsAgainInWords(nowMs: number = Date.now()): string {
+  const until = cycleOf(nowMs).until;
+  return `${until.getUTCDate()} ${MONTHS[until.getUTCMonth()]}`;
 }
 
 /**
