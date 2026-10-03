@@ -190,6 +190,20 @@ export const WAY_IN_GIFT_COIN: WayIn = {
  * 20 Sep 2026. Their `public/convert` endpoint prices a 1 EUR purchase quite happily (fee 0.04 EUR, 20 Sep), and
  * that is the same lesson as D79 on the other rail: an endpoint that quotes is not a service that pays. The
  * published limit is the figure a screen may act on (D125).
+ *
+ * Its page cannot be drawn in a frame of ours without a partner's key (measured 4 Oct 2026, nothing paid):
+ *   - `https://exchange.mercuryo.io` is served with nothing that forbids a frame, but it draws its form in a frame of
+ *     its own, `https://widget.mercuryo.io/?origin=https://exchange.mercuryo.io&widget_id=<Mercuryo's own>`, served
+ *     with `frame-ancestors https://exchange.mercuryo.io`. That rule holds every page above it, so with Viky above
+ *     the browser refuses it (`ERR_BLOCKED_BY_RESPONSE`) and the frame is empty;
+ *   - `https://widget.mercuryo.io` with no `widget_id` is served with `frame-ancestors 'none'` and `X-Frame-Options:
+ *     DENY`. Its own documentation (widget.docs.mercuryo.io, and "Widget API v1.6" on its GitHub): `widget_id` is
+ *     required, the domain that embeds it is entered in its dashboard, and `address` needs a `signature` made with
+ *     the partner's secret;
+ *   - on its public page the address's `type`, `currency`, `network`, `fiat_currency` and `fiat_amount` change nothing:
+ *     opened with MON on Monad and 30 EUR, it showed BTC for 300 USD.
+ * So its page opens beside, and the person sets everything there (`wayInFillsIn`). Whether that page has to stay open
+ * until the money arrives is not known: its documentation says nothing of it, and it was not tried.
  */
 export const WAY_IN_CHAIN_COIN: WayIn = {
   name: "Mercuryo",
@@ -370,7 +384,14 @@ export function cardServices(names: readonly string[] = waysIn().map((way) => wa
  */
 export const rampHostApiKey = (): string | undefined => process.env.NEXT_PUBLIC_RAMP_HOST_API_KEY?.trim() || undefined;
 
-/** Ramp's page with nothing in its address: the one it opens without a partner key (read on 27 Sep 2026, D289). */
+/**
+ * Ramp's page with nothing in its address: the one it opens without a partner key (read on 27 Sep 2026, D289).
+ *
+ * Ramp has no window inside Viky without that key (measured 3 Oct 2026, nothing paid): its own SDK
+ * (`@ramp-network/ramp-instant-sdk` 6.2.0) opens `https://app.rampnetwork.com/`, which answers "Integration issue
+ * detected" without `hostApiKey`, and its public site (`rampnetwork.com/buy-crypto`, `/sell-crypto`) is served with
+ * `X-Frame-Options: SAMEORIGIN` and `frame-ancestors 'self'`. Its page beside is its way, in and out.
+ */
 export const RAMP_BARE_PAGE = "https://app.ramp.network/";
 
 /**
