@@ -242,6 +242,12 @@ export const PAY = {
     `Our partner ${name} takes your card. The first time, it asks who you are: your details, a code by text, and your ID. Your account and the amount are already filled in. Come back here afterwards: your gift starts by itself.`,
   /** The sheet the card is paid in, and what its frame is called when read aloud. */
   card: { title: "Pay by card", frame: "Card payment" },
+  /** Rampnow in a frame of our own (the founder, 3 Oct 2026), and its page beside as the fallback. */
+  rampnow: {
+    failed: "The card payment did not go through. Nothing was taken.",
+    notShowing: "If the payment does not show, open its page instead.",
+    openPage: "Open the card page",
+  },
   yourCode: "Your code",
   /**
    * Under every button or link that pays by card, for the payer alone (the founder, 29 Sep 2026): no box to tick and no

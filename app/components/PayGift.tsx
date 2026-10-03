@@ -30,10 +30,12 @@ import { formatAusd } from "@/src/gift-reader";
 import { dollarsToUnits } from "@/src/money";
 import { settlingTimeInWords } from "@/src/pass-schedule";
 import { forgetPendingGift, peekPendingGift, savePendingGift, type PendingGift } from "@/src/pending-gift";
-import { wayInAsksNothing, wayInPage, waysIn, type WayIn } from "@/src/rails";
+import { wayInAsksNothing, wayInPage, waysIn, WAY_IN_USDC, type WayIn } from "@/src/rails";
 import { JudgeCode } from "../kit/offer/JudgeCode";
 import { CardNotOffered, CardTermsLine } from "../kit/offer/CardTerms";
 import { SwapperSheet } from "../kit/offer/SwapperSheet";
+import { RampnowSheet } from "../kit/offer/RampnowSheet";
+import { rampnowFrameOn } from "@/src/rampnow-frame";
 import { FunderControls } from "../kit/FunderControls";
 import { Said } from "../kit/Said";
 import { FoldChevron } from "../kit/GiftLive";
@@ -170,6 +172,8 @@ export function PayGift() {
   const wayIn: WayIn = chosenWay ?? waysIn().find((entry) => entry.name === kept?.wayIn) ?? waysIn()[0];
   /** The card paid inside Viky (`SwapperSheet`), open over this screen: at once when the pay press sent the person here for it. */
   const [cardOpen, setCardOpen] = useState(params.get("card") === "1");
+  /** Rampnow in a frame (`RampnowSheet`), open over this screen: at once when the pay press sent the person here for it. */
+  const [rampnowOpen, setRampnowOpen] = useState(params.get("rampnow") === "1");
   /** Whether the card is offered to this payer (src/card-rail.ts): not in a country its providers' terms exclude. */
   const [card, setCard] = useState<Readonly<{ offered: boolean; country: string | null }> | null>(null);
   useEffect(() => {
@@ -667,6 +671,7 @@ export function PayGift() {
                 type="button"
                 onClick={() => {
                   if (wayIn.embedded) setCardOpen(true);
+                  else if (wayIn === WAY_IN_USDC && rampnowFrameOn()) setRampnowOpen(true);
                   else window.open(wayInPage(wayIn, { account: address, euros: more }), "_blank", "noopener,noreferrer");
                   setPhase("waiting");
                 }}
@@ -796,6 +801,20 @@ export function PayGift() {
             </button>
             <CardTermsLine way={wayIn} />
           </>
+        ) : wayIn === WAY_IN_USDC && rampnowFrameOn() ? (
+          <>
+            <button
+              type="button"
+              className={PRIMARY_BUTTON}
+              onClick={() => {
+                setPartnerOpened(true);
+                setRampnowOpen(true);
+              }}
+            >
+              {partnerOpened ? W.waiting.openCardAgain : W.waiting.openCard}
+            </button>
+            <CardTermsLine way={wayIn} />
+          </>
         ) : (
           <>
             <a href={wayInPage(wayIn, { account: address, euros: toBuy })} target="_blank" rel="noopener noreferrer" className={PRIMARY_BUTTON} onClick={() => setPartnerOpened(true)}>
@@ -812,6 +831,16 @@ export function PayGift() {
             void refresh();
           }}
           onClose={() => setCardOpen(false)}
+        />
+        <RampnowSheet
+          open={rampnowOpen}
+          account={address}
+          euros={toBuy}
+          onArrived={() => {
+            setRampnowOpen(false);
+            void refresh();
+          }}
+          onClose={() => setRampnowOpen(false)}
         />
         <div className="flex flex-col gap-[var(--space-xs)]">
           <button type="button" onClick={differentGift} className={`${SMALL_BUTTON} self-start`}>

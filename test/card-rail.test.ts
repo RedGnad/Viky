@@ -136,8 +136,11 @@ test("each button or link that pays by card carries the line, and gives way to t
   assert.match(sheet, /\{!enough && cardClosed \? \(\s*<CardNotOffered country=\{card\?\.country \?\? null\} \/>/);
   const wait = readFileSync("app/components/PayGift.tsx", "utf8");
   // The two places the waiting screen opens the partner: paying the rest, and the partner's page itself.
-  // And a third, under the button that opens a card paid inside Viky (the founder, 1 Oct 2026).
-  assert.equal((wait.match(/<CardTermsLine way=\{wayIn\} \/>/g) ?? []).length, 3);
+  // And a third, under the button that opens a card paid inside Viky (the founder, 1 Oct 2026), and a fourth under the
+  // button that opens the card in a frame of our own, with the line again under the frame's way out to the card's page.
+  assert.equal((wait.match(/<CardTermsLine way=\{wayIn\} \/>/g) ?? []).length, 4);
+  const frame = readFileSync("app/kit/offer/RampnowSheet.tsx", "utf8");
+  assert.match(frame, /\{W\.rampnow\.openPage\}\s*<\/a>\s*<CardTermsLine way=\{WAY_IN_USDC\} \/>/);
   assert.equal((wait.match(/<CardNotOffered country=\{card\?\.country \?\? null\} \/>/g) ?? []).length, 2);
   assert.equal((wait.match(/window\.open\(wayInPage|href=\{wayInPage/g) ?? []).length, 2, "and no other way to the partner");
 });
