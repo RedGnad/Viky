@@ -187,13 +187,6 @@ export const PROSE = `${BODY} max-w-[var(--prose-max)]`;
 export const CONTROL_STACK = "flex flex-col gap-[var(--tap-gap)]";
 
 /**
- * One way back, and it looks the same wherever it is. Pulled left by its own padding so the word stays flush
- * with the page margin while the target around it is a full 48 wide.
- */
-export const BACK_LINK =
-  "-ml-[var(--space-md)] inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center self-start px-[var(--space-md)] text-[length:var(--type-body)] underline underline-offset-[3px] text-[var(--accent-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]";
-
-/**
  * The action a screen is asking for, kept where a thumb is and where the eye ends up, instead of below
  * whatever explaining the screen had to do.
  *
