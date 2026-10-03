@@ -217,6 +217,8 @@
 
   /* The one number every source agrees on, and the gap that satisfies Apple's bezelled case too. */
   --tap-target: 48px;
+  /* The way back's disc (the founder, 3 Oct 2026): 44, inside the 48 a finger is given. */
+  --back-disc: 44px;
   --tap-gap: 12px;
 
   /* Material publishes 16 on a phone and 24 from 600px; Apple no longer publishes any. */
@@ -541,6 +543,12 @@ video {
   }
 
   .small-button:hover:not(:active):not(:disabled) {
+    transform: translateY(calc(-1 * var(--hover-lift)));
+    box-shadow: 0 calc(3px + var(--hover-lift)) 0 var(--control-relief-colour);
+    transition-duration: var(--hover-duration);
+  }
+
+  .back-round:hover:not(:active) .back-round-disc {
     transform: translateY(calc(-1 * var(--hover-lift)));
     box-shadow: 0 calc(3px + var(--hover-lift)) 0 var(--control-relief-colour);
     transition-duration: var(--hover-duration);
@@ -960,7 +968,8 @@ dialog.sheet[open] {
 
   .control-relief,
   .small-button,
-  .you-decide-disc {
+  .you-decide-disc,
+  .back-round-disc {
     transition: none;
   }
 
@@ -968,7 +977,9 @@ dialog.sheet[open] {
   .control-relief[data-pressed]:not(:disabled),
   .action-relief[data-pressed]:not(:disabled),
   .small-button:is(:active, :hover):not(:disabled),
-  .you-decide-act:is(:active, :hover) .you-decide-disc {
+  .you-decide-act:is(:active, :hover) .you-decide-disc,
+  .back-round:is(:active, :hover) .back-round-disc,
+  .back-round[data-pressed] .back-round-disc {
     transform: none;
   }
 
@@ -1450,6 +1461,53 @@ details > summary.gift-fold-name::-webkit-details-marker {
  */
 .you-decide {
   margin-top: 20px;
+}
+
+/*
+ * The way back (the founder, 3 Oct 2026): a round key of 44 with an arrow alone, of the round controls' family, in the
+ * 48 a finger is given. It was an underlined sentence at the head of every screen. Its relief is a small key's.
+ */
+.back-round {
+  display: inline-flex;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  /* The disc stands on the page margin: the target reaches 2 past it on each side. */
+  margin-left: calc((var(--back-disc) - var(--tap-target)) / 2);
+  color: var(--text);
+}
+
+.back-round:focus-visible {
+  outline: none;
+}
+
+.back-round:focus-visible .back-round-disc {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+
+.back-round-disc {
+  display: flex;
+  width: var(--back-disc);
+  height: var(--back-disc);
+  align-items: center;
+  justify-content: center;
+  border: var(--control-border-width) solid var(--control-border);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 3px 0 var(--control-relief-colour);
+  transition:
+    transform var(--press-duration) var(--press-easing),
+    box-shadow var(--press-duration) var(--press-easing);
+}
+
+.back-round:active .back-round-disc,
+.back-round[data-pressed] .back-round-disc {
+  transform: translateY(3px);
+  box-shadow: none;
 }
 
 .you-decide-acts {

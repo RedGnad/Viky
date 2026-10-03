@@ -33,6 +33,8 @@ export const NAV = {
   gifts: "Gifts",
   me: "Me",
   back: "Back",
+  /** The way back's name for a screen reader, by where it leads: it is drawn as an arrow alone (3 Oct 2026). */
+  backTo: { "/": "Back to Home", "/gifts": "Back to my gifts", "/me": "Back to Me" },
 } as const;
 
 /**

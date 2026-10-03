@@ -22,7 +22,7 @@ export function Pressed() {
     const held = new Map<Element, number>();
     const press = (event: PointerEvent) => {
       if (event.pointerType === "mouse" || event.pointerType === "pen") return;
-      const control = (event.target as Element | null)?.closest(".control-relief, .action-relief");
+      const control = (event.target as Element | null)?.closest(".control-relief, .action-relief, .back-round");
       if (!control) return;
       const running = held.get(control);
       if (running !== undefined) window.clearTimeout(running);
