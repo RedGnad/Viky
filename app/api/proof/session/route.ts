@@ -5,7 +5,7 @@ import { readJsonBody } from "@/src/api-guard";
 import { DUOLINGO_MAX_DAY_INDEX } from "@/src/duolingo-proof-policy";
 import { resolvePublicDuolingoProfile } from "@/src/duolingo-profile";
 import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
-import { isReclaimQuotaRefusal, limitsNow, noteAttestedCall, ReclaimLimitReached, startsAgainInWords } from "@/src/attested-calls";
+import { isReclaimQuotaRefusal, limitsNow, noteAttestedCall, REAL_READINGS_OFF, realReadingsOff, ReclaimLimitReached, startsAgainInWords } from "@/src/attested-calls";
 import { conditionById } from "@/src/conditions";
 import { LIMIT } from "@/src/sentences";
 import { loadLatestEvidence, pruneExpiredProofSessions, saveProofSession, type ProofSessionPhase } from "@/src/proof-session-store";
@@ -97,6 +97,8 @@ export async function POST(request: Request) {
     // The month's limit of proofs (src/attested-calls.ts): said before the person starts, and nothing is opened at
     // Reclaim. The same when Reclaim itself refuses the session for its quota.
     if ((await limitsNow()).proofs) throw new ReclaimLimitReached("proofs");
+    // A developer's machine opens no proof at Reclaim (src/attested-calls.ts).
+    if (realReadingsOff()) throw new Error(REAL_READINGS_OFF);
     const proofRequest = await ReclaimProofRequest.init(appId, appSecret, providerId, {
       ...(witness && !witness.pin ? {} : { providerVersion }),
       // Everywhere else the portal can substitute AI-witnessed proofs while still reporting success. We refuse AI
