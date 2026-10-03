@@ -449,7 +449,9 @@ export default async function JudgesPage() {
         <p className={HELP} data-reclaim-cycle>
           The month&apos;s count, kept here because Reclaim&apos;s dashboard shows no count of the fetches: its free tier
           allows up to {RECLAIM_ALLOWANCE.fetches} attested fetches and {RECLAIM_ALLOWANCE.verifications} verifications a
-          month, and gives more on request only. {cycleInWords(reclaimUse)}
+          month, and gives more on request only. {cycleInWords(reclaimUse)} Reclaim&apos;s dashboard shows its cycle
+          as 23/09 to 24/10: the count here holds what was spent from the 23rd and starts again on the 24th, the later
+          day, so that it never starts again before theirs.
           {reclaimUse && (reclaimUse.fetches.allowed !== RECLAIM_ALLOWANCE.fetches || reclaimUse.verifications.allowed !== RECLAIM_ALLOWANCE.verifications)
             ? " Reclaim has granted more than the free tier, and the limits in force are the ones counted against."
             : ""}

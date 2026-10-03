@@ -94,7 +94,7 @@ export function ShowProof({
     );
   }
 
-  // The month's reserve of proofs is used up: the card says so above, in the red, with what the person can do (the
+  // The month's reserve of proofs is used up: the card says so above, quietly, with what the person can do (the
   // founder, 3 Oct 2026). Nothing is offered here, so nothing is opened or asked of them.
   if (limitReached && state.at !== "waiting") return null;
 

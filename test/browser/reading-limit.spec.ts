@@ -5,8 +5,9 @@ import { DAY, gift, json, makeAnAccount, neverAskedToBeTold, now } from "./gift-
 /**
  * A month's reserve is used up (the founder, 3 Oct 2026). Viky asks an outside service for each attested reading and
  * for each proof a person shows, and holds itself to that service's monthly allowance (src/attested-calls.ts). One
- * sentence says it in the open, in the one red of the product: which service is not checked, by the gift's own
- * source, and the day it starts again. What the person can do is folded under its own name. And a condition whose
+ * sentence says it in the open, in the quiet colour of the labels, since nothing is lost and it is not the person's
+ * doing: which service is not checked, by the gift's own source, and the day it starts again. The red is kept for a
+ * press the limit refuses. What the person can do is folded under its own name. And a condition whose
  * reserve is empty says so before a gift is paid for, on the card and in the choice of what they will do.
  *
  * What is real: the product's pages against the server under test, the sign-in with a passkey, every press. What is
@@ -17,7 +18,7 @@ import { DAY, gift, json, makeAnAccount, neverAskedToBeTold, now } from "./gift-
  */
 const shot = photographer(process.env.VIKY_LIMIT_CAPTURES);
 
-const AGAIN = "23 Oct";
+const AGAIN = "24 Oct";
 const card = (page: Page) => page.locator("section.gift-card-placed");
 const said = (page: Page) => card(page).locator("[data-limit-said]");
 const fold = (page: Page) => card(page).locator("[data-limit-can]");
@@ -28,6 +29,8 @@ const UNTIL = "(today|tomorrow), \\d{1,2} [A-Z][a-z]{2}, at \\d{1,2}:\\d{2}\\.";
 const WRITE = /^Write to \S+@\S+: we can reopen it sooner\.$/;
 /** The one red (src/design-tokens.ts, LIMIT_RED): Material's error role at tone 40 by day, at tone 80 after dark. */
 const RED = process.env.VIKY_DECIDE_NIGHT === "1" ? "rgb(242, 184, 181)" : "rgb(179, 38, 30)";
+/** The colour of the card's own labels, as the page paints the small line above the name. An expression: a function sent to the page loses its name on the way. */
+const labelColour = (page: Page) => page.evaluate("getComputedStyle(document.querySelector('section.gift-card-placed .gift-eyebrow')).color") as Promise<string>;
 /** Tomorrow at 06:00 UTC: the end of a window, which the page says in the clock of the device. */
 const until = () => (Math.floor(now() / DAY) + 1) * DAY + 6 * 3_600;
 const readingsEmpty = (countableUntil: number | null) => ({ limit: { readings: true, proofs: false, countableUntil, again: AGAIN } });
@@ -65,8 +68,10 @@ test.describe("a month's reserve used up, said in place", () => {
 
     await expect(said(page)).toHaveCount(1);
     await expect(said(page)).toHaveText(sentence("Duolingo", "readings"));
-    // Small and red: one line of help in size, and the only red on the page.
-    await expect(said(page)).toHaveCSS("color", RED);
+    // Small and quiet: one line of help in size, in the colour of the card's labels, and no red on the page.
+    const quiet = await labelColour(page);
+    expect(quiet).not.toBe(RED);
+    await expect(said(page)).toHaveCSS("color", quiet);
     await expect(said(page)).toHaveCSS("font-size", "13px");
     // No next reading is announced, in words or as an hour beside the money: none will go.
     await expect(card(page)).not.toContainText("Next reading");
@@ -91,7 +96,7 @@ test.describe("a month's reserve used up, said in place", () => {
     await makeAnAccount(device);
     await page.goto(`/g/${GIFT}`);
     await expect(said(page)).toHaveText(sentence("Duolingo", "readings"));
-    await expect(said(page)).toHaveCSS("color", RED);
+    await expect(said(page)).toHaveCSS("color", await labelColour(page));
     await shot(page, "03-funder");
     await folded(page, [new RegExp(`^Boo's day can still be counted until ${UNTIL}$`), "What is already theirs can be taken out as usual.", "Gifts proved by a document someone shows are not touched."]);
     await shot(page, "04-funder-what-you-can-do");
@@ -136,6 +141,7 @@ test.describe("a month's reserve used up, said in place", () => {
     await page.getByRole("button", { name: "Count now" }).click();
     const refused = page.locator("#gift-count-refused");
     await expect(refused).toHaveText(new RegExp(`^Viky can't check Duolingo right now: this month's readings are used up\\. It starts again on ${AGAIN}\\. Your day can still be counted until ${UNTIL}$`));
+    // A press that is refused: the red stays here, and only here.
     await expect(refused).toHaveCSS("color", RED);
     await shot(page, "06-refused-under-a-press");
   });
@@ -168,7 +174,7 @@ test.describe("a month's reserve used up, said in place", () => {
     await page.goto(`/g/${GIFT}`);
     // Said to the person the gift is for: the university is theirs.
     await expect(said(page)).toHaveText(sentence("your university", "proofs"));
-    await expect(said(page)).toHaveCSS("color", RED);
+    await expect(said(page)).toHaveCSS("color", await labelColour(page));
     // Nothing to press that would open a proof: the place of the button is empty while the reserve is.
     await expect(page.getByRole("button", { name: "Show it" })).toHaveCount(0);
     await expect(page.getByText(/^A verification page opens/).filter({ visible: true })).toHaveCount(0);
@@ -193,7 +199,7 @@ test.describe("a month's reserve used up, said in place", () => {
     const offer = page.locator("[data-limit-said]").filter({ visible: true });
     await expect(offer).toHaveCount(1);
     await expect(offer).toHaveText(sentence("Duolingo", "readings"));
-    await expect(offer).toHaveCSS("color", RED);
+    await expect(offer).not.toHaveCSS("color", RED);
     await offer.scrollIntoViewIfNeeded();
     await shot(page, "08-card-to-fill", false);
 
@@ -204,7 +210,7 @@ test.describe("a month's reserve used up, said in place", () => {
     const learn = sheet.locator('div[role="group"] > button');
     const back = sheet.locator("[data-limit-back]").filter({ visible: true });
     await expect(back.first()).toHaveText(`Back on ${AGAIN}`);
-    await expect(back.first()).toHaveCSS("color", RED);
+    await expect(back.first()).not.toHaveCSS("color", RED);
     expect(await back.count()).toBeGreaterThan(0);
     for (const line of await learn.all()) await expect(line).toBeEnabled();
     await shot(page, "09-choice-readings-wait", false);
@@ -220,7 +226,7 @@ test.describe("a month's reserve used up, said in place", () => {
     await sheet.getByRole("button", { name: /All families/i }).click();
     await sheet.getByRole("button", { name: /^Learn/ }).click();
     await learn.filter({ has: page.locator("[data-limit-back]") }).first().click();
-    await expect(sheet.locator("p[data-limit-said]")).toHaveText(/^Viky can't check .+ right now: this month's readings are used up\. It starts again on 23 Oct\.$/);
+    await expect(sheet.locator("p[data-limit-said]")).toHaveText(new RegExp(`^Viky can't check .+ right now: this month's readings are used up\\. It starts again on ${AGAIN}\\.$`));
     await shot(page, "11-condition-chosen", false);
   });
 });

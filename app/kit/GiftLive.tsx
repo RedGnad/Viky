@@ -61,7 +61,7 @@ export function GiftLive({
   /** When the source last updated what was read as the page opened, quietly under the figure, or nothing. */
   reading?: ReactNode;
   /**
-   * A month's reserve is used up (src/sentences.ts, LIMIT): the one sentence said in the open, in the red, and what
+   * A month's reserve is used up (src/sentences.ts, LIMIT): the one sentence said in the open, in the quiet colour of the labels, and what
    * the person can do, a line each, folded under its own name with the card's other folds.
    */
   limit?: Readonly<{ said: string; can: readonly string[] }> | null;

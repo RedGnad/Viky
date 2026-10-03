@@ -408,7 +408,7 @@ export function WillSheet({
                             its questions, where the detail is decided, not in the button, which grew when pressed. */}
                         {/* A line listed while it is being built says so in the meta voice, beside its nature (D311). */}
                         {option.live ? null : <span className={`block ${META}`}>{M.building}</span>}
-                        {/* Its reserve is used up: when it starts again, in four words and in the red. It stays offered. */}
+                        {/* Its reserve is used up: when it starts again, in four words and in the labels' quiet colour. It stays offered. */}
                         {emptyReserveOf(option.nature, reserves) && reserves ? (
                           <span className="limit-said block" data-limit-back>
                             {LIMIT.backOn(reserves.again)}

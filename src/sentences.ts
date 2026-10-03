@@ -28,7 +28,7 @@ function spokenTo(source: string): string {
 
 /**
  * The month's limit of readings is reached (the founder, 3 Oct 2026): said in place, where a reading or a proof would
- * have gone, short, and in the one red of the product (`.limit-said`). Viky asks an outside service for each attested
+ * have gone, short, and in the quiet colour of the labels (`.limit-said`); the red is kept for a press it refuses. Viky asks an outside service for each attested
  * reading and for each proof a person shows, and that service counts them by the month (src/attested-calls.ts).
  * `until` is the real end of the window of the day that can still be counted, in the reader's own clock; a gift that
  * is not counted by days has none, and reads that nothing is lost instead. `email` is where to write, and the
@@ -49,7 +49,7 @@ export const CEILING = {
  * for each proof a person shows, and that service gives two reserves a month (src/attested-calls.ts): the readings Viky
  * takes by itself, and the proofs people show.
  *
- * One sentence in the open, in the one red of the product: which service is not checked, named by the gift's own
+ * One sentence in the open, in the quiet colour of the labels: which service is not checked, named by the gift's own
  * source, and the day it starts again, which is the cycle's own first day. Everything else is folded under "What you
  * can do": until when the open day can still be counted, that what is already theirs is taken out as usual, what the
  * empty reserve does not touch, and where to write. A sentence of that length is not left in the open (rule 4).
@@ -75,7 +75,7 @@ export const LIMIT = {
   write: (email: string) => `Write to ${email}: we can reopen it sooner.`,
   /** Beside a condition in a list, where a sentence has no room: four words (rule 5). */
   backOn: (again: string) => `Back on ${again}`,
-  /** Whether a sentence is the one said in the open, wherever a screen prints what it was answered: it is then set in the red. */
+  /** Whether a sentence is the one said in the open, wherever a screen prints what it was answered to a press: it is then set in the red. */
   isSaid: (text: string | null | undefined) => Boolean(text && /^Viky can't check .+ right now: this month's (readings|proofs) are used up\./.test(text)),
 } as const;
 

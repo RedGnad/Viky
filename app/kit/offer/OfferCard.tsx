@@ -211,7 +211,7 @@ export function OfferCard({
                 <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
-            {/* Under what they will do, where it is chosen: in the red, the one sentence the gift's page will say too. */}
+            {/* Under what they will do, where it is chosen: quietly, the one sentence the gift's page will say too. */}
             {condition && emptyReserve && reserves ? (
               <span className="limit-said mt-[var(--space-sm)] block w-full" role="status" data-limit-said>
                 {LIMIT.said(condition.source, emptyReserve, reserves.again)}

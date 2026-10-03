@@ -12,7 +12,7 @@ export function reserveOf(nature: ConditionNature): Reserve {
   return nature === "shown" ? "proofs" : "readings";
 }
 
-/** What a screen is told of the two reserves: which are used up, and the day they start again ("23 Oct"). */
+/** What a screen is told of the two reserves: which are used up, and the day they start again ("24 Oct"). */
 export type Reserves = Readonly<{ readings: boolean; proofs: boolean; again: string }>;
 
 /** The reserve a condition draws on, when it is used up, or nothing: what makes the condition say so before a gift is paid for. */
