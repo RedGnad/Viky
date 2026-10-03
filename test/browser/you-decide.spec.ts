@@ -52,7 +52,7 @@ test.describe("you decide", () => {
     // Under it: three round buttons with two words each, their state in a label, and nothing else.
     await expect(decide(page).getByText("You decide", { exact: true })).toBeVisible();
     await expect(decide(page).getByRole("button")).toHaveCount(3);
-    await expect(act(page, "messages")).toHaveText("MessagesOff");
+    await expect(act(page, "messages")).toHaveText("NotificationsOff");
     await expect(act(page, "sees")).toHaveText("Maman seesOne thing");
     await expect(act(page, "stop")).toHaveText("StopAnytime");
     for (const which of ["messages", "sees", "stop"] as const) {
@@ -232,7 +232,7 @@ test.describe("you decide", () => {
     await expect(refuses.page.getByText(/Your phone is not letting Viky tell you/)).toBeHidden();
     await shot(refuses.page, "06-habit-phone-refuses");
     await act(refuses.page, "messages").click();
-    const refused = refuses.page.getByRole("dialog", { name: "Messages" });
+    const refused = refuses.page.getByRole("dialog", { name: "Notifications" });
     await expect(refused.getByText("Your phone is not letting Viky tell you. Turn notifications on for Viky in your phone's settings.")).toBeVisible();
     // The button waits: its own shape and colour, faded, and it cannot be pressed.
     await expect(refused.getByRole("button", { name: "Tell me each morning" })).toBeDisabled();
@@ -245,7 +245,7 @@ test.describe("you decide", () => {
     await makeAnAccount(asks);
     await asks.page.goto(`/g/${GIFT}`);
     await act(asks.page, "messages").click();
-    const sheet = asks.page.getByRole("dialog", { name: "Messages" });
+    const sheet = asks.page.getByRole("dialog", { name: "Notifications" });
     await expect(sheet.getByText("Viky stays quiet.")).toBeVisible();
     await expect(sheet.getByRole("button", { name: "Tell me each morning" })).toBeEnabled();
     await shot(asks.page, "06c-habit-messages-sheet", false);
@@ -290,7 +290,7 @@ test.describe("you decide", () => {
     await sees.getByRole("button", { name: "Got it" }).click();
 
     await act(page, "messages").click();
-    const messages = page.getByRole("dialog", { name: "Messages" });
+    const messages = page.getByRole("dialog", { name: "Notifications" });
     await expect(messages.getByText("Get a message when you reach 1500.")).toBeVisible();
     await expect(messages.getByRole("button", { name: "Turn on" })).toBeEnabled();
     await shot(page, "08b-climb-messages-sheet", false);

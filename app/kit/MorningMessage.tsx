@@ -18,7 +18,7 @@ const L = GIFT_LIVE.climbing;
  *
  * Offered in the open to a gift's two people (the founder, 1 Oct 2026, the audit's finding P-31), and since his rule 6
  * of the same day as one of the round controls under the card and under the link the funder has just been given
- * (app/kit/YouDecide.tsx, app/kit/FunderControls.tsx): "Messages", and this sheet after the press. It was a wide
+ * (app/kit/YouDecide.tsx, app/kit/FunderControls.tsx): "Notifications", and this sheet after the press. It was a wide
  * button or a line with a small button, and a paragraph about the phone standing on every page.
  */
 
@@ -151,7 +151,7 @@ export function useTold(giftId: string, yours: boolean) {
 export type ToldAbout = Readonly<{ kind: "morning" } | { kind: "reach"; target: string } | { kind: "hadOrNot" } | { kind: "review" }>;
 
 /**
- * "Messages", in the sheet its round button opens (the founder's rule 6 of 1 Oct 2026, you-decide.html): where being
+ * "Notifications", in the sheet its round button opens (the founder's rule 6 of 1 Oct 2026, you-decide.html): where being
  * told stands, and the one press that changes it. What the phone itself refuses is said here, once, after the press
  * that opened the sheet, and no longer as a paragraph standing on every page; on an iPhone outside the Home Screen
  * the two steps of installing are said here too. The words are the ones the open line under the card said.
@@ -172,7 +172,7 @@ export function MessagesSheet({
   return (
     <Sheet
       open={open}
-      title={Y.messages}
+      title={Y.notifications}
       onClose={onClose}
       footer={
         step === "install" ? undefined : step === "on" ? (
