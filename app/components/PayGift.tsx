@@ -359,6 +359,9 @@ export function PayGift() {
         const read = await refresh();
         if (!read) return;
         const next = nextFundingStep({ held: read.held, arriving: read.arriving, arrivingUsdc: read.usdc, wanted, failedAtMs: failedAtMs.current, nowMs: Date.now() });
+        // The money is in the account: the frame it was paid in closes, whatever the frame said or did not say.
+        // Without a partner's key Rampnow's messages may never come, so nothing waits for them (3 Oct 2026).
+        if (next.do !== "wait") setRampnowOpen(false);
         if (next.do === "give") {
           working.current = true;
           setPhase("giving");

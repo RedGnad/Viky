@@ -16,9 +16,12 @@ const READY_WITHIN_MS = 15_000;
  * filled in and locked with the amount, the euro, the card, USDC on Monad and the payer's own account
  * (src/rampnow-frame.ts). The camera and the payment are allowed in the frame, for its identity check and the card.
  *
- * Back in Viky at the end: when the frame says the order is completed the sheet closes, and the screen that waits reads
- * the account itself, which is what makes the gift. The page beside stays the fallback: it is offered when the frame
- * has not said it is ready within fifteen seconds, when its address cannot be had, and when it says the payment failed.
+ * Back in Viky at the end: the screen that waits under this sheet reads the account itself, and the money arriving
+ * there is what closes the sheet and makes the gift (app/components/PayGift.tsx). The frame saying the order is
+ * completed closes it too, but nothing counts on it: without a partner's key its messages may never come.
+ *
+ * The page beside stays the fallback: it is offered when the frame has not said it is ready within fifteen seconds,
+ * which without a key is every time, when its address cannot be had, and when it says the payment failed.
  */
 export function RampnowSheet({
   open,
@@ -37,7 +40,7 @@ export function RampnowSheet({
     closed.current = onClose;
   });
 
-  // The frame's address, asked of the server, which puts in the public key and the session's own account.
+  // The frame's address, asked of the server, which puts in the session's own account and the public key when it has one.
   useEffect(() => {
     if (!open || !account) return;
     let live = true;

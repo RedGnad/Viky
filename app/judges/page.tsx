@@ -5,7 +5,7 @@ import { PROOF_EVERY_SECONDS } from "@/src/milestone-reading";
 import { formatAusd } from "@/src/gift-reader";
 import { judgeCreditConfig, judgeCreditsStanding, standingInWords } from "@/src/judge-credit";
 import { rampHostApiKey, rampnowWayIn } from "@/src/rails";
-import { rampnowFrameOn } from "@/src/rampnow-frame";
+import { RAMPNOW_FRAME_PAID_THROUGH, rampnowFrameOn } from "@/src/rampnow-frame";
 import { usdcRouterAddress } from "@/src/usdc-router";
 import { USDC_ROUTER } from "@/src/viky-contracts";
 import { conversionsSent } from "@/src/exit-store";
@@ -388,7 +388,13 @@ export default async function JudgesPage() {
             </>
           ) : null}
           . A conversion promises at least ninety-nine for a hundred, or nothing moves.{" "}
-          {rampnowOn ? (rampnowFrameOn() ? "Rampnow's page opens in a frame inside Viky. " : "Rampnow's page opens in a tab of its own. ") : null}
+          {rampnowOn
+            ? rampnowFrameOn()
+              ? RAMPNOW_FRAME_PAID_THROUGH
+                ? "Rampnow's page opens in a frame inside Viky. "
+                : "Rampnow's page is being tried in a frame inside Viky, without a partner's key: no payment has gone through the frame end to end yet, and its own tab stays the way when the frame does not show. "
+              : "Rampnow's page opens in a tab of its own. "
+            : null}
           <UseLine use={conversion} name="rampnow" />
         </p>
       </Fold>
