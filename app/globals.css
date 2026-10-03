@@ -1860,11 +1860,27 @@ dialog.reached-moment::backdrop {
   opacity: 0;
 }
 
+/* A day earned since the last visit is there from the first image, asleep: a day sleeps until it is done, and it
+   wakes on its own turn, in its jump (the founder, 4 Oct 2026; MOTION.earned.eyesShut and mouthShut). */
+.arrival-pending svg[data-character="earned"] {
+  opacity: 1;
+}
+.arrival-pending svg[data-character="earned"] [data-part="eye"] {
+  transform: scaleY(0.36);
+}
+.arrival-pending svg[data-character="earned"] [data-part="mouth"] {
+  transform: scale(0.4);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .arrival-pending svg,
   .arrival-pending.climb-walker,
   .arrival-pending.climb-done {
     opacity: 1;
+  }
+  .arrival-pending svg[data-character="earned"] [data-part="eye"],
+  .arrival-pending svg[data-character="earned"] [data-part="mouth"] {
+    transform: none;
   }
 }
 

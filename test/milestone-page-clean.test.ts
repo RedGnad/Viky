@@ -36,7 +36,7 @@ test("one live line: read every minute while in front, one at a time, the second
 });
 
 test("no hero character on a gift in progress, no nature label and no 'where you are' on a milestone's page", () => {
-  assert.match(PAGE, /character=\{moment === "counting" \|\| moment === "climbing" \|\| moment === "awaitingProof" \? null : <HeadCharacter \/>\}/);
+  assert.match(PAGE, /character=\{\n\s*moment === "counting" \|\| moment === "climbing" \|\| moment === "awaitingProof" \? null : \(\n(\s*\/\/[^\n]*\n)*\s*<Reacts gesture=\{openings\}>\n\s*<HeadCharacter \/>\n\s*<\/Reacts>\n\s*\)\n\s*\}/);
   assert.match(PAGE, /nature=\{condition && !milestone \? <Nature/);
   assert.deepEqual(L.label, { yours: "Today", theirs: "Today" });
 });
