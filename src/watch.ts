@@ -1,4 +1,7 @@
 import { formatEther } from "viem";
+import { allowanceAlertsDue, cycleUse } from "./attested-calls";
+import { daysWaiting } from "./days-waiting";
+import { claimPass } from "./pass-guard";
 import { contractsNamingAnotherKey, pinHolds, readEvidenceKeys, readExitPin, RELAYER_ALERT_BELOW, type EvidenceKeys, type ExitPin } from "./health";
 import { lastPasses } from "./pass-log";
 import { COUNTING_PASS_UTC } from "./pass-schedule";
@@ -10,6 +13,9 @@ import { sendAlert, type AlertOutcome } from "./provider-alert";
  * evidence key of the environment no longer being the one the contracts name, and the morning pass not running at all.
  * Each is now one email through `sendAlert` (src/provider-alert.ts), sent when it is seen. A fifth since the delta
  * re-read of 2 Oct 2026: a new evidence signer announced on a contract of the second version, told while it waits.
+ * A sixth since 3 Oct 2026: the month's allowance at Reclaim, told once at half, at four fifths and at the limit, where
+ * the email says how many days wait for a reading and which goes back first (src/attested-calls.ts). It is told too
+ * the moment a row crosses one of them; here it is looked at again, for a crossing nothing wrote a row at.
  *
  * They are looked at when a nightly pass starts, and once more at 02:00 UTC by its own cron, which is also the only one
  * that can see a pass that never started. Nothing here may stop a pass: every read is caught, and what could not be
@@ -25,6 +31,8 @@ export type WatchDeps = Readonly<{
   exitPin: () => Promise<ExitPin>;
   evidenceKeys: () => Promise<EvidenceKeys>;
   lastCountingPass: () => Promise<Date | null>;
+  /** The alerts about Reclaim's allowance that have just become due, each of them once in its cycle. */
+  allowanceDue: (nowMs: number) => Promise<readonly Alert[]>;
   alert: (alert: Alert) => Promise<AlertOutcome>;
   now?: () => number;
   log?: (line: string) => void;
@@ -35,6 +43,7 @@ export function liveWatchDeps(): WatchDeps {
     exitPin: readExitPin,
     evidenceKeys: () => readEvidenceKeys(),
     lastCountingPass: async () => (await lastPasses()).counting,
+    allowanceDue: (nowMs) => allowanceAlertsDue(nowMs, { use: cycleUse, claim: claimPass, waiting: daysWaiting }),
     alert: (alert) => sendAlert(alert),
   };
 }
@@ -140,7 +149,30 @@ async function look(watched: string, deps: WatchDeps, read: () => Promise<Alert 
   }
 }
 
-/** The pin, the evidence key and a signer that waits to replace it, looked at whenever the watch runs. */
+/**
+ * Reclaim's allowance: one line, and one email for each share that has just been reached. Usually there is none, or
+ * one: both allowances crossing a share in the same hour would be two.
+ */
+async function allowance(deps: WatchDeps): Promise<WatchLine> {
+  const watched = "reclaim allowance";
+  const log = deps.log ?? ((line: string) => console.error(line));
+  try {
+    const due = await deps.allowanceDue(deps.now ? deps.now() : Date.now());
+    if (due.length === 0) return { watched, result: "holds" };
+    let outcome: AlertOutcome = "sent";
+    for (const alert of due) {
+      log(`watch: ${alert.subject}`);
+      const sent = await deps.alert(alert);
+      if (sent !== "sent") outcome = sent;
+    }
+    return { watched, result: `alert ${outcome}` };
+  } catch (error) {
+    log(`watch: ${watched} could not be read: ${error instanceof Error ? error.message.slice(0, 200) : String(error).slice(0, 200)}`);
+    return { watched, result: "not read" };
+  }
+}
+
+/** The pin, the evidence key, a signer that waits to replace it and Reclaim's allowance, looked at whenever the watch runs. */
 function standing(deps: WatchDeps): Promise<WatchLine>[] {
   // Read once for the two things that are said of it. A read that failed is told by each of them as "not read".
   const keys = deps.evidenceKeys();
@@ -149,6 +181,7 @@ function standing(deps: WatchDeps): Promise<WatchLine>[] {
     look("exit pin", deps, async () => pinAlert(await deps.exitPin())),
     look("evidence key", deps, async () => evidenceKeyAlert(await keys)),
     look("announced signer", deps, async () => announcedSignerAlert(await keys)),
+    allowance(deps),
   ];
 }
 

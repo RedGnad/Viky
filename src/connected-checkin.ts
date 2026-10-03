@@ -1,3 +1,5 @@
+import { contactEmail } from "./contact";
+import { LIMIT } from "./sentences";
 import { getAddress, type Hex } from "viem";
 import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
 import { attestedRead, AttestedReadError, reclaimAttestedReadDeps, type AttestedReadDeps } from "./attested-read";
@@ -204,6 +206,8 @@ export async function runConnectedCheckIn(input: { giftId: string; purpose: Publ
     NOT_CONFIGURED: "Counting is not switched on yet.",
     WORKER_OUT_OF_DATE: "The reading service is being updated.",
     NOT_FOUND: `${line.name} answered that there is no such day.`,
+    // The month's limit of readings (src/attested-calls.ts). The screen adds until when the day can still be counted.
+    LIMIT_REACHED: LIMIT.reading(null, contactEmail()),
   };
   let reading: Awaited<ReturnType<typeof attestedRead>>;
   try {

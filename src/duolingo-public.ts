@@ -1,4 +1,5 @@
 import { keccak256, stringToHex, type Hex } from "viem";
+import { countedFetch, ReclaimLimitReached } from "./attested-calls";
 import { duolingoProfileUrl, isValidDuolingoUsername } from "./duolingo-public-terms";
 import { localProofVerified, proofVerifierMode } from "./proof-verification";
 
@@ -11,6 +12,9 @@ import { localProofVerified, proofVerifierMode } from "./proof-verification";
  */
 
 export type ResponseMatch = { type: "regex"; value: string };
+
+/** How this reading is named in the journal of attested fetches: it predates the list of sources and has no id there. */
+const DUOLINGO_PROFILE_FETCH = "duolingo-profile";
 
 /** Each first match is the user-level field: checked on real responses on 11 Sep 2026 (`id` is the first key). */
 export const PROFILE_RESPONSE_MATCHES: readonly ResponseMatch[] = [
@@ -55,6 +59,8 @@ export type PublicProfileErrorCode =
   | "FETCH_FAILED"
   | "PROOF_INVALID"
   | "PROOF_MISMATCH"
+  /** The month's limit of attested readings is reached: nothing was fetched (src/attested-calls.ts). */
+  | "LIMIT_REACHED"
   | "NOT_CONFIGURED";
 
 export class PublicProfileError extends Error {
@@ -185,6 +191,8 @@ export async function fetchPublicProfile(username: string, deps: PublicProfileDe
   try {
     proof = await deps.zkFetch(duolingoProfileUrl(username), PROFILE_RESPONSE_MATCHES);
   } catch (error) {
+    // The month's limit, by Viky's own count or by Reclaim's answer: its own refusal, never a failure to read Duolingo.
+    if (error instanceof ReclaimLimitReached) throw new PublicProfileError("LIMIT_REACHED", error.message, { cause: error });
     const message = error instanceof Error ? error.message : String(error);
     // zkFetch rejects when a responseMatch finds nothing: an unknown username answers `{"users":[]}`.
     if (/match|regex|not found/i.test(message)) {
@@ -243,13 +251,15 @@ export async function reclaimPublicProfileDeps(): Promise<PublicProfileDeps> {
     const { verifyProof } = await import("@reclaimprotocol/js-sdk");
     const local = proofVerifierMode() === "local";
     return {
-      zkFetch: (url) => workerZkFetch(url),
+      // Counted in the journal of the month's allowance each time it leaves (src/attested-calls.ts).
+      zkFetch: (url) => countedFetch(DUOLINGO_PROFILE_FETCH, () => workerZkFetch(url)),
       verify: local
         ? verifyProfileWithPin
         : async (proof) => (await verifyProof(proof as never, { dangerouslyDisableContentValidation: true } as never)).isVerified === true,
     };
   }
-  return reclaimLocalProfileDeps();
+  const own = await reclaimLocalProfileDeps();
+  return { ...own, zkFetch: (url, matches) => countedFetch(DUOLINGO_PROFILE_FETCH, () => own.zkFetch(url, matches)) };
 }
 
 /**

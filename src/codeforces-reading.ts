@@ -13,7 +13,7 @@ import type { ZkFetchProof } from "./duolingo-public";
  * code goes (D27: the last name, in English).
  */
 
-export type CodeforcesReadErrorCode = "INVALID_USERNAME" | "PROFILE_NOT_FOUND" | "NO_NAME" | "NO_RATING" | "FETCH_FAILED" | "PROOF_INVALID" | "PROOF_MISMATCH" | "WORKER_OUT_OF_DATE" | "NOT_CONFIGURED";
+export type CodeforcesReadErrorCode = "INVALID_USERNAME" | "PROFILE_NOT_FOUND" | "NO_NAME" | "NO_RATING" | "FETCH_FAILED" | "PROOF_INVALID" | "PROOF_MISMATCH" | "WORKER_OUT_OF_DATE" | "LIMIT_REACHED" | "NOT_CONFIGURED";
 
 export class CodeforcesReadError extends Error {
   constructor(

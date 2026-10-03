@@ -10,7 +10,7 @@ import { isValidMitxOnlineKey, mitxOnlineCertificateUrl, mitxOnlineCourseOf, mit
  * patterns out of the same page, the ones in `src/attested-sources.ts`.
  */
 
-export type MitxOnlineReadErrorCode = "INVALID_LINK" | "NO_CERTIFICATE" | "PROOF_INVALID" | "PROOF_MISMATCH" | "FETCH_FAILED" | "WORKER_OUT_OF_DATE" | "NOT_CONFIGURED";
+export type MitxOnlineReadErrorCode = "INVALID_LINK" | "NO_CERTIFICATE" | "PROOF_INVALID" | "PROOF_MISMATCH" | "FETCH_FAILED" | "WORKER_OUT_OF_DATE" | "LIMIT_REACHED" | "NOT_CONFIGURED";
 
 export class MitxOnlineReadError extends Error {
   constructor(

@@ -18,6 +18,7 @@ import {
   DISPLAY_TYPE,
   HERO_TYPE,
   LEAD_TYPE,
+  LIMIT_RED,
   META_TYPE,
   TRACKING,
   TYPE_SCALE,
@@ -240,6 +241,25 @@ test("three colours per appearance and no fourth background: no joy, no sticker,
   for (const file of globSync("app/**/*.{ts,tsx}")) {
     const source = readFileSync(file, "utf8");
     assert.doesNotMatch(source, /var\(--joy\)|var\(--sticker-|var\(--day-/, `${file} paints a retired background`);
+  }
+});
+
+test("the one red is Material's error role, declared for day and night, read on the paper, and painted by one class", () => {
+  // The founder, 3 Oct 2026: the sentence that says a monthly limit is reached is set in red. The look has no other.
+  assert.deepEqual(LIMIT_RED, { light: "#B3261E", dark: "#F2B8B5" }, "tone 40 by day and tone 80 after dark, as Material 3's baseline scheme publishes them");
+  assert.equal(css.match(/--limit-red: #B3261E;/g)?.length, 1, "by day");
+  assert.equal(css.match(/--limit-red: #F2B8B5;/g)?.length, 2, "after dark, by the phone's setting and by the person's own choice");
+  // It is read on the card: the day's cream and the night's paper.
+  assert.equal(contrastRatio(LIMIT_RED.light, "#FFF6E2").toFixed(2), "6.08");
+  assert.equal(contrastRatio(LIMIT_RED.dark, "#332E3F").toFixed(2), "7.67");
+  for (const [appearance, paper] of [["light", "#FFF6E2"], ["dark", "#332E3F"]] as const) {
+    assert.ok(contrastRatio(LIMIT_RED[appearance], paper) >= TEXT_CONTRAST_MINIMUM, `${appearance} red on its paper`);
+  }
+  // A colour of words only, and of that one sentence: one rule uses it, and it paints no background.
+  assert.equal(css.match(/var\(--limit-red\)/g)?.length, 1);
+  assert.match(css, /\.limit-said \{\n  color: var\(--limit-red\);/);
+  for (const file of globSync("app/**/*.{ts,tsx}")) {
+    assert.doesNotMatch(readFileSync(file, "utf8"), /--limit-red/, `${file} paints with the red itself instead of the class`);
   }
 });
 

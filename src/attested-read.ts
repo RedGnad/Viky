@@ -1,4 +1,5 @@
 import { keccak256, stringToHex, type Hex } from "viem";
+import { countedFetch, ReclaimLimitReached } from "./attested-calls";
 import { attestedSource, headersFor, matchesOf, type AttestedSource, type ResponseMatch } from "./attested-sources";
 import { allowedAttestors, attestorAccepted, type ZkFetchProof } from "./duolingo-public";
 import { localProofVerified, proofVerifierMode } from "./proof-verification";
@@ -31,6 +32,8 @@ export type AttestedReadErrorCode =
   | "PROOF_MISMATCH"
   /** The reading service runs other sources than this build does, so nothing it fetches can be read here. */
   | "WORKER_OUT_OF_DATE"
+  /** The month's limit of attested readings is reached: nothing was fetched (src/attested-calls.ts). */
+  | "LIMIT_REACHED"
   | "NOT_CONFIGURED";
 
 export class AttestedReadError extends Error {
@@ -153,6 +156,8 @@ export async function attestedRead(sourceId: string, account: string, deps: Atte
     proof = await deps.zkFetch(source, account, bearer);
   } catch (error) {
     if (error instanceof AttestedReadError) throw error;
+    // The month's limit, by Viky's own count or by Reclaim's answer: its own refusal, never a failure to read the page.
+    if (error instanceof ReclaimLimitReached) throw new AttestedReadError("LIMIT_REACHED", error.message, undefined, { cause: error });
     throw classifyFetchFailure(error instanceof Error ? error.message : String(error), source, account);
   }
   let valid = false;
@@ -280,16 +285,22 @@ export function verifyWithPin(proof: ZkFetchProof): Promise<boolean> {
   return localProofVerified(proof, allowedAttestors());
 }
 
+/** The same fetch, written down in the journal of the month's allowance each time it leaves (src/attested-calls.ts). */
+function counted(fetch: AttestedReadDeps["zkFetch"]): AttestedReadDeps["zkFetch"] {
+  return (source, account, bearer) => countedFetch(source.id, () => fetch(source, account, bearer));
+}
+
 /**
  * The dependencies the routes and the passes use: the worker when configured, the local client otherwise. The
- * verifier is Reclaim's unless PROOF_VERIFIER says `local` (src/proof-verification.ts).
+ * verifier is Reclaim's unless PROOF_VERIFIER says `local` (src/proof-verification.ts). Every fetch made through them
+ * is counted; the reading service's own, below, is not, because whoever asked it counts.
  */
 export function reclaimAttestedReadDeps(): AttestedReadDeps {
   const local = proofVerifierMode() === "local";
   if (process.env.ZKFETCH_WORKER_URL?.trim()) {
-    return { zkFetch: workerZkFetch, verify: local ? verifyWithPin : verifyWithReclaimBundled };
+    return { zkFetch: counted(workerZkFetch), verify: local ? verifyWithPin : verifyWithReclaimBundled };
   }
-  return { zkFetch: localZkFetch, verify: local ? verifyWithPin : verifyWithReclaimAtRuntime };
+  return { zkFetch: counted(localZkFetch), verify: local ? verifyWithPin : verifyWithReclaimAtRuntime };
 }
 
 /** The fetch half alone, for the worker process: it returns the proof and leaves every check to whoever asked. */

@@ -37,6 +37,7 @@ export function GiftLive({
   figureNode,
   closed,
   reading,
+  limit = null,
   action,
   agreed,
   checked,
@@ -58,6 +59,8 @@ export function GiftLive({
   closed?: readonly string[] | null;
   /** When the source last updated what was read as the page opened, quietly under the figure, or nothing. */
   reading?: ReactNode;
+  /** The month's limit of readings is reached: the short sentence that says so, in the red (src/sentences.ts, LIMIT). */
+  limit?: string | null;
   /** The one action of this moment, or nothing. Never two of the same weight. */
   action?: ReactNode;
   /** What was agreed, folded under its name, and open at the one moment a person is discovering it. */
@@ -85,6 +88,12 @@ export function GiftLive({
             {line}
           </p>
         ))}
+        {/* A monthly limit is reached: said here, where the next reading would have been announced. */}
+        {limit ? (
+          <p className="limit-said" role="status" data-reading-limit>
+            {limit}
+          </p>
+        ) : null}
         {live.next ? <p className="gift-next">{live.next}</p> : null}
 
         {live.figure ? (

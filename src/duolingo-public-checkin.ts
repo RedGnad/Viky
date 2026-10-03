@@ -4,6 +4,8 @@ import { readDuolingoCourse, CourseReadError, type CourseReading } from "./duoli
 import { fetchPublicProfile, PublicProfileError, reclaimPublicProfileDeps, type PublicProfile, type PublicProfileDeps } from "./duolingo-public";
 import { checkInSubject, displayNameHasCode, DUOLINGO_PUBLIC_PROVIDER_LABEL } from "./duolingo-public-terms";
 import { DUOLINGO_DAILY } from "./conditions";
+import { contactEmail } from "./contact";
+import { LIMIT } from "./sentences";
 import { contractRefusal } from "./gift-api";
 import { ATTESTATION_TTL_SECONDS, identityPseudonym, serialiseMessage, signCheckIn, type CheckInMessage } from "./gift-attestation";
 import { checkInDayIndex, readGift, utcDayOf } from "./gift-reader";
@@ -29,7 +31,8 @@ export type PublicCheckInOutcome =
   | Readonly<{ kind: "bound"; giftId: string; xp: number; hash: Hex; unit?: string }>
   | Readonly<{ kind: "counted"; giftId: string; xp: number; creditedDays: number; hash: Hex; unit?: string }>
   | Readonly<{ kind: "already"; giftId: string; reason: "counted_today" | "not_bound" | "not_opened" | "no_account" | "already_bound" | "finished" | "cancelled" }>
-  | Readonly<{ kind: "refused"; giftId: string; code: string; message: string; xp?: number }>
+  /** `countableUntil`, with the refusal `LIMIT_REACHED` only: when the window of the day still to count closes, in UTC seconds (src/daily-count.ts). */
+  | Readonly<{ kind: "refused"; giftId: string; code: string; message: string; xp?: number; countableUntil?: number | null }>
   /** The second version: the first reading was taken, and waits for the recipient's own signature (src/held-start.ts). */
   | StartAsked;
 
@@ -96,6 +99,8 @@ export async function runPublicCheckIn(input: { giftId: string; purpose: PublicC
     PROOF_INVALID: "The reading could not be verified. Try again in a minute.",
     PROOF_MISMATCH: "The reading could not be verified. Try again in a minute.",
     NOT_CONFIGURED: "Counting is not switched on yet.",
+    // The month's limit of readings (src/attested-calls.ts). The screen adds until when the day can still be counted.
+    LIMIT_REACHED: LIMIT.reading(null, contactEmail()),
   };
   let read: { username: string; profileId: string; displayName: string; xp: number; observedAt: number; nullifier: Hex; proof: unknown; streak: number | null };
   try {

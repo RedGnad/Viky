@@ -58,6 +58,9 @@ const OURS_TO_FIX: ReadonlySet<string> = new Set([
   // A connected source that did not answer the token refresh (src/strava.ts, src/fitbit.ts): an outage of theirs or
   // a limit we met, not a connection the person took back.
   "REFRESH_UNAVAILABLE",
+  // The month's limit of attested readings is reached (src/attested-calls.ts): no reading was taken, so nothing is
+  // settled against it, and the person reads why on the gift's page.
+  "LIMIT_REACHED",
   // A reading that threw instead of answering (see `counted` below).
   "READING_FAILED",
 ]);

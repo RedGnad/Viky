@@ -1,3 +1,5 @@
+import { contactEmail } from "./contact";
+import { LIMIT } from "./sentences";
 import type { Hex } from "viem";
 import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
 import { signedSubjectOf } from "./subject-key";
@@ -53,6 +55,8 @@ export type CertificateRefusal =
   | "BELOW_THE_TARGET"
   | "BEFORE_THE_GIFT"
   | "AFTER_THE_DEADLINE"
+  /** The month's limit of attested readings is reached: nothing was read (src/attested-calls.ts). */
+  | "LIMIT_REACHED"
   | "SOURCE_UNAVAILABLE";
 
 /** How long an attestation is good for, as the contract's window expects. */
@@ -226,6 +230,9 @@ export async function proveCertificate(
       case "NOT_VERIFIED":
         // An edX certificate of a track edX does not verify (D212): real, and not what the gift is for.
         return refuse(giftId, "BELOW_THE_TARGET", words?.below(1, 0) ?? error.message);
+      case "LIMIT_REACHED":
+        // Nothing was read: said as it is, with where to write, and no day to count on a gift of this shape.
+        return refuse(giftId, "LIMIT_REACHED", LIMIT.reading(null, contactEmail()));
       default:
         return refuse(giftId, "SOURCE_UNAVAILABLE", words?.unavailable ?? error.message);
     }

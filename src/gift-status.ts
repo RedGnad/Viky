@@ -1,4 +1,6 @@
 import { catchUpSecondsOf } from "./catch-up";
+import { countableUntil } from "./days-waiting";
+import { giftLimitFor } from "./gift-limit";
 import { GiftApiError } from "./gift-api";
 import { dailyEnded, dailyEndOffer } from "./gift-ending";
 import { checkInDayIndex, formatAusd, readGift, utcDayOf } from "./gift-reader";
@@ -112,5 +114,7 @@ export async function giftStatusFor(id: string, reader: GiftReader): Promise<Any
     end: dailyEndOffer(gift, viewerIsRecipient),
     ended: dailyEnded(gift),
     givenBackDays: gift.givenBackDays,
+    // The month's limit of readings, when it is reached and this gift is still running (src/gift-limit.ts).
+    limit: await giftLimitFor(!gift.finalised && !gift.cancelled, () => countableUntil(gift, now, catchUpSecondsOf(escrow))),
   } as GiftStatus;
 }
