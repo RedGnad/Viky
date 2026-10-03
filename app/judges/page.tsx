@@ -397,9 +397,10 @@ export default async function JudgesPage() {
         <p className={HELP}>
           What a reading costs, written here on purpose: each attested read is paid on Reclaim&apos;s side (their public
           price starts at $0.10 per verification). Reads are counted per gift, never per person: the morning pass looks
-          at each daily gift once, takes an attested read only for one whose look shows a day to credit (or whose look
-          failed), and skips one already counted that day, so two gifts on one Duolingo account are two reads on a morning
-          both earned a day. Connecting the account is one more, and a connection by code takes it only once a plain look
+          at each daily gift once, takes an attested read only for one whose look shows a day to credit, and skips one
+          already counted that day, so two gifts on one Duolingo account are two reads on a morning both earned a day. A
+          look that failed takes no read: the gift is looked at again at 03:30 UTC, and only then, if a day of it closes
+          at 06:00 that morning, is one read taken without a look, once. Connecting the account is one more, and a connection by code takes it only once a plain look
           has found the code in the name; a count the person asks for looks first in the same way. No daily ceiling bounds
           those asks, only ten in ten minutes from one IP address, counted in each app server&apos;s memory. A gift on
           Strava or Fitbit has no plain look yet: it is read attested each morning that has a day to credit, earned or not. A climb

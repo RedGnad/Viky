@@ -5,7 +5,8 @@ import { fetchPublicProfile, PublicProfileError, reclaimPublicProfileDeps, type 
 import { checkInSubject, displayNameHasCode, DUOLINGO_PUBLIC_PROVIDER_LABEL } from "./duolingo-public-terms";
 import { DUOLINGO_DAILY } from "./conditions";
 import { contactEmail } from "./contact";
-import { lookBeforeCount, lookForCode, type ProfileLook } from "./daily-look";
+import { catchUpSecondsOf } from "./catch-up";
+import { LAST_RESORT_WITHIN_SECONDS, lastResortDue, lookBeforeCount, lookForCode, type ProfileLook } from "./daily-look";
 import { resolvePublicDuolingoProfile } from "./duolingo-profile";
 import { LIMIT } from "./sentences";
 import { contractRefusal } from "./gift-api";
@@ -18,7 +19,7 @@ import { holdTheStart, type StartAsked } from "./held-start";
 import { consumeAndSaveVerification, saveProofSession } from "./proof-session-store";
 import { escrowOf, RelayerError } from "./relayer";
 import { claimPass } from "./pass-guard";
-import { paysTheSameDay } from "./v2";
+import { paysTheSameDay, type ContractVersion } from "./v2";
 import { StartNotSigned } from "./v2-start";
 
 /**
@@ -29,10 +30,12 @@ import { StartNotSigned } from "./v2-start";
  *
  * Both look plainly before they pay for the attested read (src/daily-look.ts): a count takes none when the contract
  * would credit no day with what the profile shows, and a connection by code takes none until the code is in the name.
+ * A look that failed takes none either, but for the reading of last resort: by a pass, once for a gift in a day, when
+ * the window of its oldest open day closes before the next pass.
  *
  * On the third daily contract a day is paid by a reading taken that same day, so a gift there is also read when its
- * page opens and by a pass every quarter of an hour (`onlyOnALook`). Those two take a proof only for a lesson the look
- * saw, and one per gift every `PROOF_EVERY_SECONDS` at most, claimed before it is paid for.
+ * page opens and by a pass every quarter of an hour. There a proof is claimed before it is paid for, whoever asks:
+ * one per gift every `PROOF_EVERY_SECONDS` at most.
  */
 
 /**
@@ -45,6 +48,21 @@ export const PROOF_EVERY_SECONDS = 4 * 60;
 
 
 export type PublicCheckInPurpose = "bind" | "count";
+
+/** The passes that read daily gifts: the two of the morning, and the one of every quarter of an hour (src/frequent-pass.ts). */
+export type ReadingPass = "counting" | "recount" | "frequent";
+
+/**
+ * Within how long the window of a gift's oldest open day must close for a pass to take the reading of last resort, or
+ * nothing when whoever asks may take none (src/daily-look.ts). A gift read as the day goes is read by a pass every
+ * quarter of an hour, so any pass is its last before a window that closes within twenty minutes. Any other gift is
+ * read in the morning, and its last pass before 06:00 is the second reading.
+ */
+export function lastResortWithin(pass: ReadingPass | undefined, version: ContractVersion): number | null {
+  if (!pass) return null;
+  if (paysTheSameDay(version)) return LAST_RESORT_WITHIN_SECONDS.frequent;
+  return pass === "recount" ? LAST_RESORT_WITHIN_SECONDS.recount : null;
+}
 
 export type PublicCheckInOutcome =
   /** `unit` says what `xp` counts when it is not experience: a connected source counts verdicts (D188). */
@@ -75,11 +93,20 @@ export type PublicCheckInDeps = {
   look?: ProfileLook;
   /** Whether a proof may be taken for this gift now: true once per `everySeconds`, whichever instance asks first (src/pass-guard.ts). */
   claimProof?: (giftId: string, everySeconds: number) => Promise<boolean>;
+  /**
+   * Whether the reading of last resort may be taken for this gift on this UTC day: true once, whichever instance asks
+   * first (src/pass-guard.ts). A test that omits it takes it every time it is due.
+   */
+  claimLastResort?: (giftId: string, day: number) => Promise<boolean>;
 };
+
+/** Two days: the name carries the day, so a claim never comes back for it. */
+const LAST_RESORT_CLAIMED_FOR_SECONDS = 2 * 86_400;
 
 const defaultDeps: PublicCheckInDeps = {
   look: resolvePublicDuolingoProfile,
   claimProof: (giftId, everySeconds) => claimPass(`daily-proof:${giftId}`, everySeconds),
+  claimLastResort: (giftId, day) => claimPass(`daily-last-resort:${giftId}:${day}`, LAST_RESORT_CLAIMED_FOR_SECONDS),
   profile: reclaimPublicProfileDeps,
   course: (username, courseId) => readDuolingoCourse({ username, courseId }),
   now: () => Math.floor(Date.now() / 1_000),
@@ -103,10 +130,11 @@ export async function runPublicCheckIn(
     purpose: PublicCheckInPurpose;
     force?: boolean;
     /**
-     * Set by an open page and by the pass of every quarter of an hour: a proof is taken only for a lesson the look
-     * saw. When the look fails they take none and come back; the nightly pass is the one that reads without it.
+     * Which pass is reading, when a pass is: only a pass may take a reading of last resort after a look that failed,
+     * and only the one that is the last before a window closes (`lastResortWithin`). A count a person asks for, and
+     * a page that reads as it opens, name none: after a look that failed they take no proof, and come back.
      */
-    onlyOnALook?: boolean;
+    pass?: ReadingPass;
     /**
      * Stop at the look: answer whether a lesson is in, and take no proof. An open page asks this first, so it can
      * say that the lesson is seen before the ten seconds of the attested reading begin.
@@ -162,12 +190,20 @@ export async function runPublicCheckIn(
     const looked = await lookBeforeCount({ username: record.goalUsername, courseId, gift: onChain, nowSeconds: now }, deps.look);
     const mapped = looked.kind === "refused" ? contractRefusal(looked.refusal) : null;
     if (looked.kind === "refused" && mapped) return { kind: "refused", giftId, code: mapped.code, message: mapped.message, xp: looked.xp, looked: true };
-    if (input.onlyOnALook || input.lookOnly) {
-      // The look could not say: no proof from a page or the frequent pass, which come back. Nothing was read.
-      if (looked.kind !== "seen") return { kind: "refused", giftId, code: "FETCH_FAILED", message: messages.FETCH_FAILED, looked: true };
+    // No profile by that name: the source's own answer about the account, which a proof would only repeat.
+    if (looked.kind === "gone") return { kind: "refused", giftId, code: "PROFILE_NOT_FOUND", message: messages.PROFILE_NOT_FOUND, looked: true };
+    if (looked.kind === "seen") {
       if (input.lookOnly) return { kind: "seen", giftId, xp: looked.xp };
-      // A lesson is in: the proof is claimed before it is paid for, so the page and the pass cannot both take one.
-      if (deps.claimProof && !(await deps.claimProof(giftId, PROOF_EVERY_SECONDS))) return { kind: "already", giftId, reason: "read_recently" };
+      // A gift read as the day goes is asked by its page each minute and by a pass each quarter of an hour: the proof
+      // is claimed before it is paid for, so no two of them take one, nor one of them at every ask.
+      if (paysTheSameDay(onChain.version) && deps.claimProof && !(await deps.claimProof(giftId, PROOF_EVERY_SECONDS))) return { kind: "already", giftId, reason: "read_recently" };
+    }
+    if (looked.kind === "unseen") {
+      // The look could not say, and no proof is taken for that: the day stays open and the next pass looks again. One
+      // reading goes without a look, the last chance of a day about to close, once for a gift in a day.
+      const within = input.lookOnly ? null : lastResortWithin(input.pass, onChain.version);
+      const lastResort = within !== null && lastResortDue(onChain, now, catchUpSecondsOf(escrow), within) && (!deps.claimLastResort || (await deps.claimLastResort(giftId, utcDayOf(now))));
+      if (!lastResort) return { kind: "refused", giftId, code: "FETCH_FAILED", message: messages.FETCH_FAILED, looked: true };
     }
   }
   if (deps.look && purpose === "bind" && record.usernameSource === "recipient") {

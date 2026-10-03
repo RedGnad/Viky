@@ -39,8 +39,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (!gift || !gift.recipient || !(theirs || offeredIt)) throw new GiftApiError("NOT_RECIPIENT", "Open the gift first.", 403);
     if (look && !live) throw new GiftApiError("NOT_READ_LIVE", "This gift is read each morning.", 409);
     // By the condition's nature, as the keeper reads it (src/daily-count.ts): a Strava or Fitbit gift was read here as a
-    // Duolingo profile until 29 Sep 2026. Read as the day goes, a proof is taken only for a lesson a look saw.
-    const outcome = await readDailyGift(live ? { giftId: id, purpose: "count", onlyOnALook: true, lookOnly: look } : { giftId: id, purpose: "count", force: true });
+    // Duolingo profile until 29 Sep 2026. Either way a proof is taken only for a lesson a look saw: a page and a press
+    // name no pass, so after a look that failed they take none (src/daily-look.ts).
+    const outcome = await readDailyGift(live ? { giftId: id, purpose: "count", lookOnly: look } : { giftId: id, purpose: "count", force: true });
     return NextResponse.json(outcome, { headers: NO_STORE });
   } catch (error) {
     return giftErrorResponse(error);
