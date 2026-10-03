@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS viky_mobile_payouts (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS viky_mobile_payouts_account ON viky_mobile_payouts (account, created_at DESC)
+CREATE INDEX IF NOT EXISTS viky_mobile_payouts_account ON viky_mobile_payouts (account, created_at DESC);
+ALTER TABLE viky_mobile_payouts ADD COLUMN IF NOT EXISTS completed_at timestamptz
 `;
 
 export type MobilePayout = Readonly<{
@@ -58,6 +59,8 @@ export type MobilePayout = Readonly<{
   depositTx: string | null;
   expiresAt: Date;
   checkedAt: Date | null;
+  /** When Switch first said COMPLETED, by its webhook or its status route: the moment the judges page dates a payout by. */
+  completedAt: Date | null;
   createdAt: Date;
 }>;
 
@@ -124,11 +127,12 @@ function rowOf(row: Record<string, unknown>): MobilePayout {
     depositTx: row.deposit_tx === null || row.deposit_tx === undefined ? null : String(row.deposit_tx),
     expiresAt: new Date(String(row.expires_at)),
     checkedAt: date(row.checked_at),
+    completedAt: date(row.completed_at),
     createdAt: new Date(String(row.created_at)),
   };
 }
 
-export async function recordPayout(payout: Omit<MobilePayout, "depositSentAt" | "depositTx" | "checkedAt" | "createdAt">): Promise<MobilePayout> {
+export async function recordPayout(payout: Omit<MobilePayout, "depositSentAt" | "depositTx" | "checkedAt" | "completedAt" | "createdAt">): Promise<MobilePayout> {
   const rows = await ledger`
     INSERT INTO viky_mobile_payouts (reference, account, country, network, number_end, exit_tx, units, deposit_address, deposit_units, local_amount, local_currency, rate, status, expires_at)
     VALUES (${payout.reference}, ${payout.account.toLowerCase()}, ${payout.country}, ${payout.network}, ${payout.numberEnd}, ${payout.exitTx.toLowerCase()}, ${payout.units.toString()}, ${payout.depositAddress}, ${payout.depositUnits.toString()}, ${String(payout.localAmount)}, ${payout.localCurrency}, ${String(payout.rate)}, ${payout.status}, ${payout.expiresAt.toISOString()})
@@ -188,8 +192,31 @@ export async function notePayoutState(reference: string, state: Readonly<{ statu
            local_amount = COALESCE(${state.local === null ? null : String(state.local)}::text, local_amount),
            deposit_tx = COALESCE(${state.depositHash}::text, deposit_tx),
            deposit_sent_at = CASE WHEN ${state.depositHash}::text IS NOT NULL THEN COALESCE(deposit_sent_at, now()) ELSE deposit_sent_at END,
+           completed_at = CASE WHEN ${state.status}::text = 'COMPLETED' THEN COALESCE(completed_at, now()) ELSE completed_at END,
            checked_at = now(), updated_at = now()
      WHERE reference = ${reference}
      RETURNING reference`;
   return rows.length === 1;
+}
+
+export type ArrivedPayout = Readonly<{ at: Date; localAmount: number; localCurrency: string; units: bigint; country: string; network: string; depositTx: string | null; exitTx: string }>;
+
+/**
+ * The payouts Switch says arrived, for the judges page: how many, and the first of them as it happened. Null when the
+ * ledger cannot be read, so the page says so rather than a count it does not have.
+ */
+export async function payoutsArrived(): Promise<Readonly<{ count: number; first: ArrivedPayout | null }> | null> {
+  try {
+    const rows = await ledger`
+      SELECT *, count(*) OVER ()::int AS arrived FROM viky_mobile_payouts
+       WHERE status = 'COMPLETED' ORDER BY COALESCE(completed_at, updated_at) ASC LIMIT 1`;
+    if (!rows[0]) return { count: 0, first: null };
+    const row = rowOf(rows[0]);
+    return {
+      count: Number(rows[0].arrived),
+      first: { at: row.completedAt ?? new Date(String(rows[0].updated_at)), localAmount: row.localAmount, localCurrency: row.localCurrency, units: row.units, country: row.country, network: row.network, depositTx: row.depositTx, exitTx: row.exitTx },
+    };
+  } catch {
+    return null;
+  }
 }

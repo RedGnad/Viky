@@ -18,7 +18,14 @@ export const MILESTONE_GIFT = getAddress("0x8dc281Ac8a1c789fdb65a063b9225E98eC52
 /** The way out: its token is AUSD and its nonce tag keccak256("viky.exit.v3"), both read on chain. */
 export const EXIT_ROUTER = getAddress("0x8a1790DfD10CF1599bDaeD5eC8BB46B2A6eB6223");
 
-export const VIKY_CONTRACTS: readonly Hex[] = [GIFT_ESCROW, EARLIER_GIFT_ESCROW, MILESTONE_GIFT, EXIT_ROUTER];
+/**
+ * The converter of card payments: the way out's contract again, its token USDC, deployed on 3 Oct 2026 and handed to
+ * the Safe in its third transaction; its code is the first copy's with USDC in place of AUSD, read on chain that day.
+ * The app takes its address from `NEXT_PUBLIC_USDC_ROUTER_ADDRESS` (src/usdc-router.ts); this is the one deployed.
+ */
+export const USDC_ROUTER = getAddress("0xf05449c8b868Ce1e6a0D7223e2ceCbbfD1498F9c");
+
+export const VIKY_CONTRACTS: readonly Hex[] = [GIFT_ESCROW, EARLIER_GIFT_ESCROW, MILESTONE_GIFT, EXIT_ROUTER, USDC_ROUTER];
 
 /**
  * The three contracts of the second version, once their addresses are set (src/v2.ts), and none before (the review

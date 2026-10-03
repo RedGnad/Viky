@@ -60,10 +60,12 @@ test("an owner that is not a Safe is said to be one address, with no key count i
 });
 
 test("the contracts come from the environment, by name, and one not configured is left out", () => {
-  const env = { NEXT_PUBLIC_GIFT_ESCROW_ADDRESS: A, EXIT_ROUTER_ADDRESS: B, NEXT_PUBLIC_MILESTONE_GIFT_ADDRESS: "not an address" } as unknown as NodeJS.ProcessEnv;
+  const env = { NEXT_PUBLIC_GIFT_ESCROW_ADDRESS: A, EXIT_ROUTER_ADDRESS: B, NEXT_PUBLIC_MILESTONE_GIFT_ADDRESS: "not an address", NEXT_PUBLIC_USDC_ROUTER_ADDRESS: SAFE } as unknown as NodeJS.ProcessEnv;
   assert.deepEqual(ownedContracts(env), [
     { label: "gifts", address: A },
     { label: "the way out", address: B },
+    // The converter of card payments, once its address is set (3 Oct 2026): its owner is read with the others'.
+    { label: "the converter of card payments", address: SAFE },
   ]);
   assert.equal(ownershipWords({ contracts: [], one: null, safe: null }), "No contract is configured here, so nothing can be said about who owns them.");
 });
