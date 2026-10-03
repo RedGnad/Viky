@@ -1,5 +1,5 @@
 import { keccak256, stringToHex, type Hex } from "viem";
-import { countedFetch } from "./attested-calls";
+import { countedFetch, ReclaimLimitReached } from "./attested-calls";
 import { attestedSource, headersFor, matchesOf, type AttestedSource, type ResponseMatch } from "./attested-sources";
 import { allowedAttestors, attestorAccepted, type ZkFetchProof } from "./duolingo-public";
 import { localProofVerified, proofVerifierMode } from "./proof-verification";
@@ -32,6 +32,8 @@ export type AttestedReadErrorCode =
   | "PROOF_MISMATCH"
   /** The reading service runs other sources than this build does, so nothing it fetches can be read here. */
   | "WORKER_OUT_OF_DATE"
+  /** The month's limit of attested readings is reached: nothing was fetched (src/attested-calls.ts). */
+  | "LIMIT_REACHED"
   | "NOT_CONFIGURED";
 
 export class AttestedReadError extends Error {
@@ -154,6 +156,8 @@ export async function attestedRead(sourceId: string, account: string, deps: Atte
     proof = await deps.zkFetch(source, account, bearer);
   } catch (error) {
     if (error instanceof AttestedReadError) throw error;
+    // The month's limit, by Viky's own count or by Reclaim's answer: its own refusal, never a failure to read the page.
+    if (error instanceof ReclaimLimitReached) throw new AttestedReadError("LIMIT_REACHED", error.message, undefined, { cause: error });
     throw classifyFetchFailure(error instanceof Error ? error.message : String(error), source, account);
   }
   let valid = false;

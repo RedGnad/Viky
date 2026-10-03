@@ -63,6 +63,7 @@ import { Climb } from "../kit/Climb";
 import { HadOrNot } from "../kit/HadOrNot";
 import type { ToldAbout } from "../kit/MorningMessage";
 import { LiveLine, useLiveReading } from "../kit/LiveReading";
+import { readingLimitInWords } from "@/src/client/limit";
 import { Arrival, ArrivalAmount, useLastSeen } from "../kit/Motion";
 import { Sheet } from "../kit/Sheet";
 import { Shell } from "../kit/Shell";
@@ -232,7 +233,14 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
    * A new figure refreshes the page quietly; a reading that reaches the target refreshes it too, and the moment plays
    * at once, over this page, without a reload (ReachedOnItsPage below).
    */
-  const readsLive = Boolean(milestone && milestone.shape !== "certificate" && moment === "climbing" && (voice === "recipient" || voice === "funder"));
+  /**
+   * The month's limit (the founder, 3 Oct 2026): when it is reached no reading can go for this gift, so none is asked,
+   * and the card says why where it says where the gift stands. A condition a person shows a proof for has the other
+   * limit, said where the proof starts (ShowProof).
+   */
+  const limit = status.limit ?? null;
+  const readingsStopped = Boolean(limit?.readings && status.opened && condition?.nature !== "shown");
+  const readsLive = Boolean(milestone && milestone.shape !== "certificate" && moment === "climbing" && (voice === "recipient" || voice === "funder") && !readingsStopped);
   const shownReading = milestone?.todayReading ?? null;
   const liveState = useLiveReading(
     readsLive,
@@ -275,7 +283,10 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
 
   /** The last day Viky judged, from the record it keeps of each day. Nothing for a gift settled before that record. */
   const lastJudged = daily && daily.days.length > 0 ? [...daily.days].sort((a, b) => b.day - a.day)[0].outcome : null;
-  const nextReading = nowMs === 0 || gift.finished || gift.cancelled ? null : W.nextReading(momentInWords(nextPassMs(COUNTING_PASS_UTC, nowMs), nowMs));
+  const nextReading = nowMs === 0 || gift.finished || gift.cancelled || readingsStopped ? null : W.nextReading(momentInWords(nextPassMs(COUNTING_PASS_UTC, nowMs), nowMs));
+  // Said to the person the gift is for with the hour their day can still be counted until, in their own clock; to
+  // anybody else without it, since the day is not theirs.
+  const limitLine = readingsStopped && !gift.finished && !gift.cancelled && nowMs !== 0 ? readingLimitInWords(mine ? (limit?.countableUntil ?? null) : null, nowMs) : null;
   // Both contracts give an unopened gift back 14 days after it was funded, and an opened gift nothing started 14 days
   // after it was opened (GiftEscrow's UNCLAIMED_REFUND_DELAY, MilestoneGift's DORMANT_REFUND_DELAY).
   const openBy = moment === "unopened" ? dateInWords((status.createdAtChain + 14 * 86_400) * 1000, zone) : null;
@@ -297,7 +308,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
   /** The target as a sentence may name it: a climb's number, a grade's words, and nothing for something had or not. */
   const targetToName = !milestone ? null : hadOrNot ? (milestone.targetWords ?? null) : (milestone.targetWords ?? (milestone.target === null ? null : String(milestone.target)));
 
-  const nextPass = nowMs === 0 || gift.finished || gift.cancelled ? null : nextPassMs(COUNTING_PASS_UTC, nowMs);
+  const nextPass = nowMs === 0 || gift.finished || gift.cancelled || readingsStopped ? null : nextPassMs(COUNTING_PASS_UTC, nowMs);
   const liveInput = {
     moment,
     voice,
@@ -618,7 +629,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         if (milestone.conditionId === "marathon-finish") return <MarathonProof giftId={giftId} status={milestone} yours={mine} onChanged={reloadAll} />;
         if (milestone.conditionId === "wca-time") return <WcaProof giftId={giftId} status={milestone} yours={mine} onChanged={reloadAll} />;
         return conditionById(milestone.conditionId)?.nature === "shown" ? (
-          <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} review={milestone.review?.status ?? null} reviewMessage={milestone.review?.message ?? null} onShown={reloadAll} />
+          <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} review={milestone.review?.status ?? null} reviewMessage={milestone.review?.message ?? null} limitReached={Boolean(limit?.proofs)} onShown={reloadAll} />
         ) : (
           <CertificateProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} onProved={reloadAll} />
         );
@@ -759,7 +770,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       {/* Asking for a reading now is not the moment's action, so it is not offered beside it: it lives here, with the
           rest of how a gift is checked. Being told is offered in the open, under the card (the founder, 1 Oct 2026). */}
       {/* A milestone is read as its page opens, so it has no button for it (the founder, 29 Sep 2026). */}
-      {(mine || readerIsFunder) && !milestone && !gift.finished && gift.connected && !gift.sourceClosed ? (
+      {(mine || readerIsFunder) && !milestone && !gift.finished && gift.connected && !gift.sourceClosed && !readingsStopped ? (
         <>
           <button type="button" onClick={countToday} disabled={working} className={`${SMALL_BUTTON} self-start`}>
             <ButtonWords busy={busy === "counting"} doing={W.reading}>
@@ -855,7 +866,10 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
                 ? readerIsFunder
                   ? A.startAboveCapTheirs(milestone.startAboveCap, milestone.maximumStart, recipientName)
                   : A.startAboveCapMine(milestone.startAboveCap, milestone.maximumStart)
-                : null
+                : /* The month's limit of readings: in the place a reading would have been told. */
+                  limitLine
+                  ? [limitLine]
+                  : null
           }
           action={action}
           agreed={{ open: read.agreementOpen, children: agreed }}

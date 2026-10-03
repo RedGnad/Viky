@@ -1,3 +1,4 @@
+import type { GiftLimit } from "../gift-limit";
 import type { EndOffer, Ended } from "../gift-ending";
 import { getAddress, type Hex, type LocalAccount } from "viem";
 import {
@@ -231,6 +232,8 @@ export type GiftStatus = {
   ended?: Ended | null;
   /** The days an ending gave back: settled, and drawn as days that went back (src/day-states.ts). */
   givenBackDays?: number;
+  /** The month's limit of readings or of proofs, when it is reached and this gift is still running (src/gift-limit.ts). */
+  limit?: GiftLimit | null;
 };
 
 /** A gift as the list of the account's gifts describes it, which is what a card draws on. */

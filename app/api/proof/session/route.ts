@@ -5,7 +5,9 @@ import { readJsonBody } from "@/src/api-guard";
 import { DUOLINGO_MAX_DAY_INDEX } from "@/src/duolingo-proof-policy";
 import { resolvePublicDuolingoProfile } from "@/src/duolingo-profile";
 import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
-import { noteAttestedCall } from "@/src/attested-calls";
+import { isReclaimQuotaRefusal, limitsNow, noteAttestedCall, ReclaimLimitReached } from "@/src/attested-calls";
+import { contactEmail } from "@/src/contact";
+import { LIMIT } from "@/src/sentences";
 import { loadLatestEvidence, pruneExpiredProofSessions, saveProofSession, type ProofSessionPhase } from "@/src/proof-session-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { reclaimChannelInitOptions, reclaimChannelLaunchOptions, resolveReclaimChannel } from "@/src/reclaim-channel";
@@ -89,12 +91,18 @@ export async function POST(request: Request) {
     // witness on the portal's domain. Before its pin, whichever version the agent writes; after, the pinned one.
     const witness = provider?.witness;
     const channel = resolveReclaimChannel();
+    // The month's limit of proofs (src/attested-calls.ts): said before the person starts, and nothing is opened at
+    // Reclaim. The same when Reclaim itself refuses the session for its quota.
+    if ((await limitsNow()).proofs) throw new ReclaimLimitReached("proofs");
     const proofRequest = await ReclaimProofRequest.init(appId, appSecret, providerId, {
       ...(witness && !witness.pin ? {} : { providerVersion }),
       // Everywhere else the portal can substitute AI-witnessed proofs while still reporting success. We refuse AI
       // there, and the verify route refuses anything without a verified TEE attestation anyway.
       acceptAiProviders: Boolean(witness),
       ...reclaimChannelInitOptions(channel),
+    }).catch((error: unknown) => {
+      if (isReclaimQuotaRefusal(error)) throw new ReclaimLimitReached("proofs", { cause: error });
+      throw error;
     });
     if (bound) proofRequest.setParams({ duolingo_user_id: bound.profileId });
     proofRequest.addContext(account.toLowerCase(), shownContextMessage(giftId, phase, dayIndex));
@@ -112,12 +120,15 @@ export async function POST(request: Request) {
       dayIndex,
       ...(bound ? { duolingoUsername: bound.username, duolingoProfileId: bound.profileId } : {}),
     });
-    // Counted against the month's allowance of verifications from the moment it is opened: a session that never comes
-    // back is deleted from its table after a day, and this row is what still says it was asked (src/attested-calls.ts).
-    await noteAttestedCall({ kind: "verification", source: entry.condition.conditionId, ok: true });
+    // Written down from the moment it is opened: a session that never comes back is deleted from its table after a
+    // day, and this row is what still says it was asked (src/attested-calls.ts).
+    await noteAttestedCall({ kind: "asked", source: entry.condition.conditionId, ok: true, ref: sessionId });
 
     return NextResponse.json({ sessionId, phase, dayIndex, requestUrl }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
+    if (error instanceof ReclaimLimitReached) {
+      return NextResponse.json({ code: error.code, error: LIMIT.proof(contactEmail()) }, { status: 409, headers: { "Cache-Control": "no-store" } });
+    }
     const authStatus = accountAuthErrorStatus(error);
     return NextResponse.json(
       { error: authStatus ? accountAuthPublicMessage(error) : error instanceof Error ? error.message : "Could not start the proof" },

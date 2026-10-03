@@ -12,7 +12,8 @@ const PAGE = readFileSync("app/components/GiftPage.tsx", "utf8");
 const L = GIFT_LIVE.climbing;
 
 test("a climb is read live while its page is open, by either of its two people, and Count now is gone from it", () => {
-  assert.match(PAGE, /const readsLive = Boolean\(milestone && milestone\.shape !== "certificate" && moment === "climbing" && \(voice === "recipient" \|\| voice === "funder"\)\)/);
+  // And not while the month's limit of readings is reached: no reading could go (test/attested-calls.test.ts).
+  assert.match(PAGE, /const readsLive = Boolean\(milestone && milestone\.shape !== "certificate" && moment === "climbing" && \(voice === "recipient" \|\| voice === "funder"\) && !readingsStopped\)/);
   assert.match(PAGE, /useLiveReading\(\s*readsLive,\s*\(\) => checkMilestone\(giftId\)/);
   assert.match(PAGE, /\(mine \|\| readerIsFunder\) && !milestone && !gift\.finished/, "the button stays for a habit only");
   const routes = readFileSync("src/milestone-routes.ts", "utf8");

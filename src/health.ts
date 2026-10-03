@@ -1,6 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { formatEther, parseEther, type Hex } from "viem";
-import { cycleUse, type CycleUse } from "./attested-calls";
+import { cycleUse, limitsOf, type CycleUse } from "./attested-calls";
 import { workerFingerprint } from "./attested-read";
 import { databaseUrl } from "./database-guard";
 import { exitExchangeAddress, exitRouterAddress } from "./exit-relay";
@@ -56,9 +56,9 @@ export type Health = Readonly<{
   evidenceKey: { ok: boolean; fault?: HealthFault };
   passes: { ok: boolean } & Record<PassKind, { ok: boolean; fault?: HealthFault; last: string | null }>;
   /**
-   * The cycle's use of Reclaim's allowance. `ok` says the count could be read, and nothing else: an allowance used up
-   * is said by `over` and by an email (src/watch.ts), because readings have gone on past it and a monitor that turned
-   * red for the rest of the month would say nothing anybody could act on.
+   * The cycle's use of Reclaim's allowance. `ok` says the count could be read, and nothing else: a limit reached is
+   * said by `over`, by an email (src/watch.ts) and on each gift's page, and a monitor that turned red until the next
+   * cycle would say nothing more.
    */
   reclaim: { ok: boolean; fault?: HealthFault; over?: boolean } & Partial<CycleUse>;
 }>;
@@ -152,7 +152,8 @@ export async function readHealth(deps: HealthDeps = liveHealthDeps()): Promise<H
     }),
     check("reclaim", async () => {
       const use = await deps.reclaimUse(now);
-      return { ok: true, over: use.fetches.started >= use.fetches.allowed || use.verifications.asked >= use.verifications.allowed, ...use };
+      const limits = limitsOf(use);
+      return { ok: true, over: limits.readings || limits.proofs, ...use };
     }),
   ]);
 

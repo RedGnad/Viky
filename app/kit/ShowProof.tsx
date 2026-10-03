@@ -5,7 +5,8 @@ import { ApiError } from "@/src/client/api";
 import { awaitShownProof, openShownProof } from "@/src/client/gift";
 import { verdictOnly } from "@/src/condition-privacy";
 import { conditionById } from "@/src/conditions";
-import { SHOW_PROOF as W } from "@/src/sentences";
+import { contactEmail } from "@/src/contact";
+import { LIMIT, SHOW_PROOF as W } from "@/src/sentences";
 import { BODY, HELP, PRIMARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { Said } from "./Said";
 
@@ -32,8 +33,9 @@ export function ShowProof({
   yours,
   review = null,
   reviewMessage = null,
+  limitReached = false,
   onShown,
-}: Readonly<{ giftId: string; conditionId: string; yours: boolean; /** A first proof under review, or refused by it (D312). */ review?: "building" | "pending" | "refused" | null; /** A refusal in its own words, where it has them. */ reviewMessage?: string | null; onShown: () => Promise<void> | void }>) {
+}: Readonly<{ giftId: string; conditionId: string; yours: boolean; /** A first proof under review, or refused by it (D312). */ review?: "building" | "pending" | "refused" | null; /** A refusal in its own words, where it has them. */ reviewMessage?: string | null; /** The month's limit of proofs is reached: said before the person starts (the founder, 3 Oct 2026). */ limitReached?: boolean; onShown: () => Promise<void> | void }>) {
   const condition = conditionById(conditionId);
   const [state, setState] = useState<State>({ at: "asking" });
   const waiting = useRef<AbortController | null>(null);
@@ -89,6 +91,17 @@ export function ShowProof({
     return (
       <section className={CARD} role="status">
         <p className="font-medium">{W.shown(state.score)}</p>
+      </section>
+    );
+  }
+
+  // The month's limit of proofs: said in the button's place, before anything is opened or asked of the person.
+  if (limitReached && state.at !== "waiting") {
+    return (
+      <section className={CARD} role="status" data-proof-limit>
+        <p className="font-medium">{W.title(condition.source)}</p>
+        {/* The whole of it in the open, once (the founder, 3 Oct 2026): it is what the person needs before starting. */}
+        <p className={BODY}>{LIMIT.proof(contactEmail())}</p>
       </section>
     );
   }

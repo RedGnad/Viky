@@ -1,5 +1,7 @@
 import { formatEther } from "viem";
-import { allowanceAlertsDue } from "./attested-calls";
+import { allowanceAlertsDue, cycleUse } from "./attested-calls";
+import { daysWaiting } from "./days-waiting";
+import { claimPass } from "./pass-guard";
 import { contractsNamingAnotherKey, pinHolds, readEvidenceKeys, readExitPin, RELAYER_ALERT_BELOW, type EvidenceKeys, type ExitPin } from "./health";
 import { lastPasses } from "./pass-log";
 import { COUNTING_PASS_UTC } from "./pass-schedule";
@@ -11,9 +13,9 @@ import { sendAlert, type AlertOutcome } from "./provider-alert";
  * evidence key of the environment no longer being the one the contracts name, and the morning pass not running at all.
  * Each is now one email through `sendAlert` (src/provider-alert.ts), sent when it is seen. A fifth since the delta
  * re-read of 2 Oct 2026: a new evidence signer announced on a contract of the second version, told while it waits.
- * A sixth since 3 Oct 2026: the month's allowance at Reclaim, told once at half, at four fifths and when it is used up
- * (src/attested-calls.ts). It is told too the moment a fetch crosses one of them; here it is looked at again, for the
- * email that did not leave then.
+ * A sixth since 3 Oct 2026: the month's allowance at Reclaim, told once at half, at four fifths and at the limit, where
+ * the email says how many days wait for a reading and which goes back first (src/attested-calls.ts). It is told too
+ * the moment a row crosses one of them; here it is looked at again, for a crossing nothing wrote a row at.
  *
  * They are looked at when a nightly pass starts, and once more at 02:00 UTC by its own cron, which is also the only one
  * that can see a pass that never started. Nothing here may stop a pass: every read is caught, and what could not be
@@ -41,7 +43,7 @@ export function liveWatchDeps(): WatchDeps {
     exitPin: readExitPin,
     evidenceKeys: () => readEvidenceKeys(),
     lastCountingPass: async () => (await lastPasses()).counting,
-    allowanceDue: (nowMs) => allowanceAlertsDue(nowMs),
+    allowanceDue: (nowMs) => allowanceAlertsDue(nowMs, { use: cycleUse, claim: claimPass, waiting: daysWaiting }),
     alert: (alert) => sendAlert(alert),
   };
 }

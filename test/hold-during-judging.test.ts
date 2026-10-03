@@ -83,8 +83,8 @@ function standingDeps(over: Partial<HealthDeps> = {}): HealthDeps {
   };
 }
 
-/** A cycle a third used: 31 fetches of 100, 2 proofs asked of 25. */
-const USE = { from: "2026-09-23T00:00:00.000Z", until: "2026-10-23T00:00:00.000Z", fetches: { started: 31, proved: 29, allowed: 100 }, verifications: { asked: 2, verified: 1, allowed: 25 } } as const;
+/** A cycle a third used: 29 readings of 100, 1 proof come back of 25. */
+const USE = { from: "2026-09-23T00:00:00.000Z", until: "2026-10-23T00:00:00.000Z", fetches: { started: 31, proved: 29, allowed: 100 }, verifications: { asked: 2, shown: 1, verified: 1, allowed: 25 } } as const;
 
 test("everything standing answers ok, with a balance, a block and the times of the last passes, and nothing else", async () => {
   const health = await readHealth(standingDeps());
@@ -130,15 +130,17 @@ test("a relayer under the alert line still works: it is said, and it is not a fa
   assert.equal(health.relayer.underAlert, true);
 });
 
-test("the health answer counts the cycle's use of Reclaim's allowance, and an allowance used up is said without failing", async () => {
+test("the health answer counts the cycle's use of Reclaim's allowance, and a limit reached is said without failing", async () => {
   const health = await readHealth(standingDeps());
   assert.deepEqual(health.reclaim, { ok: true, over: false, ...USE });
-  // Past the allowance readings have gone on (3 Oct 2026: 128 fetches started, and the next one gave its proof), so
-  // it is said, and the monitor does not turn red for the rest of the month.
-  const over = await readHealth(standingDeps({ reclaimUse: async () => ({ ...USE, fetches: { started: 128, proved: 70, allowed: 100 } }) }));
+  // The limit goes by the proofs given: 128 fetches started and 70 proofs, as on 3 Oct 2026, is inside it.
+  const inside = await readHealth(standingDeps({ reclaimUse: async () => ({ ...USE, fetches: { started: 128, proved: 70, allowed: 100 } }) }));
+  assert.equal(inside.reclaim.over, false);
+  // At the limit it is said, each gift's page says it, and the monitor does not turn red until the next cycle.
+  const over = await readHealth(standingDeps({ reclaimUse: async () => ({ ...USE, fetches: { started: 160, proved: 100, allowed: 100 } }) }));
   assert.equal(over.reclaim.over, true);
   assert.equal(over.ok, true);
-  assert.equal((await readHealth(standingDeps({ reclaimUse: async () => ({ ...USE, verifications: { asked: 25, verified: 3, allowed: 25 } }) }))).reclaim.over, true);
+  assert.equal((await readHealth(standingDeps({ reclaimUse: async () => ({ ...USE, verifications: { asked: 40, shown: 25, verified: 3, allowed: 25 } }) }))).reclaim.over, true);
   // A count that cannot be read is said in the fixed word, and does not fail the whole answer either.
   const unread = await readHealth(standingDeps({ reclaimUse: async () => Promise.reject(new Error("postgres://user:secret@host refused the connection")) }));
   assert.deepEqual(unread.reclaim, { ok: false, fault: "unreachable" });

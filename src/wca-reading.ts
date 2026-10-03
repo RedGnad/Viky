@@ -16,7 +16,7 @@ import { competitionStillOpen, isWcaId, sameCuber, wcaAccount, wcaAccountOf, wca
 
 export const WCA_API = "https://www.worldcubeassociation.org/api/v0";
 
-export type WcaReadErrorCode = "INVALID_LINK" | "UNKNOWN_COMPETITION" | "NOT_REGISTERED" | "NO_RESULT" | "NOT_FINISHED" | "PROOF_INVALID" | "PROOF_MISMATCH" | "FETCH_FAILED" | "WORKER_OUT_OF_DATE" | "NOT_CONFIGURED";
+export type WcaReadErrorCode = "INVALID_LINK" | "UNKNOWN_COMPETITION" | "NOT_REGISTERED" | "NO_RESULT" | "NOT_FINISHED" | "PROOF_INVALID" | "PROOF_MISMATCH" | "FETCH_FAILED" | "WORKER_OUT_OF_DATE" | "LIMIT_REACHED" | "NOT_CONFIGURED";
 
 export class WcaReadError extends Error {
   constructor(

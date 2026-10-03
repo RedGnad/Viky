@@ -1,3 +1,4 @@
+import { giftLimitFor } from "./gift-limit";
 import { milestoneEnded, milestoneEndOffer } from "./gift-ending";
 import type { Hex } from "viem";
 import { formatAusd } from "./gift-reader";
@@ -192,6 +193,8 @@ export async function loadMilestoneStatus(record: GiftRecord, viewer: Viewer): P
   const review = await universityWait(record.giftId, milestone);
   const targetWords = await gradeTargetWords(milestone, Number(state.target));
   const reachedAt = proven.find((reading) => reading.outcome === "reached")?.observedAt ?? null;
-  const status = milestoneStatusOf({ record, milestone, state, contract, latest, last, reachedAt, viewer, nowSeconds: Math.floor(Date.now() / 1_000), review, targetWords });
+  const built = milestoneStatusOf({ record, milestone, state, contract, latest, last, reachedAt, viewer, nowSeconds: Math.floor(Date.now() / 1_000), review, targetWords });
+  // The month's limit, when it is reached and this gift is still running: a gift of this kind has no day to count.
+  const status = { ...built, limit: await giftLimitFor(!state.settled && !state.cancelled, () => null) };
   return { status, state, contract };
 }

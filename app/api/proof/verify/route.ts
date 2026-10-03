@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchStatusUrl, verifyProof, type Proof } from "@reclaimprotocol/js-sdk";
+import { noteAttestedCall } from "@/src/attested-calls";
 import type { Hex } from "viem";
 import { isAddress } from "viem";
 import { accountAuthErrorStatus, accountAuthPublicMessage, readAccountAuthSession } from "@/src/account-auth-server";
@@ -75,12 +76,19 @@ export async function POST(request: Request) {
         fetchStatus: (id) => fetchStatusUrl(id) as Promise<ReclaimStatus>,
         verifyProofs: async (proofs: Proof[]) => {
           if (!appSecret) throw new VerificationError("NOT_CONFIGURED", "The Reclaim application is not configured", 503);
+          // A proof came back from Reclaim: counted once for its session, whatever is then made of it, because it
+          // is the proof that Reclaim's month counts and not the verdict (src/attested-calls.ts).
+          const cameBack = (ok: boolean) => noteAttestedCall({ kind: "verification", source: session?.conditionId ?? "unknown", ok, ref: sessionId });
           const verified = await verifyProof(proofs, {
             providerId: provider?.providerId ?? entry?.condition.providerId,
             providerVersion: provider?.providerVersion ?? entry?.condition.providerVersion,
             allowedTags: [],
             teeAttestation: { appSecret },
-          } as never);
+          } as never).catch(async (error: unknown) => {
+            await cameBack(false);
+            throw error;
+          });
+          await cameBack((verified as { isVerified?: unknown }).isVerified === true);
           return verified as unknown as SdkVerification;
         },
         // A figure out of all proportion with the target is not signed for (src/reading-proportion.ts).

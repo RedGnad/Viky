@@ -1,5 +1,6 @@
 import { getAddress, type Hex } from "viem";
-import { MILESTONE_ACTIONS } from "./sentences";
+import { contactEmail } from "./contact";
+import { LIMIT, MILESTONE_ACTIONS } from "./sentences";
 import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
 import { attestClimbRating, isClimbReadError, readClimbStanding, type AttestedClimbReading } from "./climb-reading";
 import { climbIdentityLabel, climbOfGoal, climbProviderId, type ClimbId } from "./climbs";
@@ -61,7 +62,7 @@ export type MilestoneOutcome =
  * Refusals that say something broke on our side rather than anything about the person's account. The pass holds a
  * gift whose reading failed for one of these, so nothing is settled against a reading that never happened (D57).
  */
-export const MILESTONE_OURS_TO_FIX: ReadonlySet<string> = new Set(["FETCH_FAILED", "PROOF_INVALID", "PROOF_MISMATCH", "WORKER_OUT_OF_DATE", "NOT_CONFIGURED"]);
+export const MILESTONE_OURS_TO_FIX: ReadonlySet<string> = new Set(["FETCH_FAILED", "PROOF_INVALID", "PROOF_MISMATCH", "WORKER_OUT_OF_DATE", "NOT_CONFIGURED", "LIMIT_REACHED"]);
 
 /** What a person reads for each refusal of the reading itself. The contract's refusals have their own table (gift-api). */
 const MESSAGES: Readonly<Record<string, string>> = {
@@ -144,6 +145,8 @@ export const RECENT_READING_SECONDS = 30 * 60;
 
 /** What one refusal says, so a test can hold a sentence to what it promises without going through a whole reading. */
 export function refusalMessage(code: string): string {
+  // The month's limit of readings: a climb has no day to count, so the sentence carries no hour (src/sentences.ts).
+  if (code === "LIMIT_REACHED") return LIMIT.reading(null, contactEmail());
   return MESSAGES[code] ?? "This could not be recorded.";
 }
 
