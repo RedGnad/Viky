@@ -174,6 +174,21 @@ test("a look that answers decides as before: a proof for a day to credit, none f
   }
 });
 
+test("while check-ins are paused nothing is looked at and nothing is paid for: the refusal is the contract's own", async () => {
+  const paused = reading(closingThisMorning(), RECOUNT, async () => seen(1_010));
+  const outcome = await runPublicCheckIn({ giftId: "7", purpose: "count", pass: "recount" }, { ...paused.deps, paused: async () => true });
+  assert.deepEqual(outcome, { kind: "refused", giftId: "7", code: "PAUSED", message: "Check-ins are paused for a moment. Try again later.", xp: undefined });
+  assert.deepEqual(paused.calls, []);
+  // A pause that cannot be read is taken as none: the reading goes on, and the relay would refuse it.
+  const unread = reading(closingThisMorning(), RECOUNT, async () => seen(1_004));
+  const went = await runPublicCheckIn({ giftId: "7", purpose: "count", pass: "recount" }, { ...unread.deps, paused: async () => Promise.reject(new Error("the endpoint did not answer")) });
+  assert.equal(went.kind === "refused" && went.code, "NOT_ENOUGH_PROGRESS");
+  // The live reading asks the gift's own contract, and answers a first reading that already waits rather than read again.
+  const source = readFileSync("src/duolingo-public-checkin.ts", "utf8");
+  assert.match(source, /paused: \(escrow\) => giftPublicClient\(\)\.readContract\(\{ address: escrow, abi: dailyAbiOf\(escrow\), functionName: "checkInPaused" \}\) as Promise<boolean>,/);
+  assert.match(source, /const waiting = purpose === "bind" && deps\.heldStart \? await deps\.heldStart\(giftId, record\.recipient, now\) : null;\n\s*if \(waiting\) return waiting;/);
+});
+
 test("the passes say which of them is reading, and a gift whose look failed is held for the second reading", async () => {
   const asked: string[] = [];
   const rows: NewPass[] = [];
