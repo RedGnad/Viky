@@ -13,6 +13,7 @@ import { usesDelivered } from "@/src/phone-order-store";
 import { consentAnchorAddress, giftEscrowV2Address, milestoneGiftV2Address } from "@/src/v2";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, PUBLIC_RPC_URL } from "@/src/monad/chain";
 import { readIndex } from "@/src/envio-index";
+import { MOBILE_CEILINGS } from "@/src/mobile-money";
 import { JudgesAgora } from "./JudgesAgora";
 import { JudgesConditions } from "./JudgesConditions";
 import { JudgesContents } from "./JudgesContents";
@@ -45,6 +46,9 @@ function Tx({ hash }: Readonly<{ hash: string }>) {
     </a>
   );
 }
+
+/** The mobile money ceilings in words, from the constants the routes check (src/mobile-money.ts). */
+const MOBILE_CEILINGS_WORDS = `$${MOBILE_CEILINGS.usdPerPayout}.00 at most per payout and $${MOBILE_CEILINGS.usdPerAccountPerDay}.00 a day per account`;
 
 // The only page where contract addresses appear. Consumer screens never show them. They are set in the text face
 // like every other word: a monospace face would be the system's, and hex has no letter a text face confuses.
@@ -628,6 +632,14 @@ export default async function JudgesPage() {
             <strong>The way out.</strong> Viky can say that the payout service reports the payment as completed. It can
             never say the money arrived in a bank: the bank leg is outside anything Viky can read, and no screen claims
             otherwise.
+          </li>
+          <li>
+            <strong>Mobile money, switched off.</strong> A payout to a mobile money number through Switch Labs is built and
+            offered nowhere: it is switched on only after a first real payout has reached a real number, and on 2 Oct 2026
+            Switch had not yet opened payouts to Viky&apos;s key. When it is on, the person types the amount in their own
+            money, francs in Senegal, and Switch&apos;s quote for exactly that amount gives the dollars it takes. Its
+            ceilings are the gift cards&apos; rule: {MOBILE_CEILINGS_WORDS}, checked when the payout is priced and again
+            when it is sent, and said in place of the form when the day&apos;s is met.
           </li>
           <li>
             <strong>The Bitrefill way out.</strong> What it is: Viky buys a good, a phone top-up of credit or data or a

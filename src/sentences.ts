@@ -2023,9 +2023,10 @@ export const MOBILE_OUT = {
   holder: "Name on the account",
   holderHelp: "As your operator has it.",
   amount: "How much",
-  amountHelp: (least: string) => `In dollars, from ${least}.`,
+  amountHelp: (least: string, most: string) => `From ${least} to ${most} at a time.`,
   about: (figure: string) => `about ${figure}`,
-  pricedAt: (when: string) => `At the rate of ${when}.`,
+  /** The dollars second (the founder, 3 Oct 2026): what leaves the balance for it, and when it was priced. */
+  fromBalance: (dollars: string, when: string) => `${dollars} from your balance, at the rate of ${when}.`,
   pricing: "Pricing it",
   unpriced: "It cannot be priced right now. Nothing was changed.",
   send: (operator: string) => `Send to my ${operator}`,

@@ -4,10 +4,10 @@ import { USDC } from "./coins";
 import { exitRouterAbi } from "./exit-router-abi";
 import { exitRouterAddress } from "./exit-relay";
 import { GiftApiError } from "./gift-api";
-import { mobileMoneyOn, numberEnd, operatorInWords, phaseOf, settled, type PayoutPhase } from "./mobile-money";
-import { dropUnpaidPayout, loadPayout, notePayoutState, payoutOfExit, recordPayout, type MobilePayout } from "./mobile-money-store";
+import { ceilingProblem, mobileMoneyOn, mostNow, numberEnd, operatorInWords, phaseOf, settled, type PayoutPhase } from "./mobile-money";
+import { dropUnpaidPayout, loadPayout, notePayoutState, payoutOfExit, recordPayout, usedToday, type MobilePayout } from "./mobile-money-store";
 import { relayerClients } from "./relayer";
-import { mobileMoneyCoverage, openPayout, payoutFields, payoutStatus, quotePayout, SwitchError, type Corridor, type PayoutFields, type PayoutQuote } from "./switch";
+import { mobileMoneyCoverage, openPayout, payoutFields, payoutRates, payoutStatus, quotePayout, SwitchError, type Corridor, type PayoutFields, type PayoutQuote } from "./switch";
 
 /**
  * The mobile money way out on the server (the founder, 2 Oct 2026): what is offered in a country, what a payout would
@@ -20,17 +20,19 @@ import { mobileMoneyCoverage, openPayout, payoutFields, payoutStatus, quotePayou
  */
 
 const KEPT_MS = 10 * 60_000;
-let coverage: { at: number; rows: readonly Corridor[] } | undefined;
+let coverage: { at: number; rows: readonly Corridor[]; rates: ReadonlyMap<string, number> } | undefined;
 const fields = new Map<string, { at: number; fields: PayoutFields }>();
 
 export type SwitchReader = Readonly<{
   coverage: () => Promise<readonly Corridor[]>;
+  rates: () => Promise<ReadonlyMap<string, number>>;
   fields: (country: string) => Promise<PayoutFields>;
-  quote: (input: { country: string; units: bigint }) => Promise<PayoutQuote>;
+  quote: (input: Parameters<typeof quotePayout>[0]) => Promise<PayoutQuote>;
 }>;
 
 export const liveSwitch: SwitchReader = {
   coverage: () => mobileMoneyCoverage(),
+  rates: () => payoutRates(),
   fields: (country) => payoutFields(country),
   quote: (input) => quotePayout(input),
 };
@@ -41,11 +43,11 @@ export function forgetKeptCoverage(): void {
   fields.clear();
 }
 
-async function corridors(reader: SwitchReader, now: number): Promise<readonly Corridor[]> {
-  if (coverage && now - coverage.at < KEPT_MS) return coverage.rows;
-  const rows = await reader.coverage();
-  coverage = { at: now, rows };
-  return rows;
+async function corridors(reader: SwitchReader, now: number): Promise<{ rows: readonly Corridor[]; rates: ReadonlyMap<string, number> }> {
+  if (coverage && now - coverage.at < KEPT_MS) return coverage;
+  const [rows, rates] = await Promise.all([reader.coverage(), reader.rates()]);
+  coverage = { at: now, rows, rates };
+  return coverage;
 }
 
 async function fieldsOf(reader: SwitchReader, country: string, now: number): Promise<PayoutFields> {
@@ -67,6 +69,8 @@ export type MobileOffer =
       operators: ReadonlyArray<{ code: string; name: string }>;
       numberRule: string;
       nameRule: string;
+      /** Switch's published rate from a dollar to the country's currency: what the field's bounds are said in, never a price. */
+      rate: number;
     }>
   | Readonly<{ offered: false }>;
 
@@ -79,9 +83,11 @@ export async function offerIn(country: string | null, deps: { reader?: SwitchRea
   const reader = deps.reader ?? liveSwitch;
   const now = (deps.now ?? Date.now)();
   try {
-    const corridor = (await corridors(reader, now)).find((row) => row.country === country.toUpperCase());
-    if (!corridor) return { offered: false };
-    const read = await fieldsOf(reader, corridor.country, now);
+    const read = await corridors(reader, now);
+    const corridor = read.rows.find((row) => row.country === country.toUpperCase());
+    const rate = corridor ? read.rates.get(corridor.currency) : undefined;
+    if (!corridor || !rate) return { offered: false };
+    const fields = await fieldsOf(reader, corridor.country, now);
     return {
       offered: true,
       country: corridor.country,
@@ -89,9 +95,10 @@ export async function offerIn(country: string | null, deps: { reader?: SwitchRea
       settlement: corridor.settlement,
       minimumUnits: corridor.minimumUnits.toString(),
       maximumUnits: corridor.maximumUnits.toString(),
-      operators: read.networks.map((network) => ({ code: network.code, name: operatorInWords(network.name) })),
-      numberRule: read.numberRule,
-      nameRule: read.nameRule,
+      operators: fields.networks.map((network) => ({ code: network.code, name: operatorInWords(network.name) })),
+      numberRule: fields.numberRule,
+      nameRule: fields.nameRule,
+      rate,
     };
   } catch {
     return { offered: false };
@@ -125,6 +132,42 @@ export function assertWithinCorridor(units: bigint, offer: Extract<MobileOffer, 
   if (units > BigInt(offer.maximumUnits)) throw new GiftApiError("ABOVE_PAYOUT_MAXIMUM", `Mobile money pays at most ${dollars(offer.maximumUnits)} in one payout.`, 409);
 }
 
+/** Refuses one more payout of this many dollars past a ceiling, per payout or per account and day, by its sentence. */
+export async function assertWithinCeilings(account: string, units: bigint, used: (account: string) => Promise<bigint> = usedToday): Promise<void> {
+  const problem = ceilingProblem(units, await used(account));
+  if (problem) throw new GiftApiError("OVER_CEILING", problem, 409);
+}
+
+/** The most this account can send to mobile money in one payout now, by the two ceilings. */
+export async function mostForAccount(account: string, used: (account: string) => Promise<bigint> = usedToday): Promise<bigint> {
+  return mostNow(await used(account));
+}
+
+export type LocalPrice = Readonly<{ local: number; currency: string; sourceUnits: string; at: string }>;
+
+/**
+ * What it takes to deliver so much local currency, the amount the person typed: Switch's quote with `exact_output`,
+ * which counts the dollars that must be sent for it (the founder, 3 Oct 2026: the figure in francs is the quote's for
+ * the amount typed). An answer that does not deliver what was asked is refused rather than shown.
+ */
+export async function priceInLocal(input: { account: string; country: string; local: number }, deps: { reader?: SwitchReader; env?: Readonly<Record<string, string | undefined>>; now?: () => number; used?: (account: string) => Promise<bigint> } = {}): Promise<LocalPrice> {
+  const offer = await offerIn(input.country, deps);
+  if (!offer.offered) throw new GiftApiError("NOT_OFFERED", "Mobile money is not offered for this country.", 409);
+  if (!Number.isFinite(input.local) || input.local <= 0) throw new GiftApiError("INVALID_AMOUNT", "Enter an amount", 400);
+  let quote: PayoutQuote;
+  try {
+    quote = await (deps.reader ?? liveSwitch).quote({ country: offer.country, local: input.local, currency: offer.currency });
+  } catch (error) {
+    throw switchRefusal(error);
+  }
+  if (quote.currency !== offer.currency || Math.abs(quote.local - input.local) > input.local * 0.01 || quote.sourceUnits <= 0n) {
+    throw new GiftApiError("PAYOUT_SERVICE_SILENT", "The mobile money service priced something else. Nothing was taken.", 503);
+  }
+  assertWithinCorridor(quote.sourceUnits, offer);
+  await assertWithinCeilings(input.account, quote.sourceUnits, deps.used);
+  return { local: quote.local, currency: quote.currency, sourceUnits: quote.sourceUnits.toString(), at: quote.at };
+}
+
 /**
  * The dollars an exchange really made for this account: its `Exited` event, read from the transaction's receipt and
  * checked to be the way out's own, for this payer, into the dollar Switch takes. Never a figure the browser gives.
@@ -147,7 +190,7 @@ export type StartedPayout = Readonly<{ reference: string; depositAddress: string
  */
 export async function startPayout(
   input: { account: string; exitTx: Hex; country: string; network: string; number: string; holderName: string; callbackUrl: string },
-  deps: { reader?: SwitchReader; env?: Readonly<Record<string, string | undefined>>; client?: PublicClient; open?: typeof openPayout; now?: () => number } = {},
+  deps: { reader?: SwitchReader; env?: Readonly<Record<string, string | undefined>>; client?: PublicClient; open?: typeof openPayout; now?: () => number; used?: (account: string) => Promise<bigint> } = {},
 ): Promise<StartedPayout> {
   const offer = await offerIn(input.country, { reader: deps.reader, env: deps.env, now: deps.now });
   if (!offer.offered) throw new GiftApiError("NOT_OFFERED", "Mobile money is not offered for this country. Nothing was taken.", 409);
@@ -164,6 +207,8 @@ export async function startPayout(
   }
   const units = await exitProceeds({ exitTx: input.exitTx, account: input.account }, deps.client);
   assertWithinCorridor(units, offer);
+  // Checked again where the money is about to leave: a price moves nothing and counts for nothing.
+  await assertWithinCeilings(input.account, units, deps.used);
   let opened;
   try {
     opened = await (deps.open ?? openPayout)({

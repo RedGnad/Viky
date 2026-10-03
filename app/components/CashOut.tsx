@@ -29,7 +29,7 @@ import { Said } from "../kit/Said";
 import { AccountPanel } from "./AccountPanel";
 import { PhoneTopUp } from "./PhoneTopUp";
 import { MobileMoneyOut } from "./MobileMoneyOut";
-import { mobileMoneyOffer, type MobileOffer } from "@/src/client/mobile-money";
+import { mobileMoneyOffer, type AccountOffer } from "@/src/client/mobile-money";
 import { delayInWords, operatorsInWords } from "@/src/mobile-money";
 import { GiftCardOut } from "./GiftCardOut";
 import { AMOUNT_IN_TITLE, BODY, CARD, CARD_LABEL, CARD_TITLE, FIELD, HELP, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE, TITLE_IN_FACE } from "./ui";
@@ -170,7 +170,7 @@ export function CashOut() {
 
   // Whether mobile money is offered where the person lives, and with what, asked of the server, which asks Switch: a
   // country it does not cover, the way switched off, or Switch silent, and there is no card for it at all.
-  const [mobile, setMobile] = useState<MobileOffer | null>(null);
+  const [mobile, setMobile] = useState<AccountOffer | null>(null);
   useEffect(() => {
     if (!countryNow) return;
     let current = true;
@@ -182,7 +182,7 @@ export function CashOut() {
       current = false;
     };
   }, [countryNow]);
-  const mobileOffered = mobile?.offered === true && mobile.country === countryNow?.toUpperCase() ? mobile : null;
+  const mobileOffered = mobile && mobile.offered === true && "mostUnits" in mobile && mobile.country === countryNow?.toUpperCase() ? mobile : null;
 
   const coinOf = (way: WayOut): Coin => coinAt(way.coin) ?? USDC;
 

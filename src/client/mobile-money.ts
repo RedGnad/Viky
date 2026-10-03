@@ -1,7 +1,7 @@
 import type { LocalAccount } from "viem";
 import { getAddress, type Hex } from "viem";
 import { USDC } from "../coins";
-import type { MobileOffer, StartedPayout, FollowedPayout } from "../mobile-money-server";
+import type { LocalPrice, MobileOffer, StartedPayout, FollowedPayout } from "../mobile-money-server";
 import { getJson, postJson } from "./api";
 import { quoteWayOut, takeTheWayOut } from "./exit";
 import { sendOwnMoney } from "./gift";
@@ -15,8 +15,11 @@ import { sendOwnMoney } from "./gift";
 
 export type { MobileOffer, StartedPayout, FollowedPayout };
 
-export function mobileMoneyOffer(country: string): Promise<MobileOffer> {
-  return getJson<MobileOffer>(`/api/mobile-money/offer?country=${encodeURIComponent(country)}`);
+/** The offer for a country, with the most this account can send in one payout now when it is offered. */
+export type AccountOffer = MobileOffer | (Extract<MobileOffer, { offered: true }> & Readonly<{ mostUnits: string }>);
+
+export function mobileMoneyOffer(country: string): Promise<AccountOffer> {
+  return getJson<AccountOffer>(`/api/mobile-money/offer?country=${encodeURIComponent(country)}`);
 }
 
 /** "10.5", "10.123456": the exchange's floor as it writes it, in units of six decimals, by its digits. */
@@ -26,14 +29,26 @@ export function unitsOfShown(shown: string): bigint {
   return BigInt(whole) * 1_000_000n + BigInt(part.padEnd(6, "0"));
 }
 
-export type MobilePrice = Readonly<{ ticket: string; units: bigint; local: number; currency: string; at: string; settlement: string }>;
+export type MobilePrice = Readonly<{ ticket: string; dollars: bigint; local: number; currency: string; at: string }>;
 
-/** What this many dollars gives on the number now: the exchange's floor, then Switch's quote for that floor. Moves nothing. */
-export async function priceMobileMoney(input: { amount: bigint; country: string }): Promise<MobilePrice> {
-  const exchange = await quoteWayOut({ amount: input.amount, coin: USDC.address, mobileMoneyIn: input.country });
-  const units = unitsOfShown(exchange.shown);
-  const quote = await postJson<{ local: number; currency: string; at: string; settlement: string }>("/api/mobile-money/quote", { country: input.country, units: units.toString() });
-  return { ticket: exchange.ticket, units, ...quote };
+/**
+ * What it takes to put this much local currency on the number now (the founder, 3 Oct 2026): Switch's quote for exactly
+ * that amount says how many dollars must reach it; the exchange is then asked for enough of the balance to make them, a
+ * second time with more when its floor falls short. Moves nothing.
+ */
+export async function priceMobileMoney(input: { local: number; country: string }): Promise<MobilePrice> {
+  const quote = await postJson<LocalPrice>("/api/mobile-money/quote", { country: input.country, local: input.local });
+  const needed = BigInt(quote.sourceUnits);
+  let dollars = needed;
+  let exchange = await quoteWayOut({ amount: dollars, coin: USDC.address, mobileMoneyIn: input.country });
+  const floor = unitsOfShown(exchange.shown);
+  if (floor < needed) {
+    // The exchange gives a little less than it takes: ask for that much more, once, and refuse if it still falls short.
+    dollars = (dollars * needed) / floor + 1n;
+    exchange = await quoteWayOut({ amount: dollars, coin: USDC.address, mobileMoneyIn: input.country });
+    if (unitsOfShown(exchange.shown) < needed) throw new Error("The exchange cannot make enough for this amount right now");
+  }
+  return { ticket: exchange.ticket, dollars, local: quote.local, currency: quote.currency, at: quote.at };
 }
 
 /**

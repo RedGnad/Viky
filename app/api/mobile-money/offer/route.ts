@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { giftErrorResponse, NO_STORE } from "@/src/gift-api";
-import { offerIn } from "@/src/mobile-money-server";
+import { mostForAccount, offerIn } from "@/src/mobile-money-server";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
 export const runtime = "nodejs";
@@ -18,7 +18,9 @@ export async function GET(request: Request) {
     const rate = checkRateLimit("status", request, auth.account);
     if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
     const country = new URL(request.url).searchParams.get("country");
-    return NextResponse.json(await offerIn(country), { headers: NO_STORE });
+    const offer = await offerIn(country);
+    // The most one payout may be now, by the two ceilings: asked only where the way is offered, since it reads the day's payouts.
+    return NextResponse.json(offer.offered ? { ...offer, mostUnits: (await mostForAccount(auth.account)).toString() } : offer, { headers: NO_STORE });
   } catch (error) {
     return giftErrorResponse(error);
   }

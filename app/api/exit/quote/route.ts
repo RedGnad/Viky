@@ -9,7 +9,7 @@ import { CONVERSION_RESERVE } from "@/src/funding-step";
 import { formatAusd } from "@/src/gift-reader";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { kuruQuote } from "@/src/kuru";
-import { assertWithinCorridor, offerIn } from "@/src/mobile-money-server";
+import { assertWithinCeilings, assertWithinCorridor, offerIn } from "@/src/mobile-money-server";
 import { afterTheReserve, cardSellLimits, dollarsForTheMinimum } from "@/src/mercuryo";
 import { AUSD_ADDRESS, USDC_ADDRESS } from "@/src/monad/chain";
 import { inFiat, payoutAsset, withinPayoutRange } from "@/src/ramp";
@@ -82,6 +82,7 @@ export async function POST(request: Request) {
       const offer = await offerIn(String(body.country ?? ""));
       if (!offer.offered) throw new GiftApiError("NOT_OFFERED", "Mobile money is not offered for this country. Nothing was taken.", 409);
       assertWithinCorridor(floor, offer);
+      await assertWithinCeilings(account, amount);
     } else if (getAddress(way.coin) === getAddress(USDC_ADDRESS)) {
       const asset = await payoutAsset();
       // They name the coin's own contract in that list, and it must be the one this router hands back. If they

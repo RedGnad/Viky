@@ -154,6 +154,22 @@ export async function markDepositSent(reference: string, account: string): Promi
   return rows.length === 1;
 }
 
+/**
+ * What counts against the day's ceiling for an account, since midnight UTC (the phone way out's rule, src/phone-order.ts):
+ * every payout opened today whose dollars did not come back. One that failed or was reversed came back; one whose window
+ * closed with nothing sent never left. Everything else counts, including one opened and not yet paid into, so that two
+ * opened together cannot both pass the ceiling.
+ */
+export async function usedToday(account: string, now: Date = new Date()): Promise<bigint> {
+  const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+  const rows = await (await db())`
+    SELECT COALESCE(sum(units::numeric), 0)::text AS units FROM viky_mobile_payouts
+     WHERE account = ${account.toLowerCase()} AND created_at >= ${day}
+       AND status NOT IN ('FAILED', 'REVERSED')
+       AND NOT (deposit_sent_at IS NULL AND status = 'AWAITING_DEPOSIT' AND expires_at < ${now.toISOString()})`;
+  return BigInt(String(rows[0]?.units ?? "0").split(".")[0]);
+}
+
 /** What Switch last said of a payout, by its webhook or its status route. The local amount is its own, once it says it. */
 export async function notePayoutState(reference: string, state: Readonly<{ status: string; local: number | null; depositHash: string | null }>): Promise<boolean> {
   const rows = await (await db())`
