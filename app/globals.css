@@ -1183,6 +1183,23 @@ dialog.sheet[open] {
   width: 48px;
 }
 
+/* What one day is worth, small under each character, as on the card being filled in (D304; a gift's page since
+   3 Oct 2026). The day keeps its 48: the figure is centred under it, on one line. */
+.day-row-day[data-worth] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.day-row-worth {
+  font-size: var(--type-meta);
+  line-height: var(--type-meta-leading);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
 .day-row-where {
   margin: -8px 0 14px;
 }
