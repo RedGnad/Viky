@@ -208,6 +208,8 @@ test("the look taken as the page comes to the front is silent for a second, then
   assert.equal(hook.match(/cameToFront = true/g)?.length, 2, "as the page opens, and as it is brought back");
   // On the state's own line, with a name for a reader that speaks the page and no word on the screen.
   const card = readFileSync("app/kit/GiftLive.tsx", "utf8");
-  assert.match(card, /<p className="gift-state">\s*\{live\.headline\}\s*\{looking && !waiting \? <span className="working-ring working-ring-inline gift-state-wheel" role="status" aria-label=\{L\.asItGoes\.looking\} data-looking="" \/> : null\}\s*<\/p>/);
+  assert.match(card, /<p className="gift-state">\s*\{live\.headline\}\s*\{looking && !waiting \? \(\s*<span className="gift-state-wheel-place">\s*<span className="working-ring working-ring-inline gift-state-wheel" role="status" aria-label=\{L\.asItGoes\.looking\} data-looking="" \/>\s*<\/span>\s*\) : null\}\s*<\/p>/);
+  // Its place has no width: the wheel takes no room on the line, so nothing moves when it comes or goes.
+  assert.match(readFileSync("app/globals.css", "utf8"), /\.gift-state-wheel-place \{\s*position: relative;\s*display: inline-block;\s*width: 0;\s*height: 0;\s*\}/);
   assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /looking=\{dayReading\.phase === "looking"\}/);
 });

@@ -286,7 +286,9 @@ test.describe("the look taken as the page opens, said only when it is slow", () 
     expect(Date.now() - asked.firstAtMs, "silent for a second first").toBeGreaterThanOrEqual(900);
     await expect(wheel).toHaveText("");
     await expect(wheel).toHaveAttribute("aria-label", "Looking for today's lesson");
-    await expect(card(page).locator(".gift-state > [data-looking]")).toHaveCount(1);
+    await expect(card(page).locator(".gift-state [data-looking]")).toHaveCount(1);
+    // In a place of no width: it can take no room on the state's line, however full the line is.
+    expect((await card(page).locator(".gift-state-wheel-place").boundingBox())?.width).toBe(0);
     await expect(state).toHaveText("Today's lesson is not in yet.");
     await expect(card(page).locator("[data-waiting]")).toHaveCount(0);
     // Where the money stands while the wheel turns, the page's arrival long over: measured again once it is gone.
@@ -301,7 +303,7 @@ test.describe("the look taken as the page opens, said only when it is slow", () 
     release();
     await expect(wheel).toHaveCount(0);
     await expect(state).toHaveText("Today's lesson is not in yet.");
-    // Nothing on the card moved when it went: it sits on the state's own line.
+    // Nothing on the card moved when it went: it took no room on the state's line.
     expect(await figures.boundingBox()).toEqual(during);
     expect(asked.counts).toBe(0);
   });

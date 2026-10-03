@@ -70,7 +70,8 @@ export function GiftLive({
   waiting?: string | null;
   /**
    * The look taken as the page came to the front is still under way after a second: the wheel beside the state, and
-   * no word. It sits on the state's own line, so nothing on the card moves when it comes or goes.
+   * no word. Its place after the state's last word has no width, so it can take no room on the line: nothing on the
+   * card moves when it comes or goes, however full that line is.
    */
   looking?: boolean;
   /** The one action of this moment, or nothing. Never two of the same weight. */
@@ -96,7 +97,11 @@ export function GiftLive({
         {live.when ? <p className={`${CARD_LABEL} gift-when`}>{live.when}</p> : null}
         <p className="gift-state">
           {live.headline}
-          {looking && !waiting ? <span className="working-ring working-ring-inline gift-state-wheel" role="status" aria-label={L.asItGoes.looking} data-looking="" /> : null}
+          {looking && !waiting ? (
+            <span className="gift-state-wheel-place">
+              <span className="working-ring working-ring-inline gift-state-wheel" role="status" aria-label={L.asItGoes.looking} data-looking="" />
+            </span>
+          ) : null}
         </p>
         {closed?.map((line) => (
           <p key={line} className="gift-state-closed">
