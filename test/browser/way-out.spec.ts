@@ -20,14 +20,18 @@ const ONE = 1_000_000_000_000_000_000n;
 const RATES = { date: "2026-09-30", usdPerEur: 1.1355, eurPerUsd: 1 / 1.1355, xofPerUsd: 655.957 / 1.1355, eurPer: { USD: 1.1355, EUR: 1 }, readAtMs: Date.now() };
 
 type Where = { country: string; bank: "serves" | "does-not"; card: "serves" | "does-not"; method?: { method: string; currency: string } | null };
+const USDC_COIN = "0x754704Bc059F8C67012fEd69BC8A327a5aafb603";
+/** The withdrawal the account has open, as the route reads it from what was written down: none, unless a test says one. */
+type Open = { coin: string; atLeast: string; sinceMs: number } | null;
 
 /** Somebody signed in, with these holdings, in this country, as the routes would answer for them. */
-async function person(device: Profile, holdings: Holdings, where: Where): Promise<void> {
+async function person(device: Profile, holdings: Holdings, where: Where, open: Open = null, currency = "USD"): Promise<void> {
   const { page, context } = device;
   await answerTheChain(context, holdings);
   await page.route("**/api/gifts/earned", (route) => route.fulfill(json({ gifts: [] })));
+  await page.route("**/api/exit/open", (route) => route.fulfill(json({ open })));
   await page.route("**/api/rates", (route) => route.fulfill(json({ rates: { ...RATES, readAtMs: Date.now() }, currencies: ["USD", "EUR", "XOF"] })));
-  await page.route("**/api/account/preferences", (route) => route.fulfill(json({ country: where.country, displayCurrency: "USD" })));
+  await page.route("**/api/account/preferences", (route) => route.fulfill(json({ country: where.country, displayCurrency: currency })));
   await page.route("**/api/rails/where**", (route) =>
     route.fulfill(
       json({
@@ -58,8 +62,8 @@ test.describe("taking money out", () => {
     test(`the bank: nothing opens by itself, and step 2 opens Ramp's own selling page with the code copied (${size.name})`, async ({ browser, baseURL }) => {
       const device = await profile(browser, baseURL, size.viewport);
       const { page, context } = device;
-      // Fifteen dollars of what a gift holds, and 9.99 already made ready for the bank service.
-      await person(device, { ausd: 15_000_000n, usdc: 9_990_000n, mon: 0n }, { country: "fr", bank: "serves", card: "does-not", method: { method: "SEPA", currency: "EUR" } });
+      // Fifteen dollars of what a gift holds, and 9.99 already made ready for the bank service: a withdrawal is open.
+      await person(device, { ausd: 15_000_000n, usdc: 9_990_000n, mon: 0n }, { country: "fr", bank: "serves", card: "does-not", method: { method: "SEPA", currency: "EUR" } }, { coin: USDC_COIN, atLeast: "9990000", sinceMs: Date.now() - 60_000 });
       await context.grantPermissions(["clipboard-read", "clipboard-write"]);
       await page.goto("/cash-out");
       // The first screen, not step 2: what is ready is said, with the way back to it, and the rest can still be used.
@@ -151,3 +155,131 @@ test.describe("taking money out", () => {
     });
   }
 });
+
+/**
+ * A balance is never read as a withdrawal (the founder, 3 Oct 2026). A card payment delivers USDC, the coin the bank
+ * service takes, and Home said "$5.60 of it is ready to send to Ramp" a moment after paying. A withdrawal is open only
+ * when what was written down says so (src/open-withdrawal.ts).
+ */
+test.describe("money a card just delivered is money in the account, not a withdrawal", () => {
+  test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each case opens its own window");
+  test.setTimeout(120_000);
+  const FRANCE: Where = { country: "fr", bank: "serves", card: "serves", method: { method: "SEPA", currency: "EUR" } };
+
+  test("Home says one amount and names no service; the withdrawal screen says nothing is ready", async ({ browser, baseURL }) => {
+    const device = await profile(browser, baseURL, { width: 390, height: 844 });
+    const { page } = device;
+    // The founder's account after his card payment of 3 Oct 2026: 0.66 of what a gift holds, 5.60 USDC just delivered,
+    // and no withdrawal open.
+    await person(device, { ausd: 660_000n, usdc: 5_600_948n, mon: 0n }, FRANCE);
+    await page.goto("/");
+    const money = page.locator(".money-display-box");
+    await expect(money.getByRole("heading", { name: "In your account" })).toBeVisible();
+    await expect(money.locator("[data-amount]")).toContainText("$6.26");
+    await expect(money).not.toContainText(/ready|Ramp|Mercuryo/i);
+    await expect(money.locator("p")).toHaveCount(1);
+    await expect(page.getByRole("link", { name: "Spend or withdraw" })).toBeVisible();
+    // The withdrawal screen: the same money, and nothing said to be ready, nothing to continue.
+    await page.goto("/cash-out");
+    await expect(page.getByRole("button", { name: "Send to my bank" })).toBeVisible();
+    await expect(page.getByText(/ready to send to/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Continue with/ })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /^Ready to send to/ })).toHaveCount(0);
+    await device.context.close();
+  });
+
+  test("the chain's own coin, which a card payment delivers too, is not said on Home either", async ({ browser, baseURL }) => {
+    const device = await profile(browser, baseURL, { width: 390, height: 844 });
+    const { page } = device;
+    await person(device, { ausd: 0n, usdc: 0n, mon: 11n * ONE + (13_843n * ONE) / 100n }, FRANCE);
+    await page.goto("/");
+    const money = page.locator(".money-display-box");
+    await expect(money.getByRole("heading", { name: "In your account" })).toBeVisible();
+    await expect(money.locator("[data-amount]")).toContainText("$0.00");
+    await expect(money).not.toContainText(/ready|Ramp|Mercuryo|138/i);
+    // The way to the withdrawal screen is still offered: that is where what the account holds can leave.
+    await expect(page.getByRole("link", { name: "Spend or withdraw" })).toBeVisible();
+    await device.context.close();
+  });
+
+  test("a withdrawal that is open is said on the withdrawal screen alone, in the account's own currency", async ({ browser, baseURL }) => {
+    const device = await profile(browser, baseURL, { width: 390, height: 844 });
+    const { page } = device;
+    await person(device, { ausd: 15_000_000n, usdc: 9_990_000n, mon: 0n }, FRANCE, { coin: USDC_COIN, atLeast: "9990000", sinceMs: Date.now() - 60_000 }, "EUR");
+    await page.goto("/");
+    await expect(page.locator(".money-display-box")).not.toContainText(/ready|Ramp/i);
+    await page.goto("/cash-out");
+    // 9.99 dollars at 1.1355 dollars for a euro.
+    await expect(page.getByText("about €8.80 of it is ready to send to Ramp.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Continue with Ramp" })).toBeVisible();
+    await shot(page, "390", "4a-an-open-withdrawal-in-the-account-s-currency");
+    await device.context.close();
+  });
+
+  test("less of the coin than the open withdrawal brought is not that withdrawal's money", async ({ browser, baseURL }) => {
+    const device = await profile(browser, baseURL, { width: 390, height: 844 });
+    const { page } = device;
+    // The way out of 16 Sep 2026 has no send written after it; the 5.60 held today came from a card.
+    await person(device, { ausd: 660_000n, usdc: 5_600_948n, mon: 0n }, FRANCE, { coin: USDC_COIN, atLeast: "9990000", sinceMs: Date.now() - 17 * 86_400_000 });
+    await page.goto("/cash-out");
+    await expect(page.getByRole("button", { name: "Send to my bank" })).toBeVisible();
+    await expect(page.getByText(/ready to send to/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Continue with/ })).toHaveCount(0);
+    await device.context.close();
+  });
+});
+
+/**
+ * The same, on a build where Rampnow is the way in and its dollars can be changed (`NEXT_PUBLIC_RAMPNOW_WAY_IN=on`,
+ * `NEXT_PUBLIC_USDC_ROUTER_ADDRESS`, `NEXT_PUBLIC_RAMPNOW_FRAME=on`; run with `VIKY_RAMPNOW_FRAME_BUILD=1`): Home after
+ * a card payment and before the gift is made, and the withdrawal screen, which changes those dollars first.
+ */
+test.describe("after a card payment by Rampnow, before the gift is made", () => {
+  test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each case opens its own window");
+  test.skip(process.env.VIKY_RAMPNOW_FRAME_BUILD !== "1", "needs a build with Rampnow's way and the step that changes its dollars");
+  test.setTimeout(120_000);
+
+  test("Home: the gift to finish, one amount in the account's currency, and no word of a withdrawal", async ({ browser, baseURL }) => {
+    const device = await profile(browser, baseURL, { width: 390, height: 844 });
+    const { page, context } = device;
+    const holdings: Holdings = { ausd: 660_000n, usdc: 0n, mon: 0n };
+    await person(device, holdings, { country: "fr", bank: "serves", card: "serves", method: { method: "SEPA", currency: "EUR" } }, null, "EUR");
+    await context.route("https://app.rampnow.io/**", (route) => route.fulfill({ status: 200, contentType: "text/html", body: "<p>Rampnow, stood in for by the test.</p>" }));
+    await page.route("**/api/fund/rampnow-frame**", (route) => route.fulfill(json({ url: "https://app.rampnow.io/order/quote?stand-in=1" })));
+    // The step that changes the dollars is refused here: this test moves nothing, and the dollars stay as delivered.
+    let conversions = 0;
+    await page.route("**/api/fund/convert/**", (route) => {
+      conversions += 1;
+      return route.fulfill(json({ code: "NOT_CONFIGURED", error: "Stood in for by the test. Nothing was taken." }, 503));
+    });
+    // A gift for Boo, paid by card: the wait opens, and the person goes back to Home before the dollars land.
+    await page.goto("/");
+    const card = page.locator('section[aria-labelledby="offer-card"]');
+    await card.getByLabel("Their first name").fill("Boo");
+    await card.locator("[data-card-action]").click();
+    await page.locator("dialog.sheet[open]").last().getByRole("button", { name: /^(Pay \S+ by card|Pay)$/ }).first().click();
+    await page.waitForURL(/\/fund\?step=paying/, { timeout: 60_000 });
+    holdings.usdc = 5_600_948n;
+    await page.goto("/");
+    const money = page.locator(".money-display-box");
+    // 0.66 and 5.60 dollars, each cut to the cent, at 1.1355 dollars for a euro.
+    await expect(money.locator("[data-amount]")).toContainText("€5.51");
+    await expect(money).not.toContainText(/ready|Ramp/i);
+    await expect(money.locator("p")).toHaveCount(1);
+    await expect(page.locator("[data-finish-gift]").first()).toContainText("for Boo");
+    // The figure counts to its value as it arrives: photographed once it has.
+    await page.waitForTimeout(2_000);
+    await shot(page, "390", "5a-home-after-a-card-payment-before-the-gift");
+    // The withdrawal screen: nothing ready, and choosing a way changes the card's dollars first, by the gift's own step.
+    await page.goto("/cash-out");
+    await expect(page.getByText(/ready to send to/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Continue with/ })).toHaveCount(0);
+    await shot(page, "390", "5b-the-withdrawal-screen-after-a-card-payment");
+    const before = conversions;
+    await page.getByRole("button", { name: "Send to my bank" }).click();
+    await expect.poll(() => conversions, { timeout: 30_000 }).toBeGreaterThan(before);
+    await expect(page.locator("main").getByRole("alert")).toHaveText("Part of your money could not be made ready just now. It is still in your account.");
+    await context.close();
+  });
+});
+

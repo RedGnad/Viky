@@ -468,8 +468,6 @@ export const HOME = {
    * a gift". Both verbs, since the ways out lead with gift cards and phone credit, which are spent, not withdrawn.
    */
   takeItOut: "Spend or withdraw",
-  readyLine: (name: string, amount: string) => `${amount} of it is ready to send to ${name}.`,
-  readyLabel: (name: string) => `Ready to send to ${name}`,
   moving: "What's moving",
   seeAll: "See all gifts",
   empty: "No gift yet. Offer one, or open a link someone sent you.",
@@ -2009,6 +2007,12 @@ export const CASH_OUT = {
   inYourGifts: (amount: string) => `${amount} of it is still in your gifts. It comes out first, with one signature per gift.`,
   gathering: "Taking what your gifts hold into your account.",
   gatherFailed: "What your gifts hold could not be taken out just now. Nothing was lost: it is still yours, in the gift.",
+  /**
+   * Dollars a card payment delivered and no gift took (the founder, 3 Oct 2026): they are money in the account like
+   * the rest, never a withdrawal under way, and they are turned into what a gift holds the moment a way is chosen.
+   */
+  readying: "Getting your money ready, a few seconds.",
+  notReadied: "Part of your money could not be made ready just now. It is still in your account.",
   worthAbout: (dollars: string) => `about $${dollars}`,
   worthLater: "Its value in dollars will show in a moment.",
   sourceLine: (source: string, read: string) => `Read from ${source}, ${read}.`,
@@ -2169,8 +2173,6 @@ export const CASH_OUT = {
 /** The home page's card about money in the account, which is where the way out begins (W1). */
 export const YOUR_MONEY = {
   label: "In your account",
-  readyLine: (name: string, amount: string) => `${amount} of it is ready to send to ${name}.`,
-  readyLabel: (name: string) => `Ready to send to ${name}`,
   /**
    * The balance's own action (the founder, 29 Sep 2026): a first outside tester read "Use your money" as "use it to make
    * a gift". Both verbs, since the ways out lead with gift cards and phone credit, which are spent, not withdrawn.
