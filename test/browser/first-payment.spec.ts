@@ -68,7 +68,7 @@ test.describe("the first payment, and the way back to it", () => {
       await card(page).locator("[data-card-action]").click();
       await expect(sheet(page).getByText("Your face or your fingerprint creates your account when you press pay. Nothing was asked of you until now.")).toBeVisible();
       // Somebody whose passkey lives on another device is given their own way in, under that sentence.
-      const existing = sheet(page).getByRole("button", { name: "I already have an account" });
+      const existing = sheet(page).getByRole("button", { name: "Sign in", exact: true });
       await expect(existing).toBeVisible();
       await existing.scrollIntoViewIfNeeded();
       await shot(SHOTS, page, size.name, "1a-pay-sheet-before-the-press");
@@ -146,12 +146,12 @@ test.describe("the first payment, and the way back to it", () => {
 
       await fillTheCard(page);
       await card(page).locator("[data-card-action]").click();
-      await sheet(page).getByRole("button", { name: "I already have an account" }).click();
+      await sheet(page).getByRole("button", { name: "Sign in", exact: true }).click();
       await expect.poll(() => signedIn(context), { timeout: 30_000 }).toBe(true);
       // Signed in, and the sheet is still what the person is looking at: nothing to find and press again.
       // Signed in, the phone's own prompt says what the passkey does, and the sheet says nothing about it (3 Oct 2026).
       await expect(sheet(page).getByText(/^Your face or your fingerprint/)).toHaveCount(0);
-      await expect(sheet(page).getByRole("button", { name: "I already have an account" })).toHaveCount(0);
+      await expect(sheet(page).getByRole("button", { name: "Sign in", exact: true })).toHaveCount(0);
       expect(await page.evaluate(() => localStorage.getItem("test.ceremonies")), "the passkey was asked for, and none was made").toBe('{"create":0,"get":1}');
       await shot(SHOTS, page, size.name, "1c-signed-in-from-the-sheet");
       await sheet(page).getByRole("button", { name: /^(Pay \S+ by card|Pay)$/ }).first().click();

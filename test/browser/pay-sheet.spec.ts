@@ -92,7 +92,7 @@ test.describe("the pay sheet of 3 Oct 2026", () => {
     const funder = await toTheSheet(browser, baseURL, { ausd: 0n, signedIn: false });
     const { page } = funder;
     await expect(sheet(page).getByText(/Your face or your fingerprint creates your account when you press pay/)).toBeVisible();
-    await expect(sheet(page).getByRole("button", { name: "I already have an account" })).toBeVisible();
+    await expect(sheet(page).getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
     await shot(page, "2-first-time");
     await funder.context.close();
   });
