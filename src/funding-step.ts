@@ -50,6 +50,15 @@ export function paymentArrived(arriving: bigint): boolean {
   return arriving > ARRIVAL_FLOOR + CONVERSION_RESERVE;
 }
 
+/**
+ * How much of the chain's own coin an account holds that can be changed for what a gift holds: everything above what
+ * the account keeps, when that is a payment worth changing, and nothing otherwise. The same amount the waiting screen
+ * changes when a card delivers it, so every screen that counts it or changes it means the same money.
+ */
+export function chainCoinToChange(held: bigint): bigint {
+  return paymentArrived(held) ? held - CONVERSION_RESERVE : 0n;
+}
+
 /** Under one dollar of USDC nothing is changed (`SMALLEST_CONVERSION` in src/usdc-router.ts, the same figure). */
 export const USDC_ARRIVAL_FLOOR = 1_000_000n;
 
