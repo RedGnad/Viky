@@ -428,9 +428,11 @@ test.describe("you decide", () => {
       "Duolingo is free. Install it, make your account, then come back here with your username.",
       "The money stays in your name. Nothing counts until you connect, and after 14 days unconnected it goes back to Maman.",
     ]);
-    const link = notYet.getByRole("link", { name: "Install it" });
-    await expect(link).toHaveAttribute("href", "https://www.duolingo.com");
-    await expect(link).toHaveAttribute("target", "_blank");
+    // The button says what its press does.
+    const open = notYet.getByRole("link", { name: "Open Duolingo" });
+    await expect(open).toHaveAttribute("href", "https://www.duolingo.com");
+    await expect(open).toHaveAttribute("target", "_blank");
+    await expect(notYet.locator("p").first()).not.toContainText("Open Duolingo");
     await notYet.scrollIntoViewIfNeeded();
     await shot(page, "18-no-duolingo-yet-open", false);
 

@@ -321,10 +321,10 @@ export type RecipientWords = Readonly<{
   noPassword: string;
   notYet: string;
   /**
-   * First in that fold: how to get the source, with one link to its own site (the founder, 4 Oct 2026). The sentence
-   * that follows it says what becomes of the money, which is not what to do.
+   * First in that fold: how to get the source, and a button that opens its own site and says so (the founder, 4 Oct
+   * 2026). The sentence that follows them says what becomes of the money, which is not what to do.
    */
-  notYetHow: Readonly<{ before: string; link: string; after: string; href: string }>;
+  notYetHow: Readonly<{ says: string; open: string; href: string }>;
   /** The proof that the account is theirs, when they named it themselves. */
   proveTitle: (username: string) => string;
   proveSteps: string;
@@ -444,7 +444,7 @@ export const DUOLINGO_DAILY: Condition = {
     noPassword: "No password, no sign-in: your lessons are read from your public profile. Next, a short code proves the profile is yours.",
     // A fold's name, a question: pressing it opens a sentence and does nothing else (the founder, 4 Oct 2026).
     notYet: "No Duolingo yet?",
-    notYetHow: { before: "Duolingo is free. ", link: "Install it", after: ", make your account, then come back here with your username.", href: "https://www.duolingo.com" },
+    notYetHow: { says: "Duolingo is free. Install it, make your account, then come back here with your username.", open: "Open Duolingo", href: "https://www.duolingo.com" },
     proveTitle: (username) => `Prove ${username} is yours`,
     proveSteps: "In Duolingo, open Profile, then Settings, then Name, and add this code to your name:",
     slowToShow: "Duolingo can take a minute to show a new name. If Viky cannot see the code yet, wait a minute and press again.",
