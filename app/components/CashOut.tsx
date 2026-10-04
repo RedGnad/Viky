@@ -7,16 +7,17 @@ import { useAccount } from "@/src/account/provider";
 import { ApiError, getJson, postJson } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
 import { changeArrivedUsdc } from "@/src/client/convert";
+import { fundingQuote } from "@/src/client/funding-quote";
 import { quoteWayOut, takeTheWayOut, type WayOutQuote } from "@/src/client/exit";
 import { sendOwnMoney, withdrawEarned } from "@/src/client/gift";
 import { totalEarned, type EarnedInGift } from "@/src/earned-shape";
-import { readCoinBalance, sendMon } from "@/src/client/onchain";
+import { readCoinBalance, sendMon, sendWithExplicitGas } from "@/src/client/onchain";
 import { isVikyContract } from "@/src/viky-contracts";
-import { AUSD, coinAt, COINS, isNative, USDC, type Coin } from "@/src/coins";
-import { rateDateInWords, spokenAmount, whenInWords } from "@/src/display-currency";
+import { AUSD, coinAt, COINS, isNative, MON, USDC, type Coin } from "@/src/coins";
+import { rateDateInWords, spokenAmount, whenInWords, type LedAmount } from "@/src/display-currency";
 import { exitAmount, type ExitAmount } from "@/src/exit-amount";
 import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, heldForWithdrawal, netOfEverything, readyFor, toTheCent, twoDecimalsDown, type Ready } from "@/src/exit-steps";
-import { USDC_ARRIVAL_FLOOR } from "@/src/funding-step";
+import { chainCoinToChange, USDC_ARRIVAL_FLOOR } from "@/src/funding-step";
 import { usdcRouterAddress } from "@/src/usdc-router";
 import { formatAusd } from "@/src/gift-reader";
 import { ExactLine, LedFigure } from "../kit/LedAmount";
@@ -24,6 +25,7 @@ import { whereTheRailsServe, type RailsWhere } from "@/src/client/rails";
 import { countryInWords } from "@/src/rail-country";
 import { feeSentence, RATE_SOURCE, WAY_OUT_CARD, WAY_OUT_EURO, wayOutFillsIn, wayOutPage, WAYS_OUT, type WayOut } from "@/src/rails";
 import { CASH_OUT as W, USE_MONEY as U, WHERE_YOU_LIVE as L } from "@/src/sentences";
+import { useChainCoinWorth } from "../kit/money";
 import { inTheSun, orderUses, usesFor, usesSentence } from "@/src/use-money";
 import { useAccountCountry } from "@/src/client/account-country";
 import { CountryPicker } from "../kit/CountryPicker";
@@ -128,6 +130,8 @@ export function CashOut() {
    * while it is not known.
    */
   const [openWithdrawal, setOpenWithdrawal] = useState<Readonly<{ coin: string; atLeast: bigint }> | null | undefined>(undefined);
+  /** What the chain's own coin in the account would give now, by the exchange's own quote (app/kit/money.ts). */
+  const coinWorth = useChainCoinWorth(holdings);
   const [stage, setStage] = useState<Stage>("base");
   const [chosen, setChosen] = useState<WayOut | null>(null);
   const [dollars, setDollars] = useState("");
@@ -241,15 +245,38 @@ export function CashOut() {
    * changes them takes, or where that step does not exist.
    */
   const arrived = openWithdrawal !== undefined && !heldForWithdrawal(openWithdrawal, USDC.address, held(USDC)) && held(USDC) >= USDC_ARRIVAL_FLOOR && usdcRouterAddress() ? held(USDC) : 0n;
-  const changeable = toTheCent(ausd + giftsHold + arrived, AUSD.decimals);
-  const dollarsHeld = dollarsToTheCent(ausd + giftsHold, held(USDC));
+  /**
+   * The chain's own coin under the same rule (the founder, 4 Oct 2026): a card can deliver it too. Held with no
+   * withdrawal open on it, it is money in the account, counted at the exchange's own quote (`useChainCoinWorth`) and
+   * changed into what a gift holds the moment a way is chosen. `arrivedCoin` is the coin itself, `arrivedCoinWorth` its
+   * dollars, cut to the cent, once the quote has answered.
+   */
+  const arrivedCoin = openWithdrawal !== undefined && !heldForWithdrawal(openWithdrawal, MON.address, held(MON)) ? chainCoinToChange(held(MON)) : 0n;
+  const arrivedCoinWorth = arrivedCoin > 0n && coinWorth.state === "worth" ? coinWorth.units : 0n;
+  /** The figures hold a quote: never said as exact dollars. */
+  const estimated = arrivedCoinWorth > 0n;
+  const changeable = toTheCent(ausd + giftsHold + arrived, AUSD.decimals) + arrivedCoinWorth;
+  const dollarsHeld = dollarsToTheCent(ausd + giftsHold, held(USDC)) + arrivedCoinWorth;
+  /**
+   * The coin's worth is not known and nothing else is held: no figure, as on Home (app/kit/money.ts). While the quote
+   * is being read the dollars alone, then the dollars and the coin, would be two figures; and when it did not answer,
+   * a zero would stand over money. It is asked again until it answers, and nothing is said of it (the founder, 4 Oct 2026).
+   */
+  const figureUnknown = arrivedCoin > 0n && (coinWorth.state === "reading" || (coinWorth.state === "unread" && dollarsHeld === 0n));
+  /**
+   * What the account holds, led by the reader's currency. When it counts the chain's coin at a quote, no line under it
+   * calls the dollars exact. Nothing more is said of the estimate: no "about" of its own (the founder, 4 Oct 2026).
+   */
+  const heldLed = (): LedAmount => {
+    const led = money.led(dollarsHeld);
+    return estimated ? { ...led, rateDate: undefined } : led;
+  };
   const readyOf = (way: WayOut): Ready | undefined => (holdings ? readyFor(way, coinOf(way), held(coinOf(way))) : undefined);
   /**
-   * What the first screen says is ready for a service (the founder, 3 Oct 2026). For the bank service, only the money
-   * of a withdrawal that is open: any USDC used to be read as one, and a card payment delivers USDC. The chain's own
-   * coin is read as before.
+   * What the first screen says is ready for a service (the founder, 3 and 4 Oct 2026): only the money of a withdrawal
+   * that is open. A balance used to say it, and a card payment delivers both coins a service takes.
    */
-  const saidReady = (way: WayOut): Ready | undefined => (isNative(coinOf(way)) || heldForWithdrawal(openWithdrawal, coinOf(way).address, held(coinOf(way))) ? readyOf(way) : undefined);
+  const saidReady = (way: WayOut): Ready | undefined => (heldForWithdrawal(openWithdrawal, coinOf(way).address, held(coinOf(way))) ? readyOf(way) : undefined);
   const firstReady = WAYS_OUT.find((way) => saidReady(way) !== undefined);
 
   /** The dollars a card rail's ready amount is worth, once the price has answered, and nothing until then. */
@@ -317,7 +344,7 @@ export function CashOut() {
    * leaves the rest where it was: whatever came out is in the account, whatever did not is still in its gift.
    */
   const gather = async (): Promise<Record<string, bigint> | undefined> => {
-    if (inGifts.length === 0 && arrived === 0n) return holdings ?? undefined;
+    if (inGifts.length === 0 && arrived === 0n && arrivedCoin === 0n) return holdings ?? undefined;
     setBusy(true);
     setProblem(null);
     setStage("gathering");
@@ -332,6 +359,13 @@ export function CashOut() {
       if (arrived > 0n) {
         readying = true;
         await changeArrivedUsdc({ account, amount: arrived });
+      }
+      // And the chain's own coin a card delivered, above what the account keeps: the conversion the gift's own screen
+      // makes, held to the amount asked for and to the one exchange before it is sent (src/client/funding-quote.ts).
+      if (arrivedCoin > 0n) {
+        readying = true;
+        const conversion = await fundingQuote(arrivedCoin);
+        await sendWithExplicitGas(account, { to: conversion.to, data: conversion.data, value: BigInt(conversion.value) });
       }
       return await refresh();
     } catch (error) {
@@ -619,10 +653,10 @@ export function CashOut() {
             </p>
           ) : null}
         </>
-      ) : money.led(dollarsHeld).converted ? (
+      ) : heldLed().converted ? (
         <>
-          <LedFigure amount={money.led(dollarsHeld)} className={MONEY} />
-          <ExactLine amount={money.led(dollarsHeld)} />
+          <LedFigure amount={heldLed()} className={MONEY} />
+          <ExactLine amount={heldLed()} />
         </>
       ) : (
         <>
@@ -653,7 +687,7 @@ export function CashOut() {
   }
 
   if (stage === "base") {
-    const led = holdings === null ? undefined : money.led(dollarsHeld);
+    const led = holdings === null || figureUnknown ? undefined : heldLed();
     const cardBranch = holdings !== null && dollarsHeld === 0n && firstReady !== undefined;
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">

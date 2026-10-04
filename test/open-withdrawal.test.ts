@@ -4,9 +4,11 @@ import test, { after, before, beforeEach } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import { attachSignature, configureExitStore, ensureExitSchema, markExitSent, newExitId, saveExit, type ExitRecord } from "../src/exit-store";
 import { heldForWithdrawal } from "../src/exit-steps";
+import { chainCoinToChange, CONVERSION_RESERVE } from "../src/funding-step";
 import { openWithdrawalOf } from "../src/open-withdrawal";
 import type { SqlExecutor } from "../src/proof-session-store";
 import { configureSendStore, ensureSendsSchema, recordSend } from "../src/send-store";
+import { QUOTE_AGAIN_AFTER_MS } from "../app/kit/money";
 import { CASH_OUT, HOME, YOUR_MONEY } from "../src/sentences";
 
 /**
@@ -138,7 +140,9 @@ test("Home says one amount and names no service; the withdrawal screen says read
   assert.equal("readyLine" in YOUR_MONEY, false);
   // The withdrawal screen: what it says is ready goes through the open withdrawal for the bank service's coin.
   const screen = readFileSync("app/components/CashOut.tsx", "utf8");
-  assert.match(screen, /const saidReady = \(way: WayOut\): Ready \| undefined => \(isNative\(coinOf\(way\)\) \|\| heldForWithdrawal\(openWithdrawal, coinOf\(way\)\.address, held\(coinOf\(way\)\)\) \? readyOf\(way\) : undefined\);/);
+  // For either coin a service takes: the bank service's and the chain's own (the founder, 4 Oct 2026).
+  assert.match(screen, /const saidReady = \(way: WayOut\): Ready \| undefined => \(heldForWithdrawal\(openWithdrawal, coinOf\(way\)\.address, held\(coinOf\(way\)\)\) \? readyOf\(way\) : undefined\);/);
+  assert.doesNotMatch(screen, /isNative\(coinOf\(way\)\) \|\| heldForWithdrawal/, "no coin is read as ready from its balance alone");
   assert.match(screen, /const firstReady = WAYS_OUT\.find\(\(way\) => saidReady\(way\) !== undefined\);/);
   assert.equal((screen.match(/W\.readyLine\(firstReady\.name, readyInWords\(firstReady\)\)/g) ?? []).length, 2);
   assert.match(screen, /spokenAmount\(money\.led\(readyOf\(way\)!\.units\)\)/, "in the account's own currency");
@@ -146,9 +150,55 @@ test("Home says one amount and names no service; the withdrawal screen says read
   // Dollars a card delivered are counted with the rest and changed first, when a way is chosen; never while the
   // withdrawal is not known.
   assert.match(screen, /const arrived = openWithdrawal !== undefined && !heldForWithdrawal\(openWithdrawal, USDC\.address, held\(USDC\)\) && held\(USDC\) >= USDC_ARRIVAL_FLOOR && usdcRouterAddress\(\) \? held\(USDC\) : 0n;/);
-  assert.match(screen, /const changeable = toTheCent\(ausd \+ giftsHold \+ arrived, AUSD\.decimals\);/);
+  assert.match(screen, /const changeable = toTheCent\(ausd \+ giftsHold \+ arrived, AUSD\.decimals\) \+ arrivedCoinWorth;/);
   assert.match(screen, /if \(arrived > 0n\) \{\n\s*readying = true;\n\s*await changeArrivedUsdc\(\{ account, amount: arrived \}\);/);
   // The route answers for the session's account, never one the browser names.
   const route = readFileSync("app/api/exit/open/route.ts", "utf8");
   assert.match(route, /const open = await openWithdrawalOf\(auth\.account\);/);
+});
+
+test("the chain's own coin a card delivered is money in the account: counted at the exchange's quote, changed first, and nothing said of the estimate", () => {
+  const ONE = 10n ** 18n;
+  // What can be changed: everything above what the account keeps, when that is a payment worth changing.
+  assert.equal(chainCoinToChange(0n), 0n);
+  assert.equal(chainCoinToChange(CONVERSION_RESERVE), 0n);
+  assert.equal(chainCoinToChange(CONVERSION_RESERVE + ONE), 0n, "a coin above the reserve is dust, not a payment");
+  assert.equal(chainCoinToChange(CONVERSION_RESERVE + 150n * ONE), 150n * ONE);
+  // An open withdrawal by card is held to the same test as the bank's: the chain's own coin is written as the zero address.
+  const ZERO = "0x0000000000000000000000000000000000000000";
+  assert.equal(heldForWithdrawal({ coin: ZERO, atLeast: 138n * ONE }, ZERO, 149n * ONE), true);
+  assert.equal(heldForWithdrawal({ coin: ZERO, atLeast: 138n * ONE }, ZERO, 100n * ONE), false);
+  assert.equal(heldForWithdrawal(null, ZERO, 149n * ONE), false, "a balance alone says no withdrawal");
+
+  // The worth is the exchange's own quote for exactly that amount, asked again when the amount changes, and after a
+  // while when it did not answer: the one part asked of an outside service.
+  const money = readFileSync("app/kit/money.ts", "utf8");
+  assert.match(money, /const amount = holdings \? chainCoinToChange\(holdings\[MON\.symbol\] \?\? 0n\) : 0n;/);
+  assert.match(money, /postJson<\{ output: string \}>\("\/api\/fund\/quote", \{ amount: amount\.toString\(\) \}\)\.then\(\n\s*\(quote\) => live && setAnswer\(\{ amount, units: toTheCent\(BigInt\(quote\.output\), AUSD\.decimals\) \}\),/);
+  assert.match(money, /setAnswer\(\{ amount, units: null \}\);\n\s*timer = setTimeout\(\(\) => setAgain\(\(times\) => times \+ 1\), QUOTE_AGAIN_AFTER_MS\);/);
+  assert.match(money, /\}, \[amount, again\]\);/);
+  assert.equal(QUOTE_AGAIN_AFTER_MS, 30_000);
+  assert.doesNotMatch(money, /setInterval\([^)]*quote/, "no quote on a clock");
+
+  // The one amount: no figure before the quote answers, the coin in it once it has, and never a bare zero over money.
+  assert.match(money, /if \(holdings === null \|\| coin\.state === "reading" \|\| \(gifts === null && !giftsUnread\)\) return undefined;/);
+  assert.match(money, /if \(coin\.state === "worth"\) return dollars \+ coin\.units;\n\s*return coin\.state === "unread" && dollars === 0n \? undefined : dollars;/);
+
+  // Home: that amount alone. Nothing before it and nothing under it (the founder, 4 Oct 2026): no "about", no line.
+  const hero = readFileSync("app/kit/MoneyHero.tsx", "utf8");
+  assert.match(hero, /const dollars = useMoneyHeld\(holdings, gifts, giftsUnread\);/);
+  assert.doesNotMatch(hero, /LED_AMOUNT|data-about|data-more-unread|moreUnread/);
+  assert.equal("moreUnread" in HOME, false, "the line under the amount is gone, and its sentence with it");
+  assert.doesNotMatch(hero, /firstReady|readyLine|readyLabel|\.way\.name/, "and still no service named");
+
+  // The withdrawal screen: the coin with no withdrawal open on it is counted and changed first. Its figure takes no
+  // "about" of its own, and no line under it calls dollars that hold a quote exact.
+  const screen = readFileSync("app/components/CashOut.tsx", "utf8");
+  assert.match(screen, /const arrivedCoin = openWithdrawal !== undefined && !heldForWithdrawal\(openWithdrawal, MON\.address, held\(MON\)\) \? chainCoinToChange\(held\(MON\)\) : 0n;/);
+  assert.match(screen, /const arrivedCoinWorth = arrivedCoin > 0n && coinWorth\.state === "worth" \? coinWorth\.units : 0n;/);
+  assert.match(screen, /const dollarsHeld = dollarsToTheCent\(ausd \+ giftsHold, held\(USDC\)\) \+ arrivedCoinWorth;/);
+  assert.match(screen, /return estimated \? \{ \.\.\.led, rateDate: undefined \} : led;/, "no line calling the dollars exact");
+  assert.match(screen, /const figureUnknown = arrivedCoin > 0n && \(coinWorth\.state === "reading" \|\| \(coinWorth\.state === "unread" && dollarsHeld === 0n\)\);/);
+  assert.match(screen, /if \(arrivedCoin > 0n\) \{\n\s*readying = true;\n\s*const conversion = await fundingQuote\(arrivedCoin\);\n\s*await sendWithExplicitGas\(account, \{ to: conversion\.to, data: conversion\.data, value: BigInt\(conversion\.value\) \}\);/);
+  assert.doesNotMatch(screen, /moreUnread|data-more-unread/);
 });
