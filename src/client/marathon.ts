@@ -9,8 +9,8 @@ export type ListedRace = Readonly<{
   country: string;
   startsAt: string;
   timer: string;
-  /** The distances a gift can be made on, each with the heat's name on the timing company's pages. */
-  events: readonly { distance: string; label: string; heat: string }[];
+  /** The distances a gift can be made on, each in words and with the name its organiser gives the event. */
+  events: readonly { distance: string; label: string; named: string }[];
   /** Listed to an operator's account only: a race already run, kept for the test gift. */
   operatorOnly?: boolean;
 }>;

@@ -270,6 +270,8 @@ export type Condition = Readonly<{
    * here only where the table said more than the register already did.
    */
   help: string;
+  /** What the line covers, in a few words under its name in its family's list: "A marathon, a half or a 10 km". */
+  under?: string;
   /**
    * "How this is checked", on the sheet where a condition is chosen (the founder, 4 Oct 2026): four lines, a label
    * and its value. Where it is read from, when, what counts, what the person has to do. The subject stays exact: the
@@ -1107,7 +1109,9 @@ export const MARATHON_FINISH_LINE: Condition = {
   state: "open",
   source: "Breizh Chrono",
   family: "move",
-  name: "Finish a marathon",
+  // The line covers three distances (the founder, 4 Oct 2026): its name says a race, and its list says which.
+  name: "Finish a race",
+  under: "A marathon, a half or a 10 km",
   help: "Their line on the timing company's results page, read for them: the name, the bib and the official time. It proves the result.",
   checked: { from: "the timing company's results page", when: "after the finish", counts: "the line with their bib and name", they: "enter their bib before the start" },
   link: { kind: "link", label: "Your bib number", help: "Enter the number on your bib on your gift's page before the race starts. After the finish, Viky reads your line on the results page." },
@@ -1117,7 +1121,7 @@ export const MARATHON_FINISH_LINE: Condition = {
     connect: "Opened. Enter your bib number before the race starts; after the finish, Viky reads your line on Breizh Chrono.",
     doIt: "Enter your bib number here before the start, then run. After the finish, Viky reads your line on the timing company's results page.",
     eachDay: "the day the result is read",
-    preview: "Finish a marathon: the gift is yours when the results page says you did.",
+    preview: "Finish your race: the gift is yours when the results page says you did.",
   },
 };
 

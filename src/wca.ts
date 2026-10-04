@@ -135,3 +135,19 @@ export const WCA_GOAL_TYPE = 32;
 export function wcaProviderId(): Hex {
   return keccak256(stringToHex("viky:provider:wca-zkfetch:v1"));
 }
+
+/**
+ * The places the WCA lists that are no country: a competition held in several countries at once, by the codes and the
+ * names of its own list of countries (GET https://www.worldcubeassociation.org/api/v0/countries, read 4 Oct 2026).
+ * The chooser printed the bare codes, "XE" and "XW".
+ */
+export const WCA_SEVERAL_COUNTRIES: Readonly<Record<string, string>> = {
+  XA: "Multiple Countries (Asia)",
+  XE: "Multiple Countries (Europe)",
+  XF: "Multiple Countries (Africa)",
+  XM: "Multiple Countries (Americas)",
+  XN: "Multiple Countries (North America)",
+  XO: "Multiple Countries (Oceania)",
+  XS: "Multiple Countries (South America)",
+  XW: "Multiple Countries (World)",
+};
