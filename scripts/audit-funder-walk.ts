@@ -578,8 +578,8 @@ async function sceneFirstPayment(w: Walk): Promise<void> {
   if (!giftDollars) throw new Error("the device keeps no gift to read the dollars of");
   const short = (BigInt(giftDollars[1]) * 100n + BigInt((giftDollars[2] ?? "").padEnd(2, "0")) - 29n) * 10_000n;
   w.s.holdings = { AUSD: short, USDC: 0n, MON: 0n };
-  // What the account holds is said in the money typed: any figure but nothing.
-  await w.s.text(/In your account now: \D*[1-9]/, 40_000);
+  // What the account holds is said in the money typed, on its own line since 4 Oct 2026: any figure but nothing.
+  await w.page.locator("dl.said-lines > div").filter({ hasText: "In your account" }).locator("dd").filter({ hasText: /[1-9]/ }).first().waitFor({ timeout: 40_000 });
   await w.page.waitForTimeout(9_000);
   await settle(w);
   await w.s.shot(w.journey, "37d a payment landed 29 cents short", "On the waiting screen, a payment landing 29 cents short of the gift (balance read replaced), two looks later", { real: "replaced: balance reads" });
