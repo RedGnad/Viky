@@ -85,7 +85,8 @@ test("the lines add up to what the card pays, in one money, and what stays in th
 test("the name comes first, as the recipient knows the giver, filled with the last one this account gave", () => {
   assert.equal(PAY.nameLabel("Boo"), "Your name, as Boo knows you");
   assert.equal(PAY.nameLabel(""), "Your name, as they know you");
-  assert.equal(PAY.namePlaceholder, "Mum");
+  // An example of a giver's name, never a parent's (the founder, 4 Oct 2026).
+  assert.equal(PAY.namePlaceholder, "Sam");
   assert.equal(
     lastNameGiven([
       { role: "funder", funderName: "Mum", fundedAt: 10 },

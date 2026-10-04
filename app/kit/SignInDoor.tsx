@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import * as mera from "@/src/account/mera";
 import { useMadeHere } from "@/src/account/door";
 import { useAccount } from "@/src/account/provider";
-import { DOOR as W } from "@/src/sentences";
+import { ACCOUNT_DOOR, DOOR as W } from "@/src/sentences";
 import { CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { MadeOnTheMainSite } from "./AccountDoor";
 import { ButtonWords, StepInProgress } from "./Waiting";
@@ -106,6 +106,9 @@ export function SignInDoor() {
                 </ButtonWords>
               </button>
               <StepInProgress busy={busy} step={WAITS.account} />
+              <p className={HELP} data-adult="">
+                {ACCOUNT_DOOR.adult}
+              </p>
             </>
           ) : (
             <MadeOnTheMainSite />
