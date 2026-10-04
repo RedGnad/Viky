@@ -1,3 +1,4 @@
+import type { ConditionIcon } from "./condition-icons";
 import { isValidDuolingoUsername } from "./duolingo-public-terms";
 import { UNIVERSITY_SOURCE } from "./university-shown";
 import { ECOLEDIRECTE_SOURCE } from "./school-shown";
@@ -270,6 +271,8 @@ export type Condition = Readonly<{
    * here only where the table said more than the register already did.
    */
   help: string;
+  /** The pictogram its line starts with, by its kind of activity and never by its source (src/condition-icons.ts). */
+  icon: ConditionIcon;
   /**
    * What the line is, in a few words under its name in its family's list, when the name alone does not say it to
    * everybody: "A marathon, a half or a 10 km" under a race, "English test" under the TOEFL (the founder, 4 and 5 Oct
@@ -394,6 +397,7 @@ export type RecipientWords = Readonly<{
 
 export const DUOLINGO_DAILY: Condition = {
   id: "duolingo-daily",
+  icon: "language",
   kind: "daily",
   nature: "read",
   goalType: GOAL_TYPE_DUOLINGO_XP,
@@ -497,6 +501,7 @@ export const DUOLINGO_DAILY: Condition = {
  */
 export const CHESS_RATING: Condition = {
   id: "chess-rating",
+  icon: "pawn",
   kind: "milestone",
   nature: "read",
   goalType: null,
@@ -549,6 +554,7 @@ export const CHESS_RATING: Condition = {
  */
 export const CHESS_TACTICS_RECORD: Condition = {
   id: "chess-tactics",
+  icon: "puzzle",
   kind: "milestone",
   nature: "read",
   goalType: null,
@@ -595,6 +601,7 @@ export const CHESS_TACTICS_RECORD: Condition = {
  */
 export const DUOLINGO_ENGLISH_TEST: Condition = {
   id: "duolingo-english-test",
+  icon: "test",
   kind: "milestone",
   nature: "read",
   goalType: null,
@@ -626,6 +633,7 @@ export const DUOLINGO_ENGLISH_TEST: Condition = {
 /** C3, written with its words, live once a real certificate gift has run. */
 export const COURSERA_CERTIFICATE: Condition = {
   id: "coursera-certificate",
+  icon: "rosette",
   kind: "milestone",
   nature: "read",
   goalType: null,
@@ -657,6 +665,7 @@ export const COURSERA_CERTIFICATE: Condition = {
  */
 export const EDX_CERTIFICATE: Condition = {
   id: "edx-certificate",
+  icon: "rosette",
   kind: "milestone",
   nature: "read",
   goalType: null,
@@ -686,6 +695,7 @@ export const EDX_CERTIFICATE: Condition = {
  */
 export const MITX_ONLINE_CERTIFICATE_LINE: Condition = {
   id: "mitx-online-certificate",
+  icon: "rosette",
   kind: "milestone",
   nature: "read",
   goalType: null,
@@ -721,6 +731,7 @@ export const MITX_ONLINE_CERTIFICATE_LINE: Condition = {
  */
 export const CREDLY_BADGE: Condition = {
   id: "credly-badge",
+  icon: "rosette",
   kind: "milestone",
   nature: "read",
   goalType: null,
@@ -750,6 +761,7 @@ export const CREDLY_BADGE: Condition = {
  */
 export const ACCREDIBLE_CREDENTIAL: Condition = {
   id: "accredible-credential",
+  icon: "rosette",
   kind: "milestone",
   nature: "read",
   goalType: null,
@@ -781,6 +793,7 @@ export const ACCREDIBLE_CREDENTIAL: Condition = {
  */
 export const TOEFL_MYBEST_SHOWN: Condition = {
   id: "toefl-mybest-shown",
+  icon: "test",
   kind: "milestone",
   nature: "shown",
   goalType: null,
@@ -811,6 +824,7 @@ export const TOEFL_MYBEST_SHOWN: Condition = {
  */
 export const UNIVERSITY_ENROLLMENT_SHOWN: Condition = {
   id: "university-enrollment-shown",
+  icon: "university",
   kind: "milestone",
   nature: "shown",
   goalType: null,
@@ -841,6 +855,7 @@ export const UNIVERSITY_ENROLLMENT_SHOWN: Condition = {
  */
 export const UNIVERSITY_YEAR_PASSED_SHOWN: Condition = {
   id: "university-year-passed-shown",
+  icon: "university",
   kind: "milestone",
   nature: "shown",
   goalType: null,
@@ -873,6 +888,7 @@ export const UNIVERSITY_YEAR_PASSED_SHOWN: Condition = {
  */
 export const UNIVERSITY_GRADE_SHOWN: Condition = {
   id: "university-grade-shown",
+  icon: "university",
   kind: "milestone",
   nature: "shown",
   goalType: null,
@@ -905,6 +921,7 @@ export const UNIVERSITY_GRADE_SHOWN: Condition = {
  */
 export const CHSI_ENROLMENT_SHOWN: Condition = {
   id: "chsi-enrolment-shown",
+  icon: "university",
   kind: "milestone",
   nature: "shown",
   goalType: null,
@@ -933,6 +950,7 @@ export const CHSI_ENROLMENT_SHOWN: Condition = {
  */
 export const WAEC_RESULT_SHOWN: Condition = {
   id: "waec-result-shown",
+  icon: "test",
   kind: "milestone",
   nature: "shown",
   goalType: null,
@@ -964,6 +982,7 @@ export const WAEC_RESULT_SHOWN: Condition = {
  */
 export const FITBIT_DAILY: Condition = {
   id: "fitbit-daily",
+  icon: "watch",
   kind: "daily",
   nature: "connected",
   goalType: GOAL_TYPE_FITBIT_ACTIVITY,
@@ -1027,6 +1046,7 @@ export const FITBIT_DAILY: Condition = {
  */
 export const CODEFORCES_RATING: Condition = {
   id: "codeforces-rating",
+  icon: "code",
   kind: "milestone",
   nature: "read",
   goalType: null,
@@ -1078,6 +1098,7 @@ export const CODEFORCES_RATING: Condition = {
  */
 export const WCA_TIME_LINE: Condition = {
   id: "wca-time",
+  icon: "cube",
   kind: "milestone",
   nature: "read",
   goalType: null,
@@ -1112,6 +1133,7 @@ export const WCA_TIME_LINE: Condition = {
  */
 export const MARATHON_FINISH_LINE: Condition = {
   id: "marathon-finish",
+  icon: "flag",
   kind: "milestone",
   nature: "read",
   goalType: null,
@@ -1138,6 +1160,7 @@ export const MARATHON_FINISH_LINE: Condition = {
 
 export const STRAVA_DAILY: Condition = {
   id: "strava-daily",
+  icon: "route",
   kind: "daily",
   nature: "connected",
   goalType: GOAL_TYPE_STRAVA_DISTANCE,
@@ -1207,6 +1230,7 @@ const EXAM_LINK: ConditionLink = { kind: "link", label: "Show it from your own a
 
 export const CAMBRIDGE_ENGLISH_SHOWN: Condition = {
   id: "cambridge-english-shown",
+  icon: "test",
   kind: "milestone",
   nature: "shown",
   goalType: null,
@@ -1230,6 +1254,7 @@ export const CAMBRIDGE_ENGLISH_SHOWN: Condition = {
 
 export const IELTS_SHOWN: Condition = {
   id: "ielts-shown",
+  icon: "test",
   kind: "milestone",
   nature: "shown",
   goalType: null,
@@ -1253,6 +1278,7 @@ export const IELTS_SHOWN: Condition = {
 
 export const BAC_MOROCCO_SHOWN: Condition = {
   id: "bac-morocco-shown",
+  icon: "test",
   kind: "milestone",
   nature: "shown",
   goalType: null,
@@ -1276,6 +1302,7 @@ export const BAC_MOROCCO_SHOWN: Condition = {
 
 export const BAC_CAMEROON_SHOWN: Condition = {
   id: "bac-cameroon-shown",
+  icon: "test",
   kind: "milestone",
   nature: "shown",
   goalType: null,
@@ -1299,6 +1326,7 @@ export const BAC_CAMEROON_SHOWN: Condition = {
 
 export const BAC_FRANCE_SHOWN: Condition = {
   id: "bac-france-shown",
+  icon: "test",
   kind: "milestone",
   nature: "shown",
   goalType: null,
@@ -1326,6 +1354,7 @@ export const BAC_FRANCE_SHOWN: Condition = {
  */
 export const ECOLEDIRECTE_GRADE_SHOWN: Condition = {
   id: "ecoledirecte-grade-shown",
+  icon: "university",
   kind: "milestone",
   nature: "shown",
   goalType: null,
@@ -1354,6 +1383,7 @@ export const ECOLEDIRECTE_GRADE_SHOWN: Condition = {
  */
 export const PRONOTE_GRADE_SHOWN: Condition = {
   id: "pronote-grade-shown",
+  icon: "university",
   kind: "milestone",
   nature: "shown",
   goalType: null,

@@ -15,6 +15,7 @@ import { emptyReserveOf, type Reserves } from "@/src/reserves";
 import { FUND, GIFT_LIVE, GRADE_SCALE, LIMIT, MILESTONE_FUND as M, OFFER as W } from "@/src/sentences";
 import { CARD_LABEL, CHOICE, HELP, META, PRIMARY_BUTTON, ROW_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TILE } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
+import { ConditionIcon } from "../ConditionIcon";
 import { FamilyArt } from "../FamilyArt";
 import { Nature } from "../Nature";
 import { Field } from "../Field";
@@ -391,8 +392,10 @@ export function WillSheet({
                       type="button"
                       aria-current={chosen ? "true" : undefined}
                       onClick={() => choose(option.id)}
-                      className={`${ROW_BUTTON} w-full justify-between! text-left ${chosen ? "bg-[var(--chosen)]!" : ""}`}
+                      className={`${ROW_BUTTON} w-full justify-between! gap-[var(--space-md)] text-left ${chosen ? "bg-[var(--chosen)]!" : ""}`}
                     >
+                      {/* The pictogram of its kind of activity at the start, 12 pixels before the name (5 Oct 2026). */}
+                      <ConditionIcon icon={option.icon} />
                       <span className="flex min-w-0 flex-1 flex-col items-start text-left">
                         <span className={`${CHOICE} break-words`}>{name}</span>
                         {/* What the line covers, when its name does not say it: "A marathon, a half or a 10 km". */}
