@@ -26,13 +26,54 @@ import { rampnowPage } from "./rails";
  * frame does not load or says it failed.
  */
 
-/**
- * Whether a real payment has gone through the frame end to end, from the card to the gift. Not yet: the founder's
- * first one is still to come. Until it has, no page says the frame is how Rampnow opens.
- */
-export const RAMPNOW_FRAME_PAID_THROUGH = false;
-
 export const RAMPNOW_ORIGIN = "https://app.rampnow.io";
+
+/**
+ * One gift, one payment (the founder, 3 Oct 2026), from what the first payment through the frame showed that day: 6 EUR
+ * paid in the frame at 21:23 UTC, 5.600948 USDC on the account at 21:38:57, gift 1000 made at 21:44:32.
+ *
+ * Rampnow finishes an order from its own page: the card buys USDC on Base into an account Rampnow keeps for the person
+ * (21:24:51 that day), and its page then sends it on to Monad, signed in the browser ("Do not close this window until
+ * the order processing is completed"). The frame was closed meanwhile, the money waited on Base for fourteen minutes,
+ * until Rampnow's page was opened again; and opening the frame again from "Pay by card" started a second order.
+ *
+ * So the pay button always leads to the payment of this gift. The frame open has no cross and no other way to close:
+ * one way out under it, for somebody who says they have not paid. A payment the frame says is under way leaves no way
+ * out at all, until five minutes have passed without the money. Left otherwise, the screen that waits says the payment
+ * is at Rampnow and its main action opens that order again, in the frame, where the person is still signed in
+ * (Rampnow's session in a frame is kept apart from a tab's: its cookies are "Partitioned", read on /api/auth/csrf).
+ * A new order is started only after the person says they have not paid.
+ */
+
+/** Rampnow's list of a person's orders, behind its own sign-in: where an order left unfinished is found again. */
+export const RAMPNOW_ORDERS_PAGE = `${RAMPNOW_ORIGIN}/order/list`;
+
+/**
+ * How long the frame must have been open before a payment can have left through it: nobody signs in, gives a card and
+ * passes their bank's check in less. Left before, nothing is waited for.
+ */
+export const PAYMENT_POSSIBLE_AFTER_MS = 20_000;
+
+/**
+ * How long the frame stays without a way out of its own once a payment may be under way (the founder, 4 Oct 2026):
+ * five minutes without the money, and a way out appears, which leads to the screen that waits. To be set again on the
+ * measured length of a real payment.
+ */
+export const LATE_WAY_OUT_AFTER_MS = 5 * 60_000;
+
+/** An order's identifier as Rampnow writes it, and nothing that could turn an address into another one. */
+const ORDER_UID = /^[A-Za-z0-9_-]{1,80}$/;
+
+/** The page on which Rampnow finishes one order (read in its own script, 3 Oct 2026: `/order/dapp/<uid>`), or nothing for an identifier that does not look like one. */
+export function rampnowOrderPage(orderUid: string | null | undefined): string | null {
+  return orderUid && ORDER_UID.test(orderUid) ? `${RAMPNOW_ORIGIN}/order/dapp/${orderUid}` : null;
+}
+
+/** Where a payment already started is finished: its own order when Rampnow named it, the person's list of orders otherwise. Never a new payment. */
+export function rampnowFinishPage(orderUid: string | null | undefined): string {
+  return rampnowOrderPage(orderUid) ?? RAMPNOW_ORDERS_PAGE;
+}
+
 export const RAMPNOW_FRAME_ALLOW = "camera; microphone; payment; clipboard-write; publickey-credentials-get";
 
 /** Whether the frame is switched on here. The way in itself must be on too (`rampnowWayIn`). */
@@ -41,12 +82,14 @@ export function rampnowFrameOn(env: Readonly<Record<string, string | undefined>>
 }
 
 /**
- * The frame's address: the public locked page as it is, and with the partner's public key added when there is one. A
- * key that does not look public (`pk_`) is never put in an address a browser shows: Rampnow's other key, its secret,
- * signs its webhooks and must stay on the server. With no public key the page goes without one.
+ * The frame's address: the public locked page, without its "Buy" and "Sell" tabs, and with the partner's public key
+ * added when there is one. `hideOrderTabs` is read by the page's own script (`app/(full)/order/quote/page-*.js`, its
+ * header: the tabs are drawn unless it is "true"), and measured on the page itself on 4 Oct 2026: two tabs without it,
+ * none with it. A key that does not look public (`pk_`) is never put in an address a browser shows: Rampnow's other
+ * key, its secret, signs its webhooks and must stay on the server. With no public key the page goes without one.
  */
 export function rampnowFrameAddress(fill: Readonly<{ account?: string; euros?: number }>, apiKey: string = ""): string {
-  const page = rampnowPage(fill);
+  const page = `${rampnowPage(fill)}&hideOrderTabs=true`;
   const key = apiKey.trim();
   return /^pk_[A-Za-z0-9_]+$/.test(key) ? `${page}&apiKey=${encodeURIComponent(key)}` : page;
 }
@@ -94,17 +137,37 @@ export function rampnowEventOf(message: Readonly<{ origin: string; data: unknown
   return { type: data.type as RampnowEvent["type"], ...(typeof data.payload === "object" && data.payload !== null ? { payload: data.payload as Record<string, unknown> } : {}) };
 }
 
-/** What the sheet does on an event: the money is on its way, the person closed it, or the frame failed and the page is offered. */
-export function rampnowOutcome(event: RampnowEvent): "arrived" | "closed" | "failed" | null {
+/**
+ * The order an event is about, when it names one: every event of an order carries `orderUid` (`@rampnow/sdk` 0.0.8,
+ * its own types). Kept so the order can be opened again where it is finished.
+ */
+export function orderUidOf(event: RampnowEvent): string | null {
+  const uid = event.payload?.orderUid;
+  return typeof uid === "string" && ORDER_UID.test(uid) ? uid : null;
+}
+
+/**
+ * What an event says of a payment (`@rampnow/sdk` 0.0.8, its own names; none of the order events has been seen without
+ * a partner's key, so nothing here is counted on):
+ *   - "ordered": an order exists, and nothing says a card paid for it. The person may still say they have not paid.
+ *   - "paying": a payment is under way or made. From here the frame leaves no way out of its own.
+ *   - "failed": the payment did not go through, and nothing was taken. A failed payment says it whenever it comes; a
+ *     failed order says it only while no payment is known, since an order that fails after its card paid has taken
+ *     something, and nothing is said here that could be false.
+ * Nothing for the others: ready, signed in, an identity check, an error, a widget closed. None of them is about money.
+ */
+export function rampnowSays(event: RampnowEvent, paying: boolean): "ordered" | "paying" | "failed" | null {
   switch (event.type) {
+    case "ORDER_CREATED":
+      return "ordered";
+    case "ORDER_PAYMENT_PROCESSING":
+    case "ORDER_PAYMENT_COMPLETED":
     case "ORDER_COMPLETED":
-      return "arrived";
-    case "WIDGET_CLOSED":
-      return "closed";
+      return "paying";
     case "ORDER_PAYMENT_FAILED":
-    case "ORDER_FAILED":
-    case "ERROR":
       return "failed";
+    case "ORDER_FAILED":
+      return paying ? null : "failed";
     default:
       return null;
   }

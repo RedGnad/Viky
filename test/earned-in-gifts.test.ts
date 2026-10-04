@@ -30,7 +30,7 @@ test("a daily gift that counts offers no gesture to its recipient: the way out i
 test("the way out reads the gifts' part with the balances, counts it, and takes it before a way", () => {
   const out = readFileSync("app/components/CashOut.tsx", "utf8");
   assert.match(out, /getJson<\{ gifts: EarnedInGift\[\] \}>\("\/api\/gifts\/earned"\)/, "read with the balances");
-  assert.match(out, /const changeable = toTheCent\(ausd \+ giftsHold, AUSD\.decimals\);/, "counted in every way's figure");
+  assert.match(out, /const changeable = toTheCent\(ausd \+ giftsHold \+ arrived, AUSD\.decimals\);/, "counted in every way's figure, with the dollars a card delivered");
   assert.match(out, /const dollarsHeld = dollarsToTheCent\(ausd \+ giftsHold, held\(USDC\)\);/, "and in the figure at the head");
   assert.match(out, /const start = async \(way: WayOut\) => \{\n\s*const now = await gather\(\);\n\s*if \(!now\) return;/, "taken first, and a refusal stops there");
   assert.match(out, /await withdrawEarned\(\{ account, giftId: gift\.giftId, escrow: gift\.escrow, amount: BigInt\(gift\.earned\), nonce: BigInt\(gift\.nonce\) \}\)/, "the whole of each gift's part, at the nonce the contract expects");

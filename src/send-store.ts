@@ -73,6 +73,15 @@ export async function recordSend(input: Omit<SendRecord, "id" | "sentAtMs">): Pr
   return { id, reference: sendReference(input.txHash) };
 }
 
+/** Whether this account sent any of this coin, by a send written down here, at or after a moment. */
+export async function sentSince(account: string, coin: string, sinceMs: number): Promise<boolean> {
+  const rows = await sql()`
+    SELECT 1 FROM viky_sends
+     WHERE account = ${account.toLowerCase()} AND coin = ${coin.toLowerCase()} AND sent_at >= ${new Date(sinceMs).toISOString()}
+     LIMIT 1`;
+  return rows.length > 0;
+}
+
 export async function loadSends(account: string): Promise<SendRecord[]> {
   const rows = await sql()`SELECT * FROM viky_sends WHERE account = ${account.toLowerCase()} ORDER BY sent_at DESC`;
   return rows.map((row) => ({

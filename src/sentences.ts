@@ -305,11 +305,42 @@ export const PAY = {
     `${recipient.trim() ? `${recipient}'s name` : "Their name"}${withYours ? " and yours show" : " shows"} on the gift, to whoever opens its link.`,
   /** The sheet the card is paid in, and what its frame is called when read aloud. */
   card: { title: "Pay by card", frame: "Card payment" },
-  /** Rampnow in a frame of our own (the founder, 3 Oct 2026), and its page beside as the fallback. */
+  /**
+   * Rampnow in a frame of our own, one payment for one gift (the founder, 3 Oct 2026, src/rampnow-frame.ts). Its page
+   * beside stays the fallback.
+   *
+   * A button says what the press does and never declares a state (the founder, 4 Oct 2026). When only the person knows
+   * a fact, the screen asks it as a question, and the answers are actions: "Did you pay by card?", "Yes, finish my
+   * payment", "No, pay now".
+   */
   rampnow: {
-    failed: "The card payment did not go through. Nothing was taken.",
+    /** The frame said the payment failed, and nothing left: said on the screen that waits, where paying starts again. */
+    failed: "The payment did not go through. Nothing was taken.",
+    /** The frame's address could not be had: its page beside is the way. */
     notShowing: "If the payment does not show, open its page instead.",
     openPage: "Open the card page",
+    /** Under the frame while no payment is known: the one way out, and the page beside for a sign-in the frame refuses. */
+    goBackWithoutPaying: "Go back without paying",
+    /** The same place, when the frame was opened on a payment already started: back to the screen that waits, which keeps it. */
+    goBack: "Go back",
+    cantSignIn: "Can't sign in here?",
+    /** Under the frame once a payment is known: no way out, and why. */
+    keepOpen: "Keep this window open: Rampnow is finishing your payment.",
+    /** Five minutes without the money: a way out, to the screen that waits. */
+    late: "This is taking longer than usual.",
+    lateOut: "Close this window",
+    /** On the screen that waits, a payment known: where it is, since when, and the one way back to it. */
+    atRampnow: "Your payment is at Rampnow.",
+    needsItsPage: "It finishes on Rampnow's page, which has to be open for it.",
+    since: (minutes: number) => `Started ${ago(minutes)}.`,
+    finish: "Finish my payment",
+    /** On the screen that waits, nothing known of a payment: the question, what makes it asked, and its two answers. */
+    didYouPay: "Did you pay by card?",
+    started: (minutes: number) => `A card payment was started ${ago(minutes)}.`,
+    yesFinish: "Yes, finish my payment",
+    noPayNow: "No, pay now",
+    /** On Home and on Gifts, where "not made yet" stood: one sentence, and one button that leads to the screen that waits. */
+    giftStarted: (amount: string, recipient: string, minutes: number) => `${amount}${forThem(recipient)}: a card payment was started ${ago(minutes)}.`,
   },
   yourCode: "Your code",
   /**
@@ -437,8 +468,6 @@ export const HOME = {
    * a gift". Both verbs, since the ways out lead with gift cards and phone credit, which are spent, not withdrawn.
    */
   takeItOut: "Spend or withdraw",
-  readyLine: (name: string, amount: string) => `${amount} of it is ready to send to ${name}.`,
-  readyLabel: (name: string) => `Ready to send to ${name}`,
   moving: "What's moving",
   seeAll: "See all gifts",
   empty: "No gift yet. Offer one, or open a link someone sent you.",
@@ -609,6 +638,13 @@ export const GIFT_CARD = {
  */
 const their = (name: string) => (name.trim() ? `${name}'s` : "their");
 const forThem = (name: string) => (name.trim() ? ` for ${name}` : "");
+/** How long ago, in whole minutes, then in whole hours: "less than a minute ago", "4 minutes ago", "3 hours ago". */
+const ago = (minutes: number) => {
+  if (minutes < 1) return "less than a minute ago";
+  if (minutes < 60) return `${minutes} ${minutes === 1 ? "minute" : "minutes"} ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+};
 const onlyTo = (name: string) => (name.trim() ? name : "the person it is for");
 
 /**
@@ -1971,6 +2007,12 @@ export const CASH_OUT = {
   inYourGifts: (amount: string) => `${amount} of it is still in your gifts. It comes out first, with one signature per gift.`,
   gathering: "Taking what your gifts hold into your account.",
   gatherFailed: "What your gifts hold could not be taken out just now. Nothing was lost: it is still yours, in the gift.",
+  /**
+   * Dollars a card payment delivered and no gift took (the founder, 3 Oct 2026): they are money in the account like
+   * the rest, never a withdrawal under way, and they are turned into what a gift holds the moment a way is chosen.
+   */
+  readying: "Getting your money ready, a few seconds.",
+  notReadied: "Part of your money could not be made ready just now. It is still in your account.",
   worthAbout: (dollars: string) => `about $${dollars}`,
   worthLater: "Its value in dollars will show in a moment.",
   sourceLine: (source: string, read: string) => `Read from ${source}, ${read}.`,
@@ -2131,8 +2173,6 @@ export const CASH_OUT = {
 /** The home page's card about money in the account, which is where the way out begins (W1). */
 export const YOUR_MONEY = {
   label: "In your account",
-  readyLine: (name: string, amount: string) => `${amount} of it is ready to send to ${name}.`,
-  readyLabel: (name: string) => `Ready to send to ${name}`,
   /**
    * The balance's own action (the founder, 29 Sep 2026): a first outside tester read "Use your money" as "use it to make
    * a gift". Both verbs, since the ways out lead with gift cards and phone credit, which are spent, not withdrawn.
