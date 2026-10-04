@@ -104,3 +104,30 @@ export function clearRampnowPending(account: string | undefined): void {
   }
   tell();
 }
+
+/**
+ * A new payment on Rampnow's page in a tab of its own, where its frame cannot keep the person signed in
+ * (`frameKeepsSignIn`, src/rampnow-frame.ts), followed from the first second as one started from a tab: one gift, one
+ * payment (the founder, 4 Oct 2026).
+ *
+ * It says whether the tab opened. A browser refuses a tab no press asked for directly, and the press that makes a
+ * first account waits for the passkey before it gets here: nothing is then waited for, and the screen that waits
+ * offers the page by a link of its own, which no browser refuses.
+ */
+export function payAtRampnowBeside(account: string | undefined, page: string): boolean {
+  let tab: Window | null = null;
+  try {
+    tab = window.open(page, "_blank");
+  } catch {
+    return false;
+  }
+  if (!tab) return false;
+  try {
+    // The page opened is given no hold on this one.
+    tab.opener = null;
+  } catch {
+    // Already another site's page: it has none.
+  }
+  noteRampnowPending(account, { via: "tab" });
+  return true;
+}

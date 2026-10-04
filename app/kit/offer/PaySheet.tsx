@@ -21,7 +21,9 @@ import { rateDateInWords } from "@/src/display-currency";
 import { cardSum, giftTyped, heldIn, moneyIn, perEuro } from "@/src/pay-sum";
 import type { RailReach } from "@/src/rail-country";
 import { feeInWords, feeSentence, RAMP_NO_GIFT_COIN_IN, sourceOfIts, wayInFillsIn, wayInPage, waysIn, WAY_IN_GIFT_COIN, WAY_IN_USDC } from "@/src/rails";
-import { rampnowFrameOn } from "@/src/rampnow-frame";
+import { frameKeepsSignIn, rampnowFrameOn } from "@/src/rampnow-frame";
+import { noteInRampnowJournal } from "@/src/client/rampnow-journal";
+import { payAtRampnowBeside } from "@/src/client/rampnow-pending";
 import { ACCOUNT_DOOR, CASH_OUT, FUND, MILESTONE_FUND, PAY as W, WAITS } from "@/src/sentences";
 import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, PRIMARY_BUTTON, SMALL_BUTTON } from "../../components/ui";
 import { AccountPanel } from "../../components/AccountPanel";
@@ -229,7 +231,15 @@ export function PaySheet({
       // A card paid inside Viky opens on the wait, in a sheet of its own, by this same press.
       if (!enough && way.embedded) return router.push("/fund?step=paying&card=1");
       // Rampnow in a frame of our own, when it is switched on (src/rampnow-frame.ts): opened on the wait, by this press.
-      if (!enough && way === WAY_IN_USDC && rampnowFrameOn()) return router.push("/fund?step=paying&rampnow=1");
+      if (!enough && way === WAY_IN_USDC && rampnowFrameOn()) {
+        if (frameKeepsSignIn(navigator.userAgent)) return router.push("/fund?step=paying&rampnow=1");
+        // Where the frame cannot keep the person signed in at Rampnow, they never see it (the founder, 4 Oct 2026):
+        // its page opens beside by this same press, and the payment is followed as one started from a tab. A tab the
+        // browser refused leaves nothing waited for: the wait then offers the page by a link of its own.
+        const beside = payAtRampnowBeside(account, wayInPage(way, { account, euros }));
+        noteInRampnowJournal(beside ? "Viky: the pay press opened the card page beside" : "Viky: the browser refused the card page beside the pay press", { carried: { browser: navigator.userAgent } });
+        return router.push("/fund?step=paying");
+      }
       // The partner's page opens in this press only when it arrives filled in (D289). Otherwise the person has not seen
       // their code yet, a first funder has only just made it: the waiting screen shows it, with its copy, and opens the
       // page when they press (D296).

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { rampnowPage } from "../src/rails";
 import { FUND, PAY } from "../src/sentences";
-import { FRAME_HEIGHT, frameHeightFor, LATE_WAY_OUT_AFTER_MS, orderUidOf, PAYMENT_POSSIBLE_AFTER_MS, RAMPNOW_EVENTS, RAMPNOW_FRAME_ALLOW, RAMPNOW_ORDERS_PAGE, rampnowEventOf, rampnowFinishPage, rampnowFrameAddress, rampnowFrameOn, rampnowOrderPage, rampnowSays } from "../src/rampnow-frame";
+import { FRAME_HEIGHT, frameHeightFor, LATE_WAY_OUT_AFTER_MS, orderUidOf, PAYMENT_POSSIBLE_AFTER_MS, RAMPNOW_EVENTS, RAMPNOW_FRAME_ALLOW, RAMPNOW_ORDERS_PAGE, rampnowEventOf, rampnowFinishPage, rampnowFrameAddress, rampnowFrameOn, rampnowOrderPage, rampnowSays, frameKeepsSignIn, safariEngineVersion } from "../src/rampnow-frame";
 
 /**
  * Rampnow in a frame of our own (the founder, 3 Oct 2026), from its official widget mode and the code of its SDK
@@ -131,14 +131,14 @@ test("the sheet is held, and what stands under the frame is the way out", () => 
 test("the wait says a known payment and gives one button; with nothing known it asks, and only the answer 'No, pay now' pays again", () => {
   const paying = readFileSync("app/components/PayGift.tsx", "utf8");
   const from = paying.indexOf(") : wayIn === WAY_IN_USDC && rampnowFrameOn() && rampnowPending ? (");
-  const waiting = paying.slice(from, paying.indexOf(") : wayIn === WAY_IN_USDC && rampnowFrameOn() ? (", from));
+  const waiting = paying.slice(from, paying.indexOf(") : wayIn === WAY_IN_USDC && rampnowBeside ? (", from));
   assert.ok(from > 0);
   assert.match(waiting, /onFinish=\{\(\) => setFrame\(\{ mode: "finish", orderUid: rampnowPending\.orderUid \}\)\}/, "the payment opened again in our frame");
   // "No, pay now": the payment is forgotten and the frame opens on a new one, in the same press.
-  assert.match(waiting, /onPayNow=\{\(\) => \{\n\s*noteInRampnowJournal\("Viky: answered no, pay now"\);\n\s*clearRampnowPending\(address\);\n\s*setRampnowFailed\(false\);\n\s*setFrame\(\{ mode: "new" \}\);\n\s*\}\}/);
+  assert.match(waiting, /onPayNow=\{\(\) => \{\n\s*noteInRampnowJournal\("Viky: answered no, pay now"\);\n\s*clearRampnowPending\(address\);\n\s*setRampnowFailed\(false\);\n\s*if \(rampnowBeside\) payAtRampnowBeside\(address, wayInPage\(wayIn, \{ account: address, euros: toBuy \}\)\);\n\s*else setFrame\(\{ mode: "new" \}\);\n\s*\}\}/);
   assert.doesNotMatch(waiting, /openCard\b|openCardAgain|payByCard/, "never Pay by card here");
   // The pay press that arrives with a payment already waited for opens nothing.
-  assert.match(paying, /if \(arrival && browser && address\) \{\n\s*setArrival\(false\);\n\s*if \(!rampnowPending\) setFrame\(\{ mode: "new" \}\);\n\s*\}/);
+  assert.match(paying, /if \(arrival && browser && address\) \{\n\s*setArrival\(false\);\n\s*if \(!rampnowPending && !rampnowBeside\) setFrame\(\{ mode: "new" \}\);\n\s*\}/);
   // Back from a new payment forgets it; back from a payment already started keeps it.
   assert.match(paying, /onBack=\{\(\) => \{\n(\s*\/\/[^\n]*\n)*\s*if \(frame\?\.mode !== "finish"\) clearRampnowPending\(address\);\n\s*setFrame\(null\);\n\s*\}\}/);
   // Paying, when nothing is waited for: "Pay €X by card", and the failure said once above it.
@@ -230,4 +230,67 @@ test("the frame is as tall as the sheet has room for: whole inside it on a lapto
   assert.match(sheetSource, /under: around\.getBoundingClientRect\(\)\.height - frame\.current\.getBoundingClientRect\(\)\.height,/);
   assert.match(sheetSource, /ref=\{frame\}\n\s*style=\{\{ height \}\}/);
   assert.doesNotMatch(sheetSource, /h-\[600px\]/, "no fixed height");
+});
+
+test("where the frame cannot keep the person signed in, it is never shown: Safari's engine before 18.4 and from 18.5 to 26.1", () => {
+  const mac = (version: string) => `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/${version} Safari/605.1.15`;
+  const phone = (system: string, rest: string) => `Mozilla/5.0 (iPhone; CPU iPhone OS ${system} like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) ${rest}`;
+  // Safari on a Mac says its own version. The founder measured 17.6: the frame went back to its sign-in form.
+  assert.equal(frameKeepsSignIn(mac("17.6")), false);
+  assert.equal(frameKeepsSignIn(mac("18.3")), false);
+  assert.equal(frameKeepsSignIn(mac("18.4")), true, "shipped in 18.4");
+  assert.equal(frameKeepsSignIn(mac("18.4.1")), true);
+  assert.equal(frameKeepsSignIn(mac("18.5")), false, "removed in 18.5");
+  assert.equal(frameKeepsSignIn(mac("18.6")), false);
+  assert.equal(frameKeepsSignIn(mac("26.0")), false);
+  assert.equal(frameKeepsSignIn(mac("26.1")), false);
+  assert.equal(frameKeepsSignIn(mac("26.2")), true, "shipped again in 26.2");
+  assert.equal(frameKeepsSignIn(mac("27.0")), true);
+  // On an iPhone every browser is Safari's engine. Safari writes its own version; since 26 it writes a system frozen
+  // at 18_6 beside it, so the higher of the two is the engine's.
+  assert.equal(frameKeepsSignIn(phone("17_6", "Version/17.6 Mobile/15E148 Safari/604.1")), false);
+  assert.equal(frameKeepsSignIn(phone("18_4", "Version/18.4 Mobile/15E148 Safari/604.1")), true);
+  assert.equal(frameKeepsSignIn(phone("18_6", "Version/26.0 Mobile/15E148 Safari/604.1")), false);
+  assert.equal(frameKeepsSignIn(phone("18_6", "Version/26.2 Mobile/15E148 Safari/604.1")), true);
+  assert.deepEqual(safariEngineVersion(phone("18_6", "Version/26.2 Mobile/15E148 Safari/604.1")), { major: 26, minor: 2 });
+  // Chrome and Firefox there write the real system and no version of their own; Edge writes a version without its minor.
+  assert.equal(frameKeepsSignIn(phone("17_6", "CriOS/126.0.6478.153 Mobile/15E148 Safari/604.1")), false);
+  assert.equal(frameKeepsSignIn(phone("26_2", "CriOS/143.0.0.0 Mobile/15E148 Safari/604.1")), true);
+  assert.equal(frameKeepsSignIn(phone("26_1", "FxiOS/143.0 Mobile/15E148 Safari/605.1.15")), false);
+  assert.deepEqual(safariEngineVersion(phone("17_5", "Version/17.0 EdgiOS/125.2535.60 Mobile/15E148 Safari/605.1.15")), { major: 17, minor: 5 });
+  // An iPad asking for the desktop site says what a Mac says.
+  assert.equal(frameKeepsSignIn(mac("17.6").replace("Macintosh", "Macintosh")), false);
+  // Every other engine keeps the frame, whatever "Safari" its name carries.
+  for (const other of [
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+    "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36",
+    "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/23.0 Chrome/115.0.0.0 Mobile Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:143.0) Gecko/20100101 Firefox/143.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+    "",
+  ]) {
+    assert.equal(safariEngineVersion(other), null, other);
+    assert.equal(frameKeepsSignIn(other), true, other);
+  }
+
+  // The pay press: the frame where it can, Rampnow's page beside where it cannot, followed as started from a tab.
+  const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
+  assert.match(sheet, /if \(frameKeepsSignIn\(navigator\.userAgent\)\) return router\.push\("\/fund\?step=paying&rampnow=1"\);/);
+  assert.match(sheet, /const beside = payAtRampnowBeside\(account, wayInPage\(way, \{ account, euros \}\)\);[\s\S]{0,400}return router\.push\("\/fund\?step=paying"\);/);
+  const store = readFileSync("src/client/rampnow-pending.ts", "utf8");
+  assert.match(store, /if \(!tab\) return false;[\s\S]{0,300}noteRampnowPending\(account, \{ via: "tab" \}\);\n\s*return true;/, "a tab the browser refused leaves nothing waited for");
+  // The screen that waits never opens the frame there: its button that pays is a link to Rampnow's page in a tab.
+  const wait = readFileSync("app/components/PayGift.tsx", "utf8");
+  assert.match(wait, /const rampnowBeside = browser && rampnowFrameOn\(\) && !frameKeepsSignIn\(navigator\.userAgent\);/);
+  assert.match(wait, /if \(!rampnowPending && !rampnowBeside\) setFrame\(\{ mode: "new" \}\);/);
+  assert.match(wait, /pending=\{rampnowBeside \? \{ \.\.\.rampnowPending, via: "tab" \} : rampnowPending\}/);
+  assert.match(wait, /if \(rampnowBeside\) payAtRampnowBeside\(address, wayInPage\(wayIn, \{ account: address, euros: toBuy \}\)\);\n\s*else setFrame\(\{ mode: "new" \}\);/);
+  assert.match(wait, /data-rampnow-pay-beside=""\n\s*onClick=\{\(\) => \{\n\s*noteInRampnowJournal\("Viky: the card page was opened beside, from the wait"\);\n\s*noteRampnowPending\(address, \{ via: "tab" \}\);/);
+  // And the judges page says the limit as it is, with what was measured and what was not.
+  const judges = readFileSync("app/judges/page.tsx", "utf8");
+  assert.match(judges, /Where the frame cannot keep the person signed in at Rampnow, it is never shown/);
+  assert.match(judges, /Safari's engine before 18\.4 and from 18\.5 to 26\.1, so every browser on an iPhone at those versions/);
+  assert.match(judges, /Measured on Safari 17\.6 on 4 Oct 2026, on a neutral page holding the same frame/);
+  assert.match(judges, /it was not measured on viky\.cash in Safari, nor on the versions in between/);
 });

@@ -82,6 +82,47 @@ export function rampnowFrameOn(env: Readonly<Record<string, string | undefined>>
 }
 
 /**
+ * Whether Rampnow's frame can keep the person signed in, in this browser (the founder, 4 Oct 2026).
+ *
+ * Rampnow's session in a frame lives in cookies set "Partitioned" (read on its /api/auth/csrf). Safari's engine reads
+ * such cookies in 18.4 and from 26.2, and not in between or before (webkit.org/blog/17640, "WebKit Features for Safari
+ * 26.2": shipped in Safari 18.4, removed in 18.5, shipped again in 26.2). Measured by the founder on Safari 17.6
+ * (macOS 14.7.3), on a neutral page holding this same frame: after the code received by e-mail, Rampnow's page went
+ * back to its sign-in form. So where it cannot, the person never sees the frame: Rampnow's page opens beside, from the
+ * first press, and the payment is followed as one started from a tab.
+ *
+ * Read from what the browser says of itself, which is all there is to read without a second origin to measure from:
+ *   - on an iPhone or an iPad every browser runs on Safari's engine. Safari writes its own version ("Version/17.6");
+ *     since version 26 it writes a system frozen at 18_6 beside it, while Chrome and Firefox there write the real
+ *     system and no version of their own. So the engine's version is the higher of the two;
+ *   - on a Mac, Safari alone, by "Version/"; an iPad asking for the desktop site says the same thing.
+ * Every other browser keeps the frame. So does a version that cannot be read on a Mac. Its limit: on a Mac, Safari's
+ * version is not the system's, and the cookies are kept by the system, so a Safari 18.4 or 26.2 on an older system may
+ * be read as able when it is not. Under the frame, "Can't sign in here?" and the page beside are there for that.
+ */
+export function frameKeepsSignIn(userAgent: string): boolean {
+  const version = safariEngineVersion(userAgent);
+  if (version === null) return true;
+  const atLeast = (major: number, minor: number) => version.major > major || (version.major === major && version.minor >= minor);
+  return (atLeast(18, 4) && !atLeast(18, 5)) || atLeast(26, 2);
+}
+
+/** The version of Safari's engine a browser says it runs on, or nothing for a browser on another engine. */
+export function safariEngineVersion(userAgent: string): Readonly<{ major: number; minor: number }> | null {
+  const read = (found: RegExpMatchArray | null) => (found ? { major: Number(found[1]), minor: Number(found[2] ?? 0) } : null);
+  const own = read(userAgent.match(/\bVersion\/(\d+)(?:\.(\d+))?/));
+  if (/\b(iPhone|iPad|iPod)\b/.test(userAgent)) {
+    const system = read(userAgent.match(/\bOS (\d+)(?:_(\d+))?/));
+    // Nothing readable on a device where every browser is Safari's engine: counted as the oldest, which opens the page beside.
+    if (!own && !system) return { major: 0, minor: 0 };
+    if (!own || !system) return own ?? system;
+    return own.major > system.major || (own.major === system.major && own.minor >= system.minor) ? own : system;
+  }
+  const safariOnAMac = /\bMacintosh\b/.test(userAgent) && /\bSafari\//.test(userAgent) && !/\b(Chrome|Chromium|Edg|OPR|Firefox)\//.test(userAgent);
+  return safariOnAMac ? own : null;
+}
+
+/**
  * The frame's address: the public locked page, without its "Buy" and "Sell" tabs, and with the partner's public key
  * added when there is one. `hideOrderTabs` is read by the page's own script (`app/(full)/order/quote/page-*.js`, its
  * header: the tabs are drawn unless it is "true"), and measured on the page itself on 4 Oct 2026: two tabs without it,
