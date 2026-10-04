@@ -3,11 +3,13 @@ import { TERMS, aWindow, daily, photographer, serve } from "./gift-fixtures";
 import { KEY, json, makeAnAccount } from "./gift-kit";
 
 /**
- * A day sleeps until it is done (the founder, 4 Oct 2026, in the place of "the days wake at the opening"). At the
- * opening the row does not move and its days keep their eyes closed: the gift's own character, at the head of the
- * page, answers it once, on the gift's spring. A day earned wakes in its jump, with one small turn in the air, and the
- * days done since the last visit play it on arrival, one after another, once. With less motion asked for, nothing
- * moves and the final state is there.
+ * What a row of days says (the founder, 4 Oct 2026): a sleeping capsule is a day not open yet, the triangle awake is
+ * the day open now, the triangle that yawns is yesterday still to catch up, the smiling circle a day done. Opening a
+ * gift's page wakes nothing: the gift's own character, at the head of the page, answers the opening once. A day wakes
+ * when it opens, the capsule becoming the triangle and the eyes opening: under the person's eyes when a gift paid the
+ * same day connects, on arrival when a new day opened since the last visit. A day earned wakes in its jump, with one
+ * small turn in the air, and the days done since the last visit play it on arrival, one after another, once. With less
+ * motion asked for, nothing moves and the final state is there.
  *
  * Every movement the page starts is written down as it starts (`Element.animate`), so the test reads what was asked
  * for rather than racing a movement of half a second. VIKY_DAYS_CAPTURES=<folder> photographs the reduced-motion states.
@@ -18,6 +20,15 @@ type Started = { part: string; day: number; delay: number; duration: number; fro
 
 const RECORD = `(() => {
   window.__started = [];
+  // Whether the day of today was drawn waiting for its turn the moment it came into the page: its first image.
+  window.__todayFirstDrawn = [];
+  new MutationObserver((changes) => {
+    for (const change of changes) for (const node of change.addedNodes) {
+      if (!(node instanceof Element)) continue;
+      const drawings = node.matches && node.matches('svg[data-character="today"]') ? [node] : [...node.querySelectorAll('.day-row-day svg[data-character="today"]')];
+      for (const drawing of drawings) if (drawing.closest(".day-row-day")) window.__todayFirstDrawn.push(Boolean(drawing.closest(".arrival-pending")));
+    }
+  }).observe(document, { childList: true, subtree: true });
   const animate = Element.prototype.animate;
   Element.prototype.animate = function (frames, options) {
     const day = this.closest ? this.closest(".day-row-day") : null;
@@ -39,16 +50,21 @@ const RECORD = `(() => {
 })();`;
 
 const started = (page: Page) => page.evaluate(() => (window as unknown as { __started: Started[] }).__started);
+const started_ = started;
 /**
  * A device that last saw none of a gift's days done. The app's page is left first: a screen writes what it has seen
  * from its own memory (app/kit/seen.tsx), so Home, still open, could write the cookie again after this and leave the
  * gift out of it. That was a race, lost on the run of 4 Oct 2026: nothing was pending, and nothing played.
  */
-async function sawNoDayOf(page: Page, giftId: string): Promise<void> {
+async function lastVisitSaw(page: Page, giftId: string, saw: Readonly<{ settled: number; open?: number }>): Promise<void> {
   const origin = new URL(page.url()).origin;
   await page.goto("about:blank");
-  await page.context().addCookies([{ name: "viky.seen", value: encodeURIComponent(JSON.stringify({ [`days.${giftId}`]: 0 })), url: origin }]);
+  const seen = { [`days.${giftId}`]: saw.settled, ...(saw.open === undefined ? {} : { [`days.open.${giftId}`]: saw.open }) };
+  await page.context().addCookies([{ name: "viky.seen", value: encodeURIComponent(JSON.stringify(seen)), url: origin }]);
 }
+const sawNoDayOf = (page: Page, giftId: string) => lastVisitSaw(page, giftId, { settled: 0 });
+const todayFirstDrawn = (page: Page) => page.evaluate(() => (window as unknown as { __todayFirstDrawn: boolean[] }).__todayFirstDrawn);
+const UTC_DAY = () => Math.floor(Date.now() / 86_400_000);
 /** What moved in the row's own days. */
 const inTheRow = (all: Started[]) => all.filter((one) => one.day >= 0);
 /**
@@ -241,4 +257,172 @@ test.describe("a day sleeps until it is done", () => {
     await shot(page, "reduced-motion-days-done", false);
     await device.context.close();
   });
+
+  /** What the waking starts in a day: the capsule fading, the triangle rising from its height, the eyes opening. */
+  const expectTheWaking = (moved: Started[], day: number) => {
+    const of = (part: string) => moved.filter((one) => one.day === day && one.part === part);
+    expect(of("was"), "the capsule it was fades").toHaveLength(1);
+    expect(of("was")[0].fades).toBe(true);
+    const figure = of("figure");
+    expect(figure.map((one) => one.from).sort(), "the triangle rises from the capsule's height, and fades in").toEqual(["", "scaleY(0.64)"]);
+    const eyes = of("eye");
+    expect(eyes, "its two eyes, and not the capsule's").toHaveLength(2);
+    for (const eye of eyes) {
+      expect(eye.from).toBe("scaleY(0.36)");
+      expect(eye.fill).toBe("backwards");
+    }
+    // No jump and no turn: nothing leaves the floor.
+    expect(moved.filter((one) => one.day === day && (one.part === "whirl" || /translateY/.test(one.from)))).toEqual([]);
+    return { at: figure[0].delay, becomes: figure[0].duration, eyes: eyes[0].duration };
+  };
+
+  test("a gift paid the same day connects: its first day wakes under the person's eyes, and no other day moves", async ({ browser, baseURL }) => {
+    test.setTimeout(120_000);
+    const GIFT = "871";
+    const device = await aWindow(browser, baseURL);
+    const { page, context } = device;
+    await context.addInitScript(RECORD);
+    let started = false;
+    const named = { username: "boo_learns", source: "funder", bound: false, code: null, codeExpiresAt: null };
+    const gift = () =>
+      started
+        ? daily(GIFT, "recipient", { version: 3, connected: true, startDay: UTC_DAY(), endDay: UTC_DAY() + 6, creditedDays: 0, daysLeft: 7, days: [], earned: "0", earnedDisplay: "$0.00", alreadyTheirs: "0", alreadyTheirsDisplay: "$0.00", todayDayIndex: 1, goalAccount: { ...named, bound: true } })
+        : daily(GIFT, "recipient", { version: 3, connected: false, startDay: 0, endDay: 0, creditedDays: 0, daysLeft: 7, days: [], earned: "0", earnedDisplay: "$0.00", alreadyTheirs: "0", alreadyTheirsDisplay: "$0.00", todayDayIndex: 0, goalAccount: named });
+    await serve(page, GIFT, gift, TERMS.daily);
+    await page.route(`**/api/gift/${GIFT}/bind`, (route) => {
+      started = true;
+      return route.fulfill(json({ kind: "bound", giftId: GIFT, totalXp: 1_000, hash: `0x${"ab".repeat(32)}` }));
+    });
+    // The page of a gift read as the day goes looks as it opens: no lesson is in yet.
+    await page.route(new RegExp(`/api/gift/${GIFT}/count(\\?.*)?$`), (route) => route.fulfill(json({ kind: "refused", giftId: GIFT, code: "NOT_ENOUGH_PROGRESS", message: "Not enough yet for a full day. One more lesson and it counts.", looked: true })));
+    await makeAnAccount(device);
+    await page.goto(`/g/${GIFT}`);
+    const asleep = page.locator(".day-row-days[data-days='asleep']");
+    await expect(asleep.locator(".day-row-day")).toHaveCount(7);
+    await page.waitForTimeout(600);
+    expect(inTheRow(await started_(page)), "nothing moves before the connection").toEqual([]);
+
+    await page.getByRole("button", { name: "Start counting" }).click();
+    const row = page.locator(".day-row-days:not([data-days])");
+    await expect(row.locator(".day-row-day svg[data-character='today']")).toHaveCount(1);
+    await expect.poll(async () => inTheRow(await started_(page)).filter((one) => one.part === "was").length, { timeout: 10_000 }).toBe(1);
+    // From the render that brought the connection, the day was drawn waiting for its turn: the capsule, never the
+    // triangle awake for a frame and then the movement.
+    expect(await todayFirstDrawn(page)).toEqual([true]);
+    const moved = inTheRow(await started_(page));
+    const waking = expectTheWaking(moved, 0);
+    expect(waking.becomes).toBe(200);
+    expect(waking.at).toBe(0);
+    expect(moved.filter((one) => one.day > 0), "the other days stay asleep").toEqual([]);
+    await expect(row.locator(".day-row-day svg[data-character='toCome']")).toHaveCount(6);
+    // Once it has played: the triangle awake, the capsule out of sight.
+    await page.waitForTimeout(900);
+    const today = row.locator(".day-row-day svg[data-character='today']");
+    expect(await today.locator("[data-part='was']").evaluate((element) => getComputedStyle(element).opacity)).toBe("0");
+    expect(await today.locator("[data-part='figure']").evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
+    expect(await today.locator("[data-part='figure'] [data-part='eye']").first().evaluate((element) => getComputedStyle(element).transform)).toBe("none");
+    await expect(row.locator(".arrival-pending")).toHaveCount(0);
+
+    // Once: the page opened again on the gift, its day already open, plays nothing.
+    await page.reload();
+    await expect(page.locator(".day-row-day svg[data-character='today']")).toHaveCount(1);
+    await page.waitForTimeout(900);
+    expect(inTheRow(await started_(page))).toEqual([]);
+    expect(await todayFirstDrawn(page)).toEqual([false]);
+    await device.context.close();
+  });
+
+  test("a gift of the earlier contract connects: its first day opens tomorrow, so nothing wakes", async ({ browser, baseURL }) => {
+    test.setTimeout(120_000);
+    const GIFT = "872";
+    const device = await aWindow(browser, baseURL);
+    const { page, context } = device;
+    await context.addInitScript(RECORD);
+    let started = false;
+    const named = { username: "boo_learns", source: "funder", bound: false, code: null, codeExpiresAt: null };
+    const gift = () =>
+      started
+        ? daily(GIFT, "recipient", { version: 2, connected: true, startDay: UTC_DAY() + 1, endDay: UTC_DAY() + 7, creditedDays: 0, daysLeft: 7, days: [], earned: "0", earnedDisplay: "$0.00", alreadyTheirs: "0", alreadyTheirsDisplay: "$0.00", todayDayIndex: 0, goalAccount: { ...named, bound: true } })
+        : daily(GIFT, "recipient", { version: 2, connected: false, startDay: 0, endDay: 0, creditedDays: 0, daysLeft: 7, days: [], earned: "0", earnedDisplay: "$0.00", alreadyTheirs: "0", alreadyTheirsDisplay: "$0.00", todayDayIndex: 0, goalAccount: named });
+    await serve(page, GIFT, gift, TERMS.daily);
+    await page.route(`**/api/gift/${GIFT}/bind`, (route) => {
+      started = true;
+      return route.fulfill(json({ kind: "bound", giftId: GIFT, totalXp: 1_000, hash: `0x${"ab".repeat(32)}` }));
+    });
+    await makeAnAccount(device);
+    await page.goto(`/g/${GIFT}`);
+    await expect(page.locator(".day-row-days[data-days='asleep'] .day-row-day")).toHaveCount(7);
+    await page.getByRole("button", { name: "Start counting" }).click();
+    const row = page.locator(".day-row-days:not([data-days])");
+    await expect(row.locator(".day-row-day")).toHaveCount(7);
+    await page.waitForTimeout(900);
+    await expect(row.locator(".day-row-day svg[data-character='toCome']")).toHaveCount(7);
+    expect(inTheRow(await started_(page))).toEqual([]);
+    await device.context.close();
+  });
+
+  test("on arrival, a day earned since the last visit jumps, then the day that opened since wakes, once", async ({ browser, baseURL }) => {
+    test.setTimeout(120_000);
+    const GIFT = "873";
+    const device = await aWindow(browser, baseURL);
+    const { page, context } = device;
+    await context.addInitScript(RECORD);
+    // Two days earned and the third open. The last visit saw one day done and the second day open.
+    await serve(page, GIFT, () => daily(GIFT, "recipient"), TERMS.daily);
+    await makeAnAccount(device);
+    await lastVisitSaw(page, GIFT, { settled: 1, open: 1 });
+    await page.goto(`/g/${GIFT}`);
+    const row = page.locator(".day-row-days");
+    await expect(row.locator("svg[data-character='today']")).toHaveCount(1);
+    await expect.poll(async () => inTheRow(await started_(page)).filter((one) => one.part === "was").length, { timeout: 10_000 }).toBe(1);
+    const moved = inTheRow(await started_(page));
+    // Day 2 jumps: it is the one day done since the last visit. Day 1, seen done already, does not move.
+    expect(moved.filter((one) => one.day === 0)).toEqual([]);
+    const jump = moved.filter((one) => one.day === 1 && one.part === "figure");
+    expect(jump).toHaveLength(1);
+    // Day 3 wakes, after the jump has landed, and it is shorter than the jump.
+    const waking = expectTheWaking(moved, 2);
+    expect(waking.at).toBe(jump[0].delay + 380);
+    expect(waking.becomes + waking.eyes).toBeLessThan(jump[0].duration);
+    expect(await todayFirstDrawn(page)).toEqual([true]);
+    // Once: nothing plays on the next visit.
+    await page.waitForTimeout(1_500);
+    await page.reload();
+    await expect(page.locator(".day-row-days svg[data-character='today']")).toHaveCount(1);
+    await page.waitForTimeout(900);
+    expect(inTheRow(await started_(page))).toEqual([]);
+    await device.context.close();
+  });
+
+  test("a gift seen for the first time, and less motion asked for: the open day is simply awake, and nothing plays", async ({ browser, baseURL }) => {
+    test.setTimeout(120_000);
+    const first = await aWindow(browser, baseURL);
+    await first.context.addInitScript(RECORD);
+    await serve(first.page, "874", () => daily("874", "recipient"), TERMS.daily);
+    await makeAnAccount(first);
+    await first.page.goto("/g/874");
+    await expect(first.page.locator(".day-row-days svg[data-character='today']")).toHaveCount(1);
+    await first.page.waitForTimeout(900);
+    expect(inTheRow(await started_(first.page))).toEqual([]);
+    expect(await todayFirstDrawn(first.page)).toEqual([false]);
+    await first.context.close();
+
+    const still = await aWindow(browser, baseURL);
+    await still.page.emulateMedia({ reducedMotion: "reduce" });
+    await still.context.addInitScript(RECORD);
+    await serve(still.page, "875", () => daily("875", "recipient"), TERMS.daily);
+    await makeAnAccount(still);
+    await lastVisitSaw(still.page, "875", { settled: 2, open: 1 });
+    await still.page.goto("/g/875");
+    const today = still.page.locator(".day-row-days svg[data-character='today']");
+    await expect(today).toHaveCount(1);
+    await still.page.waitForTimeout(900);
+    expect(inTheRow(await started_(still.page))).toEqual([]);
+    expect(await today.locator("[data-part='was']").evaluate((element) => getComputedStyle(element).opacity)).toBe("0");
+    expect(await today.locator("[data-part='figure']").evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
+    expect(await today.locator("[data-part='figure'] [data-part='eye']").first().evaluate((element) => getComputedStyle(element).transform)).toBe("none");
+    await shot(still.page, "reduced-motion-the-open-day-is-awake", false);
+    await still.context.close();
+  });
 });
+

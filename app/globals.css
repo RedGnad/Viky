@@ -1872,6 +1872,21 @@ dialog.reached-moment::backdrop {
   transform: scale(0.4);
 }
 
+/* A day that opens wakes (the founder, 4 Oct 2026): it carries the sleeping capsule it was, out of sight outside that
+   movement. While it waits for its turn, the capsule is what is drawn, as the row showed it before the day opened. */
+[data-character="today"] [data-part="was"] {
+  opacity: 0;
+}
+.arrival-pending svg[data-character="today"] {
+  opacity: 1;
+}
+.arrival-pending svg[data-character="today"] [data-part="was"] {
+  opacity: 1;
+}
+.arrival-pending svg[data-character="today"] [data-part="figure"] {
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .arrival-pending svg,
   .arrival-pending.climb-walker,
@@ -1881,6 +1896,12 @@ dialog.reached-moment::backdrop {
   .arrival-pending svg[data-character="earned"] [data-part="eye"],
   .arrival-pending svg[data-character="earned"] [data-part="mouth"] {
     transform: none;
+  }
+  .arrival-pending svg[data-character="today"] [data-part="was"] {
+    opacity: 0;
+  }
+  .arrival-pending svg[data-character="today"] [data-part="figure"] {
+    opacity: 1;
   }
 }
 
