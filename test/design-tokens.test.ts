@@ -14,7 +14,7 @@ import {
   COLOURS,
   CONTROL,
   CONTROL_COLOURS,
-  DESTINATION_MAX,
+  GIFT_CARD_WIDTH,
   DISPLAY_TYPE,
   HERO_TYPE,
   LEAD_TYPE,
@@ -406,7 +406,7 @@ test("the stylesheet says what the tokens say, by day and by night", () => {
   assert.equal(cssVariable("page-margin"), `${PAGE_MARGIN.compact}px`);
   assert.equal(cssVariable("app-column-max"), `${APP_COLUMN_MAX}px`);
   assert.equal(cssVariable("prose-max"), `${PROSE_MAX_CH}ch`);
-  assert.equal(cssVariable("destination-max"), `${DESTINATION_MAX}px`);
+  assert.equal(cssVariable("gift-card-width"), `${GIFT_CARD_WIDTH}px`);
   assert.equal(cssVariable("space-lg"), `${SPACE.lg}px`);
   assert.equal(cssVariable("radius-card"), `${RADIUS.card}px`);
   assert.equal(cssVariable("type-money"), `${TYPE.money.size}px`);
@@ -727,8 +727,14 @@ test("a journey stays narrow enough that prose can never run too long", () => {
 test("the rail begins where Material's expanded breakpoint begins, and the column fits beside it", () => {
   assert.equal(NAV.from, TWO_PANE_FROM);
   assert.equal(TWO_PANE_FROM, 840);
-  assert.ok(NAV.railWidth + DESTINATION_MAX + PAGE_MARGIN.medium * 2 < TWO_PANE_FROM, "the column and the rail fit at the breakpoint");
-  assert.ok(DESTINATION_MAX > APP_COLUMN_MAX, "a destination is wider than a journey");
+  // The three destinations share one column, the gift card's with the page's margins (the founder, 4 Oct 2026).
+  assert.ok(NAV.railWidth + GIFT_CARD_WIDTH + PAGE_MARGIN.medium * 2 < TWO_PANE_FROM, "the column and the rail fit at the breakpoint");
+  const shell = readFileSync("app/kit/Shell.tsx", "utf8");
+  assert.match(shell, /const column = props\.kind === "task" \? "var\(--app-column-max\)" : props\.kind === "document" \? "var\(--prose-max\)" : "calc\(var\(--gift-card-width\) \+ 2 \* var\(--page-margin\)\)";/);
+  assert.doesNotMatch(readFileSync("app/globals.css", "utf8"), /--destination-max/, "the wider column of Gifts and Me is gone");
+  // No rail drawn, no room kept: the room is the rail's own condition, an account.
+  assert.match(shell, /const rail = props\.kind === "destination" && !props\.bare && Boolean\(address\);/);
+  assert.match(readFileSync("app/kit/Nav.tsx", "utf8"), /const \{ address \} = useAccount\(\);\n\s*if \(!address\) return null;/);
 });
 
 test("the faces are loaded by next/font and defined on the whole document", () => {

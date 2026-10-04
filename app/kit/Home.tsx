@@ -179,7 +179,7 @@ export function Home({
           under it. Without an account there is no money to read, and the card leads, which is D129's order. */}
       {/* Its title, like Gifts and You: without one the head's row was the character's own height and the character
           stood higher here than on the two other destinations (the founder, 24 Sep 2026, D230). */}
-      <Shell kind="destination" active="home" width="card" title={NAV.home} character={<HeadCharacter scene="home" />}>
+      <Shell kind="destination" active="home" title={NAV.home} character={<HeadCharacter scene="home" />}>
         <ReachedMoments gifts={owed} />
         {/* A payment started for a gift never made: said first, since the money for it may be what stands below (D74). */}
         <FinishTheGift />

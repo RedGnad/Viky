@@ -38,8 +38,6 @@ type Props =
       bare?: boolean;
       /** The page without an account: the column of `.home-column`, the card's width below 1024 and the title's from it (D130). */
       wide?: boolean;
-      /** Home with an account: the column is the card's width plus its margins, so everything shares its edges (D128). */
-      width?: "card";
       /**
        * The character at the head of this screen, opposite its title (D154). Every screen of the app carries it now,
        * not only the ones a gift is made on: it is the one thing here that answers a gesture.
@@ -90,22 +88,23 @@ export function Shell(props: Props) {
   const { address } = useAccount();
   const character = props.character !== undefined ? props.character : props.kind === "destination" && props.bare ? null : <HeadCharacter />;
   /**
+   * The three destinations share one column, the gift card's with the page's margins (the founder, 4 Oct 2026): Gifts
+   * and Me took 680, so the column changed width from one tab to the next and a gift's card there was 632 wide,
+   * against the rule of 20 Sep 2026 that a gift card is 440 and never wider.
+   *
    * The column of this page, its margins included: what the page is held to, and what every sheet over it is as wide
    * as, so a sheet's edges fall on the page's as they do on a phone (the founder, 4 Oct 2026). It was 560 over a card
    * of 440, which no mockup had decided. The page without an account is as wide as its widest line from 1024
    * (`.home-column`), and what a sheet covers there is the card: its column is the card's.
    */
-  const column =
-    props.kind === "task"
-      ? "var(--app-column-max)"
-      : props.kind === "document"
-        ? "var(--prose-max)"
-        : props.width === "card" || props.wide
-          ? "calc(var(--gift-card-width) + 2 * var(--page-margin))"
-          : "var(--destination-max)";
+  const column = props.kind === "task" ? "var(--app-column-max)" : props.kind === "document" ? "var(--prose-max)" : "calc(var(--gift-card-width) + 2 * var(--page-margin))";
   const width = props.kind === "destination" && props.wide ? "home-column" : "max-w-[var(--page-column)]";
-  /** The rail is drawn on a destination that is somebody's, and nowhere else. */
-  const rail = props.kind === "destination" && !props.bare;
+  /**
+   * The rail and the bar are drawn on a destination that is somebody's, and nowhere else (`Nav` draws nothing without
+   * an account). No rail drawn, no room kept (D127, and the founder, 4 Oct 2026): Gifts and Me without an account kept
+   * the rail's room, and their column stood 44 pixels right of the window's middle.
+   */
+  const rail = props.kind === "destination" && !props.bare && Boolean(address);
   // Room for the bar below it and beside the rail on a destination; a task and a document have neither.
   const room = rail ? "page-beside-the-rail pb-[calc(var(--nav-bar-height)+var(--space-xl))] [@media(min-width:840px)]:pb-[var(--space-xl)] pl-[var(--page-offset)]" : "";
 
