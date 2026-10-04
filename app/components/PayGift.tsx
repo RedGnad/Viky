@@ -38,8 +38,8 @@ import { CardNotOffered, CardTermsLine } from "../kit/offer/CardTerms";
 import { SwapperSheet } from "../kit/offer/SwapperSheet";
 import { RampnowSheet } from "../kit/offer/RampnowSheet";
 import { RampnowWaiting } from "../kit/offer/RampnowWaiting";
-import { rampnowFrameOn } from "@/src/rampnow-frame";
-import { clearRampnowPending, noteRampnowPending, readRampnowPending, useRampnowPending } from "@/src/client/rampnow-pending";
+import { frameKeepsSignIn, rampnowFrameOn } from "@/src/rampnow-frame";
+import { clearRampnowPending, noteRampnowPending, payAtRampnowBeside, readRampnowPending, useRampnowPending } from "@/src/client/rampnow-pending";
 import { noteInRampnowJournal } from "@/src/client/rampnow-journal";
 import { moneyIn } from "@/src/pay-sum";
 import { FunderControls } from "../kit/FunderControls";
@@ -201,10 +201,16 @@ export function PayGift() {
    * the pay press opens the frame on a new payment only if none is waited for. Arriving again at the same address
    * never starts a second one: the screen then says what is waited for, or asks.
    */
+  /**
+   * Where Rampnow's frame can keep the person signed in, it is the way. Where it cannot (`frameKeepsSignIn`,
+   * src/rampnow-frame.ts: Safari's engine before 18.4 and from 18.5 to 26.1), the person never sees the frame:
+   * Rampnow's page opens beside, and the payment is followed as one started from a tab (the founder, 4 Oct 2026).
+   */
+  const rampnowBeside = browser && rampnowFrameOn() && !frameKeepsSignIn(navigator.userAgent);
   const [arrival, setArrival] = useState(params.get("rampnow") === "1");
   if (arrival && browser && address) {
     setArrival(false);
-    if (!rampnowPending) setFrame({ mode: "new" });
+    if (!rampnowPending && !rampnowBeside) setFrame({ mode: "new" });
   }
   /** The frame said the payment failed and nothing left: said once, above the button that pays. */
   const [rampnowFailed, setRampnowFailed] = useState(false);
@@ -761,6 +767,7 @@ export function PayGift() {
                 onClick={() => {
                   if (wayIn.embedded) setCardOpen(true);
                   // What arrived fell short: paying the rest is a new payment, asked for by this press.
+                  else if (wayIn === WAY_IN_USDC && rampnowBeside) payAtRampnowBeside(address, wayInPage(wayIn, { account: address, euros: more }));
                   else if (wayIn === WAY_IN_USDC && rampnowFrameOn()) setFrame({ mode: "new" });
                   else window.open(wayInPage(wayIn, { account: address, euros: more }), "_blank", "noopener,noreferrer");
                   setPhase("waiting");
@@ -900,15 +907,36 @@ export function PayGift() {
           // A payment may have left and the frame was left. Known: the screen says where it is, and its one button
           // leads back to it. Not known: the screen asks, and a new payment opens only on the answer "No, pay now".
           <RampnowWaiting
-            pending={rampnowPending}
+            // Where the frame is never shown, the way back to a payment is Rampnow's own page in a tab, whatever was kept.
+            pending={rampnowBeside ? { ...rampnowPending, via: "tab" } : rampnowPending}
             onFinish={() => setFrame({ mode: "finish", orderUid: rampnowPending.orderUid })}
             onPayNow={() => {
               noteInRampnowJournal("Viky: answered no, pay now");
               clearRampnowPending(address);
               setRampnowFailed(false);
-              setFrame({ mode: "new" });
+              if (rampnowBeside) payAtRampnowBeside(address, wayInPage(wayIn, { account: address, euros: toBuy }));
+              else setFrame({ mode: "new" });
             }}
           />
+        ) : wayIn === WAY_IN_USDC && rampnowBeside ? (
+          // No frame here: the button that pays is a link to Rampnow's page in a tab of its own, which no browser
+          // refuses, and from that press the payment is followed as one started from a tab.
+          <>
+            <a
+              href={wayInPage(wayIn, { account: address, euros: toBuy })}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={PRIMARY_BUTTON}
+              data-rampnow-pay-beside=""
+              onClick={() => {
+                noteInRampnowJournal("Viky: the card page was opened beside, from the wait");
+                noteRampnowPending(address, { via: "tab" });
+              }}
+            >
+              {toBuy ? P.payByCard(moneyIn(toBuy, "EUR")) : W.waiting.openCard}
+            </a>
+            <CardTermsLine way={wayIn} />
+          </>
         ) : wayIn === WAY_IN_USDC && rampnowFrameOn() ? (
           <>
             {rampnowFailed ? <FieldRefusal id="rampnow-failed">{P.rampnow.failed}</FieldRefusal> : null}

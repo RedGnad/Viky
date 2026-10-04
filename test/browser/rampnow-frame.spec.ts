@@ -1,5 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
-import { answerTheChain, json, profile, shot, type Holdings } from "./gift-kit";
+import { answerTheChain, json, makeAnAccount, profile, shot, type Holdings } from "./gift-kit";
 
 /**
  * Rampnow in a frame of our own, one payment for one gift (the founder, 3 Oct 2026). The pay press opens the wait with
@@ -333,6 +333,81 @@ test.describe("Rampnow in a frame: one gift, one payment", () => {
     await expect(finish).toHaveAttribute("href", "https://app.rampnow.io/order/list");
     await expect(finish).toHaveAttribute("target", "_blank");
     await expect(payByCard(page)).toHaveCount(0);
+    await context.close();
+  });
+
+  /** Safari 17.6 on a Mac, the browser the founder measured on 4 Oct 2026: the frame there cannot keep a sign-in. */
+  const SAFARI_17_6 = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15";
+
+  /** To the pay sheet in a browser that says it is Safari 17.6, with or without an account already. */
+  async function toThePaySheet(page: Page, context: BrowserContext, signedIn: boolean): Promise<void> {
+    await answerTheChain(context, { ausd: 0n, mon: 0n });
+    await rampnowStandIn(context, true);
+    await page.route("**/api/rails/where**", (route) =>
+      route.fulfill(json({ country: "fr", ask: false, fromConnection: "fr", fromDevice: "fr", waysOut: { Ramp: "serves", Mercuryo: "serves" }, waysIn: {}, card: { offered: true, country: "fr" }, out: { bank: null, cardSmallest: null } })),
+    );
+    if (signedIn) await makeAnAccount({ page, context, baseURL: "" });
+    await page.goto("/");
+    if (!signedIn) await page.getByRole("link", { name: "Offer a gift" }).first().click();
+    await card(page).getByLabel("Their first name").fill("Boo");
+    await card(page).locator("[data-card-action]").click();
+    await expect(sheet(page)).toBeVisible();
+  }
+
+  test("where the frame cannot keep a sign-in, it is never shown: the pay press opens Rampnow's page beside, followed as started from a tab", async ({ browser, baseURL }) => {
+    const funder = await profile(browser, baseURL, { width: 390, height: 844 }, { userAgent: SAFARI_17_6 });
+    const { page, context } = funder;
+    await toThePaySheet(page, context, true);
+    // The press opens Rampnow's page in a tab of its own, filled in and locked, and the wait takes over under it.
+    const [tab] = await Promise.all([context.waitForEvent("page"), sheet(page).getByRole("button", { name: /^Pay \S+ by card$/ }).click()]);
+    expect(tab.url()).toMatch(/^https:\/\/app\.rampnow\.io\/order\/quote\?/);
+    await tab.close();
+    await page.waitForURL(/\/fund\?step=paying$/, { timeout: 60_000 });
+    // No frame, at any moment, and no sheet over the wait.
+    await expect(frameOf(page)).toHaveCount(0);
+    await expect(page.locator("dialog.sheet[open]")).toHaveCount(0);
+    // One gift, one payment: the wait asks, its way back is Rampnow's own page in a tab, and nothing else pays.
+    await expect(pending(page)).toHaveAttribute("data-rampnow-pending", "asked");
+    const finish = pending(page).getByRole("link", { name: "Yes, finish my payment" });
+    await expect(finish).toHaveAttribute("href", "https://app.rampnow.io/order/list");
+    await expect(finish).toHaveAttribute("target", "_blank");
+    await expect(page.locator("[data-rampnow-pay-beside]")).toHaveCount(0);
+    await shot(SHOTS, page, "390", "9a-safari-the-wait-after-the-page-beside");
+    expect(await journal(page)).toContain("Viky: the pay press opened the card page beside");
+    // "No, pay now" forgets it and opens Rampnow's page again, in a tab, never the frame.
+    const [again] = await Promise.all([context.waitForEvent("page"), pending(page).getByRole("button", { name: "No, pay now" }).click()]);
+    expect(again.url()).toMatch(/^https:\/\/app\.rampnow\.io\/order\/quote\?/);
+    await again.close();
+    await expect(frameOf(page)).toHaveCount(0);
+    await expect(pending(page)).toHaveAttribute("data-rampnow-pending", "asked");
+    // Home says a card payment was started, and leads to the wait.
+    await page.goto("/");
+    await expect(page.locator("[data-finish-gift]").getByRole("link", { name: "Finish my payment" })).toBeVisible();
+    await context.close();
+  });
+
+  test("a tab the browser refuses leaves nothing waited for: the wait offers Rampnow's page by a link of its own", async ({ browser, baseURL }) => {
+    const funder = await profile(browser, baseURL, { width: 390, height: 844 }, { userAgent: SAFARI_17_6 });
+    const { page, context } = funder;
+    // Safari refuses a tab no press asked for directly, and the press that makes a first account waits for the passkey.
+    await context.addInitScript("window.open = () => null;");
+    await toThePaySheet(page, context, false);
+    await sheet(page).getByRole("button", { name: /^(Pay \S+ by card|Pay)$/ }).first().click();
+    await page.waitForURL(/\/fund\?step=paying$/, { timeout: 60_000 });
+    await expect(frameOf(page)).toHaveCount(0);
+    // Nothing is asked about a payment nobody could have made: the button that pays is there, and it is a link.
+    await expect(pending(page)).toHaveCount(0);
+    const pay = page.locator("[data-rampnow-pay-beside]");
+    await expect(pay).toHaveText(/^Pay \S+ by card$/);
+    await expect(pay).toHaveAttribute("href", /^https:\/\/app\.rampnow\.io\/order\/quote\?/);
+    await expect(pay).toHaveAttribute("target", "_blank");
+    await shot(SHOTS, page, "390", "9b-safari-the-wait-when-the-tab-was-refused");
+    expect(await journal(page)).toContain("Viky: the browser refused the card page beside the pay press");
+    // The press on it opens the tab, and from then the payment is followed.
+    const [tab] = await Promise.all([context.waitForEvent("page"), pay.click()]);
+    await tab.close();
+    await expect(pending(page)).toHaveAttribute("data-rampnow-pending", "asked");
+    await expect(pending(page).getByRole("link", { name: "Yes, finish my payment" })).toHaveAttribute("href", "https://app.rampnow.io/order/list");
     await context.close();
   });
 
