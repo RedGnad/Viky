@@ -27,10 +27,11 @@ import { CARD_LABEL } from "../components/ui";
  * the founder's word of 3 Oct 2026, for the person it is for as for the one who offered it). The figure is the page's
  * own, the day's share of the gift; a reader of the screen hears it once, in "What was agreed", not thirty times.
  *
- * A day sleeps until it is done (the founder, 4 Oct 2026). Before a gift starts its days are asleep, eyes closed, and
- * they stay so when it is opened: nothing in the row moves at the opening, which the gift's own character answers at
- * the head of the page (app/components/GiftPage.tsx). A day wakes when it is earned, in its jump, on the arrival that
- * finds it done (app/kit/Motion.tsx).
+ * Before a gift starts its days are asleep, eyes closed, and they stay so when it is opened: nothing in the row moves at
+ * the opening, which the gift's own character answers at the head of the page (app/components/GiftPage.tsx). Only the
+ * day that is open is awake (the founder, 4 Oct 2026): it wakes once, when it opens, the capsule becoming the triangle
+ * and the eyes opening, under the person's eyes when the gift connects and is paid the same day, on arrival otherwise;
+ * and a day done wakes in its jump (app/kit/Motion.tsx).
  */
 
 type Shape = Readonly<{ startDay: number; endDay: number; durationDays: number; creditedDays: number; missedDays: number; givenBackDays?: number }>;
@@ -122,9 +123,17 @@ export function DayRow({
             data-worth={each ? "" : undefined}
           >
             <ArrivalDay gift={id} index={index}>
-              {/* A day earned jumps and a day gone back leaves, in the arrival: those two are written into the page (D206);
-                  the others name their drawing, since nothing follows the pointer any more (D216). */}
-              <Character state={characterOf(state)} variant={index} standing={false} drawn={characterOf(state) === "earned" || characterOf(state) === "returned" ? "inline" : "referenced"} className="h-auto w-full" />
+              {/* A day earned jumps, a day gone back leaves and the day that opens wakes, in the arrival: those three are
+                  written into the page (D206); the others name their drawing, since nothing follows the pointer any more
+                  (D216). */}
+              <Character
+                state={characterOf(state)}
+                variant={index}
+                standing={false}
+                drawn={characterOf(state) === "earned" || characterOf(state) === "returned" || characterOf(state) === "today" ? "inline" : "referenced"}
+                wakes={characterOf(state) === "today"}
+                className="h-auto w-full"
+              />
             </ArrivalDay>
             {each ? (
               <span aria-hidden className="day-row-worth">
