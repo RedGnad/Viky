@@ -370,16 +370,11 @@ test("on the sheet that pays, one fold holds what only some readers need, and th
   // 2026), on the screen that gives it, and no more on the sheet that pays.
   assert.doesNotMatch(sheet, /linkRisk/);
   assert.match(readFileSync("app/components/PayGift.tsx", "utf8"), /onlyThem\(/);
-  // Everything else a careful reader may want is inside the one fold, and all of it is still there: what this
-  // condition promises, the fourteen days, the two names, what the card service asks the first time, its fee, the rate.
+  // The fold holds short lines, a label and its value, and never a paragraph (the founder, 4 Oct 2026): what comes
+  // back and when, by the kind of gift, and the card's fee. It held up to eight sentences.
   const inside = sheet.slice(sheet.indexOf('<details className="said-fold" data-what-happens="">'), sheet.indexOf("</details>"));
-  assert.match(inside, /W\.namesSeen/);
-  assert.match(inside, /fourteenDays/);
-  assert.match(inside, /W\.feeAndRate\(feeInWords\(way\)/);
-  assert.match(inside, /feeSentence\(way\)/, "and the measured form where a service publishes no fee of its own, or no rate is read");
-  assert.match(inside, /CASH_OUT\.sourceLine/);
-  assert.match(inside, /mustShow|howItWorks|W\.missedBy/);
-  assert.match(inside, /W\.partnerLocked\(way\.name\)/);
+  assert.match(inside, /<Lines quiet rows=\{\[milestone \? W\.fold\.notReached : certificate \? W\.fold\.notShown : W\.fold\.missedDay, W\.fold\.notOpened, \.\.\.\(byCard \? \[\[W\.rows\.fee, feeInALine\(way, euros\)\] as const\] : \[\]\)\]\} \/>/);
+  assert.doesNotMatch(inside, /<p /, "no paragraph in it");
   // And what the sheet says in the open is what the mockup says: the name, the lines, the total, the action, its line.
   for (const said of ["W.nameLabel(recipient)", "W.rows.gift(recipient)", "W.rows.fromAccount", "W.rows.fee", "W.rows.viky", "W.youPay", "W.payByCard(", "<CardLine way={way} />", "W.passkeyMakesTheAccount"]) {
     assert.ok(sheet.includes(said), `the sheet says ${said}`);
