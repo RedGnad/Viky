@@ -28,7 +28,7 @@ import { CHARACTERS_FILE } from "./character-file";
  * `data-part` so the motion (app/kit/Motion.tsx) can move a body, a face or a bow without knowing how they are drawn.
  */
 
-export type CharacterState = "toCome" | "today" | "catchable" | "earned" | "returned" | "gift" | "diamond";
+export type CharacterState = "toCome" | "today" | "todayAsleep" | "catchable" | "earned" | "returned" | "gift" | "diamond";
 
 const ONE = "var(--character-1)";
 const TWO = "var(--character-2)";
@@ -231,6 +231,22 @@ function drawing(
             <Eye x={26 + gaze} y={37} r={3.1} />
             <Eye x={38 + gaze} y={37} r={3.1} />
             <rect x={28.5 + gaze} y={45} width={7} height={2.6} rx={1.3} style={{ fill: FACE }} />
+          </>
+        ) : null,
+      };
+    // The day of today, in a row of days (the founder, 4 Oct 2026): a day sleeps until it is done, and today is no
+    // exception. It keeps its triangle, which is what says "today"; its eyes are closed like a day to come's. The
+    // triangle awake, above, is still drawn wherever it is not a day: a goal waited for, a choice, the landing's crowd.
+    case "todayAsleep":
+      return {
+        body: <path d={TRIANGLE} style={bodyFill(TWO)} />,
+        gloss: <Gloss cx={25} cy={27} r={3.4} dot={{ cx: 30, cy: 22, r: 1.7 }} />,
+        shade: <Shade cx={32} cy={51} rx={15} ry={2.4} />,
+        face: face ? (
+          <>
+            <ClosedEye x={26 + gaze} y={37} />
+            <ClosedEye x={38 + gaze} y={37} />
+            <circle cx={32 + gaze} cy={45.5} r={1.9} style={{ fill: FACE }} />
           </>
         ) : null,
       };

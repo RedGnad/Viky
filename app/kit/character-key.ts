@@ -11,7 +11,7 @@ import type { CharacterState, CharacterTone } from "./Character";
 /** The faces a variant chooses between: the gaze goes three ways, and an earned day's smile has two widths. */
 export function faceOf(state: CharacterState, variant: number): number {
   if (state === "earned") return ((variant % 6) + 6) % 6;
-  if (state === "toCome" || state === "today") return ((variant % 3) + 3) % 3;
+  if (state === "toCome" || state === "today" || state === "todayAsleep") return ((variant % 3) + 3) % 3;
   return 0;
 }
 
@@ -24,6 +24,7 @@ export const REFERENCED_DRAWINGS: ReadonlyArray<Readonly<{ state: CharacterState
   ...[0, 1, 2].flatMap((variant) => [
     { state: "toCome" as const, variant, tone: "range" as const },
     { state: "today" as const, variant, tone: "range" as const },
+    { state: "todayAsleep" as const, variant, tone: "range" as const },
   ]),
   ...[0, 1, 2, 3, 4, 5].map((variant) => ({ state: "earned" as const, variant, tone: "range" as const })),
   { state: "catchable", variant: 0, tone: "range" },
