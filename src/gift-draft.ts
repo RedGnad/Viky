@@ -89,13 +89,13 @@ export const DAILY_DURATION = { min: 7, max: 90, suggested: 30 } as const;
  * The card as a visitor first meets it (the founder, 20 Sep 2026): a plausible gift rather than four holes. A
  * Duolingo lesson, thirty dollars, thirty days, at the bar the register itself suggests for a day.
  *
- * The first name starts as "Boo" (the founder, 28 Sep 2026, D300): a card that reads as a whole gift from the first
- * image, with a name the funder replaces. Nothing here is a claim: the money is only taken at the passkey, and every
- * value below is one the funder can change on the card before pressing anything.
+ * The first name starts empty (the founder, 5 Oct 2026): the field asks "who?" until the funder writes a name. It
+ * started as "Boo" from 28 Sep 2026 (D300), a name the funder had to replace. Nothing here is a claim: the money is
+ * only taken at the passkey, and every value below is one the funder can change on the card before pressing anything.
  */
 export const STARTING_DRAFT: GiftDraft = {
   ...EMPTY_DRAFT,
-  recipientName: "Boo",
+  recipientName: "",
   conditionId: "duolingo-daily",
   target: String(conditionById("duolingo-daily")?.target?.suggested ?? 10),
   dollars: "30",
