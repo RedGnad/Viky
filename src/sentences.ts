@@ -209,7 +209,8 @@ export const PAY = {
   title: (recipient: string) => `Pay for ${their(recipient)} gift`,
   /** The one thing to fill in, so it comes first (the founder's mockup of 3 Oct 2026); empty, the gift is from nobody. */
   nameLabel: (recipient: string) => (recipient.trim() ? `Your name, as ${recipient} knows you` : "Your name, as they know you"),
-  namePlaceholder: "Mum",
+  // An example of a giver's name, and never a parent's (the founder, 4 Oct 2026): Viky is for adults on both sides.
+  namePlaceholder: "Sam",
   /**
    * Lines that add up, in the one money the gift was typed in (the mockup of 3 Oct 2026, src/pay-sum.ts). The company is
    * not named on a line (the founder, 20 Sep 2026): it is named under the button, where the card goes to it.
@@ -508,6 +509,11 @@ export const ACCOUNT_DOOR = {
   copyRefused: "This browser would not copy it. Press and hold the link, then choose Copy.",
   linkLabel: "The link",
   how: "Your face or your fingerprint, and nothing to remember.",
+  /**
+   * Said wherever an account is made, to the person who offers and to the person a gift is for (the founder, 4 Oct
+   * 2026): Viky is for adults, on both sides. It was said at the card payment alone.
+   */
+  adult: "By creating an account you confirm you are 18 or older.",
   /** Two lines: what the computer lacks, then what to do. */
   computer: (gift: boolean) => ["This computer did not find a fingerprint reader or Windows Hello.", `Use a security key, or open ${linkOf(gift)} on your phone.`],
   ifItKeepsFailing: {
@@ -626,7 +632,7 @@ export const FUND = {
     title: "Who is it for?",
     recipientLabel: "Their first name",
     funderLabel: "Your name, as they know you",
-    funderHelp: "Like Mum, or Tom: the gift says who it is from.",
+    funderHelp: "Like Sam, or Tom: the gift says who it is from.",
     seen: "Both names show on the gift, to them and to whoever opens its link.",
     neverWrites: "Viky never writes to them. You send them the link yourself, once the gift is ready.",
     refusals: {

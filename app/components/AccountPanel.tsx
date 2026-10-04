@@ -97,6 +97,10 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
           {line}
         </p>
       ))}
+      {/* Viky is for adults, the person a gift is for as the person who offers it (the founder, 4 Oct 2026). */}
+      <p className={HELP} data-adult="">
+        {W.adult}
+      </p>
       {noSensor ? <CopyThisLink browser={null} /> : null}
 
       {naming ? (

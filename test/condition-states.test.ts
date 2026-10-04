@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { BUILDING, catalogueSections, conditionById, CONDITIONS, FAMILIES, FRONTIERS, liveConditions, STATES, stateOf, stateWords } from "../src/conditions";
+import { BUILDING, catalogueSections, conditionById, CONDITIONS, FAMILIES, FRONTIERS, liveConditions, STATES, stateOf, stateWords, FOR_PUPILS } from "../src/conditions";
 import { CATALOGUE } from "../src/sentences";
 
 /**
@@ -69,7 +69,9 @@ test("what nobody can check is listed with what was read, and it is not pretende
   assert.deepEqual(FRONTIERS.map((frontier) => frontier.id), ["supervised-exams", "university-enrolment", "state-diplomas", "school-marks"]);
   // Each line says whether the other reading is being built for it (D163): the exams and enrolment (D165), and only they, today.
   for (const frontier of FRONTIERS) assert.ok(frontier.building === null || /\.$/.test(frontier.building), `${frontier.id} says it in a sentence`);
-  assert.deepEqual(FRONTIERS.filter((frontier) => frontier.building).map((frontier) => frontier.id), ["supervised-exams", "university-enrolment", "state-diplomas", "school-marks"]);
+  // School marks are a pupil's: Viky is for adults, on both sides, so nothing is on its way there (the founder, 4 Oct 2026).
+  assert.deepEqual(FRONTIERS.filter((frontier) => frontier.building).map((frontier) => frontier.id), ["supervised-exams", "university-enrolment", "state-diplomas"]);
+  assert.equal(FRONTIERS.find((frontier) => frontier.id === "school-marks")?.building, null);
   for (const frontier of FRONTIERS.filter((frontier) => frontier.building)) assert.match(String(frontier.building), /SHOWN BY THEM/, `${frontier.id} names the two words the condition will carry`);
   assert.match(stateWords("no-public-page").meaning, /^No public page shows it\. The person can show it from their own account, and Viky is building that\.$/);
   // Each line rests on a page read on a day, and the two read from a source's own site say which day.
@@ -95,7 +97,8 @@ test("the page lists every condition the register holds, offered or not, by fami
   // year passed and the grade are open since D313.
   assert.deepEqual(
     sections.flatMap((section) => section.building).map((condition) => condition.id),
-    ["chsi-enrolment-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown", "cambridge-english-shown", "ielts-shown", "ecoledirecte-grade-shown"],
+    // Without the line for pupils, which stays closed and off the public page (the founder, 4 Oct 2026).
+    ["chsi-enrolment-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown", "cambridge-english-shown", "ielts-shown"],
   );
   assert.deepEqual(sections.find((section) => section.family === "move")?.conditions.map((condition) => condition.id), ["fitbit-daily", "strava-daily", "marathon-finish"], "the family Move, its three lines open (D188, D191, D273)");
   assert.deepEqual(sections.find((section) => section.family === "move")?.building.map((condition) => condition.id), [], "nothing being built beside them since the marathon opened");
@@ -167,5 +170,10 @@ test("every condition says its nature, and every one of the pilot is read for th
     if (!frontier.building) assert.equal(frontier.conditionId, undefined, `${frontier.id} names a line and says nothing is being built`);
   }
   const printed = new Set(catalogueSections().flatMap((section) => section.building).map((condition) => condition.id));
-  for (const id of ["bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "ecoledirecte-grade-shown"]) assert.ok(printed.has(id), `${id} prints under its family, since no frontier line names it`);
+  for (const id of ["bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown"]) assert.ok(printed.has(id), `${id} prints under its family, since no frontier line names it`);
+  // The lines for pupils are printed nowhere on the public page, and neither school portal is named on it.
+  assert.deepEqual(FOR_PUPILS, ["ecoledirecte-grade-shown", "pronote-grade-shown"]);
+  for (const id of FOR_PUPILS) assert.ok(!printed.has(id), `${id} is not on the public page`);
+  const said = [...catalogueSections().flatMap((section) => [...section.conditions, ...section.building].flatMap((condition) => [condition.name, condition.help, condition.beforeItOpens ?? ""])), ...FRONTIERS.flatMap((frontier) => [frontier.name, frontier.why, frontier.building ?? ""])].join(" ");
+  assert.doesNotMatch(said, /PRONOTE|EcoleDirecte/i);
 });

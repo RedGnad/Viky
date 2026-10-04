@@ -35,9 +35,9 @@ test("one goal, pinned by name, a constant subject, and the family School after 
   assert.equal(condition?.live, false);
   assert.ok(BUILDING.includes(condition as never));
   assert.ok(proofOfCondition("ecoledirecte-grade-shown"));
-  // The frontier's line on school marks says which portal is on its way and why the other is not, in its publisher's words.
   const marks = FRONTIERS.find((frontier) => frontier.id === "school-marks");
-  assert.match(String(marks?.building), /EcoleDirecte account.*SHOWN BY THEM.*not PRONOTE.*encrypted/);
+  // Since 4 Oct 2026 the public page names neither portal and says nothing is on its way: Viky is for adults.
+  assert.equal(marks?.building, null);
   assert.equal(marks?.conditionId, undefined, "the line prints under School & studies, once");
   assert.equal(conditionById("pronote-grade-shown"), undefined, "PRONOTE is parked: its answers and bulletins are encrypted");
 });
