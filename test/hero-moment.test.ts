@@ -225,7 +225,7 @@ test("signing out never draws a screen for nobody on the way, and the landing it
   const order = ["await signOutOfServer();", "mera.signOut({ quiet: true });", "heroCookieCleared(", 'window.location.assign("/");'].map((step) => leave.indexOf(step));
   assert.ok(order.every((at) => at >= 0) && order.every((at, i) => i === 0 || at > order[i - 1]), `in that order: ${order}`);
   const me = readFileSync("app/kit/Me.tsx", "utf8");
-  assert.match(me, /setLeaving\(true\);\n\s*void leave\(\);/);
+  assert.match(me, /setLeaving\("out"\);\n\s*void leave\(\);/);
   assert.doesNotMatch(me, /router\.push\("\/"\)/, "no client navigation that redraws Me for nobody while it waits");
   const mera = readFileSync("src/account/mera.ts", "utf8");
   assert.match(mera, /if \(wasSignedIn && !quiet\) notify\(\);/);

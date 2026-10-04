@@ -1,4 +1,5 @@
 "use client";
+import { askForTheDoor } from "./door-asked";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Address, LocalAccount } from "viem";
 import { ACCOUNT_CHANNEL, currentServerSession, serverStillKnows, signInToServer, signOutOfServer, tellOtherTabsSignedOut } from "../client/server-session";
@@ -75,7 +76,7 @@ export type AccountContextValue = {
    * Someone who holds two accounts, a funder and a recipient, had no way back to the other one: sign-in
    * always reused the remembered passkey and nothing on screen said which account that was.
    */
-  useAnotherAccount: () => void;
+  useAnotherAccount: () => Promise<void>;
   clearError: () => void;
 };
 
@@ -282,16 +283,23 @@ export function AccountProvider({ initialAccount, children }: { initialAccount?:
         } catch {
           // A browser that refuses the cookie keeps the moment as played, which is what it had.
         }
+        // Straight to the account's door (the founder, 4 Oct 2026): the landing opens it as it arrives.
+        askForTheDoor();
         // A document load on purpose, not a client navigation: the browser keeps painting this page until the landing
         // is ready (paint holding), where a client navigation redrew this page for nobody while it waited (D258).
         // eslint-disable-next-line @next/next/no-location-assign-relative-destination
         window.location.assign("/");
       },
-      useAnotherAccount: () => {
-        mera.forgetCredential();
-        setServerSessionFor(undefined);
+      useAnotherAccount: async () => {
         setError(undefined);
-        void signOutOfServer().then(tellOtherTabsSignedOut);
+        await signOutOfServer();
+        tellOtherTabsSignedOut();
+        mera.forgetCredential();
+        // The same way out as signing out, and the same door: it used to leave the page of an account drawn for
+        // nobody, where "Sign in" had to be pressed again (the founder, 4 Oct 2026).
+        askForTheDoor();
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+        window.location.assign("/");
       },
       clearError: () => setError(undefined),
     }),
@@ -328,7 +336,7 @@ export function ExampleAccountProvider({ children }: { children: ReactNode }) {
       signOut: () => undefined,
       serverForgot: () => undefined,
       leave: async () => undefined,
-      useAnotherAccount: () => undefined,
+      useAnotherAccount: async () => undefined,
       clearError: () => undefined,
     }),
     [],

@@ -40,9 +40,22 @@ import { WhereYouLive } from "./WhereYouLive";
  * carries the same one door as the page without an account, and nothing else to do.
  */
 export function Me() {
-  const { address, reach, leave, useAnotherAccount } = useAccount();
-  /** Set while the session closes: the page stays as it is, and the key says what is happening (D258). */
-  const [leaving, setLeaving] = useState(false);
+  // Named without "use" here: it is called from a press, and a name that starts so is read as a hook.
+  const { address: signedIn, reach, leave, useAnotherAccount: toAnotherAccount } = useAccount();
+  /**
+   * Set while the session closes, by "Sign out" or by "Other account": the page stays as it is, and the key says what
+   * is happening (D258). Which of the two was pressed, so that key alone shows the wheel.
+   */
+  const [leaving, setLeaving] = useState<"out" | "other" | null>(null);
+  /**
+   * The account this page was drawn for, kept while the session closes: the page for nobody ("You, not signed in on
+   * this device") showed for a moment between the press and the landing, and "Other account" left the person on it
+   * (the founder, 4 Oct 2026). Both lead straight to the account's door, and this page is never drawn for nobody on
+   * the way.
+   */
+  const [drawnFor, setDrawnFor] = useState(signedIn);
+  if (signedIn && signedIn !== drawnFor) setDrawnFor(signedIn);
+  const address = signedIn ?? (leaving ? drawnFor : undefined);
   /** What every screen reads in, and the list it may be changed from, both from one place (D152). */
   const money = useDisplayCurrency(address);
   const holdings = useHoldings(address);
@@ -139,7 +152,8 @@ export function Me() {
       </section>
 
       <section className={CARD}>
-        <p className="font-medium">{reach === "signing" && until ? W.signedInUntil(until) : reach === "signed-out" ? W.signedOut : W.signedIn}</p>
+        {/* While the session closes the page stays as it was: this line does not turn to "Not signed in" on the way. */}
+        <p className="font-medium">{reach === "signing" && until ? W.signedInUntil(until) : reach === "signed-out" && !leaving ? W.signedOut : W.signedIn}</p>
         {reach === "reading" ? <p className={HELP}>{W.passkeyWhenMoneyMoves}</p> : null}
       </section>
 
@@ -171,24 +185,35 @@ export function Me() {
             page anybody can read, which is the one with the card, and nothing for nobody is drawn on the way
             (D258: this page stays until the landing is ready to be painted). */}
         <Act
-          name={leaving ? W.leaving : W.signOut}
-          disabled={leaving}
+          name={leaving === "out" ? W.leaving : W.signOut}
+          disabled={leaving !== null}
           onPress={() => {
-            setLeaving(true);
+            setLeaving("out");
             void leave();
           }}
           data-decide="sign-out"
         >
           {/* The wheel takes the drawing's place while the session closes (the founder, 3 Oct 2026). */}
-          {leaving ? <span className="working-ring working-ring-inline text-[26px]" aria-hidden="true" /> : null}
-          <svg aria-hidden focusable="false" className={leaving ? "hidden" : undefined} width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {leaving === "out" ? <span className="working-ring working-ring-inline text-[26px]" aria-hidden="true" /> : null}
+          <svg aria-hidden focusable="false" className={leaving === "out" ? "hidden" : undefined} width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M10 5H6a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h4" />
             <path d="M14 8l4 4-4 4" />
             <path d="M18 12H10" />
           </svg>
         </Act>
-        <Act name={W.otherAccount} onPress={useAnotherAccount} data-decide="other-account">
-          <svg aria-hidden focusable="false" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {/* The same way out, to the same door: this account's session closes, the passkey this device remembered is let
+            go of, and the landing opens the door, where another account is signed in to or made. */}
+        <Act
+          name={W.otherAccount}
+          disabled={leaving !== null}
+          onPress={() => {
+            setLeaving("other");
+            void toAnotherAccount();
+          }}
+          data-decide="other-account"
+        >
+          {leaving === "other" ? <span className="working-ring working-ring-inline text-[26px]" aria-hidden="true" /> : null}
+          <svg aria-hidden focusable="false" className={leaving === "other" ? "hidden" : undefined} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="9" r="3.5" />
             <path d="M5 20a7 7 0 0 1 14 0" />
           </svg>
