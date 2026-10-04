@@ -89,28 +89,33 @@ export function Shell(props: Props) {
   // drawn for nobody and then replaced by the account's is visible to a test and to the trace (D196).
   const { address } = useAccount();
   const character = props.character !== undefined ? props.character : props.kind === "destination" && props.bare ? null : <HeadCharacter />;
-  const width =
+  /**
+   * The column of this page, its margins included: what the page is held to, and what every sheet over it is as wide
+   * as, so a sheet's edges fall on the page's as they do on a phone (the founder, 4 Oct 2026). It was 560 over a card
+   * of 440, which no mockup had decided. The page without an account is as wide as its widest line from 1024
+   * (`.home-column`), and what a sheet covers there is the card: its column is the card's.
+   */
+  const column =
     props.kind === "task"
-      ? "max-w-[var(--app-column-max)]"
+      ? "var(--app-column-max)"
       : props.kind === "document"
-        ? "max-w-[var(--prose-max)]"
-        : props.width === "card"
-          ? "max-w-[calc(var(--gift-card-width)+2*var(--page-margin))]"
-          : props.wide
-            ? "home-column"
-            : "max-w-[var(--destination-max)]";
+        ? "var(--prose-max)"
+        : props.width === "card" || props.wide
+          ? "calc(var(--gift-card-width) + 2 * var(--page-margin))"
+          : "var(--destination-max)";
+  const width = props.kind === "destination" && props.wide ? "home-column" : "max-w-[var(--page-column)]";
+  /** The rail is drawn on a destination that is somebody's, and nowhere else. */
+  const rail = props.kind === "destination" && !props.bare;
   // Room for the bar below it and beside the rail on a destination; a task and a document have neither.
-  const room =
-    props.kind === "destination" && !props.bare
-      ? "pb-[calc(var(--nav-bar-height)+var(--space-xl))] [@media(min-width:840px)]:pb-[var(--space-xl)] pl-[var(--page-offset)]"
-      : "";
+  const room = rail ? "page-beside-the-rail pb-[calc(var(--nav-bar-height)+var(--space-xl))] [@media(min-width:840px)]:pb-[var(--space-xl)] pl-[var(--page-offset)]" : "";
 
   return (
     <>
-      {/* The page without an account draws no rail, so it keeps no room for one: the offset the sheets are placed by
-          is zero there (D137). At 88 it pushed every sheet that many pixels right of the window's middle, which is
-          what the founder measured on the catalogue. */}
-      <div className={room} style={props.kind === "destination" && props.bare ? ({ "--page-offset": "0px" } as CSSProperties) : undefined}>
+      {/* The offset a sheet is placed by is zero everywhere, and the rail's width only here, where the rail is drawn
+          (`.page-beside-the-rail`, the founder, 4 Oct 2026). It was the rail's width on every page from 840, taken
+          back for one kind of page at a time (20 Sep 2026, then D137): a task and a document draw no rail and kept
+          it, so every sheet over a gift's page, a payment or a withdrawal stood 44 pixels right of its page. */}
+      <div className={room} data-page-kind={props.kind} style={{ "--page-column": column } as CSSProperties}>
         {/* Everything this page carries enters when the page is reached from another, 250 ms, once, block by block
             (D146, D171); the mark and the appearance control stand still, because they are in the same place on every
             screen. The first screen a document draws is drawn whole and still (D198): on a reload it replaces itself
@@ -154,7 +159,7 @@ export function Shell(props: Props) {
           {props.children}
         </main>
       </div>
-      {props.kind === "destination" && !props.bare ? <Nav active={props.active} /> : null}
+      {rail && props.kind === "destination" ? <Nav active={props.active} /> : null}
     </>
   );
 }

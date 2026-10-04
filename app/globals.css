@@ -235,11 +235,20 @@
   --nav-bar-height: 64px;
   --nav-rail-width: 88px;
   /*
-   * How far the page column is pushed in from the left, which the rail takes on a destination. The shell reads it
+   * How far the page column is pushed in from the left, which the rail takes where it is drawn. The shell reads it
    * and so does every sheet, because a sheet is over the page and must stand on the page's own axis: measured on
    * production at 1440 on 20 Sep 2026, the page was centred 57 pixels away from the sheet over it.
+   *
+   * Zero everywhere, and the rail's width only on the page the rail is drawn beside (`.page-beside-the-rail`, the
+   * founder, 4 Oct 2026). It used to be the rail's width on every page from 840, taken back one kind of page at a
+   * time, and the defect came back three times.
    */
   --page-offset: 0px;
+  /*
+   * The column of the page a sheet covers, its margins included: the shell says it for each kind of page, and a
+   * sheet is exactly that wide. Outside any shell it is the column of a task.
+   */
+  --page-column: var(--app-column-max);
 
   /*
    * The card a gift is filled in on, and every card of a gift: 440 wide and never wider (the founder, 20 Sep 2026,
@@ -286,10 +295,13 @@
   }
 }
 
-/* The display title grows where the screen is wide, and the rail takes its room beside the column. */
+/* The display title grows where the screen is wide, and the rail takes its room beside the column it is drawn by. */
 @media (min-width: 840px) {
-  :root {
+  .page-beside-the-rail {
     --page-offset: var(--nav-rail-width);
+  }
+
+  :root {
     --type-display: 76px;
     --type-display-leading: 80px;
     --type-display-tracking: -2px;
@@ -777,15 +789,18 @@ video {
  */
 dialog.sheet {
   /* The page's axis, not the window's: a destination's column is pushed in by the rail, and a sheet over it has to
-     stand on the same line. Measured on production at 1440 on 20 Sep 2026: 57 pixels apart, and visibly so. */
+     stand on the same line. Measured on production at 1440 on 20 Sep 2026: 57 pixels apart, and visibly so. Both
+     are read from the page the sheet is drawn in: zero and its own column for a page without a rail. */
   left: var(--page-offset);
   right: 0;
   margin: auto auto 0;
-  width: min(100%, 560px);
+  /* As wide as the column of the page it covers, margins included, so its edges fall on the page's as on a phone
+     (the founder, 4 Oct 2026). It was 560 on every page, over a card of 440. */
+  width: min(100%, var(--page-column));
   /* A dialog carries a browser's own `max-width: calc(100% - 6px - 2em)`, which is 38 pixels on a phone: the sheet
      was inset from both edges where the image draws it flush, and its list was 38 pixels narrower than the screen,
      which is what wrapped titles the image holds on one line (measured 20 Sep 2026). */
-  max-width: min(100%, 560px);
+  max-width: min(100%, var(--page-column));
   /* Capped at what the mockups cap it at, so a sheet never fills the screen and the card is always behind it. */
   max-height: 74dvh;
   padding: 0;
