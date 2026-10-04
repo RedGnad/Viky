@@ -205,8 +205,9 @@ test.describe("your mobile money", () => {
       await send.click();
       // Nothing filled in: each field says what it is missing, in the sentences the route itself refuses with.
       await expect(page.locator("#mobile-operator-refusal")).toHaveText("Choose your operator from the list.");
-      await expect(page.locator("#mobile-number-refusal")).toHaveText("That number is not one this operator takes. Digits only, as your operator gives it.");
-      await expect(page.locator("#mobile-holder-refusal")).toHaveText("Write the name on the account, as your operator has it.");
+      // An empty field is asked for; a field filled in and refused keeps the route's own sentence (5 Oct 2026).
+      await expect(page.locator("#mobile-number-refusal")).toHaveText("Enter your number.");
+      await expect(page.locator("#mobile-holder-refusal")).toHaveText("Enter the name on the account.");
       await expect(page.locator("#mobile-amount-refusal")).toHaveCount(0);
       await expect(send).toBeEnabled();
       expect(asked.started(), "nothing started").toBeNull();
@@ -218,6 +219,14 @@ test.describe("your mobile money", () => {
       await shot(page, size.name, "8a-a-press-with-nothing-filled");
       await page.locator("#mobile-operator-refusal").scrollIntoViewIfNeeded();
       await shot(page, size.name, "8b-what-each-field-is-missing");
+      await page.getByLabel("Number").fill("12 34");
+      await expect(page.locator("#mobile-number-refusal")).toHaveText("That number is not one this operator takes. Digits only, as your operator gives it.");
+      await page.getByLabel("Name on the account").fill("7");
+      await expect(page.locator("#mobile-holder-refusal")).toHaveText("Write the name on the account, as your operator has it.");
+      await page.locator("#mobile-number-refusal").scrollIntoViewIfNeeded();
+      await shot(page, size.name, "8b2-a-field-filled-in-and-refused");
+      await page.getByLabel("Number").fill("");
+      await page.getByLabel("Name on the account").fill("");
       // An amount past a bound says the bound, in the country's money.
       await page.getByLabel("How much").fill("100");
       await expect(page.locator("#mobile-amount-refusal")).toHaveText("At least 5 872 F at a time.");

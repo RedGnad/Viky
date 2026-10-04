@@ -214,13 +214,16 @@ test.describe("the screens a person meets", () => {
     await expect(conditions).not.toHaveCount(0);
     // A row explains itself when it carries a line of help beyond its name and its nature: the nature is said on every
     // line in the meta voice (capitals, D162), and the help is said on the condition's questions instead.
+    // Since 5 Oct 2026 a name not everybody knows carries one grey line saying what it is ("Competitive programming"
+    // under Codeforces): a few words, never the help, and it is not counted as an explanation.
     const explained = async () =>
       body.evaluate((element) =>
         [...element.querySelectorAll('div[role="group"] > button')].filter((label) =>
-          [...label.querySelectorAll(":scope > span > span")].slice(1).some((line) => getComputedStyle(line).textTransform !== "uppercase"),
+          [...label.querySelectorAll(":scope > span > span")].slice(1).some((line) => !line.hasAttribute("data-what-it-is") && getComputedStyle(line).textTransform !== "uppercase"),
         ).length,
       );
     expect(await explained()).toBe(0);
+    await expect(sheet.locator("[data-what-it-is]")).toHaveText(["Competitive programming", "Professional badges", "Digital certificates"]);
     // The one the card carries, by its own name: the catalogue is ordered by title inside a family, so "first" is
     // whatever the register's words sort to, and that is not what this check is about.
     await expect(sheet.getByRole("button", { name: /A Duolingo lesson each day/i })).toHaveAttribute("aria-current", "true");

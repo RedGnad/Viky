@@ -24,6 +24,9 @@ export const MOBILE_REFUSALS = {
    * nothing). The route refuses with the same sentences, so the screen and the server never say two things.
    */
   chooseOperator: "Choose your operator from the list.",
+  /** Nothing typed yet: the field is asked for, where the sentences below would speak of a number nobody wrote. */
+  enterNumber: "Enter your number.",
+  enterName: "Enter the name on the account.",
   numberNotTaken: "That number is not one this operator takes. Digits only, as your operator gives it.",
   writeTheName: "Write the name on the account, as your operator has it.",
   /** Said in place of the form once the day's ceiling leaves less than the smallest payout. */

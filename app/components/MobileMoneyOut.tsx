@@ -214,8 +214,8 @@ export function MobileMoneyOut(props: Readonly<{ offer: Offered; ausd: bigint; e
   const busy = step !== null;
   const missing = {
     operator: pressed && !network ? MOBILE_REFUSALS.chooseOperator : null,
-    number: pressed && !numberFits ? MOBILE_REFUSALS.numberNotTaken : null,
-    holder: pressed && !holderFits ? MOBILE_REFUSALS.writeTheName : null,
+    number: pressed && !numberFits ? (number.trim() === "" ? MOBILE_REFUSALS.enterNumber : MOBILE_REFUSALS.numberNotTaken) : null,
+    holder: pressed && !holderFits ? (holder.trim() === "" ? MOBILE_REFUSALS.enterName : MOBILE_REFUSALS.writeTheName) : null,
     amount:
       pressed && !within
         ? local === null
