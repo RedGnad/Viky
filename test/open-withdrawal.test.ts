@@ -202,7 +202,7 @@ test("the chain's own coin a card delivered is money in the account: counted at 
   assert.match(screen, /const arrivedCoin = openWithdrawal !== undefined && !heldForWithdrawal\(openWithdrawal, MON\.address, held\(MON\)\) \? coinHeld : 0n;/);
   assert.match(screen, /const arrivedCoinWorth = arrivedCoin > 0n \? coinHeldWorth : 0n;/);
   assert.match(screen, /const dollarsHeld = dollarsToTheCent\(ausd \+ giftsHold, held\(USDC\)\) \+ coinHeldWorth;/);
-  assert.match(screen, /return estimated \? \{ \.\.\.led, rateDate: undefined \} : led;/, "no line calling the dollars exact");
+  assert.doesNotMatch(screen, /ExactLine/, "no line calling the dollars exact: the exact dollars are gone from this screen (the founder, 4 Oct 2026)");
   assert.match(screen, /const figureUnknown = coinHeld > 0n && \(coinWorth\.state === "reading" \|\| \(coinWorth\.state === "unread" && dollarsHeld === 0n\)\);/);
   assert.match(screen, /if \(arrivedCoin > 0n\) \{\n\s*readying = true;\n\s*const conversion = await fundingQuote\(arrivedCoin\);\n\s*await sendWithExplicitGas\(account, \{ to: conversion\.to, data: conversion\.data, value: BigInt\(conversion\.value\) \}\);/);
   assert.doesNotMatch(screen, /moreUnread|data-more-unread/);

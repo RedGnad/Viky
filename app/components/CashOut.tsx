@@ -20,7 +20,7 @@ import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, heldForWit
 import { chainCoinToChange, USDC_ARRIVAL_FLOOR } from "@/src/funding-step";
 import { usdcRouterAddress } from "@/src/usdc-router";
 import { formatAusd } from "@/src/gift-reader";
-import { ExactLine, LedFigure } from "../kit/LedAmount";
+import { LedFigure } from "../kit/LedAmount";
 import { whereTheRailsServe, type RailsWhere } from "@/src/client/rails";
 import { countryInWords } from "@/src/rail-country";
 import { feeSentence, RATE_SOURCE, WAY_OUT_CARD, WAY_OUT_EURO, wayOutFillsIn, wayOutPage, WAYS_OUT, type WayOut } from "@/src/rails";
@@ -257,8 +257,6 @@ export function CashOut() {
   const coinHeldWorth = coinHeld > 0n && coinWorth.state === "worth" ? coinWorth.units : 0n;
   const arrivedCoin = openWithdrawal !== undefined && !heldForWithdrawal(openWithdrawal, MON.address, held(MON)) ? coinHeld : 0n;
   const arrivedCoinWorth = arrivedCoin > 0n ? coinHeldWorth : 0n;
-  /** The figures hold a quote: never said as exact dollars. */
-  const estimated = coinHeldWorth > 0n;
   const changeable = toTheCent(ausd + giftsHold + arrived, AUSD.decimals) + arrivedCoinWorth;
   const dollarsHeld = dollarsToTheCent(ausd + giftsHold, held(USDC)) + coinHeldWorth;
   /**
@@ -268,13 +266,11 @@ export function CashOut() {
    */
   const figureUnknown = coinHeld > 0n && (coinWorth.state === "reading" || (coinWorth.state === "unread" && dollarsHeld === 0n));
   /**
-   * What the account holds, led by the reader's currency. When it counts the chain's coin at a quote, no line under it
-   * calls the dollars exact. Nothing more is said of the estimate: no "about" of its own (the founder, 4 Oct 2026).
+   * What the account holds, led by the reader's currency, with "about" before a figure that is a conversion. The exact
+   * dollars under it are gone from this screen (the founder, 4 Oct 2026: "Exactly $20.99, at the rate of…"): the person
+   * this is for has no use for dollars here. They are still said where an amount is typed and confirmed in them.
    */
-  const heldLed = (): LedAmount => {
-    const led = money.led(dollarsHeld);
-    return estimated ? { ...led, rateDate: undefined } : led;
-  };
+  const heldLed = (): LedAmount => money.led(dollarsHeld);
   const readyOf = (way: WayOut): Ready | undefined => (holdings ? readyFor(way, coinOf(way), held(coinOf(way))) : undefined);
   /**
    * What the first screen says is ready for a service (the founder, 3 and 4 Oct 2026): only the money of a withdrawal
@@ -672,7 +668,6 @@ export function CashOut() {
       ) : heldLed().converted ? (
         <>
           <LedFigure amount={heldLed()} className={MONEY} />
-          <ExactLine amount={heldLed()} />
         </>
       ) : (
         <>
@@ -724,7 +719,6 @@ export function CashOut() {
                 …
               </p>
             )}
-            {led ? <ExactLine amount={led} /> : null}
             {led && !led.converted && money.unavailable ? <p className={HELP}>{money.unavailable}</p> : null}
             {firstReady && dollarsHeld > 0n ? (
               <>

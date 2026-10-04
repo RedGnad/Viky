@@ -321,13 +321,13 @@ export type RecipientWords = Readonly<{
   noPassword: string;
   notYet: string;
   /**
-   * First in that fold: how to get the source, and a button that opens its own site and says so (the founder, 4 Oct
-   * 2026). The sentence that follows them says what becomes of the money, which is not what to do.
+   * That fold: the button that opens the source's own site and says so, and one line (the founder, 4 Oct 2026).
    */
   notYetHow: Readonly<{ says: string; open: string; href: string }>;
   /** The proof that the account is theirs, when they named it themselves. */
   proveTitle: (username: string) => string;
-  proveSteps: string;
+  /** The second of the three steps of the code: where it goes at the source, in a few words (the founder, 4 Oct 2026). */
+  codeStep: string;
   slowToShow: string;
   /** When the funder named the account. */
   namedBy: (username: string, funder: string) => string;
@@ -444,9 +444,9 @@ export const DUOLINGO_DAILY: Condition = {
     noPassword: "No password, no sign-in: your lessons are read from your public profile. Next, a short code proves the profile is yours.",
     // A fold's name, a question: pressing it opens a sentence and does nothing else (the founder, 4 Oct 2026).
     notYet: "No Duolingo yet?",
-    notYetHow: { says: "Duolingo is free. Install it, make your account, then come back here with your username.", open: "Open Duolingo", href: "https://www.duolingo.com" },
+    notYetHow: { says: "Free. Come back with your username.", open: "Open Duolingo", href: "https://www.duolingo.com" },
     proveTitle: (username) => `Prove ${username} is yours`,
-    proveSteps: "In Duolingo, open Profile, then Settings, then Name, and add this code to your name:",
+    codeStep: "Add it to your name in Duolingo: Profile, Settings, Name.",
     slowToShow: "Duolingo can take a minute to show a new name. If Viky cannot see the code yet, wait a minute and press again.",
     namedBy: (username, funder) => `Your Duolingo: ${username}. Named by ${funder}.`,
     namedHow: "Nothing to sign in to, nothing to install: your lessons are read from your public profile.",

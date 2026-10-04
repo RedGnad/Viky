@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMadeHere } from "@/src/account/door";
 import { useAccount } from "@/src/account/provider";
@@ -10,24 +10,23 @@ import { readAusdBalance } from "@/src/client/onchain";
 import { whereTheRailsServe } from "@/src/client/rails";
 import { conditionById } from "@/src/conditions";
 import { certificateById, milestoneById } from "@/src/milestone-conditions";
-import { settlingTimeInWords } from "@/src/pass-schedule";
 import { draftToTerms, draftUnits, isComplete, type GiftDraft } from "@/src/gift-draft";
-import { serviceChargeEur, serviceChargeIsCeiling, wayInFor, type WayInOffer } from "@/src/gift-amount";
+import { serviceChargeEur, serviceChargeIsCeiling, wayInFor } from "@/src/gift-amount";
 import { lastNameGiven, tidyGiftName } from "@/src/gift-names";
 import { judgeLineIsTrue } from "@/src/judge-line";
 import { formatAusd } from "@/src/gift-reader";
 import { savePendingGift } from "@/src/pending-gift";
-import { rateDateInWords } from "@/src/display-currency";
 import { cardSum, giftTyped, heldIn, moneyIn, perEuro } from "@/src/pay-sum";
 import type { RailReach } from "@/src/rail-country";
-import { feeInWords, feeSentence, RAMP_NO_GIFT_COIN_IN, sourceOfIts, wayInFillsIn, wayInPage, waysIn, WAY_IN_GIFT_COIN, WAY_IN_USDC } from "@/src/rails";
+import { feeInALine, wayInFillsIn, wayInPage, waysIn, WAY_IN_USDC } from "@/src/rails";
 import { frameKeepsSignIn, rampnowFrameOn } from "@/src/rampnow-frame";
 import { noteInRampnowJournal } from "@/src/client/rampnow-journal";
 import { payAtRampnowBeside } from "@/src/client/rampnow-pending";
-import { ACCOUNT_DOOR, CASH_OUT, FUND, MILESTONE_FUND, PAY as W, WAITS } from "@/src/sentences";
+import { ACCOUNT_DOOR, FUND, PAY as W, WAITS } from "@/src/sentences";
 import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, PRIMARY_BUTTON, SMALL_BUTTON } from "../../components/ui";
 import { AccountPanel } from "../../components/AccountPanel";
 import { Field } from "../Field";
+import { Lines } from "../Lines";
 import { heldInGifts } from "../money";
 import { CardLine, CardNotOffered } from "./CardTerms";
 import { JudgeCode } from "./JudgeCode";
@@ -61,24 +60,6 @@ import { ButtonWords, StepInProgress } from "../Waiting";
  * keeps the page it is drawing, and the terms are kept and the wait opened by this same press. Whether the sheet is
  * open is Home's to know as well, so signing in from it, by its small "Sign in", leaves it open.
  */
-function everyMinute(changed: () => void): () => void {
-  const timer = setInterval(changed, 60_000);
-  return () => clearInterval(timer);
-}
-const thisMinute = () => Math.floor(Date.now() / 60_000) * 60_000;
-const noClock = () => 0;
-
-/** Which way refused, why, and which one stands instead, in our words. */
-function insteadSentence(offer: WayInOffer, country: string | null): string {
-  const first = offer.insteadOf!.way;
-  // A service that serves the country and does not sell there what a gift holds is said as that, never as a country
-  // it does not serve (the audit of 1 Oct 2026: Ramp in twenty-six countries of the European Economic Area).
-  if (offer.insteadOf!.because === "country" && first === WAY_IN_GIFT_COIN && country && RAMP_NO_GIFT_COIN_IN.includes(country.toLowerCase())) return W.instead.notSold(first.name, offer.way.name);
-  if (offer.insteadOf!.because === "country") return W.instead.country(first.name, offer.way.name);
-  if (offer.insteadOf!.because === "paused") return W.instead.paused(first.name, offer.way.name);
-  return W.instead.floor(first.name, moneyIn(first.smallestEur, "EUR"), offer.way.name);
-}
-
 export function PaySheet({
   open,
   draft,
@@ -124,8 +105,6 @@ export function PaySheet({
       live = false;
     };
   }, [open, address, balanceRead]);
-  /** The reader's own clock, read once a minute: the hour the settling pass runs is said in it. */
-  const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
   const [problem, setProblem] = useState<string | null>(null);
 
   useEffect(() => {
@@ -189,10 +168,8 @@ export function PaySheet({
   const units = draftUnits(draft);
   const condition = conditionById(draft.conditionId);
   const recipient = tidyGiftName(draft.recipientName);
-  const funder = tidyGiftName(draft.funderName);
   const milestone = milestoneById(draft.conditionId);
   const certificate = certificateById(draft.conditionId);
-  const target = Number(draft.target);
   const ready = isComplete(draft) && units !== undefined && condition !== undefined;
   // "From your Viky money": the account and what the person's gifts hold for them, one figure.
   const inAccount = (held ?? 0n) + inGifts;
@@ -213,7 +190,6 @@ export function PaySheet({
   const feeCeiling = Boolean(euros) && serviceChargeIsCeiling(euros ?? 0, way.fee);
   const heldRead = heldIn(inAccount, code, money.rates);
   const giftRead = gift === undefined ? formatAusd(units ?? 0n) : say(gift);
-  const rateDay = money.rates ? rateDateInWords(money.rates.date) : undefined;
 
   /**
    * The passkey makes the account at the moment pay is pressed, which is what the sheet says it will do: a new one on
@@ -381,54 +357,17 @@ export function PaySheet({
         </div>
       ) : null}
 
-      {/* One fold for everything a careful reader may want, in the order of their questions (the mockup of 3 Oct 2026):
-          a day missed, the fourteen days, whose names the link shows, what the card service asks the first time, its
-          fee, and the rate. "How it works" was a second fold, and two folds asked the reader to guess. */}
+      {/* One fold, and in it short lines, a label and its value, never a paragraph and four at most (the founder,
+          4 Oct 2026): what comes back and when, and the card's fee. It held up to eight sentences. What it no longer
+          says is said where it serves: the line under the button says who takes the card and its ID, and the screen
+          of the link says whom to send it to. */}
       <details className="said-fold" data-what-happens="">
         <summary className="said-fold-name">
           {W.whatHappens}
           <FoldChevron />
         </summary>
-        <div className="said-fold-body flex flex-col gap-[var(--space-sm)]">
-          {milestone ? (
-            <>
-              {/* The hour is the reader's own, and the server has no idea which clock that is (D151): it is printed
-                  once the browser has said, never before, or the page the server sent and the page the browser draws
-                  say two different hours and React throws the whole thing away and builds it again. */}
-              {nowMs === 0 ? null : <p className={BODY}>{MILESTONE_FUND.check.howItWorks(condition?.source ?? "", target, settlingTimeInWords(nowMs))}</p>}
-              <p className={BODY}>{MILESTONE_FUND.check.whyCeiling(target)}</p>
-            </>
-          ) : certificate ? (
-            <>
-              <p className={BODY}>{certificate.words.mustShow(draft.subject.trim(), target, draft.scale)}</p>
-              <p className={BODY}>{certificate.words.ifNot}</p>
-            </>
-          ) : nowMs === 0 ? null : (
-            <p className={BODY}>{W.missedBy(recipient, settlingTimeInWords(nowMs))}</p>
-          )}
-          <p className={BODY}>{milestone ? MILESTONE_FUND.check.fourteenDays : certificate ? FUND.check.fourteenDaysUnopened : FUND.check.fourteenDays}</p>
-          <p className={BODY}>{W.namesSeen(recipient, funder !== "")}</p>
-          {byCard ? (
-            <>
-              <p className={BODY}>
-                {way.embedded
-                  ? W.partnerEmbedded(way.name, euros)
-                  : way === WAY_IN_USDC
-                    ? W.partnerLocked(way.name)
-                    : wayInFillsIn(way)
-                      ? W.partnerFilledIn
-                      : W.partnerPaste(way.name, way.delivers.coin, way.delivers.network, way.arrives === "gift")}
-              </p>
-              {/* The first way refused this person, and the fold says which, why and which this goes through (D239). */}
-              {offer.insteadOf ? <p className={BODY}>{insteadSentence(offer, card?.country ?? null)}</p> : null}
-              {offer.atFloor && euros ? <p className={BODY}>{W.floor(moneyIn(way.smallestEur, "EUR"), moneyIn(euros, "EUR"))}</p> : null}
-              {sum && sum.stays > 0 && way.arrives === "chain" ? <p className={BODY}>{W.chainMargin}</p> : null}
-              <p className={HELP}>
-                {way.embedded || !rateDay ? `${feeSentence(way)}. ${CASH_OUT.sourceLine(way.source, way.read)}` : W.feeAndRate(feeInWords(way), sourceOfIts(way), way.read, rateDay)}
-              </p>
-              {sum && code !== "EUR" && rateDay ? <p className={HELP}>{W.chargedIn(moneyIn(sum.cardEuros, "EUR"), say(sum.card), rateDay)}</p> : null}
-            </>
-          ) : null}
+        <div className="said-fold-body">
+          <Lines quiet rows={[milestone ? W.fold.notReached : certificate ? W.fold.notShown : W.fold.missedDay, W.fold.notOpened, ...(byCard ? [[W.rows.fee, feeInALine(way, euros)] as const] : [])]} />
         </div>
       </details>
 

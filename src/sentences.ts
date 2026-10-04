@@ -218,7 +218,9 @@ export const PAY = {
     gift: (recipient: string) => (recipient.trim() ? `${recipient}'s gift` : "The gift"),
     fromAccount: "From your Viky money",
     fee: "Card fee",
-    stays: "Stays in your Viky money",
+    // What the card brings beyond the gift and its fee: "Stays in your Viky money" was not understood (the founder,
+    // 4 Oct 2026). The line stays, so the sum adds up.
+    stays: "Change, kept in your account",
     viky: "Viky takes",
   },
   nothing: "nothing",
@@ -227,33 +229,10 @@ export const PAY = {
   upTo: (amount: string) => `up to ${amount}`,
   youPay: "You pay",
   /**
-   * Why a card that buys the chain's coin brings more than the gift and its fee (the founder, 29 Sep 2026): the coin is
-   * bought, then changed into what a gift holds, at a margin that covers its price moving meanwhile; some coin must also
-   * stay in the account (D53). The sheet's own line says how much stays.
-   */
-  chainMargin:
-    "This card buys MON, which is changed into what your gift holds once it arrives, so a margin covers its price moving meanwhile. What is not used stays in your account.",
-  /**
    * The rate's source, named, and why its day can be a Friday on a Sunday: the European Central Bank sets one each
    * working day and none at the weekend (the founder, 20 Sep 2026: a line that looked stale becomes a proof of care).
    */
   atTheRate: (day: string) => `At the European Central Bank's rate of ${day}. It sets one each working day.`,
-  /** When the gift needs less than the smallest payment the card service takes (D125), in the card's own money. */
-  floor: (smallest: string, pays: string) =>
-    smallest === pays
-      ? `The card service takes nothing under ${smallest}, so that is what you pay. What is left over stays in your account for your next gift.`
-      : `The card service takes nothing under ${smallest}, so you pay ${pays}. What is left over stays in your account for your next gift.`,
-  /**
-   * The one time the two services are named on the sheet (D239): the first refused this person, and the sentence
-   * says which one, why, and which one this goes through instead. In our words, never theirs.
-   */
-  instead: {
-    country: (first: string, second: string) => `${first} does not serve your country, so this goes through ${second}.`,
-    /** A service that serves the country and does not sell there what a gift holds (the audit of 1 Oct 2026). */
-    notSold: (first: string, second: string) => `${first} does not sell what a gift holds in your country, so this goes through ${second}.`,
-    paused: (first: string, second: string) => `${first} is not selling right now, so this goes through ${second}.`,
-    floor: (first: string, smallest: string, second: string) => `${first} takes nothing under ${smallest}, so this goes through ${second}.`,
-  },
   /** Said before the action, because it is what pressing it does: nothing was asked of this person until now. */
   passkeyMakesTheAccount: "Your face or your fingerprint creates your account when you press pay. Nothing was asked of you until now.",
   /**
@@ -261,51 +240,6 @@ export const PAY = {
    * "I already have an account", which declares a state: a button says what its press does (the founder, 4 Oct 2026).
    */
   alreadyHaveAccount: "Sign in",
-  /**
-   * Before the partner's page opens (D289, the founder's words of 27 Sep 2026), shown only when that page arrives filled
-   * in with the account and the amount, which needs Ramp's partner key.
-   */
-  partnerFilledIn:
-    "Our partner Ramp takes your card, once with your ID. It shows the amount as digital dollars, AUSD: that is what your gift holds. Your account is already filled in. Come back here: the gift starts by itself.",
-  /**
-   * The same moment when the partner's page opens bare (D294, the founder's decision of 28 Sep 2026, in the words he
-   * confirmed): what to choose there, and where the code goes. The coin and network are the rail's own
-   * (`WayIn.delivers`); a way that delivers the chain's coin ends with one step to confirm, not by itself (D101).
-   * "address" is the partner's own word for that field, kept by the founder's choice over the list of words a person
-   * never sees.
-   */
-  partnerPaste: (name: string, coin: string, network: string, arrivesAsGift: boolean) =>
-    arrivesAsGift
-      ? // consumer-words: allow "address" is the partner page's own word for the field, the founder's choice (D294)
-        `Our partner ${name} takes your card, once with your ID. Choose ${coin} on ${network} there: that is what your gift holds. Paste your code where it asks for an address. Come back here: the gift starts by itself.`
-      : // consumer-words: allow "address" is the partner page's own word for the field, the founder's choice (D294)
-        `Our partner ${name} takes your card, once with your ID. Choose ${coin} on ${network} there. Paste your code where it asks for an address. Come back here to confirm the last step.`,
-  /**
-   * The same moment when the card is paid inside Viky (the founder, 1 Oct 2026): nothing to choose and no code to
-   * paste, so neither is said. What is said is what the person meets (read 1 Oct 2026): the payment opens on the next
-   * screen; the amount is typed there, since that page takes none from us; a card service takes the card in its own
-   * window, with its identity check; and that window calls the money USDC, which reaches the gift as what it holds.
-   */
-  partnerEmbedded: (name: string, euros: number | undefined) =>
-    `The card payment opens next, by our partner ${name}. Enter ${euros ? `${euros} EUR` : "the amount"} there: it shows what your gift receives. A card service then takes your card in its own window, once with your ID, and calls the money USDC. Come back here: the gift starts by itself.`,
-  /**
-   * The same moment for a page that arrives filled in and locked, and delivers another dollar coin (the founder's
-   * words of 1 Oct 2026, from his own try to the last step before paying). Its last sentence changed the same day:
-   * the coin that arrives is changed by the screen that waits, with nothing to confirm (src/usdc-router.ts).
-   */
-  partnerLocked: (name: string) =>
-    `At ${name}, the first time: your details, a code by text and your ID. Your account and the amount are already filled in. Come back here: the gift starts by itself.`,
-  /**
-   * The fold's last line (the mockup of 3 Oct 2026): what the card service keeps, from its own figures, and the rate the
-   * sheet's money is read at. When the gift was typed in another money than the euro, what the card is charged too.
-   */
-  feeAndRate: (keeps: string, source: string, read: string, day: string) => `${keeps} (${source}, ${read}). Euros at the European Central Bank's rate of ${day}.`,
-  chargedIn: (euros: string, figure: string, day: string) => `Your card is charged ${euros}, which is ${figure} at the European Central Bank's rate of ${day}.`,
-  /** The fold's first lines, as the mockup says them: a day missed, and whose names the link shows. */
-  missedBy: (recipient: string, time: string) =>
-    `A day ${recipient.trim() ? `${recipient} misses` : "they miss"} can be caught up the next day. If not, it comes back to you the morning after, at about ${time} your time.`,
-  namesSeen: (recipient: string, withYours: boolean) =>
-    `${recipient.trim() ? `${recipient}'s name` : "Their name"}${withYours ? " and yours show" : " shows"} on the gift, to whoever opens its link.`,
   /** The sheet the card is paid in, and what its frame is called when read aloud. */
   card: { title: "Pay by card", frame: "Card payment" },
   /**
@@ -396,6 +330,16 @@ export const PAY = {
   paying: "One moment",
   /** The quiet second button of the mockup: everything only some readers need, one press away. */
   whatHappens: "What happens to my money",
+  /**
+   * That fold: short lines, a label and its value, four at most and never a paragraph (the founder, 4 Oct 2026). What
+   * comes back to the giver and when, by the kind of gift; the card's fee is its third line, with the service's name.
+   */
+  fold: {
+    missedDay: ["A missed day", "back to you"],
+    notReached: ["Not reached in time", "back to you"],
+    notShown: ["Not shown in time", "back to you"],
+    notOpened: ["Not opened in 14 days", "back to you"],
+  },
   notMade: "That did not go through, and nothing was taken. Try again.",
   /** The wait, while the gift is being made: what is happening, how long, and what closing the page costs. */
   putting: (amount: string, recipient: string) => `Putting ${amount} in ${their(recipient)} name.`,
@@ -738,8 +682,6 @@ export const FUND = {
     namesSeen: (recipient: string, funder: string) => `${recipient} and ${funder} show on the gift, to whoever opens its link.`,
     linkRisk: (recipient: string) => `The link you will get opens the gift for whoever opens it first. Send it only to ${onlyTo(recipient)}.`,
     fourteenDays: "If nobody opens it within 14 days, it all comes back to you, and the same if it is opened and never connected.",
-    /** The same for something had or not, which is never connected: opened, it comes back as its own sentence says. */
-    fourteenDaysUnopened: "If nobody opens it within 14 days, it all comes back to you.",
     /** The two disclosures of the check (GOV.UK Details): what only some readers need, out of everybody's way. */
     elseTitle: "What else this means",
     feeTitle: (name: string) => `How ${name} charges`,
@@ -773,14 +715,28 @@ export const FUND = {
 
   account: {
     title: "One account, and then you can pay",
-    yourGift: (amount: string, recipient: string, days: number) => `Your gift: ${amount}${forThem(recipient)}, ${days} days.`,
     why: "The money is held in your name until they earn it, so it needs somewhere of yours to be held.",
   },
 
   waiting: {
     /** The amount as the screen's own button writes it, "€30.00": one writing on one screen (the founder, 4 Oct 2026). */
     title: (amount: string | undefined) => (amount ? `Waiting for your ${amount} payment` : "Waiting for your payment"),
-    inAccountNow: (held: string) => `In your account now: ${held}`,
+    /**
+     * The wait's head: two short lines, a label and its value, where "In your account now: …" and "Your gift: … for
+     * Boo, 30 days." stood as sentences (the founder, 4 Oct 2026).
+     */
+    lines: { gift: "Your gift", account: "In your account" },
+    giftSaid: (amount: string, recipient: string, days?: number) => `${amount}${forThem(recipient)}${days ? `, ${days} days` : ""}`,
+    /**
+     * A card paid through Rampnow: two short steps where four sentences stood. On its page beside, the person comes
+     * back; in its frame, the window stays open until the money lands, which is the frame's own limit.
+     */
+    steps: {
+      payBeside: (service: string) => `Pay by card on ${service}'s page.`,
+      comeBack: "Come back here: your gift starts by itself.",
+      pay: "Pay by card.",
+      keepOpen: "Keep the window open until the money lands: your gift starts by itself.",
+    },
     setThese: (name: string) => `On ${name}'s page, set these yourself:`,
     settings: (euros: number | undefined, delivers: { coin: string; network: string }) => [
       "Pick: Buy.",
@@ -797,7 +753,6 @@ export const FUND = {
     thenChanged: "When it lands, you confirm one step that turns it into what the gift holds.",
     thenChangedRest: "A little stays behind for it.",
     /** The same for a dollar coin, changed by the screen itself: nothing to confirm, nothing stays behind (the founder, 1 Oct 2026). */
-    thenConfirmed: "When it lands, Viky turns it into what the gift holds and starts your gift.",
     codeLabel: (name: string) => `The code to give ${name}`,
     copy: "Copy the code",
     copied: "Copied",
@@ -941,7 +896,6 @@ export const GIFT_PAGE = {
 
   continue: "Continue",
   checking: "Checking the name",
-  notYetBody: (funder: string | null) => `The money stays in your name. Nothing counts until you connect, and after 14 days unconnected it goes back to ${funder ?? "them"}.`,
   copyCode: "Copy the code",
   copied: "Copied",
   /** Only on the device that made the gift, which is the only one holding the link (it carries the key). */
@@ -988,13 +942,16 @@ export const GIFT_PAGE = {
   takeBackFailed: "That did not go through, and nothing was changed. The gift is where it was.",
   shareLink: "Share",
   copyRefused: "Your browser would not let us copy it. Press and hold the code, then choose Copy.",
-  validUntil: (moment: string) => `Valid until ${moment} your time. After that, ask for a new one here.`,
   expired: "This code has expired.",
+  /**
+   * The first and the last of the three steps of the code (the founder, 4 Oct 2026); the second is the source's own,
+   * where the code goes there (`codeStep`).
+   */
+  steps: { copy: "Copy the code.", back: "Come back here and press:" },
   newCode: "Get a new code",
   /** What the press does: it reads the profile, to find the code there. It said "I added it" until 4 Oct 2026. */
   iAddedIt: "Check my profile",
   reading: "Reading your profile",
-  removeAfter: "You can take the code out of your name as soon as this screen says it is done.",
   keepMyName: "Keep the name I had",
   namedWrong: (funder: string | null) => `Ask ${funder ?? "the person who sent it"} to check the name. Nothing counts until it is right.`,
   startCounting: "Start counting",
@@ -1319,14 +1276,6 @@ export const MILESTONE_FUND = {
       ifNot: "If they do not reach it",
     },
     allBack: "All of it comes back to you",
-    howItWorks: (source: string, target: number, time: string) =>
-      `Their first reading is taken when they connect ${source}, and that is where they start. After that Viky reads their rating every day, at about ${time} your time, and the first reading at ${target} or more makes all of it theirs at once.`,
-    whyCeiling: (target: number) =>
-      `If they have already reached ${target} when they connect, this gift cannot count it and comes back to you at the end: a gift is for a climb, not for where they already are.`,
-    fourteenDays: "If nobody opens it within 14 days, it all comes back to you, and the same if it is opened and never connected.",
-  },
-  account: {
-    yourGift: (amount: string, recipient: string) => `Your gift: ${amount}${forThem(recipient)}.`,
   },
   made: {
     terms: (amount: string, goal: string, days: number, source: string) => `${amount} when they reach ${goal}, within ${days} ${days === 1 ? "day" : "days"} of connecting ${source}.`,
@@ -1364,8 +1313,6 @@ export const MILESTONE_ACTIONS = {
   startReading: (source: string) => `Start reading my ${source}`,
   /** How long they then have is in what was agreed, unfolded on this one moment (V4): it is not said twice. */
   connectNow: "Connect now: only what you reach after connecting counts.",
-  firstReading: "If you have already reached it when you connect, this gift cannot count it.",
-  firstReadingThen: "So connect before you play.",
   getCode: "Get my code",
   proveTitle: (username: string) => `Prove ${username} is yours`,
   added: "Check my profile",

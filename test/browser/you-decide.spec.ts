@@ -418,16 +418,13 @@ test.describe("you decide", () => {
     );
     await makeAnAccount(device);
     await page.goto(`/g/${GIFT}`);
-    // The fold of somebody who has no Duolingo: what to do first, with Duolingo's own site, then what becomes of the
-    // money meanwhile (the founder, 4 Oct 2026). The second sentence alone said nothing of what to do.
+    // The fold of somebody who has no Duolingo: the button that opens Duolingo's own site, and one line (the founder,
+    // 4 Oct 2026). It held two sentences, and a fold holds no paragraph.
     const notYet = page.locator("details[data-no-source-yet]");
     await expect(notYet.locator("summary")).toHaveText("No Duolingo yet?");
     await expect(notYet.locator("p").first()).toBeHidden();
     await notYet.locator("summary").click();
-    await expect(notYet.locator("p")).toHaveText([
-      "Duolingo is free. Install it, make your account, then come back here with your username.",
-      "The money stays in your name. Nothing counts until you connect, and after 14 days unconnected it goes back to Maman.",
-    ]);
+    await expect(notYet.locator("p")).toHaveText(["Free. Come back with your username."]);
     // The button says what its press does.
     const open = notYet.getByRole("link", { name: "Open Duolingo" });
     await expect(open).toHaveAttribute("href", "https://www.duolingo.com");
@@ -440,6 +437,18 @@ test.describe("you decide", () => {
     goalAccount = { username: "boo_learns", source: "recipient", bound: false, code: "K7PX2M", codeExpiresAt: new Date(Date.now() + 3_600_000).toISOString() };
     await page.reload();
     await expect(page.getByRole("button", { name: "Not my name" })).toHaveCount(0);
+    // The code: three numbered steps, short (the founder, 4 Oct 2026). The help that only serves later is not there
+    // yet: the validity is said when the code runs out, "it can take a minute" after a check that did not see the
+    // code, and "you can take the code out" at the success.
+    await expect(page.locator("ol.said-steps > li > p:first-child")).toHaveText(["Copy the code.", "Add it to your name in Duolingo: Profile, Settings, Name.", "Come back here and press:"]);
+    await expect(page.locator("ol.said-steps > li").nth(0)).toContainText("K7PX2M");
+    await expect(page.locator("ol.said-steps > li").nth(2).getByRole("button", { name: "Check my profile" })).toBeVisible();
+    for (const later of [/Valid until/, /Duolingo can take a minute/, /take the code out/]) await expect(page.getByText(later)).toHaveCount(0);
+    // A check that does not see the code yet: its refusal, and then the one help that serves now.
+    await page.route(`**/api/gift/${GIFT}/bind`, (route) => route.fulfill(json({ error: "Viky cannot see the code in your Duolingo name yet.", code: "CODE_NOT_IN_NAME" }, 409)));
+    await page.getByRole("button", { name: "Check my profile" }).click();
+    await expect(page.getByText("Duolingo can take a minute to show a new name. If Viky cannot see the code yet, wait a minute and press again.")).toBeVisible();
+    await shot(page, "19b-after-a-check-that-did-not-see-the-code", false);
     const another = page.getByRole("button", { name: "Use another username" });
     await another.scrollIntoViewIfNeeded();
     await shot(page, "19-use-another-username", false);

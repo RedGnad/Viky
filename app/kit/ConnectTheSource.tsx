@@ -1,9 +1,10 @@
 "use client";
 import { useState } from "react";
 import { GIFT_PAGE as W } from "@/src/sentences";
-import { BODY, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
+import { BODY, FIELD, HELP, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { FieldRefusal } from "./FieldRefusal";
 import { FoldChevron } from "./GiftLive";
+import { Step, Steps } from "./Steps";
 import { ButtonWords, StepInProgress } from "./Waiting";
 
 /**
@@ -33,7 +34,9 @@ export type ConnectWords = Readonly<{
   /** The name of the fold that says what to do when the account the funder named is not theirs. */
   notYours?: string;
   proveTitle: string;
-  proveSteps: string;
+  /** The second of the three steps: where the code goes at the source, in a few words. */
+  codeStep: string;
+  /** Said after a check that did not see the code, and only then. */
   slowToShow?: string;
   /**
    * What is true of connecting itself, said on every way in rather than on one of them: only what comes after
@@ -41,9 +44,6 @@ export type ConnectWords = Readonly<{
    * which is the one thing that cannot be undone afterwards.
    */
   connectNow?: string;
-  firstReading?: string;
-  /** What to do about it, a line of its own: the two were one sentence, too long to stand in the open. */
-  firstReadingThen?: string;
   /**
    * The label of the gesture that takes the first reading, and they are not the same gesture in words: where the
    * funder named the account nothing was asked of the person, so it starts; where a code is waiting in their own
@@ -64,7 +64,6 @@ export function ConnectTheSource({
   step,
   working,
   refusal,
-  validUntil,
   onName,
   onAskCode,
   onStart,
@@ -79,8 +78,6 @@ export function ConnectTheSource({
   working: boolean;
   /** The refusal of the gesture that failed, under the element in cause. */
   refusal: Readonly<{ where: "name" | "start"; text: string }> | null;
-  /** How long the code lasts, in the reader's own clock. */
-  validUntil: string | null;
   /** Naming the account. Absent on a shape whose account is named when the gift is made. */
   onName?: (username: string) => void;
   onAskCode: () => void;
@@ -98,9 +95,8 @@ export function ConnectTheSource({
     return (
       <div className="flex flex-col gap-[var(--space-md)]">
         {words.named ? <p className={BODY}>{words.named}</p> : null}
-        {words.connectNow ? <p className="font-medium">{words.connectNow}</p> : null}
-        {words.firstReading ? <p className={HELP}>{words.firstReading}</p> : null}
-            {words.firstReadingThen ? <p className={HELP}>{words.firstReadingThen}</p> : null}
+        {/* One line where there were three: what connecting costs is said once, before the gesture (4 Oct 2026). */}
+        {words.connectNow ? <p className={HELP}>{words.connectNow}</p> : null}
         <button type="button" onClick={onStart} disabled={working} className={PRIMARY_BUTTON}>
           <ButtonWords busy={busy === "starting"} doing={W.reading}>
             {words.start}
@@ -133,10 +129,9 @@ export function ConnectTheSource({
         {/* No code yet, or the one they had ran out: asking for one is the gesture, and it is the same route twice. */}
         {account.code === null || account.codeExpired ? (
           <>
+            {/* The code's validity is said when it runs out, and not before: that is when it serves. */}
             {account.codeExpired ? <p className={BODY}>{W.expired}</p> : null}
-            {words.connectNow ? <p className="font-medium">{words.connectNow}</p> : null}
-            {words.firstReading ? <p className={HELP}>{words.firstReading}</p> : null}
-            {words.firstReadingThen ? <p className={HELP}>{words.firstReadingThen}</p> : null}
+            {words.connectNow ? <p className={HELP}>{words.connectNow}</p> : null}
             <button type="button" onClick={onAskCode} disabled={working} className={PRIMARY_BUTTON}>
               <ButtonWords busy={busy === "naming"} doing={W.checking}>
                 {account.codeExpired ? words.newCode : words.getCode}
@@ -147,36 +142,42 @@ export function ConnectTheSource({
           </>
         ) : (
           <>
-            <p className={BODY}>{words.proveSteps}</p>
-            <p className="text-center text-[length:var(--type-money)] font-semibold tracking-widest tabular-nums">{account.code}</p>
-            <button
-              type="button"
-              onClick={() => {
-                const code = account.code;
-                if (code === null) return;
-                void navigator.clipboard
-                  .writeText(code)
-                  .then(() => setCopied("yes"))
-                  .catch(() => setCopied("refused"));
-              }}
-              className={SECONDARY_BUTTON}
-            >
-              {copied === "yes" ? W.copied : W.copyCode}
-            </button>
-            {copied === "refused" ? <FieldRefusal id="code-copy-refused">{W.copyRefused}</FieldRefusal> : null}
-            {validUntil ? <p className={HELP}>{W.validUntil(validUntil)}</p> : null}
-            {words.connectNow ? <p className="font-medium">{words.connectNow}</p> : null}
-            {words.firstReading ? <p className={HELP}>{words.firstReading}</p> : null}
-            {words.firstReadingThen ? <p className={HELP}>{words.firstReadingThen}</p> : null}
-            <button type="button" onClick={onStart} disabled={working} className={PRIMARY_BUTTON}>
-              <ButtonWords busy={busy === "starting"} doing={W.reading}>
-                {words.added}
-              </ButtonWords>
-            </button>
-            <StepInProgress busy={busy === "starting"} step={step} />
-            {refusalAt("start")}
-            {words.slowToShow ? <p className={HELP}>{words.slowToShow}</p> : null}
-            <p className={HELP}>{W.removeAfter}</p>
+            {/* Three short steps, numbered (the founder, 4 Oct 2026): it was a paragraph, a code, and four sentences
+                of help said all at once. Each help now comes when it serves: the validity when the code has run out
+                (above), "it can take a minute" after a check that did not see the code, and "you can take the code
+                out" at the success, where the page says it. */}
+            <Steps>
+              <Step says={W.steps.copy}>
+                <p className={`${MONEY} text-center tracking-widest`}>{account.code}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const code = account.code;
+                    if (code === null) return;
+                    void navigator.clipboard
+                      .writeText(code)
+                      .then(() => setCopied("yes"))
+                      .catch(() => setCopied("refused"));
+                  }}
+                  className={SECONDARY_BUTTON}
+                >
+                  {copied === "yes" ? W.copied : W.copyCode}
+                </button>
+                {copied === "refused" ? <FieldRefusal id="code-copy-refused">{W.copyRefused}</FieldRefusal> : null}
+              </Step>
+              <Step says={words.codeStep} />
+              <Step says={W.steps.back}>
+                {words.connectNow ? <p className={HELP}>{words.connectNow}</p> : null}
+                <button type="button" onClick={onStart} disabled={working} className={PRIMARY_BUTTON}>
+                  <ButtonWords busy={busy === "starting"} doing={W.reading}>
+                    {words.added}
+                  </ButtonWords>
+                </button>
+                <StepInProgress busy={busy === "starting"} step={step} />
+                {refusalAt("start")}
+                {refusal?.where === "start" && words.slowToShow ? <p className={HELP}>{words.slowToShow}</p> : null}
+              </Step>
+            </Steps>
           </>
         )}
         {onName && words.anotherUsername ? (
@@ -243,16 +244,14 @@ export function ConnectTheSource({
                 {field.notYet}
                 <FoldChevron />
               </summary>
-              <div className="said-fold-body flex flex-col gap-[var(--space-xs)]">
-                {/* What to do first, and the button that opens the source's own site and says so (the founder, 4 Oct
-                    2026); then what becomes of the money meanwhile. */}
-                <p className={HELP} data-how-to-get-it="">
-                  {field.notYetHow.says}
-                </p>
+              {/* The button that opens the source's own site, and one line (the founder, 4 Oct 2026). */}
+              <div className="said-fold-body flex flex-col gap-[var(--space-sm)]">
                 <a href={field.notYetHow.href} target="_blank" rel="noopener noreferrer" className={`${SMALL_BUTTON} self-start`} data-open-the-source="">
                   {field.notYetHow.open}
                 </a>
-                <p className={HELP}>{W.notYetBody(funderName)}</p>
+                <p className={HELP} data-how-to-get-it="">
+                  {field.notYetHow.says}
+                </p>
               </div>
             </details>
           )}
