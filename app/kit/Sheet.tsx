@@ -23,6 +23,7 @@ export function Sheet({
   footer,
   tall = false,
   view,
+  held = false,
 }: Readonly<{
   open: boolean;
   title: string;
@@ -41,6 +42,11 @@ export function Sheet({
   view?: string;
   /** A sheet with more to say stops a little higher, at the cap pay.html draws, and still never fills the screen. */
   tall?: boolean;
+  /**
+   * A sheet the person cannot close by themselves (one gift, one payment, 3 Oct 2026): no cross, no handle, and Escape,
+   * the backdrop and a pull do nothing. What it holds gives the way out, and the screen under it still closes it.
+   */
+  held?: boolean;
 }>) {
   const dialog = useRef<HTMLDialogElement>(null);
   const labelId = useId();
@@ -61,6 +67,11 @@ export function Sheet({
     if (open && !element.open) element.showModal();
     if (!open && element.open) element.close();
   }, [open]);
+  // What the sheet is asked to be now, for the browser's own close event, which comes after the render that changed it.
+  const asked = useRef({ open, held });
+  useEffect(() => {
+    asked.current = { open, held };
+  });
 
   /*
     A sheet stops at 74 % of the height (D113) and its questions scroll inside it. What was missing was the sign that
@@ -131,13 +142,20 @@ export function Sheet({
       // React carries a nested sheet's close up to this one's handler (a country chosen in "Which country is it in?"
       // closed the sheet it was opened from): only this dialog's own close and cancel close this sheet.
       onClose={(event) => {
-        if (event.target === dialog.current) onClose();
+        if (event.target !== dialog.current) return;
+        // A browser closes a dialog on a second Escape whatever the first was answered (its close watcher refuses one
+        // refusal at a time). A held sheet that the screen still wants open is opened again, as it was, at once.
+        if (asked.current.held && asked.current.open) return dialog.current?.showModal();
+        onClose();
       }}
       onCancel={(event) => {
-        if (event.target === dialog.current) onClose();
+        if (event.target !== dialog.current) return;
+        // Escape on a held sheet does nothing: the dialog stays open, and nothing is told to the screen.
+        if (held) return event.preventDefault();
+        onClose();
       }}
       onClick={(event) => {
-        if (event.target === dialog.current) dialog.current?.close();
+        if (event.target === dialog.current && !held) dialog.current?.close();
       }}
     >
       <div className="on-paper flex max-h-[inherit] flex-col" style={pulled > 0 ? { transform: `translateY(${pulled}px)` } : undefined}>
@@ -147,7 +165,7 @@ export function Sheet({
             // A press on the close button is a press on the close button. Capturing the pointer for the drag
             // retargets its click to this header, and the button never hears it (the founder, 20 Sep 2026: "the
             // cross does nothing").
-            if ((event.target as Element).closest("button")) return;
+            if (held || (event.target as Element).closest("button")) return;
             from.current = event.clientY;
             event.currentTarget.setPointerCapture(event.pointerId);
           }}
@@ -157,7 +175,7 @@ export function Sheet({
           }}
           onPointerUp={() => {
             // Far enough to mean it, and the browser closes the sheet; short of that it settles back.
-            if (pulled > 80) dialog.current?.close();
+            if (pulled > 80 && !held) dialog.current?.close();
             from.current = null;
             setPulled(0);
           }}
@@ -167,7 +185,7 @@ export function Sheet({
           }}
         >
           {/* The handle of the rendered mockups: what says this can be pulled down, and what a thumb pulls. */}
-          <span aria-hidden className="mx-auto h-[5px] w-[44px] rounded-full bg-[var(--surface-rule)]" />
+          {held ? null : <span aria-hidden className="mx-auto h-[5px] w-[44px] rounded-full bg-[var(--surface-rule)]" />}
           <div className="flex items-start justify-between gap-[var(--space-md)]">
           <div className="space-y-[var(--space-xs)]">
             <h2 id={labelId} className={TITLE}>
@@ -176,14 +194,16 @@ export function Sheet({
             {help ? <p className={HELP}>{help}</p> : null}
           </div>
           {beside ? <div className="ml-auto flex items-center">{beside}</div> : null}
-          <button
-            type="button"
-            onClick={() => dialog.current?.close()}
-            aria-label="Close"
-            className="-mr-[var(--space-sm)] -mt-[var(--space-sm)] inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center justify-center rounded-full text-[length:var(--type-title)] transition-colors duration-[var(--hover-duration)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)] motion-reduce:transition-none [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--paper-field)]"
-          >
-            <span aria-hidden="true">&times;</span>
-          </button>
+          {held ? null : (
+            <button
+              type="button"
+              onClick={() => dialog.current?.close()}
+              aria-label="Close"
+              className="-mr-[var(--space-sm)] -mt-[var(--space-sm)] inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center justify-center rounded-full text-[length:var(--type-title)] transition-colors duration-[var(--hover-duration)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)] motion-reduce:transition-none [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--paper-field)]"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          )}
           </div>
         </header>
         {/*

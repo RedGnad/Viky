@@ -295,7 +295,8 @@ test("a sheet rises from the bottom, darkens once, and leaves the card readable 
     assert.ok(strength <= 0.5, `the page behind is darkened at ${strength}, which is a page nobody can read`);
   }
   assert.match(sheetFile, /onPointerDown/, "a sheet is dismissed by pulling it down, the gesture a sheet has");
-  assert.match(sheetFile, /if \(pulled > 80\) dialog\.current\?\.close\(\)/);
+  // Unless the sheet is held: a payment under way is not left by a pull (one gift, one payment, 3 Oct 2026).
+  assert.match(sheetFile, /if \(pulled > 80 && !held\) dialog\.current\?\.close\(\)/);
 });
 
 test("what the card writes is what the gift is made from, and it comes back the same", () => {
@@ -338,7 +339,7 @@ test("nothing on the card asks for an account, and the sheet that pays makes it 
 test("a case opens in a sheet, and a sheet is a dialog rather than a page", () => {
   assert.match(sheetFile, /showModal\(\)/, "the browser keeps the focus inside it and Escape closes it");
   // Escape closes it, and only its own: a nested sheet's close never closes the sheet it was opened from (D313).
-  assert.match(sheetFile, /onCancel=\{\(event\) => \{\n\s+if \(event\.target === dialog\.current\) onClose\(\);/);
+  assert.match(sheetFile, /onCancel=\{\(event\) => \{\n\s+if \(event\.target !== dialog\.current\) return;\n(\s*\/\/[^\n]*\n)*\s*if \(held\) return event\.preventDefault\(\);\n\s*onClose\(\);/);
   assert.match(sheetFile, /event\.target === dialog\.current/, "and pressing the backdrop leaves it");
   for (const source of sheets) {
     assert.match(source, /<Sheet\n?\s+open=\{open\}/, "each case is drawn in a sheet");

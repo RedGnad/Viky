@@ -141,7 +141,8 @@ test("each button or link that pays by card carries the line, and gives way to t
   // button that opens the card in a frame of our own, with the line again under the frame's way out to the card's page.
   assert.equal((wait.match(/<CardTermsLine way=\{wayIn\} \/>/g) ?? []).length, 4);
   const frame = readFileSync("app/kit/offer/RampnowSheet.tsx", "utf8");
-  assert.match(frame, /\{W\.rampnow\.openPage\}\s*<\/a>\s*<CardTermsLine way=\{WAY_IN_USDC\} \/>/);
+  // Under the frame's way out to the card's page, for as long as that way is offered: while no payment is known.
+  assert.match(frame, /\{W\.rampnow\.openPage\}\s*<\/a>[\s\S]*?\{known \? null : <CardTermsLine way=\{WAY_IN_USDC\} \/>\}/);
   assert.equal((wait.match(/<CardNotOffered country=\{card\?\.country \?\? null\} \/>/g) ?? []).length, 2);
   assert.equal((wait.match(/window\.open\(wayInPage|href=\{wayInPage/g) ?? []).length, 2, "and no other way to the partner");
 });

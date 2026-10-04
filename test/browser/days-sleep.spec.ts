@@ -39,7 +39,16 @@ const RECORD = `(() => {
 })();`;
 
 const started = (page: Page) => page.evaluate(() => (window as unknown as { __started: Started[] }).__started);
-const forget = (page: Page) => page.evaluate(() => ((window as unknown as { __started: Started[] }).__started.length = 0));
+/**
+ * A device that last saw none of a gift's days done. The app's page is left first: a screen writes what it has seen
+ * from its own memory (app/kit/seen.tsx), so Home, still open, could write the cookie again after this and leave the
+ * gift out of it. That was a race, lost on the run of 4 Oct 2026: nothing was pending, and nothing played.
+ */
+async function sawNoDayOf(page: Page, giftId: string): Promise<void> {
+  const origin = new URL(page.url()).origin;
+  await page.goto("about:blank");
+  await page.context().addCookies([{ name: "viky.seen", value: encodeURIComponent(JSON.stringify({ [`days.${giftId}`]: 0 })), url: origin }]);
+}
 /** What moved in the row's own days. */
 const inTheRow = (all: Started[]) => all.filter((one) => one.day >= 0);
 /**
@@ -169,8 +178,7 @@ test.describe("a day sleeps until it is done", () => {
     // Two days earned, and a device that last saw none of them.
     await serve(page, GIFT, () => daily(GIFT, "recipient"), TERMS.daily);
     await makeAnAccount(device);
-    await context.addCookies([{ name: "viky.seen", value: encodeURIComponent(JSON.stringify({ [`days.${GIFT}`]: 0 })), url: new URL(page.url()).origin }]);
-    await forget(page);
+    await sawNoDayOf(page, GIFT);
     await page.goto(`/g/${GIFT}`);
     const row = page.locator(".day-row-days");
     await expect(row.locator("svg[data-character='earned']")).toHaveCount(2);
@@ -222,8 +230,7 @@ test.describe("a day sleeps until it is done", () => {
     await context.addInitScript(RECORD);
     await serve(page, GIFT, () => daily(GIFT, "recipient"), TERMS.daily);
     await makeAnAccount(device);
-    await context.addCookies([{ name: "viky.seen", value: encodeURIComponent(JSON.stringify({ [`days.${GIFT}`]: 0 })), url: new URL(page.url()).origin }]);
-    await forget(page);
+    await sawNoDayOf(page, GIFT);
     await page.goto(`/g/${GIFT}`);
     const row = page.locator(".day-row-days");
     await expect(row.locator("svg[data-character='earned']")).toHaveCount(2);
