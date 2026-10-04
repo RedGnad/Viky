@@ -55,7 +55,9 @@ test("every money path opens the passkey at the signature, and none assumes it i
 test("Me says what is true of each state, and promises no signing window that is not open", () => {
   const me = readFileSync("app/kit/Me.tsx", "utf8");
   assert.match(me, /reach === "signing" && until \? W\.signedInUntil\(until\)/, "the countdown belongs to the signing session");
-  assert.match(me, /reach === "signed-out" \? W\.signedOut : W\.signedIn/);
+  // "Not signed in" is said of a session that is closed, never of one that is closing: the page stays as it was on
+  // its way to the door (the founder, 4 Oct 2026).
+  assert.match(me, /reach === "signed-out" && !leaving \? W\.signedOut : W\.signedIn/);
   assert.match(me, /reach === "reading" \? <p className=\{HELP\}>\{W\.passkeyWhenMoneyMoves\}<\/p> : null/);
   assert.equal(ME.signedIn, "Signed in on this device.");
   assert.match(ME.passkeyWhenMoneyMoves, /asked again the moment money moves/);
