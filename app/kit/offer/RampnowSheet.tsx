@@ -20,7 +20,7 @@ const nothing = () => undefined;
  * money waiting there, and a frame opened anew starts a second order. So this sheet is held: no cross, no handle, and
  * Escape, the backdrop and a pull do nothing. What stands under the frame is the way out, and it depends on what is
  * known of a payment:
- *   - none known: one way out, "I have not paid: go back", which forgets everything and leads back to paying; and the
+ *   - none known: one way out, "Go back without paying", which forgets everything and leads back to paying; and the
  *     page beside, for somebody whose sign-in the frame does not keep (Rampnow's session in a frame lives in cookies
  *     set "Partitioned", which Safari reads only in 18.4 and from 26.2; not measured on the versions between);
  *   - a payment known, by a message of the frame: no way out, and "Keep this window open";
@@ -31,7 +31,10 @@ const nothing = () => undefined;
  * order messages have never been seen.
  *
  * With `finish` the frame opens on a payment already started: the order Rampnow named, or the person's list of orders,
- * in the frame, where they are still signed in. It starts no new payment.
+ * in the frame, where they are still signed in. It starts no new payment, and its way out is "Go back", to the screen
+ * that waits, which keeps the payment.
+ *
+ * A button says what its press does and never declares a state (the founder, 4 Oct 2026).
  *
  * The frame is held to what the sheet has left, so that it and what stands under it are whole inside the sheet
  * whatever the window; on a window too short even for the frame's least height, the sheet scrolls by what is under
@@ -44,7 +47,7 @@ export function RampnowSheet({
   finish = null,
   known,
   onSaid,
-  onNotPaid,
+  onBack,
   onFailed,
   onLate,
   onBeside,
@@ -61,8 +64,8 @@ export function RampnowSheet({
    * one), an order exists, or a payment is under way or made; with the order Rampnow named, when it named one.
    */
   onSaid: (what: "possible" | "ordered" | "paying", orderUid: string | null) => void;
-  /** The person says they have not paid: the sheet closes and nothing is waited for. */
-  onNotPaid: () => void;
+  /** The way out under the frame was taken: the sheet closes. What is still waited for is the screen's to decide. */
+  onBack: () => void;
   /** The frame said the payment failed and nothing left. */
   onFailed: () => void;
   /** The late way out was taken: the sheet closes and the payment is still waited for. */
@@ -87,7 +90,10 @@ export function RampnowSheet({
   /** What the frame shows: the payment to finish, or the new payment the server addressed. */
   const shown = finishing ? rampnowFinishPage(orderUid) : address;
   const waitKey = known ? "known" : "none";
-  const late = open && lateFor === waitKey;
+  // A payment already started and not known has its way back from the first second: the late one would be the same.
+  const late = open && lateFor === waitKey && !(finishing && !known);
+  /** How many pages the frame has loaded since it opened: their times are all that can be read of what it shows. */
+  const loads = useRef(0);
 
   // A sheet opened again starts clean: no address from the visit before, nothing unreachable, no late way out.
   const [wasOpen, setWasOpen] = useState(open);
@@ -114,9 +120,15 @@ export function RampnowSheet({
     };
   }, [open, account, euros, finishing]);
 
-  // Written down once per opening, with what it opens on: the times of a real payment are read from these lines.
+  // Written down once per opening, with what it opens on and in which browser: the times of a real payment, and what
+  // one browser does that another does not, are read from these lines. And once more if the page is left with it open.
   useEffect(() => {
-    if (open) noteInRampnowJournal(finishing ? "Viky: the frame opens on a payment already started" : "Viky: the frame opens on a new payment", { orderUid });
+    if (!open) return;
+    loads.current = 0;
+    noteInRampnowJournal(finishing ? "Viky: the frame opens on a payment already started" : "Viky: the frame opens on a new payment", { orderUid, carried: { browser: navigator.userAgent } });
+    const left = () => noteInRampnowJournal("Viky: the page was left with the frame open");
+    window.addEventListener("pagehide", left);
+    return () => window.removeEventListener("pagehide", left);
   }, [open, finishing, orderUid]);
 
   // Long enough in front of the person for a payment to have left: said to the screen under it, with no order named.
@@ -184,7 +196,19 @@ export function RampnowSheet({
     // Held: the screen under it closes it, and so does a way out under the frame. Nothing else does.
     <Sheet open={open} title={W.card.title} onClose={nothing} tall held>
       {/* Drawn only while the sheet is open: closed, the frame and whatever Rampnow was showing go with it. */}
-      {open && shown ? <iframe src={shown} title={W.card.frame} allow={RAMPNOW_FRAME_ALLOW} ref={frame} style={{ height }} className="block w-full rounded-[var(--radius-control)] border-0" data-rampnow-frame="" /> : null}
+      {open && shown ? (
+        <iframe
+          src={shown}
+          title={W.card.frame}
+          allow={RAMPNOW_FRAME_ALLOW}
+          ref={frame}
+          style={{ height }}
+          className="block w-full rounded-[var(--radius-control)] border-0"
+          data-rampnow-frame=""
+          // Each page the frame loads, numbered: what it shows cannot be read from here, when it changes can.
+          onLoad={() => noteInRampnowJournal(`Viky: the frame loaded a page (${(loads.current += 1)})`)}
+        />
+      ) : null}
       {open ? (
         <div className="flex flex-col gap-[var(--space-sm)]" data-rampnow-under={known ? "known" : "none"}>
           {known ? (
@@ -199,13 +223,13 @@ export function RampnowSheet({
               <button
                 type="button"
                 className={SMALL_BUTTON}
-                data-rampnow-not-paid=""
+                data-rampnow-back=""
                 onClick={() => {
-                  noteInRampnowJournal("Viky: said not paid, under the frame");
-                  onNotPaid();
+                  noteInRampnowJournal(finishing ? "Viky: went back from a payment already started" : "Viky: went back without paying");
+                  onBack();
                 }}
               >
-                {W.rampnow.notPaidBack}
+                {finishing ? W.rampnow.goBack : W.rampnow.goBackWithoutPaying}
               </button>
               <div className="flex flex-wrap items-center gap-[var(--space-sm)]" data-rampnow-beside="">
                 <p className={HELP}>{unreachable ? W.rampnow.notShowing : W.rampnow.cantSignIn}</p>

@@ -3,8 +3,7 @@ import Link from "next/link";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useAccount } from "@/src/account/provider";
 import { subscribeToCardDraft } from "@/src/card-draft";
-import { noteInRampnowJournal } from "@/src/client/rampnow-journal";
-import { clearRampnowPending, useRampnowPending } from "@/src/client/rampnow-pending";
+import { useRampnowPending } from "@/src/client/rampnow-pending";
 import { formatAusd } from "@/src/gift-reader";
 import { dollarsToUnits } from "@/src/money";
 import { loadPendingGift, peekPendingGift } from "@/src/pending-gift";
@@ -12,7 +11,7 @@ import { WAY_IN_USDC } from "@/src/rails";
 import { rampnowFrameOn } from "@/src/rampnow-frame";
 import { FUND, HOME, PAY } from "@/src/sentences";
 import { BODY, CARD, SECONDARY_BUTTON } from "../components/ui";
-import { RampnowWaiting } from "./offer/RampnowWaiting";
+import { useMinute } from "./clock";
 
 /**
  * The way back to a gift whose payment was started and which was never made (D74, and the audit of 1 Oct 2026).
@@ -43,21 +42,18 @@ export function FinishTheGift() {
   const waiting = useMemo(() => (kept === null ? null : (JSON.parse(kept) as { amount: string; recipient: string; byRampnow: boolean })), [kept]);
   // A card payment that may be at Rampnow, kept on this device for this account (src/client/rampnow-pending.ts).
   const pending = useRampnowPending(address);
+  const minute = useMinute();
   if (!waiting) return null;
-  // One gift, one payment (the founder, 3 Oct 2026): where "not made yet" stood, the payment that is at Rampnow, the
-  // way back to it, and never a button that would start another.
+  // One gift, one payment (the founder, 3 and 4 Oct 2026): where "not made yet" stood, one sentence saying a card
+  // payment was started, and one button, at the weight of the one it replaces, which leads to the screen that waits.
+  // Whether the person paid is asked there and nowhere else, and nothing here could start another payment.
   if (waiting.byRampnow && rampnowFrameOn() && pending) {
     return (
-      <section className={`${CARD} w-full`} data-finish-gift="">
-        <RampnowWaiting
-          pending={pending}
-          says={(pending.known ? PAY.rampnow.giftAtRampnow : PAY.rampnow.giftMaybeAtRampnow)(waiting.amount, waiting.recipient)}
-          quiet
-          onNotPaid={() => {
-            noteInRampnowJournal("Viky: said not paid, away from the screen that waits");
-            clearRampnowPending(address);
-          }}
-        />
+      <section className={`${CARD} w-full`} data-finish-gift="" data-rampnow-started="">
+        <p className={BODY}>{PAY.rampnow.giftStarted(waiting.amount, waiting.recipient, Math.max(0, Math.floor((minute - pending.sinceMs) / 60_000)))}</p>
+        <Link href="/fund?step=paying" className={`${SECONDARY_BUTTON} block text-center no-underline`}>
+          {PAY.rampnow.finish}
+        </Link>
       </section>
     );
   }

@@ -4,9 +4,11 @@ import { answerTheChain, json, profile, shot, type Holdings } from "./gift-kit";
 /**
  * Rampnow in a frame of our own, one payment for one gift (the founder, 3 Oct 2026). The pay press opens the wait with
  * the sheet over it, the frame filled in and locked. The sheet is held: no cross, no handle, and Escape, the backdrop
- * and a pull do nothing. Under the frame, the way out depends on what is known of a payment; left otherwise, the wait,
- * Home and Gifts say the payment is at Rampnow and lead back to it, and never start a second one. The money arriving
- * in the account is what closes the frame and makes the gift.
+ * and a pull do nothing. Under the frame, the way out depends on what is known of a payment. Left otherwise, the wait
+ * says a known payment and gives one button, "Finish my payment"; with nothing known it asks "Did you pay by card?",
+ * and only the answer "No, pay now" opens a new payment. Home and Gifts say a card payment was started and lead to the
+ * wait. A button says what its press does and never declares a state (the founder, 4 Oct 2026). The money arriving in
+ * the account is what closes the frame and makes the gift.
  *
  * It needs a build where the way is on: `NEXT_PUBLIC_RAMPNOW_WAY_IN=on`, `NEXT_PUBLIC_USDC_ROUTER_ADDRESS` and
  * `NEXT_PUBLIC_RAMPNOW_FRAME=on`; run with `VIKY_RAMPNOW_FRAME_BUILD=1` against one. Rampnow itself is stood in for by
@@ -111,7 +113,7 @@ test.describe("Rampnow in a frame: one gift, one payment", () => {
       // Under the frame: the one way out, and the page beside for a sign-in the frame does not keep.
       const under = sheet(page).locator("[data-rampnow-under]");
       await expect(under).toHaveAttribute("data-rampnow-under", "none");
-      const out = under.getByRole("button", { name: "I have not paid: go back", exact: true });
+      const out = under.getByRole("button", { name: "Go back without paying", exact: true });
       await expect(out).toBeVisible();
       await expect(under.getByText("Can't sign in here?", { exact: true })).toBeVisible();
       const beside = under.getByRole("link", { name: "Open the card page" });
@@ -122,7 +124,7 @@ test.describe("Rampnow in a frame: one gift, one payment", () => {
       await expect(under.locator("[data-rampnow-keep-open]")).toHaveCount(0);
       await expect(under.locator("[data-rampnow-late]")).toHaveCount(0);
       await shot(SHOTS, page, size.name, "1-frame-open-no-payment-known");
-      // "I have not paid: go back": the frame goes, nothing is waited for, and paying is the screen's action again.
+      // "Go back without paying": the frame goes, nothing is waited for, and paying is the screen's action again.
       await out.click();
       await expect(frameOf(page)).toHaveCount(0);
       await expect(pending(page)).toHaveCount(0);
@@ -141,7 +143,7 @@ test.describe("Rampnow in a frame: one gift, one payment", () => {
       await inFrame(page).getByRole("button", { name: "Create the order" }).click();
       const under = sheet(page).locator("[data-rampnow-under]");
       await expect(under).toHaveAttribute("data-rampnow-under", "none");
-      await expect(under.getByRole("button", { name: "I have not paid: go back" })).toBeVisible();
+      await expect(under.getByRole("button", { name: "Go back without paying" })).toBeVisible();
       // The card pays: from here nothing under the frame leads out, and the page beside is gone with it.
       await inFrame(page).getByRole("button", { name: "The card pays" }).click();
       await expect(under).toHaveAttribute("data-rampnow-under", "known");
@@ -162,16 +164,17 @@ test.describe("Rampnow in a frame: one gift, one payment", () => {
       await shot(SHOTS, page, size.name, "4-five-minutes-on-a-way-out");
       await late.getByRole("button", { name: "Close this window" }).click();
       await expect(frameOf(page)).toHaveCount(0);
-      // The wait says where the payment is, with the wheel and since when; its main action leads back to it, and
-      // paying is not offered.
+      // The wait says where the payment is, with the wheel and since when, and gives one button, the way back to it.
+      // Nothing else pays or forgets: the last way to a second payment would be here.
       await expect(pending(page)).toHaveAttribute("data-rampnow-pending", "known");
       await expect(pending(page)).toContainText("Your payment is at Rampnow.");
       await expect(pending(page)).toContainText("It finishes on Rampnow's page, which has to be open for it.");
       await expect(pending(page).locator("[data-rampnow-since]")).toHaveText(/^Started (less than a minute|\d+ minutes?) ago\.$/);
       await expect(pending(page).locator(".working-ring")).toBeVisible();
+      await expect(pending(page).getByRole("button")).toHaveCount(1);
+      await expect(pending(page).getByRole("button", { name: "Finish my payment", exact: true })).toBeVisible();
       await expect(payByCard(page)).toHaveCount(0);
-      const notPaid = pending(page).getByRole("button", { name: "I have not paid", exact: true });
-      expect((await notPaid.boundingBox())!.height, "a small action, not the main one").toBeLessThan(48);
+      await expect(page.getByRole("button", { name: /I have not paid|No, pay now/ })).toHaveCount(0);
       await shot(SHOTS, page, size.name, "5-the-wait-says-the-payment-is-at-rampnow");
       // Coming back to the same address later, the frame does not open by itself on a second payment.
       await page.reload();
@@ -187,14 +190,14 @@ test.describe("Rampnow in a frame: one gift, one payment", () => {
       await shot(SHOTS, page, size.name, "6-finish-my-payment-opens-that-order");
       // What the frame said and what the screens did is written down on the device, and read on the founder's page.
       const written = await journal(page);
-      for (const line of ["Viky: the frame opens on a new payment", "Rampnow: WIDGET_READY", "Rampnow: ORDER_CREATED ord_42", "Rampnow: ORDER_PAYMENT_PROCESSING ord_42", "Viky: the late way out was taken", "Viky: the frame opens on a payment already started ord_42"]) expect(written, line).toContain(line);
+      for (const line of ["Viky: the frame opens on a new payment", "Viky: the frame loaded a page (1)", "Rampnow: WIDGET_READY", "Rampnow: ORDER_CREATED ord_42", "Rampnow: ORDER_PAYMENT_PROCESSING ord_42", "Viky: the late way out was taken", "Viky: the wait shows a payment known, started in the frame ord_42", "Viky: the frame opens on a payment already started ord_42"]) expect(written, line).toContain(line);
       await page.goto("/dev/rampnow");
       await expect(page.locator("[data-rampnow-journal] li").filter({ hasText: "Rampnow: ORDER_PAYMENT_PROCESSING" })).toContainText("order ord_42");
       await context.close();
     });
   }
 
-  test("left with nothing said by Rampnow: the wait, Home and Gifts say 'if you paid' and lead back to its orders in our frame; 'I have not paid' starts again", async ({ browser, baseURL }) => {
+  test("left with nothing said by Rampnow: the wait asks 'Did you pay by card?', Home and Gifts lead to it, and only 'No, pay now' opens a new payment", async ({ browser, baseURL }) => {
     const funder = await profile(browser, baseURL, { width: 390, height: 844 });
     const { page, context } = funder;
     await page.clock.install();
@@ -206,36 +209,56 @@ test.describe("Rampnow in a frame: one gift, one payment", () => {
     // Twenty seconds in front of the person: a payment may have left, though Rampnow said nothing of it.
     await page.clock.fastForward(21_000);
     await page.reload();
-    await expect(pending(page)).toHaveAttribute("data-rampnow-pending", "possible");
-    await expect(pending(page)).toContainText("If you paid, your payment is at Rampnow.");
+    // Only the person knows: the screen asks, in the body's text, with no wheel, and the answers are actions.
+    await expect(pending(page)).toHaveAttribute("data-rampnow-pending", "asked");
+    await expect(pending(page).getByText("Did you pay by card?", { exact: true })).toBeVisible();
+    await expect(pending(page).locator("[data-rampnow-since]")).toHaveText(/^A card payment was started (less than a minute|\d+ minutes?) ago\.$/);
+    await expect(pending(page).locator(".working-ring")).toHaveCount(0);
+    const yes = pending(page).getByRole("button", { name: "Yes, finish my payment", exact: true });
+    const no = pending(page).getByRole("button", { name: "No, pay now", exact: true });
+    await expect(yes).toBeVisible();
+    expect((await no.boundingBox())!.height, "a small button under the main one").toBeLessThan((await yes.boundingBox())!.height);
+    expect((await no.boundingBox())!.y).toBeGreaterThan((await yes.boundingBox())!.y);
     await page.waitForTimeout(1_500);
     await expect(frameOf(page)).toHaveCount(0);
     await expect(payByCard(page)).toHaveCount(0);
-    await shot(SHOTS, page, "390", "7-left-with-nothing-said-the-wait");
-    // Home and Gifts, where "not made yet" stood: the same, for the gift named, and never a button that pays.
+    expect(await journal(page)).toContain("Viky: the page was left with the frame open");
+    await shot(SHOTS, page, "390", "7-left-with-nothing-said-the-wait-asks");
+    // Home and Gifts, where "not made yet" stood: one sentence and one button, which leads to the wait. Nothing there
+    // pays, nothing there forgets, and the question is not asked there.
     for (const [where, name] of [["/", "8-home"], ["/gifts", "9-gifts"]] as const) {
       await page.goto(where);
       const kept = page.locator("[data-finish-gift]");
-      await expect(kept).toContainText("for Boo: if you paid, your payment is at Rampnow.");
-      await expect(kept).not.toContainText("not made yet");
-      await expect(kept.locator(".working-ring")).toBeVisible();
-      await expect(kept.locator("[data-rampnow-since]")).toHaveText(/^Started /);
-      await expect(kept.getByRole("link", { name: "Finish my payment" })).toHaveAttribute("href", "/fund?step=paying&finish=1");
-      await expect(kept.getByRole("button", { name: "I have not paid", exact: true })).toBeVisible();
+      await expect(kept.locator("p")).toHaveText(/^\$\S+ for Boo: a card payment was started (less than a minute|\d+ minutes?) ago\.$/);
+      await expect(kept).not.toContainText(/not made yet|Did you pay/);
+      await expect(kept.getByRole("link", { name: "Finish my payment", exact: true })).toHaveAttribute("href", "/fund?step=paying");
+      await expect(kept.getByRole("link")).toHaveCount(1);
+      await expect(kept.getByRole("button")).toHaveCount(0);
+      await expect(kept.locator(".working-ring")).toHaveCount(0);
       await kept.scrollIntoViewIfNeeded();
       await shot(SHOTS, page, "390", name);
     }
-    // "Finish my payment", from Gifts: Rampnow's list of the person's orders, in our frame, with the way out of
-    // somebody who has not paid, since no message said a payment exists.
+    // From Gifts: the wait, which asks. "Yes, finish my payment": Rampnow's list of the person's orders, in our frame.
     await page.locator("[data-finish-gift]").getByRole("link", { name: "Finish my payment" }).click();
+    await expect(pending(page)).toHaveAttribute("data-rampnow-pending", "asked");
+    await expect(frameOf(page)).toHaveCount(0);
+    await pending(page).getByRole("button", { name: "Yes, finish my payment" }).click();
     await expect(frameOf(page)).toHaveAttribute("src", "https://app.rampnow.io/order/list");
     await expect(inFrame(page).locator("#where")).toHaveText("/order/list");
     const under = sheet(page).locator("[data-rampnow-under]");
     await expect(under).toHaveAttribute("data-rampnow-under", "none");
-    // The page beside is that same list, never a new payment.
+    // The page beside is that same list, never a new payment; and the way out goes back to the wait, which keeps it.
     await expect(under.getByRole("link", { name: "Open the card page" })).toHaveAttribute("href", "https://app.rampnow.io/order/list");
-    await shot(SHOTS, page, "390", "10-finish-opens-rampnow-s-orders");
-    await under.getByRole("button", { name: "I have not paid: go back" }).click();
+    await expect(under.getByRole("button", { name: "Go back without paying" })).toHaveCount(0);
+    await shot(SHOTS, page, "390", "10-yes-finish-opens-rampnow-s-orders");
+    await under.getByRole("button", { name: "Go back", exact: true }).click();
+    await expect(frameOf(page)).toHaveCount(0);
+    await expect(pending(page)).toHaveAttribute("data-rampnow-pending", "asked");
+    // "No, pay now": the payment is forgotten and the frame opens on a new one, by that press.
+    await pending(page).getByRole("button", { name: "No, pay now" }).click();
+    await expect(frameOf(page)).toHaveAttribute("src", "https://app.rampnow.io/order/quote?stand-in=1");
+    await expect(sheet(page).getByRole("button", { name: "Go back without paying", exact: true })).toBeVisible();
+    await sheet(page).getByRole("button", { name: "Go back without paying", exact: true }).click();
     await expect(frameOf(page)).toHaveCount(0);
     await expect(pending(page)).toHaveCount(0);
     await expect(payByCard(page)).toBeVisible();
@@ -245,18 +268,31 @@ test.describe("Rampnow in a frame: one gift, one payment", () => {
     await context.close();
   });
 
-  test("'I have not paid', pressed on Home, forgets the payment there too", async ({ browser, baseURL }) => {
+  test("a payment known is never forgotten by a press: the wait, Home and Gifts give the way back and nothing else", async ({ browser, baseURL }) => {
     const funder = await profile(browser, baseURL, { width: 390, height: 844 });
     const { page, context } = funder;
     await page.clock.install();
-    await toTheFrame(page, context, true);
-    await page.clock.fastForward(21_000);
-    await page.goto("/");
-    const kept = page.locator("[data-finish-gift]");
-    await expect(kept).toContainText("if you paid, your payment is at Rampnow.");
-    await kept.getByRole("button", { name: "I have not paid", exact: true }).click();
-    await expect(kept).toContainText("not made yet");
-    await expect(kept.getByRole("link", { name: "Finish my payment" })).toHaveCount(0);
+    await toTheFrame(page, context);
+    await inFrame(page).getByRole("button", { name: "The card pays" }).click();
+    await expect(sheet(page).locator("[data-rampnow-keep-open]")).toBeVisible();
+    // The page is left while Rampnow is finishing: coming back, the wait says the payment and gives one button.
+    await page.reload();
+    await expect(pending(page)).toHaveAttribute("data-rampnow-pending", "known");
+    await expect(pending(page).getByRole("button")).toHaveCount(1);
+    await expect(page.getByRole("button", { name: /No, pay now|Pay \S+ by card/ })).toHaveCount(0);
+    await shot(SHOTS, page, "390", "12-reloaded-while-rampnow-finishes");
+    for (const where of ["/", "/gifts"]) {
+      await page.goto(where);
+      const kept = page.locator("[data-finish-gift]");
+      await expect(kept.locator("p")).toHaveText(/for Boo: a card payment was started/);
+      await expect(kept.getByRole("link", { name: "Finish my payment", exact: true })).toHaveAttribute("href", "/fund?step=paying");
+      await expect(kept.getByRole("button")).toHaveCount(0);
+    }
+    // "Finish my payment", from Gifts to the wait, then into the frame on that order, where nothing leads out.
+    await page.locator("[data-finish-gift]").getByRole("link", { name: "Finish my payment" }).click();
+    await pending(page).getByRole("button", { name: "Finish my payment" }).click();
+    await expect(frameOf(page)).toHaveAttribute("src", "https://app.rampnow.io/order/dapp/ord_42");
+    await expect(sheet(page).locator("[data-rampnow-under]").getByRole("button")).toHaveCount(0);
     await context.close();
   });
 
@@ -292,8 +328,8 @@ test.describe("Rampnow in a frame: one gift, one payment", () => {
     const [tab] = await Promise.all([context.waitForEvent("page"), sheet(page).getByRole("link", { name: "Open the card page" }).click()]);
     await tab.close();
     await expect(frameOf(page)).toHaveCount(0);
-    await expect(pending(page)).toHaveAttribute("data-rampnow-pending", "possible");
-    const finish = pending(page).getByRole("link", { name: "Finish my payment" });
+    await expect(pending(page)).toHaveAttribute("data-rampnow-pending", "asked");
+    const finish = pending(page).getByRole("link", { name: "Yes, finish my payment" });
     await expect(finish).toHaveAttribute("href", "https://app.rampnow.io/order/list");
     await expect(finish).toHaveAttribute("target", "_blank");
     await expect(payByCard(page)).toHaveCount(0);
@@ -353,7 +389,7 @@ test.describe("Rampnow's frame fits the sheet, whatever the window", () => {
       await page.waitForTimeout(400);
       await whole(await frameOf(page).boundingBox(), "the frame");
       await whole(await inFrame(page).getByRole("button", { name: "Login" }).boundingBox(), "the frame's last button");
-      await whole(await sheet(page).getByRole("button", { name: "I have not paid: go back" }).boundingBox(), "the way out");
+      await whole(await sheet(page).getByRole("button", { name: "Go back without paying" }).boundingBox(), "the way out");
       await whole(await sheet(page).getByRole("link", { name: "Open the card page" }).boundingBox(), "the link to the card page");
       await whole(await sheet(page).locator("[data-rampnow-under]").boundingBox(), "everything under the frame");
       // Nothing is left to scroll: the frame took exactly the room what stands under it left.

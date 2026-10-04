@@ -191,14 +191,13 @@ export function PayGift() {
   const [frame, setFrame] = useState<Readonly<{ mode: "new" } | { mode: "finish"; orderUid: string | null }> | null>(null);
   /**
    * What the address asked for on arrival, answered once, when the account and what this device waits for are known:
-   * the pay press opens the frame on a new payment only if none is waited for, and "Finish my payment", pressed on
-   * Home or on Gifts, opens it on the payment that is. Arriving again at the same address never starts a second one.
+   * the pay press opens the frame on a new payment only if none is waited for. Arriving again at the same address
+   * never starts a second one: the screen then says what is waited for, or asks.
    */
-  const [arrival, setArrival] = useState<"new" | "finish" | null>(params.get("rampnow") === "1" ? "new" : params.get("finish") === "1" ? "finish" : null);
+  const [arrival, setArrival] = useState(params.get("rampnow") === "1");
   if (arrival && browser && address) {
-    setArrival(null);
-    if (arrival === "new" && !rampnowPending) setFrame({ mode: "new" });
-    if (arrival === "finish" && rampnowPending?.via === "frame") setFrame({ mode: "finish", orderUid: rampnowPending.orderUid });
+    setArrival(false);
+    if (!rampnowPending) setFrame({ mode: "new" });
   }
   /** The frame said the payment failed and nothing left: said once, above the button that pays. */
   const [rampnowFailed, setRampnowFailed] = useState(false);
@@ -842,15 +841,16 @@ export function PayGift() {
             <CardTermsLine way={wayIn} />
           </>
         ) : wayIn === WAY_IN_USDC && rampnowFrameOn() && rampnowPending ? (
-          // A payment may have left and the frame was left: the screen says where the payment is, and its main action
-          // leads back to it. Paying is not offered: a new payment starts only once the person says they have not paid.
+          // A payment may have left and the frame was left. Known: the screen says where it is, and its one button
+          // leads back to it. Not known: the screen asks, and a new payment opens only on the answer "No, pay now".
           <RampnowWaiting
             pending={rampnowPending}
-            says={rampnowPending.known ? P.rampnow.atRampnow : P.rampnow.maybeAtRampnow}
             onFinish={() => setFrame({ mode: "finish", orderUid: rampnowPending.orderUid })}
-            onNotPaid={() => {
-              noteInRampnowJournal("Viky: said not paid, on the screen that waits");
+            onPayNow={() => {
+              noteInRampnowJournal("Viky: answered no, pay now");
               clearRampnowPending(address);
+              setRampnowFailed(false);
+              setFrame({ mode: "new" });
             }}
           />
         ) : wayIn === WAY_IN_USDC && rampnowFrameOn() ? (
@@ -892,8 +892,10 @@ export function PayGift() {
           finish={frame?.mode === "finish" ? { orderUid: frame.orderUid } : null}
           known={rampnowPending?.known ?? false}
           onSaid={(what, orderUid) => noteRampnowPending(address, { orderUid, known: what === "paying", via: "frame" })}
-          onNotPaid={() => {
-            clearRampnowPending(address);
+          onBack={() => {
+            // Back from a new payment, nothing was paid and nothing is waited for; back from a payment already
+            // started, it is still waited for, and the screen that waits says so or asks.
+            if (frame?.mode !== "finish") clearRampnowPending(address);
             setFrame(null);
           }}
           onFailed={() => {

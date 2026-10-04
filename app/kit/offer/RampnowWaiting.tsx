@@ -1,62 +1,75 @@
 "use client";
-import Link from "next/link";
+import { useEffect } from "react";
+import { noteInRampnowJournal } from "@/src/client/rampnow-journal";
 import type { RampnowPending } from "@/src/client/rampnow-pending";
 import { rampnowFinishPage } from "@/src/rampnow-frame";
 import { PAY as W } from "@/src/sentences";
-import { BODY, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "../../components/ui";
+import { BODY, HELP, PRIMARY_BUTTON, SMALL_BUTTON } from "../../components/ui";
 import { useMinute } from "../clock";
 
 /**
- * A card payment that is at Rampnow, as every screen says it once the frame was left (one gift, one payment, the
- * founder, 3 Oct 2026): the wheel, where the payment is, since when; the main action, which leads back to that payment
- * and never to a new one; and a small one for somebody who has not paid, which is the only way a new payment starts.
+ * A card payment started through Rampnow that has not arrived, on the screen that waits (one gift, one payment, the
+ * founder, 3 and 4 Oct 2026). A button says what its press does and never declares a state.
  *
- * The same block on the screen that waits, on Home and on Gifts. The way back is the frame, where the person is still
- * signed in at Rampnow; for a payment started on Rampnow's page in a tab of its own, it is that page.
+ * - A payment known, by a message of the frame: the wheel, where the payment is, since when, and one button, "Finish
+ *   my payment". Nothing here pays again: the last way to a second payment would be here.
+ * - Nothing known: only the person knows whether they paid, so the screen asks, "Did you pay by card?", and the two
+ *   answers are actions. "Yes, finish my payment" leads back to it; "No, pay now" forgets it and opens a new payment.
+ *
+ * The way back is the frame, where the person is still signed in at Rampnow; for a payment started on Rampnow's page
+ * in a tab of its own, it is that page.
  */
 export function RampnowWaiting({
   pending,
-  says,
   onFinish,
-  quiet = false,
-  onNotPaid,
+  onPayNow,
 }: Readonly<{
   pending: RampnowPending;
-  /** Where the payment is, in one sentence: "if you paid" when no message said a payment exists. */
-  says: string;
-  /** On the screen that waits: opens the frame on the payment. Without it, the action is a link to that screen. */
-  onFinish?: () => void;
-  /** On Home and on Gifts the way back takes the weight of the action it replaces, which is not the screen's main one. */
-  quiet?: boolean;
-  onNotPaid: () => void;
+  /** Opens the frame on the payment already started. */
+  onFinish: () => void;
+  /** The person answers that they did not pay: the payment is forgotten and a new one opens. */
+  onPayNow: () => void;
 }>) {
   const minute = useMinute();
   const minutes = Math.max(0, Math.floor((minute - pending.sinceMs) / 60_000));
-  const action = quiet ? `${SECONDARY_BUTTON} block text-center no-underline` : PRIMARY_BUTTON;
-  return (
-    <div className="flex flex-col gap-[var(--space-sm)]" data-rampnow-pending={pending.known ? "known" : "possible"}>
-      <div className="flex items-center gap-[var(--space-md)]" role="status">
-        <span className="working-ring shrink-0" aria-hidden="true" />
-        <p className={BODY}>{says}</p>
+  // Written down once per state: what the screen showed when the person came back to it.
+  useEffect(() => {
+    noteInRampnowJournal(`Viky: the wait shows a payment ${pending.known ? "known" : "not known"}, started in ${pending.via === "tab" ? "a tab" : "the frame"}`, { orderUid: pending.orderUid });
+  }, [pending.known, pending.via, pending.orderUid]);
+  const finish = (label: string) =>
+    pending.via === "tab" ? (
+      <a href={rampnowFinishPage(pending.orderUid)} target="_blank" rel="noopener noreferrer" className={PRIMARY_BUTTON}>
+        {label}
+      </a>
+    ) : (
+      <button type="button" className={PRIMARY_BUTTON} onClick={onFinish}>
+        {label}
+      </button>
+    );
+  if (pending.known) {
+    return (
+      <div className="flex flex-col gap-[var(--space-sm)]" data-rampnow-pending="known">
+        <div className="flex items-center gap-[var(--space-md)]" role="status">
+          <span className="working-ring shrink-0" aria-hidden="true" />
+          <p className={BODY}>{W.rampnow.atRampnow}</p>
+        </div>
+        <p className={HELP}>
+          {W.rampnow.needsItsPage} <span data-rampnow-since="">{W.rampnow.since(minutes)}</span>
+        </p>
+        {finish(W.rampnow.finish)}
       </div>
-      <p className={HELP}>
-        {W.rampnow.needsItsPage} <span data-rampnow-since="">{W.rampnow.since(minutes)}</span>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-[var(--space-sm)]" data-rampnow-pending="asked">
+      {/* No wheel beside a question: nothing is known to be under way. */}
+      <p className={BODY}>{W.rampnow.didYouPay}</p>
+      <p className={HELP} data-rampnow-since="">
+        {W.rampnow.started(minutes)}
       </p>
-      {pending.via === "tab" ? (
-        <a href={rampnowFinishPage(pending.orderUid)} target="_blank" rel="noopener noreferrer" className={action}>
-          {W.rampnow.finish}
-        </a>
-      ) : onFinish ? (
-        <button type="button" className={action} onClick={onFinish}>
-          {W.rampnow.finish}
-        </button>
-      ) : (
-        <Link href="/fund?step=paying&finish=1" className={action}>
-          {W.rampnow.finish}
-        </Link>
-      )}
-      <button type="button" className={`${SMALL_BUTTON} self-start`} onClick={onNotPaid}>
-        {W.rampnow.notPaid}
+      {finish(W.rampnow.yesFinish)}
+      <button type="button" className={`${SMALL_BUTTON} self-start`} onClick={onPayNow}>
+        {W.rampnow.noPayNow}
       </button>
     </div>
   );

@@ -48,15 +48,15 @@ test("nothing counts on the frame's messages: the money arriving closes it, and 
   // No message of the frame closes the sheet: it has no handler that would, and the screen closes it on four things only.
   const sheet = readFileSync("app/kit/offer/RampnowSheet.tsx", "utf8");
   assert.doesNotMatch(sheet, /onArrived|onClose\b(?!=\{nothing\})/);
-  assert.equal(paying.match(/setFrame\(null\)/g)?.length, 5, "the money arriving, not paid, failed, the late way out, the page beside");
+  assert.equal(paying.match(/setFrame\(null\)/g)?.length, 5, "the money arriving, the way back, failed, the late way out, the page beside");
   // The route gives an address whether or not a key is set, once the frame is switched on.
   const route = readFileSync("app/api/fund/rampnow-frame/route.ts", "utf8");
   assert.match(route, /const url = rampnowFrameOn\(\) \? rampnowFrameAddress\(\{ account: getAddress\(auth\.account\), euros: [^}]+\}, key\) : null;/);
   // A real payment has gone through the frame (the founder's, 3 Oct 2026), and the page says the frame with what that payment showed.
   const judges = readFileSync("app/judges/page.tsx", "utf8").replace(/\s+/g, " ");
   assert.ok(judges.includes("? \"Rampnow's page opens in a frame inside Viky. Its limit: Rampnow finishes a payment from its own page (the card buys USDC on Base, and its page then sends it on to Monad), so the frame has to stay open until the money arrives."));
-  assert.ok(judges.includes("The frame has no cross: its way out is for somebody who says they have not paid, or after five minutes without the money."));
-  assert.ok(judges.includes("Left before the end, the payment waits at Rampnow, and the screen that waits leads back to it and starts no second one."));
+  assert.ok(judges.includes("The frame has no cross: one way out under it while no payment is known, \\\"Go back without paying\\\", and one after five minutes without the money."));
+  assert.ok(judges.includes("Left before the end, the payment waits at Rampnow: the screen that waits leads back to it, and opens another only when the person answers that they did not pay."));
   assert.ok(judges.includes("6 EUR paid at 21:23 UTC, the frame closed, the money held on Base for 14 minutes, then 5.60 USDC on the account at 21:38 UTC"));
   assert.equal(LATE_WAY_OUT_AFTER_MS, 5 * 60_000, "the five minutes the page says");
 });
@@ -100,16 +100,22 @@ test("the sheet is held, and what stands under the frame is the way out", () => 
   assert.match(kit, /if \(event\.target === dialog\.current && !held\) dialog\.current\?\.close\(\);/, "the backdrop");
   assert.match(kit, /if \(held \|\| \(event\.target as Element\)\.closest\("button"\)\) return;/, "a pull");
   assert.match(kit, /if \(asked\.current\.held && asked\.current\.open\) return dialog\.current\?\.showModal\(\);/, "a second Escape");
-  // The founder's sentences, word for word.
-  assert.equal(PAY.rampnow.notPaidBack, "I have not paid: go back");
+  // The founder's sentences, word for word. A button says what its press does and never declares a state.
+  assert.equal(PAY.rampnow.goBackWithoutPaying, "Go back without paying");
+  assert.equal(PAY.rampnow.goBack, "Go back");
   assert.equal(PAY.rampnow.keepOpen, "Keep this window open: Rampnow is finishing your payment.");
   assert.equal(PAY.rampnow.failed, "The payment did not go through. Nothing was taken.");
   assert.equal(PAY.rampnow.finish, "Finish my payment");
-  assert.equal(PAY.rampnow.notPaid, "I have not paid");
+  assert.equal(PAY.rampnow.didYouPay, "Did you pay by card?");
+  assert.equal(PAY.rampnow.yesFinish, "Yes, finish my payment");
+  assert.equal(PAY.rampnow.noPayNow, "No, pay now");
   assert.equal(PAY.rampnow.cantSignIn, "Can't sign in here?");
+  for (const label of [PAY.rampnow.goBackWithoutPaying, PAY.rampnow.goBack, PAY.rampnow.finish, PAY.rampnow.yesFinish, PAY.rampnow.noPayNow, PAY.rampnow.lateOut, PAY.rampnow.openPage]) {
+    assert.doesNotMatch(label, /\bI (have|am|did|paid|added)\b/i, `"${label}" says what the press does, never what the person is`);
+  }
   // A payment known: the sentence and nothing that leads out. None known: the way out and the page beside.
   assert.match(sheet, /\{known \? \(\n\s*<p className=\{`\$\{BODY\} font-medium`\} role="status" data-rampnow-keep-open="">\n\s*\{W\.rampnow\.keepOpen\}/);
-  assert.match(sheet, /data-rampnow-not-paid=""[\s\S]*?\{W\.rampnow\.notPaidBack\}/);
+  assert.match(sheet, /data-rampnow-back=""[\s\S]*?\{finishing \? W\.rampnow\.goBack : W\.rampnow\.goBackWithoutPaying\}/);
   assert.match(sheet, /<p className=\{HELP\}>\{unreachable \? W\.rampnow\.notShowing : W\.rampnow\.cantSignIn\}<\/p>/);
   assert.match(sheet, /\{known \? null : <CardTermsLine way=\{WAY_IN_USDC\} \/>\}/);
   // The page beside is the payment to finish when there is one, never a new payment in its place.
@@ -122,39 +128,58 @@ test("the sheet is held, and what stands under the frame is the way out", () => 
   assert.match(sheet, /const listen = \(message: MessageEvent\) => \{\n\s*noteRampnowMessage\(message\);\n\s*const event = rampnowEventOf\(message\);/);
 });
 
-test("the wait, Home and Gifts say the payment is at Rampnow and lead back to it; paying starts again only on 'I have not paid'", () => {
+test("the wait says a known payment and gives one button; with nothing known it asks, and only the answer 'No, pay now' pays again", () => {
   const paying = readFileSync("app/components/PayGift.tsx", "utf8");
   const from = paying.indexOf(") : wayIn === WAY_IN_USDC && rampnowFrameOn() && rampnowPending ? (");
   const waiting = paying.slice(from, paying.indexOf(") : wayIn === WAY_IN_USDC && rampnowFrameOn() ? (", from));
   assert.ok(from > 0);
-  assert.match(waiting, /says=\{rampnowPending\.known \? P\.rampnow\.atRampnow : P\.rampnow\.maybeAtRampnow\}/);
   assert.match(waiting, /onFinish=\{\(\) => setFrame\(\{ mode: "finish", orderUid: rampnowPending\.orderUid \}\)\}/, "the payment opened again in our frame");
-  assert.match(waiting, /clearRampnowPending\(address\);/, "not paid: nothing is waited for");
-  assert.doesNotMatch(waiting, /openCard\b|openCardAgain|payByCard|mode: "new"/, "never a new payment here");
-  // The pay press that arrives with a payment already waited for opens nothing; "Finish my payment" from Home opens that payment.
-  assert.match(paying, /if \(arrival === "new" && !rampnowPending\) setFrame\(\{ mode: "new" \}\);/);
-  assert.match(paying, /if \(arrival === "finish" && rampnowPending\?\.via === "frame"\) setFrame\(\{ mode: "finish", orderUid: rampnowPending\.orderUid \}\);/);
+  // "No, pay now": the payment is forgotten and the frame opens on a new one, in the same press.
+  assert.match(waiting, /onPayNow=\{\(\) => \{\n\s*noteInRampnowJournal\("Viky: answered no, pay now"\);\n\s*clearRampnowPending\(address\);\n\s*setRampnowFailed\(false\);\n\s*setFrame\(\{ mode: "new" \}\);\n\s*\}\}/);
+  assert.doesNotMatch(waiting, /openCard\b|openCardAgain|payByCard/, "never Pay by card here");
+  // The pay press that arrives with a payment already waited for opens nothing.
+  assert.match(paying, /if \(arrival && browser && address\) \{\n\s*setArrival\(false\);\n\s*if \(!rampnowPending\) setFrame\(\{ mode: "new" \}\);\n\s*\}/);
+  // Back from a new payment forgets it; back from a payment already started keeps it.
+  assert.match(paying, /onBack=\{\(\) => \{\n(\s*\/\/[^\n]*\n)*\s*if \(frame\?\.mode !== "finish"\) clearRampnowPending\(address\);\n\s*setFrame\(null\);\n\s*\}\}/);
   // Paying, when nothing is waited for: "Pay €X by card", and the failure said once above it.
   assert.match(paying, /\{rampnowFailed \? <FieldRefusal id="rampnow-failed">\{P\.rampnow\.failed\}<\/FieldRefusal> : null\}/);
   assert.match(paying, /\{toBuy \? P\.payByCard\(moneyIn\(toBuy, "EUR"\)\) : W\.waiting\.openCard\}/);
   assert.equal(PAY.payByCard("€6.00"), "Pay €6.00 by card");
-  // The block itself: the wheel, since when, the way back, and the small way to start again.
+
   const block = readFileSync("app/kit/offer/RampnowWaiting.tsx", "utf8");
-  assert.match(block, /<span className="working-ring shrink-0" aria-hidden="true" \/>/);
-  assert.match(block, /\{W\.rampnow\.needsItsPage\} <span data-rampnow-since="">\{W\.rampnow\.since\(minutes\)\}<\/span>/);
-  assert.match(block, /pending\.via === "tab" \? \(\n\s*<a href=\{rampnowFinishPage\(pending\.orderUid\)\} target="_blank" rel="noopener noreferrer"/, "a payment started in a tab is finished in a tab");
-  assert.match(block, /<Link href="\/fund\?step=paying&finish=1" className=\{action\}>/);
+  const known = block.slice(block.indexOf("if (pending.known) {"), block.indexOf('data-rampnow-pending="asked"'));
+  const asked = block.slice(block.indexOf('data-rampnow-pending="asked"'));
+  // Known: the wheel, where it is, since when, and one button. No other button: the last way to a second payment was here.
+  assert.match(known, /<span className="working-ring shrink-0" aria-hidden="true" \/>\n\s*<p className=\{BODY\}>\{W\.rampnow\.atRampnow\}<\/p>/);
+  assert.match(known, /\{W\.rampnow\.needsItsPage\} <span data-rampnow-since="">\{W\.rampnow\.since\(minutes\)\}<\/span>/);
+  assert.match(known, /\{finish\(W\.rampnow\.finish\)\}/);
+  assert.doesNotMatch(known, /<button|onPayNow|noPayNow/, "one button, and it is the way back");
+  // Not known: the question in the body's text, what makes it asked, and the two answers, which are actions.
+  assert.match(asked, /<p className=\{BODY\}>\{W\.rampnow\.didYouPay\}<\/p>/);
+  assert.match(asked, /\{W\.rampnow\.started\(minutes\)\}/);
+  assert.match(asked, /\{finish\(W\.rampnow\.yesFinish\)\}\n\s*<button type="button" className=\{`\$\{SMALL_BUTTON\} self-start`\} onClick=\{onPayNow\}>\n\s*\{W\.rampnow\.noPayNow\}/);
+  assert.doesNotMatch(asked, /working-ring/, "no wheel beside a question");
+  // A payment started in a tab is finished in a tab; in the frame, in the frame.
+  assert.match(block, /pending\.via === "tab" \? \(\n\s*<a href=\{rampnowFinishPage\(pending\.orderUid\)\} target="_blank" rel="noopener noreferrer" className=\{PRIMARY_BUTTON\}>/);
   assert.equal(PAY.rampnow.since(0), "Started less than a minute ago.");
   assert.equal(PAY.rampnow.since(1), "Started 1 minute ago.");
   assert.equal(PAY.rampnow.since(14), "Started 14 minutes ago.");
   assert.equal(PAY.rampnow.since(60), "Started 1 hour ago.");
   assert.equal(PAY.rampnow.since(200), "Started 3 hours ago.");
-  // Home and Gifts, where "not made yet" stood, for a gift whose payment went by Rampnow.
+  assert.equal(PAY.rampnow.started(4), "A card payment was started 4 minutes ago.");
+});
+
+test("Home and Gifts say a card payment was started and give one button, which leads to the screen that waits", () => {
   const kept = readFileSync("app/kit/FinishTheGift.tsx", "utf8");
-  assert.match(kept, /if \(waiting\.byRampnow && rampnowFrameOn\(\) && pending\) \{/);
-  assert.match(kept, /says=\{\(pending\.known \? PAY\.rampnow\.giftAtRampnow : PAY\.rampnow\.giftMaybeAtRampnow\)\(waiting\.amount, waiting\.recipient\)\}/);
-  assert.equal(PAY.rampnow.giftAtRampnow("$5.00", "Boo"), "$5.00 for Boo: your payment is at Rampnow.");
-  assert.equal(PAY.rampnow.giftMaybeAtRampnow("$5.00", ""), "$5.00: if you paid, your payment is at Rampnow.");
+  const from = kept.indexOf("if (waiting.byRampnow && rampnowFrameOn() && pending) {");
+  const started = kept.slice(from, kept.indexOf("  return (", kept.indexOf("</section>", from)));
+  assert.ok(from > 0);
+  assert.match(started, /<p className=\{BODY\}>\{PAY\.rampnow\.giftStarted\(waiting\.amount, waiting\.recipient, /);
+  assert.match(started, /<Link href="\/fund\?step=paying" className=\{`\$\{SECONDARY_BUTTON\} block text-center no-underline`\}>\n\s*\{PAY\.rampnow\.finish\}/, "the weight of the button it replaces, and the way to the screen that waits");
+  assert.equal(started.match(/<Link|<button|<a /g)?.length, 1, "one button");
+  assert.doesNotMatch(started, /clearRampnowPending|working-ring|didYouPay/, "nothing here forgets the payment, and the question is asked on the screen that waits alone");
+  assert.equal(PAY.rampnow.giftStarted("$30.00", "Boo", 4), "$30.00 for Boo: a card payment was started 4 minutes ago.");
+  assert.equal(PAY.rampnow.giftStarted("$5.00", "", 0), "$5.00: a card payment was started less than a minute ago.");
 });
 
 test("a message is believed only from Rampnow's origin, in the SDK's shape, with a type it knows", () => {
@@ -173,7 +198,9 @@ test("the frame allows what the SDK allows, the camera and the payment among it,
   const sdk = 'iframeAllow:"camera; microphone; payment; clipboard-write; publickey-credentials-get"';
   assert.ok(sdk.includes(RAMPNOW_FRAME_ALLOW));
   const sheet = readFileSync("app/kit/offer/RampnowSheet.tsx", "utf8");
-  assert.match(sheet, /\{open && shown \? <iframe src=\{shown\} title=\{W\.card\.frame\} allow=\{RAMPNOW_FRAME_ALLOW\}/);
+  assert.match(sheet, /\{open && shown \? \(\n\s*<iframe\n\s*src=\{shown\}\n\s*title=\{W\.card\.frame\}\n\s*allow=\{RAMPNOW_FRAME_ALLOW\}/);
+  // Each page the frame loads is written down, numbered: what it shows cannot be read, when it changes can.
+  assert.match(sheet, /onLoad=\{\(\) => noteInRampnowJournal\(`Viky: the frame loaded a page \(\$\{\(loads\.current \+= 1\)\}\)`\)\}/);
   assert.match(readFileSync("next.config.mjs", "utf8"), /frame-src 'self' https:\/\/deposit\.swapper\.finance https:\/\/app\.rampnow\.io/);
   // The key is read on the server, and the account is the session's.
   const route = readFileSync("app/api/fund/rampnow-frame/route.ts", "utf8");
@@ -197,6 +224,6 @@ test("the frame is as tall as the sheet has room for: whole inside it on a lapto
   assert.match(sheetSource, /window\.addEventListener\("resize", fit\);\n\s*const watch = new ResizeObserver\(fit\);\n\s*if \(frame\.current\?\.parentElement\) watch\.observe\(frame\.current\.parentElement\);/);
   // What stands under the frame is taken from the frame's room, as it is drawn.
   assert.match(sheetSource, /under: around\.getBoundingClientRect\(\)\.height - frame\.current\.getBoundingClientRect\(\)\.height,/);
-  assert.match(sheetSource, /ref=\{frame\} style=\{\{ height \}\}/);
+  assert.match(sheetSource, /ref=\{frame\}\n\s*style=\{\{ height \}\}/);
   assert.doesNotMatch(sheetSource, /h-\[600px\]/, "no fixed height");
 });
