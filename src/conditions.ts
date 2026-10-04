@@ -680,9 +680,10 @@ export const EDX_CERTIFICATE: Condition = {
   state: "open",
   source: "edX",
   family: "exam",
-  // The schools behind the courses, which is what a funder recognises (the founder, 29 Sep 2026), in the register's 30.
-  name: "Harvard, MIT and more, on edX",
-  under: "Online courses",
+  // The schools behind the courses are what a funder recognises (the founder, 29 Sep 2026): they are the grey line
+  // since 5 Oct 2026, and the name is short enough for one line on a 360 pixel phone, where it took two.
+  name: "An edX certificate",
+  under: "Harvard, MIT and more",
   help: "The verified certificate's public page on edX, shared when they have it: the course and the day are read from it, and edX checks identity for that track.",
   checked: { from: "the certificate's public page on edX", when: "when they share its link", counts: "the course, the name and the day", they: "share their certificate's link" },
   link: { kind: "link", label: "The link to your certificate", help: "In edX, open the certificate and copy the whole link from your browser, courses.edx.org/certificates/ followed by its id, then paste it here." },
@@ -1183,7 +1184,8 @@ export const STRAVA_DAILY: Condition = {
   state: "open",
   source: "Strava",
   family: "move",
-  name: "Kilometres each day, on Strava",
+  // "a day", not "each day": one line on a 360 pixel phone, where the longer name took two (the founder, 5 Oct 2026).
+  name: "Kilometres a day, on Strava",
   under: "Runs, rides, walks and more",
   help: "Connected once: each morning, did yesterday's Strava activities reach the distance? Viky keeps only yes or no. It proves the account moved.",
   checked: { from: "their Strava activities", when: "each morning, for the day before", counts: "the account's kilometres that day", they: "connect Strava once" },
@@ -1221,7 +1223,7 @@ export const STRAVA_DAILY: Condition = {
     eachDay: "each day with the kilometres",
     theyConnect: "connects their Strava",
     yesterday: "yesterday's kilometres",
-    preview: "Kilometres each day, on Strava: each day you reach them, that day's share becomes yours.",
+    preview: "Kilometres a day, on Strava: each day you reach them, that day's share becomes yours.",
   },
 };
 

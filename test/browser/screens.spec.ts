@@ -261,6 +261,28 @@ test.describe("the screens a person meets", () => {
   });
 
   /**
+   * Every row of every family is the same height on the narrowest phone held, 360 by 800 (the founder, 5 Oct 2026).
+   * A grey line under every name made them equal at 390; at 360 two names still took two lines ("Harvard, MIT and
+   * more, on edX", "Kilometres each day, on Strava") and their rows stood taller. A name or a grey line that grows
+   * past one line there fails here, by its own words.
+   */
+  test("at 360 pixels every row of a family's list is the same height: no name and no grey line takes two lines", async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 0) !== 375, "measured once, at a size of its own");
+    await page.setViewportSize({ width: 360, height: 800 });
+    await page.goto("/");
+    await openTheCatalogue(page);
+    const sheet = page.locator("dialog.sheet[open]");
+    for (const family of [/^Learn/, /^School & studies/, /^Play/, /^Move/]) {
+      await openTheFamily(page, family);
+      const rows = sheet.locator('div[role="group"] > button');
+      await expect(rows).not.toHaveCount(0);
+      const read = await rows.evaluateAll((all) => all.map((row) => ({ name: row.querySelector(":scope > span > span")?.textContent ?? "", height: Math.round(row.getBoundingClientRect().height) })));
+      const least = Math.min(...read.map((row) => row.height));
+      expect(read.filter((row) => row.height !== least).map((row) => `${row.name} (${row.height} for ${least})`), `${family}: rows taller than the others`).toEqual([]);
+    }
+  });
+
+  /**
    * The other end of the same decision: the gift is composed on the card, so the paying screen has nothing to ask
    * about it. Reached with nothing filled in, it says so and sends the person back to the card rather than asking
    * the four questions a second time.

@@ -621,7 +621,7 @@ export default async function JudgesPage() {
             verification and its third party security review (CASA) apply.
           </li>
           <li>
-            <strong>Strava&apos;s API Agreement, and the same risk.</strong> Kilometres each day on Strava is connected by
+            <strong>Strava&apos;s API Agreement, and the same risk.</strong> Kilometres a day on Strava is connected by
             the person once, on Strava&apos;s own page (D191), read each morning the way Fitbit is: yesterday&apos;s
             activities through the attested fetch with their key as a secret, the distances added, the verdict signed,
             the list dropped. Strava&apos;s API Agreement (read 23 Sep 2026) asks that Strava Data serve the person who
