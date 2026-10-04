@@ -160,5 +160,5 @@ test("a name not everybody knows says what it is in the grey line under it", () 
   assert.equal(Object.keys(WCA_EVENTS).length, 17);
   assert.deepEqual(Object.keys(WCA_EVENTS).filter((id) => !wcaEventIsTimed(id)), ["333fm", "333mbf"]);
   for (const condition of [...CONDITIONS, ...BUILDING]) if (condition.under) assert.ok(condition.under.length <= 32 && !/\.$/.test(condition.under), `${condition.id}: a few words, no full stop`);
-  assert.match(read("app/kit/offer/WillSheet.tsx"), /\{option\.under \? <span className=\{HELP\}>\{option\.under\}<\/span> : null\}/);
+  assert.match(read("app/kit/offer/WillSheet.tsx"), /\{option\.under \? \(\n\s*<span className=\{HELP\} data-what-it-is="">\n\s*\{option\.under\}\n\s*<\/span>\n\s*\) : null\}/);
 });

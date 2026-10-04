@@ -396,7 +396,11 @@ export function WillSheet({
                       <span className="flex min-w-0 flex-1 flex-col items-start text-left">
                         <span className={`${CHOICE} break-words`}>{name}</span>
                         {/* What the line covers, when its name does not say it: "A marathon, a half or a 10 km". */}
-                        {option.under ? <span className={HELP}>{option.under}</span> : null}
+                        {option.under ? (
+                          <span className={HELP} data-what-it-is="">
+                            {option.under}
+                          </span>
+                        ) : null}
                         <Nature nature={option.nature} />
                         {/* Every line the same height, chosen or not (the founder, 28 Sep 2026): what it proves is said on
                             its questions, where the detail is decided, not in the button, which grew when pressed. */}
