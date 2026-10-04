@@ -9,7 +9,8 @@ import { DAY, gift, json, now, profile } from "./gift-kit";
  * 844, by day or after dark, and a photograph where a folder is named.
  */
 export const CONTRACT = "0x00000000000000000000000000000000000000d2";
-export const VIEW = { width: 390, height: 844 };
+/** VIKY_CAPTURE_DESK=1 walks and photographs the same states on a computer, 1440 by 900 (the desktop sweep of 4 Oct 2026). */
+export const VIEW = process.env.VIKY_CAPTURE_DESK === "1" ? { width: 1440, height: 900 } : { width: 390, height: 844 };
 /** VIKY_DECIDE_NIGHT=1 walks and photographs the same states after dark. */
 const NIGHT = process.env.VIKY_DECIDE_NIGHT === "1";
 
