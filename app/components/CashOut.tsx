@@ -9,7 +9,7 @@ import { useDisplayCurrency } from "@/src/client/display-currency";
 import { changeArrivedUsdc } from "@/src/client/convert";
 import { fundingQuote } from "@/src/client/funding-quote";
 import { quoteWayOut, takeTheWayOut, type WayOutQuote } from "@/src/client/exit";
-import { sendOwnMoney, withdrawEarned } from "@/src/client/gift";
+import { loadEarnedInGifts, sendOwnMoney, takeFromGifts } from "@/src/client/gift";
 import { totalEarned, type EarnedInGift } from "@/src/earned-shape";
 import { readCoinBalance, sendMon, sendWithExplicitGas } from "@/src/client/onchain";
 import { isVikyContract } from "@/src/viky-contracts";
@@ -207,7 +207,7 @@ export function CashOut() {
     const [read, gifts, open] = await Promise.all([
       Promise.all(COINS.map((coin) => readCoinBalance(coin, address))),
       // A read that fails is a way out without the gifts' part, which is what it was before (D208).
-      getJson<{ gifts: EarnedInGift[] }>("/api/gifts/earned").then((answer) => answer.gifts, () => [] as EarnedInGift[]),
+      loadEarnedInGifts(),
       // A read that fails leaves it unknown: nothing is said to be ready, and nothing is changed either.
       getJson<{ open: { coin: string; atLeast: string } | null }>("/api/exit/open").then(
         (answer) => (answer.open ? { coin: answer.open.coin, atLeast: BigInt(answer.open.atLeast) } : null),
@@ -352,9 +352,7 @@ export function CashOut() {
     let readying = false;
     try {
       const account = await ensureSigner();
-      for (const gift of inGifts) {
-        await withdrawEarned({ account, giftId: gift.giftId, escrow: gift.escrow, amount: BigInt(gift.earned), nonce: BigInt(gift.nonce) });
-      }
+      await takeFromGifts(account, inGifts);
       // Then the dollars a card delivered, all of them, by the same step the gift's own screen takes (src/usdc-router.ts).
       if (arrived > 0n) {
         readying = true;
@@ -402,6 +400,20 @@ export function CashOut() {
     if (!now) return;
     setProblem(null);
     setStage("phone");
+  };
+
+  /**
+   * Sending to another account takes the gifts' part and what a card delivered first, as every other use does (the
+   * founder, 4 Oct 2026). It opened on what the account alone held: somebody whose money was in a gift pressed an
+   * enabled button and was offered "0.00".
+   */
+  const startOwn = async () => {
+    const now = await gather();
+    if (!now) return;
+    const coin = (now[AUSD.symbol] ?? 0n) > 0n ? AUSD : USDC;
+    setProblem(null);
+    setOwnAmount(twoDecimalsDown(now[coin.symbol] ?? 0n, coin.decimals));
+    setStage("own");
   };
 
   const startMobile = async () => {
@@ -784,7 +796,7 @@ export function CashOut() {
         })}
         {/* The two gestures left, in one line (the README's seventh rule): keep it here, or send it to another account. */}
         <p className={HELP}>{U.keepHere}</p>
-        <button type="button" onClick={() => { setProblem(null); setOwnAmount(ownMax); setStage("own"); }} disabled={holdings === null || dollarsHeld === 0n} className={`${SMALL_BUTTON} self-start`}>
+        <button type="button" onClick={() => void startOwn()} disabled={holdings === null || dollarsHeld === 0n || busy} className={`${SMALL_BUTTON} self-start`}>
           {W.anotherAccount}
         </button>
         {/* The published figures and where each was read, for whoever asks: one press away, under everything. */}

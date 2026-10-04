@@ -6,7 +6,8 @@ import { useMoneySession } from "@/src/account/money-session";
 import { useAccount } from "@/src/account/provider";
 import { ApiError } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
-import { linkOfMade, prepareGift, submitGift, type CreatedGift } from "@/src/client/gift";
+import { linkOfMade, loadEarnedInGifts, prepareGift, submitGift, takeFromGifts, type CreatedGift } from "@/src/client/gift";
+import { totalEarned, type EarnedInGift } from "@/src/earned-shape";
 import { prepareCertificateGift, submitCertificateGift } from "@/src/client/certificate-gift";
 import { prepareMilestoneGift, submitMilestoneGift } from "@/src/client/milestone";
 import { attemptFor, forgetsAttempt, GIFT_ATTEMPT_KEY, isCertificateRequest, isMilestoneRequest } from "@/src/gift-attempt";
@@ -45,7 +46,7 @@ import { FunderControls } from "../kit/FunderControls";
 import { Said } from "../kit/Said";
 import { FoldChevron } from "../kit/GiftLive";
 import { whereTheRailsServe } from "@/src/client/rails";
-import { FUND as W, MILESTONE_FUND as M, OFFER, OFFER as O, PAY as P } from "@/src/sentences";
+import { CASH_OUT as C, FUND as W, MILESTONE_FUND as M, OFFER, OFFER as O, PAY as P } from "@/src/sentences";
 import { ExactLine } from "../kit/LedAmount";
 import { Figure } from "../kit/Figure";
 import { FieldRefusal } from "../kit/FieldRefusal";
@@ -75,7 +76,7 @@ const MADE_KEY = "viky.giftMade";
 
 type Step = "pay" | "account" | "paying" | "done";
 const ALL_STEPS: readonly Step[] = ["pay", "account", "paying", "done"];
-type Phase = "waiting" | "converting" | "giving" | "short" | "failed";
+type Phase = "waiting" | "taking" | "converting" | "giving" | "short" | "failed";
 
 type Made = Readonly<{
   giftId: string;
@@ -160,6 +161,12 @@ export function PayGift() {
   const [kept, setKept] = useState<PendingGift | undefined>(() => (typeof window === "undefined" ? undefined : peekPendingGift()));
   const [balance, setBalance] = useState<bigint | null>(null);
   const [phase, setPhase] = useState<Phase>("waiting");
+  /**
+   * What the person's gifts have already paid them and still hold (D208): theirs to pay with, as Home counts it, and
+   * taken into the account before the gift is made (the founder, 4 Oct 2026). Null until read, once, when the screen
+   * opens; empty once taken, and after a taking that was refused, which is said and not tried again by itself.
+   */
+  const [earned, setEarned] = useState<readonly EarnedInGift[] | null>(null);
   const [arrivedFigure, setArrivedFigure] = useState<string | undefined>(undefined);
   const [problem, setProblem] = useState<string | null>(null);
   const [problemCode, setProblemCode] = useState<string | null>(null);
@@ -251,6 +258,17 @@ export function PayGift() {
       .then(() => refresh())
       .catch(() => undefined);
   }, [refresh]);
+
+  useEffect(() => {
+    if (!address) return;
+    let live = true;
+    void loadEarnedInGifts().then((gifts) => {
+      if (live) setEarned(gifts);
+    });
+    return () => {
+      live = false;
+    };
+  }, [address]);
 
   // Where the screen belongs: a gift already made, a payment already running, or nothing to pay for at all.
   useEffect(() => {
@@ -384,7 +402,43 @@ export function PayGift() {
       try {
         const read = await refresh();
         if (!read) return;
-        const next = nextFundingStep({ held: read.held, arriving: read.arriving, arrivingUsdc: read.usdc, wanted, failedAtMs: failedAtMs.current, nowMs: Date.now() });
+        const inGifts = totalEarned(earned ?? []);
+        const next = nextFundingStep({ held: read.held, arriving: read.arriving, arrivingUsdc: read.usdc, inGifts, wanted, failedAtMs: failedAtMs.current, nowMs: Date.now() });
+        if (next.do === "takeFromGifts") {
+          // The person's own money, out of their gifts and into their account, by the way out's own gesture
+          // (src/client/gift.ts), before the gift is made and before a card is waited for.
+          working.current = true;
+          // Said on the whole screen only when it is all the gift needs. With a card still to pay, the screen stays
+          // as it is: the frame a card is paid in must not close under the person (one gift, one payment).
+          if (read.held + inGifts >= wanted) setPhase("taking");
+          let account;
+          try {
+            account = await ensureSigner();
+          } catch {
+            working.current = false;
+            return;
+          }
+          try {
+            await takeFromGifts(account, earned ?? []);
+          } catch {
+            // Said once, and not tried again by itself (F11): whatever came out is in the account, whatever did not
+            // is still in its gift, and the gift is paid with what the account holds and a card.
+            const after = await readAusdBalance(address).catch(() => read.held);
+            setBalance(after);
+            setEarned([]);
+            setProblem(C.gatherFailed);
+            working.current = false;
+            setPhase("waiting");
+            return;
+          }
+          const after = await readAusdBalance(address);
+          setBalance(after);
+          setEarned([]);
+          setProblem(null);
+          working.current = false;
+          setPhase(after >= wanted ? "giving" : "waiting");
+          return;
+        }
         // The money is in the account: the frame it was paid in closes, whatever the frame said or did not say.
         // Without a partner's key Rampnow's messages may never come, so nothing waits for them (3 Oct 2026).
         if (next.do !== "wait") {
@@ -481,7 +535,7 @@ export function PayGift() {
       live = false;
       clearInterval(timer);
     };
-  }, [step, address, units, phase, refresh, give, ensureSigner]);
+  }, [step, address, units, phase, refresh, give, ensureSigner, earned]);
 
   const copy = (what: "code" | "link", text: string) => {
     void navigator.clipboard
@@ -682,12 +736,12 @@ export function PayGift() {
   // Paying: the wait, the payment arriving, the gift being made.
   if (step === "paying" && address) {
     const held = balance ?? 0n;
-    if (phase === "converting" || phase === "giving") {
+    if (phase === "taking" || phase === "converting" || phase === "giving") {
       return (
         <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows>
           {/* The whole screen while a gift is being made (the mockup paying.html): the ring, what is being done,
               how long it takes, and the gift itself small underneath, so it never leaves the screen. */}
-          <Working says={phase === "converting" ? W.arrived.gettingReady : P.putting(gift, recipient)} and={P.takesSeconds} then={P.mayClose} large />
+          <Working says={phase === "taking" ? C.gathering : phase === "converting" ? W.arrived.gettingReady : P.putting(gift, recipient)} and={P.takesSeconds} then={P.mayClose} large />
           <MiniGift recipient={recipient} what={condition.name} line={P.mini(condition.name, gift, days)} />
         </Shell>
       );
@@ -770,7 +824,9 @@ export function PayGift() {
         </Shell>
       );
     }
-    const toBuy = balance === null ? undefined : eurosToBuyOn(units - held, wayIn, money.rates?.usdPerEur);
+    // What a card is asked for: the gift, less everything the person pays with, their account and what their gifts
+    // still hold for them, which is being taken. Not known, and nothing asked, until both have been read.
+    const toBuy = balance === null || earned === null ? undefined : eurosToBuyOn(units - held - totalEarned(earned), wayIn, money.rates?.usdPerEur);
     const start = address.slice(0, 4);
     const end = address.slice(-4);
     return (
