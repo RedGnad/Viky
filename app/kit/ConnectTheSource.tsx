@@ -27,9 +27,9 @@ export type ConnectWords = Readonly<{
   /** The line above whatever is asked, from the register: what the gift still needs before it can count. */
   stillNeeds: string;
   /** The field, when the account is not known yet. Absent on a shape whose account is always named at the start. */
-  nameField?: Readonly<{ label: string; help: string; typeToContinue: string; noPassword: string; notYet: string }>;
-  /** The way out for somebody who is not that account. */
-  notMine?: string;
+  nameField?: Readonly<{ label: string; help: string; typeToContinue: string; noPassword: string; notYet: string; notYetHow: Readonly<{ before: string; link: string; after: string; href: string }> }>;
+  /** Under the code, where the person typed the name themselves: the button that opens the name's field again. */
+  anotherUsername?: string;
   /** The name of the fold that says what to do when the account the funder named is not theirs. */
   notYours?: string;
   proveTitle: string;
@@ -179,9 +179,9 @@ export function ConnectTheSource({
             <p className={HELP}>{W.removeAfter}</p>
           </>
         )}
-        {onName && words.notMine ? (
+        {onName && words.anotherUsername ? (
           <button type="button" onClick={() => setRenaming(true)} className={SECONDARY_BUTTON}>
-            {words.notMine}
+            {words.anotherUsername}
           </button>
         ) : null}
         {/* Whose account it is, said under the code rather than above it: the code is what they came here to use. */}
@@ -243,7 +243,15 @@ export function ConnectTheSource({
                 {field.notYet}
                 <FoldChevron />
               </summary>
-              <div className="said-fold-body">
+              <div className="said-fold-body flex flex-col gap-[var(--space-xs)]">
+                {/* What to do first, with the source's own site; then what becomes of the money meanwhile. */}
+                <p className={HELP} data-how-to-get-it="">
+                  {field.notYetHow.before}
+                  <a href={field.notYetHow.href} target="_blank" rel="noopener noreferrer" className="underline">
+                    {field.notYetHow.link}
+                  </a>
+                  {field.notYetHow.after}
+                </p>
                 <p className={HELP}>{W.notYetBody(funderName)}</p>
               </div>
             </details>

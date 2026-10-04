@@ -388,4 +388,62 @@ test.describe("you decide", () => {
     await shot(page, "14b-opened-stop-sheet", false);
     await device.context.close();
   });
+
+  test("nobody named the account: the fold says how to get Duolingo first, and under the code the button says what it does", async ({ browser, baseURL }) => {
+    test.setTimeout(120_000);
+    const GIFT = "43";
+    const device = await aWindow(browser, baseURL);
+    const { page } = device;
+    await neverAskedToBeTold(device.context);
+    let goalAccount: Record<string, unknown> = { username: null, source: null, bound: false, code: null, codeExpiresAt: null };
+    await serve(
+      page,
+      GIFT,
+      () =>
+        daily(GIFT, "recipient", {
+          connected: false,
+          creditedDays: 0,
+          days: [],
+          startDay: 0,
+          endDay: 0,
+          earned: "0",
+          earnedDisplay: "$0.00",
+          alreadyTheirs: "0",
+          alreadyTheirsDisplay: "$0.00",
+          goalAccount,
+          end: { keep: "0", keepDisplay: "$0.00", giveBack: "7000000", giveBackDisplay: "$7.00", nonce: "0" },
+        }),
+      TERMS.daily,
+      null,
+    );
+    await makeAnAccount(device);
+    await page.goto(`/g/${GIFT}`);
+    // The fold of somebody who has no Duolingo: what to do first, with Duolingo's own site, then what becomes of the
+    // money meanwhile (the founder, 4 Oct 2026). The second sentence alone said nothing of what to do.
+    const notYet = page.locator("details[data-no-source-yet]");
+    await expect(notYet.locator("summary")).toHaveText("No Duolingo yet?");
+    await expect(notYet.locator("p").first()).toBeHidden();
+    await notYet.locator("summary").click();
+    await expect(notYet.locator("p")).toHaveText([
+      "Duolingo is free. Install it, make your account, then come back here with your username.",
+      "The money stays in your name. Nothing counts until you connect, and after 14 days unconnected it goes back to Maman.",
+    ]);
+    const link = notYet.getByRole("link", { name: "Install it" });
+    await expect(link).toHaveAttribute("href", "https://www.duolingo.com");
+    await expect(link).toHaveAttribute("target", "_blank");
+    await notYet.scrollIntoViewIfNeeded();
+    await shot(page, "18-no-duolingo-yet-open", false);
+
+    // The name typed and its code given: the button under the code opens the username's field again, and says so.
+    goalAccount = { username: "boo_learns", source: "recipient", bound: false, code: "K7PX2M", codeExpiresAt: new Date(Date.now() + 3_600_000).toISOString() };
+    await page.reload();
+    await expect(page.getByRole("button", { name: "Not my name" })).toHaveCount(0);
+    const another = page.getByRole("button", { name: "Use another username" });
+    await another.scrollIntoViewIfNeeded();
+    await shot(page, "19-use-another-username", false);
+    await another.click();
+    await expect(page.getByLabel("Your Duolingo username")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Keep the name I had" })).toBeVisible();
+    await device.context.close();
+  });
 });
