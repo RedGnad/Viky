@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { rampnowPage } from "../src/rails";
-import { PAY } from "../src/sentences";
+import { FUND, PAY } from "../src/sentences";
 import { FRAME_HEIGHT, frameHeightFor, LATE_WAY_OUT_AFTER_MS, orderUidOf, PAYMENT_POSSIBLE_AFTER_MS, RAMPNOW_EVENTS, RAMPNOW_FRAME_ALLOW, RAMPNOW_ORDERS_PAGE, rampnowEventOf, rampnowFinishPage, rampnowFrameAddress, rampnowFrameOn, rampnowOrderPage, rampnowSays } from "../src/rampnow-frame";
 
 /**
@@ -145,6 +145,10 @@ test("the wait says a known payment and gives one button; with nothing known it 
   assert.match(paying, /\{rampnowFailed \? <FieldRefusal id="rampnow-failed">\{P\.rampnow\.failed\}<\/FieldRefusal> : null\}/);
   assert.match(paying, /\{toBuy \? P\.payByCard\(moneyIn\(toBuy, "EUR"\)\) : W\.waiting\.openCard\}/);
   assert.equal(PAY.payByCard("€6.00"), "Pay €6.00 by card");
+  // The title above it writes the amount as the button does: it said "30 EUR" over a button saying "€30.00".
+  assert.match(paying, /step=\{W\.waiting\.title\(toBuy \? moneyIn\(toBuy, "EUR"\) : undefined\)\}/);
+  assert.equal(FUND.waiting.title("€30.00"), "Waiting for your €30.00 payment");
+  assert.equal(FUND.waiting.title(undefined), "Waiting for your payment");
 
   const block = readFileSync("app/kit/offer/RampnowWaiting.tsx", "utf8");
   const known = block.slice(block.indexOf("if (pending.known) {"), block.indexOf('data-rampnow-pending="asked"'));

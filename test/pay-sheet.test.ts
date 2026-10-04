@@ -135,7 +135,7 @@ test("ensureAccount opens the key, signs in with a remembered passkey, or makes 
   // A key this opened is closed again when the server could not be told: nobody stands signed in on no session.
   assert.match(made, /if \(!open\) \{\s+mera\.signOut\(\);\s+setServerSessionFor\(undefined\);\s+\}/);
   // Somebody whose passkey is on another device: asked for it, never given a second account.
-  assert.equal(PAY.alreadyHaveAccount, "I already have an account");
+  assert.equal(PAY.alreadyHaveAccount, "Sign in");
   assert.match(sheet, /\{!address && !hasCredential \? \(\s+<button type="button" className=\{`\$\{SMALL_BUTTON\} self-start`\}[^>]*onClick=\{\(\) => void signInFirst\(\)\}>/);
   assert.match(sheet, /await ensureAccount\(\{ existing: true \}\);/);
 });

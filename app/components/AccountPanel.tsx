@@ -72,7 +72,8 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
       disabled={busy}
       className={returning ? PRIMARY_BUTTON : SECONDARY_BUTTON}
     >
-      {hasCredential ? "Sign in" : "I already have an account"}
+      {/* One label whether or not this device knows a passkey: what the press does is sign in (the founder, 4 Oct 2026). */}
+      Sign in
     </button>
   );
 

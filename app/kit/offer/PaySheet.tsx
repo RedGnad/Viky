@@ -56,7 +56,7 @@ import { ButtonWords, StepInProgress } from "../Waiting";
  * exist yet, which could only fail, and making the account from the panel that followed shut the sheet: Home draws
  * one page for nobody and another for an account. So the press tells Home an account is being made (`onMaking`), Home
  * keeps the page it is drawing, and the terms are kept and the wait opened by this same press. Whether the sheet is
- * open is Home's to know as well, so signing in from it, by "I already have an account", leaves it open.
+ * open is Home's to know as well, so signing in from it, by its small "Sign in", leaves it open.
  */
 function everyMinute(changed: () => void): () => void {
   const timer = setInterval(changed, 60_000);
