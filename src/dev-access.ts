@@ -47,6 +47,17 @@ export function requireOperator(request: Request): AccountAuthSession {
  */
 export async function operatorCanSeeDevPages(): Promise<boolean> {
   if (!devPagesEnabled()) return false;
+  return operatorIsSignedIn();
+}
+
+/**
+ * Whether the browser asking is signed in as one of the operator's accounts, whatever the dev pages' switch says. The
+ * looks laboratory alone opens on it (the founder, 4 Oct 2026: he judges each screen and each movement on viky.cash,
+ * from his operator account): it draws example data and moves nothing, so it does not need the switch that opens the
+ * pages which move money, and those stay shut where that switch is off.
+ */
+export async function operatorIsSignedIn(): Promise<boolean> {
+  if (operatorAccounts().size === 0) return false;
   const { headers } = await import("next/headers");
   const incoming = await headers();
   const host = incoming.get("x-forwarded-host") ?? incoming.get("host");

@@ -8,6 +8,7 @@ import { AMOUNT_IN_TITLE, CARD, HELP, SECONDARY_BUTTON, TITLE } from "@/app/comp
 import { FUND, HOME } from "@/src/sentences";
 import { ACCOUNT, fromMaman, LAST_VISIT, TO_NOE } from "./example";
 import { ReplayArrival } from "./ReplayArrival";
+import { ReplayMoments } from "./ReplayMoments";
 import { SuccessDemo } from "./SuccessDemo";
 import { LAB } from "./words";
 
@@ -26,13 +27,15 @@ export function MotionScreen() {
     <Arrival storageKey="viky.lab.motion" amount gifts={[{ id: gift.giftId, days, lastSeen: LAST_VISIT.settledDays }]}>
       <main className="mx-auto flex w-full max-w-[var(--app-column-max)] flex-col gap-[var(--space-lg)] px-[var(--page-margin)] py-[var(--space-lg)]">
         <h1 className={`${TITLE} pr-[148px]`}>{LAB.motion}</h1>
+        <ReplayMoments />
         <section className={CARD}>
           <p className={HELP}>Arriving: the days that changed since the last visit, then the amount</p>
           <div className="grid grid-cols-5 gap-[var(--space-sm)]">
             {days.map((state, index) => (
               <ArrivalDay key={index} gift={gift.giftId} index={index}>
-                                  <Character state={state} variant={index} className="h-auto w-full" />
-                              </ArrivalDay>
+                {/* As the product's own row draws them (app/kit/DayRow.tsx): a day that moves is written into the page. */}
+                <Character state={state} variant={index} drawn={state === "earned" || state === "returned" || state === "today" ? "inline" : "referenced"} wakes={state === "today"} className="h-auto w-full" />
+              </ArrivalDay>
             ))}
           </div>
           <div className="money-display-box">
