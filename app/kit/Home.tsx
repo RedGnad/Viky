@@ -183,7 +183,7 @@ export function Home({
         <ReachedMoments gifts={owed} />
         {/* A payment started for a gift never made: said first, since the money for it may be what stands below (D74). */}
         <FinishTheGift />
-        <MoneyHero address={address} holdings={holdings} />
+        <MoneyHero address={address} holdings={holdings} gifts={gifts} giftsUnread={problem !== null} />
         {/* The balance's own action, small and under it (the founder, 29 Sep 2026). It keeps its place while the
             balance is being read (D147), so the card under it does not jump down when the answer lands. The room is
             held only on a device that saw money here last time: a first visit holds nothing, and an account with
