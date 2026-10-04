@@ -224,7 +224,10 @@ test.describe("the screens a person meets", () => {
         ).length,
       );
     expect(await explained()).toBe(0);
-    await expect(sheet.locator("[data-what-it-is]")).toHaveText(["Competitive programming", "Professional badges", "Digital certificates"]);
+    // Every row carries its grey line, so every row is the same height.
+    await expect(sheet.locator("[data-what-it-is]")).toHaveText(["Languages, math, music or chess", "Competitive programming", "Professional badges", "Digital certificates"]);
+    const heights = await conditions.evaluateAll((rows) => rows.map((row) => Math.round(row.getBoundingClientRect().height)));
+    expect(new Set(heights).size, `the rows' heights: ${heights.join(", ")}`).toBe(1);
     // The one the card carries, by its own name: the catalogue is ordered by title inside a family, so "first" is
     // whatever the register's words sort to, and that is not what this check is about.
     await expect(sheet.getByRole("button", { name: /A Duolingo lesson each day/i })).toHaveAttribute("aria-current", "true");
