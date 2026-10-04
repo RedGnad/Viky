@@ -173,8 +173,8 @@ and the contract moves the money: to the recipient for what is verified, back to
 
 ## Contracts
 
-Three contracts hold or move money, and none can be upgraded. On the two that hold gifts, no function of the owner
-moves a gift's money: the owner registers a goal, replaces the evidence signer, or pauses.
+Three kinds of contract hold or move money, and none can be upgraded. On the two kinds that hold gifts, no function of
+the owner moves a gift's money: the owner registers a goal, replaces the evidence signer, or pauses.
 
 `contracts/GiftEscrow.sol` holds a gift for a habit, a day at a time: creation and funding in one transaction through
 the funder's EIP-3009 authorization, the claim by the recipient's account, daily check-ins attested by the evidence
@@ -192,21 +192,26 @@ granted in time may still be shown for 14 days after.
 an exchange its owner has allowed, in one transaction the relayer submits. One signature says everything, because its
 nonce is the hash of the terms. The exchanged coin goes to the person, never to a payout service. The contract holds
 nothing between two transactions; its owner allows or removes an exchange, and can return what an exchange might leave
-behind (`sweep`).
+behind (`sweep`). A second copy of it, deployed on 3 Oct 2026 and set on USDC, is the converter of card payments: the
+card service delivers USDC to the funder's own account, and the converter changes it into AUSD on one signature. It ran
+with real amounts that day, in `0x533ec0746493e0670029b917887b8e15376380a4a9c7bb82706b2de910ed1616`: 7.914524 AUSD
+reached the funder's account.
 
 | Contract | On Monad mainnet (chain 143) |
 |---|---|
-| `GiftEscrowV2`, where a daily gift is made since 2 Oct 2026 | `0xC83d8028347967Fc84D0e36Ae5876d9b29EAEc51` |
+| `GiftEscrowV3`, where a daily gift is made since 3 Oct 2026 | `0x591d76863177E70FfcA2C793212d4715A367Ec70` |
+| `GiftEscrowV2`, where a daily gift was made on 2 and 3 Oct 2026, which runs the gifts it holds | `0xC83d8028347967Fc84D0e36Ae5876d9b29EAEc51` |
 | `MilestoneGiftV2`, where a milestone gift is made since 2 Oct 2026 | `0x493c87A27E637bBc7179C17bE2B215fC18523CC0` |
 | `ConsentAnchor` | `0x2a15DF23fF62120700f14D1E5d5d56CA0dAd027e` |
 | `GiftEscrow`, closed to new gifts, which runs the gifts it holds | `0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233` |
 | `GiftEscrow`, the earlier deployment, closed to new gifts, which runs the gifts it holds | `0xE04CD59bB93765333200a9da01df83149D4C4d67` |
 | `MilestoneGift`, closed to new gifts, which runs the gifts it holds | `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e` |
 | `ExitRouter` | `0x8a1790DfD10CF1599bDaeD5eC8BB46B2A6eB6223` |
-| Owner of the seven, a Safe 1.4.1 that signs with 2 of its 3 keys | `0xE08D926c148A5065F4Df2892702785a183de86F9` |
+| `ExitRouter`, a second copy set on USDC: the converter of card payments | `0xf05449c8b868Ce1e6a0D7223e2ceCbbfD1498F9c` |
+| Owner of the nine, a Safe 1.4.1 that signs with 2 of its 3 keys | `0xE08D926c148A5065F4Df2892702785a183de86F9` |
 | AUSD | `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` |
 
-`cast call <contract> "owner()(address)" --rpc-url https://rpc.monad.xyz` answers the Safe for each of the seven.
+`cast call <contract> "owner()(address)" --rpc-url https://rpc.monad.xyz` answers the Safe for each of the nine.
 
 `contracts/verifiers` is not deployed. It holds the direct verifiers ported from Lock-in with their real-proof tests,
 kept fail-closed (`LIVE_SCHEMA_CONFIRMED = false`). The path in production is the evidence signer, below.
@@ -223,6 +228,25 @@ goes back in the same transaction. The owner is bounded: ownership moves in two 
 evidence signer stands a day after it is announced, a goal is added and never changed, and a pause ends by itself
 after seven days and holds the open days rather than taking them. `ConsentAnchor` holds no money: it records which
 consent key an account agrees with, bound by the account's own signature, and every yes and stop in order.
+
+`contracts/GiftEscrowV3.sol` is the third version of the daily contract. It was deployed on 3 Oct 2026 at the address
+above, its source verified through Sourcify, and handed to the Safe the same evening. It is the second version with
+one rule changed: a day is paid the day it is read. On the second version a reading judged only days that were over,
+so a lesson was paid the morning after. Here the first day is the day the account is connected, and a reading credits
+the open days up to its own day, the oldest first, and never a day that has not begun. A cumulative figure cannot say
+when the progress was made: a lesson taken after its day was paid is counted by the first reading of the next day. So
+one lesson never pays two days, no more days are paid than lessons were taken, and a day can be paid on which no
+lesson was taken. The change was read by an independent reviewer on 3 Oct 2026 before the deployment, and the
+correction that reading asked for (which day is the first when an account is connected across midnight) is in the
+deployed code. A daily gift made since is made there, numbered from 1000; a gift made on the second version stays
+there, under its rule.
+
+What has run on it, with real amounts: gift 1000, on 4 Oct 2026. Its first day was paid at 03:22 UTC, the day its
+lesson was read, and the person it was for ended it at 03:44 UTC: 0.187 AUSD went to them, the 29 days neither
+counted nor missed went back to the funder (5.423 AUSD), and the contract holds nothing.
+`cast call 0x591d76863177E70FfcA2C793212d4715A367Ec70 "nextGiftId()(uint256)" --rpc-url https://rpc.monad.xyz` answers
+1001 while that gift is the only one. What has not run on it yet: a missed day going back, and a gift reaching its
+last day.
 
 An independent review of 2 Oct 2026 was read before any deployment, and the contracts were corrected from it. A
 pause cannot be sent again while it runs, nor for seven days after it ended, so it cannot hold a funder's unearned
@@ -312,10 +336,11 @@ check exists: a signed reading with no claim behind it cannot be re-verified by 
 ## Indexer
 
 The contracts' events are indexed with Envio HyperIndex in a separate repository,
-[RedGnad/Viky-index](https://github.com/RedGnad/Viky-index): `config.yaml` names the seven contracts above and the
+[RedGnad/Viky-index](https://github.com/RedGnad/Viky-index): `config.yaml` names the contracts above, all but the converter, and the
 events read from each, `schema.graphql` the entities (every gift, check-in, drained day, payout and refund, and the
 aggregates per day, per condition and in all). It answers GraphQL at
-an endpoint that changes with each hosted deployment: that repository's README gives the one in service. The app reads
+an endpoint that changes with each hosted deployment: that repository's README gives the one in service. The
+deployment in service was made before the third daily contract and does not read it yet. The app reads
 it in one place, the judges page (who has used Viky, and the index set beside the chain); no movement of money depends
 on it, and every figure a funder or a recipient sees comes from the contracts themselves.
 
