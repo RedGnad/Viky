@@ -789,7 +789,9 @@ function withdrawal(): Scenario[] {
         await currency(s, "EUR");
         await s.signIn();
         await s.click("Spend or withdraw");
-        await s.text(/rate of 16 Sep\b/);
+        // The line of exact dollars and its rate left this screen on 4 Oct 2026: the figure in euros is what is waited for.
+        await s.page.locator(".money-display-box").filter({ hasText: /€\d/ }).first().waitFor({ state: "visible", timeout: 20_000 });
+        await s.text(/Credit for your phone|A gift card|A transfer to your/);
         await s.shot("withdrawal", "base, read in euros", `${WAY}, on an account whose display currency is the euro`);
       },
     },
