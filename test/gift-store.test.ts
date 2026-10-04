@@ -215,11 +215,11 @@ test("a gift keeps its two names beside the link, and only the link's key proves
     createdTx: `0x${"77".repeat(32)}`,
     escrow: "0x00000000000000000000000000000000000000e1",
     recipientName: "Léa",
-    funderName: "Maman",
+    funderName: "Mom",
   });
   const gift = await loadGift("77");
   assert.equal(gift?.recipientName, "Léa");
-  assert.equal(gift?.funderName, "Maman");
+  assert.equal(gift?.funderName, "Mom");
   assert.ok(gift && holdsGiftLink(gift, token));
   assert.ok(gift && !holdsGiftLink(gift, `${token}x`));
   assert.ok(gift && !holdsGiftLink(gift, null));

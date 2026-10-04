@@ -12,13 +12,13 @@ import { MORNING } from "../src/sentences";
  * a word about coins or networks.
  */
 
-const BOTH = { recipientName: "Léa", funderName: "Maman" };
+const BOTH = { recipientName: "Léa", funderName: "Mom" };
 const NEITHER = { recipientName: null, funderName: null };
 const WORDS = { yesterday: "yesterday's lesson" };
 
 test("the recipient hears what happened to yesterday, and that today still counts", () => {
   assert.equal(morningSentence("recipient", { kind: "day", outcome: "earned", amount: "$3.57" }, BOTH), "Yesterday counted. $3.57 is yours.");
-  assert.equal(morningSentence("recipient", { kind: "day", outcome: "returned", amount: "$3.57" }, BOTH), "Yesterday went back to Maman. Today still counts.");
+  assert.equal(morningSentence("recipient", { kind: "day", outcome: "returned", amount: "$3.57" }, BOTH), "Yesterday went back to Mom. Today still counts.");
   // A gift made before the names existed says the same thing without inventing one.
   assert.equal(morningSentence("recipient", { kind: "day", outcome: "returned", amount: "$3.57" }, NEITHER), "Yesterday went back. Today still counts.");
 });
@@ -35,7 +35,7 @@ test("a milestone reached and a milestone expired are one sentence each, on both
   assert.equal(morningSentence("recipient", { kind: "reached", amount: "$60.00" }, BOTH), "You reached it. $60.00 is yours.");
   assert.equal(morningSentence("funder", { kind: "reached", amount: "$60.00" }, BOTH), "Léa reached it. $60.00 is theirs.");
   assert.equal(morningSentence("funder", { kind: "reached", amount: "$60.00" }, NEITHER), "It is reached. $60.00 is theirs.");
-  assert.equal(morningSentence("recipient", { kind: "expired", amount: "$60.00" }, BOTH), "The time is up. $60.00 went back to Maman.");
+  assert.equal(morningSentence("recipient", { kind: "expired", amount: "$60.00" }, BOTH), "The time is up. $60.00 went back to Mom.");
   assert.equal(morningSentence("recipient", { kind: "expired", amount: "$60.00" }, NEITHER), "The time is up. $60.00 went back.");
   assert.equal(morningSentence("funder", { kind: "expired", amount: "$60.00" }, BOTH), "The time is up. $60.00 came back to you.");
 });
@@ -68,7 +68,7 @@ test("the payload carries the sentence, a title that names nobody, and the gift'
   assert.equal(payload.title, "Viky");
   assert.equal(payload.message, "Yesterday counted. $3.57 is yours.");
   assert.equal(payload.url, "/g/42");
-  assert.doesNotMatch(payload.title, /Léa|Maman/, "a lock screen shows the title to whoever is looking");
+  assert.doesNotMatch(payload.title, /Léa|Mom/, "a lock screen shows the title to whoever is looking");
 });
 
 test("a day is its own subject, so one day is told about once", () => {

@@ -120,7 +120,7 @@ export type Live = Readonly<{
 }>;
 
 /**
- * The small line above the name, which names the other person of the two: "A gift from Maman" to the person it is
+ * The small line above the name, which names the other person of the two: "A gift from Mom" to the person it is
  * for and to anybody reading their link, "Your gift" to the funder, and "A gift" to a reader nobody gave the names
  * to. It said "Your gift" to that reader until V4, which is false of them.
  */

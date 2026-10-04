@@ -348,7 +348,7 @@ function tellingDeps(answer: () => { ok: true } | { ok: false; gone: boolean; st
     subscriptions: async (giftId) => [{ endpoint: "https://fcm.googleapis.com/fcm/send/one", giftId, account: A, p256dh: "p", auth: "a" }] as never,
     claim: async () => true,
     forgetEndpoint: async () => {},
-    facts: async () => ({ funder: A, names: { recipientName: "Boo", funderName: "Maman" }, perDayDisplay: "$3.57", amountDisplay: "$25.00", words: { yesterday: "yesterday's lesson" } }),
+    facts: async () => ({ funder: A, names: { recipientName: "Boo", funderName: "Mom" }, perDayDisplay: "$3.57", amountDisplay: "$25.00", words: { yesterday: "yesterday's lesson" } }),
     send: async () => answer(),
     log: (line) => logged.push(line),
   };

@@ -1,7 +1,6 @@
 import type { CSSProperties } from "react";
 import type { LedAmount } from "@/src/display-currency";
 import { LED_AMOUNT as W } from "@/src/sentences";
-import { HELP } from "../components/ui";
 
 /**
  * An amount led by the reader's currency (the founder, 29 Sep 2026): "about" small before the figure, because the
@@ -16,9 +15,4 @@ export function LedFigure({ amount, className, style }: Readonly<{ amount: LedAm
       {amount.lead}
     </p>
   );
-}
-
-/** The exact dollars under a converted figure, with the rate's day; nothing when the figure is the dollars already. */
-export function ExactLine({ amount }: Readonly<{ amount: LedAmount }>) {
-  return amount.converted && amount.rateDate ? <p className={HELP}>{W.exactly(amount.exact, amount.rateDate)}</p> : null;
 }

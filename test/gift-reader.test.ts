@@ -58,11 +58,11 @@ test("a reader is offered no gesture at all, and the two people keep theirs", ()
 
 test("nothing a reader is shown speaks to them in the second person", () => {
   const you = /\b(your|yours|you)\b/i;
-  assert.doesNotMatch(GIFT_PAGE.titleReading("Maman", "Ama", "$20.00"), you);
-  assert.equal(GIFT_PAGE.titleReading("Maman", "Ama", "$20.00"), "Maman put $20.00 in Ama's name.");
+  assert.doesNotMatch(GIFT_PAGE.titleReading("Mom", "Ama", "$20.00"), you);
+  assert.equal(GIFT_PAGE.titleReading("Mom", "Ama", "$20.00"), "Mom put $20.00 in Ama's name.");
   // Every gift does not carry both names: a gift made before the names existed carries neither.
   for (const [funder, recipient] of [
-    ["Maman", null],
+    ["Mom", null],
     [null, "Ama"],
     [null, null],
   ] as Array<[string | null, string | null]>) {
@@ -70,10 +70,10 @@ test("nothing a reader is shown speaks to them in the second person", () => {
     assert.doesNotMatch(title, you, `"${title}" speaks to the reader`);
     assert.match(title, /\$20\.00/);
   }
-  assert.doesNotMatch(GIFT_CARD.fromFor("Maman", "Ama"), you);
+  assert.doesNotMatch(GIFT_CARD.fromFor("Mom", "Ama"), you);
   assert.doesNotMatch(GIFT_CARD.theirsGoneBack("$8.00", "$20.00", "$4.00"), you);
   assert.doesNotMatch(GIFT_PAGE.dayWords.returnedReading, you);
-  assert.doesNotMatch(GIFT_PAGE.readingWhose("Maman", "Ama"), you);
+  assert.doesNotMatch(GIFT_PAGE.readingWhose("Mom", "Ama"), you);
   // The sentence beside the next reading: the register carries both persons, and a reader gets the third one.
   for (const condition of CONDITIONS) {
     if (!condition.recipient) continue;
@@ -94,7 +94,7 @@ const summary = (role: GiftSummary["role"]): GiftSummary =>
     goalUsername: "ama_learns",
     usernameSource: "funder",
     recipientName: "Ama",
-    funderName: "Maman",
+    funderName: "Mom",
     catchUpSeconds: 86_400,
     days: [],
     fundedAt: 0,
@@ -116,8 +116,8 @@ const summary = (role: GiftSummary["role"]): GiftSummary =>
   }) as GiftSummary;
 
 test("the card at the head of the page names both sides when neither of them is reading", () => {
-  assert.equal(whoInWords(summary("reader")), "From Maman, for Ama");
-  assert.equal(whoInWords(summary("recipient")), "From Maman");
+  assert.equal(whoInWords(summary("reader")), "From Mom, for Ama");
+  assert.equal(whoInWords(summary("recipient")), "From Mom");
   assert.equal(whoInWords(summary("funder")), "For Ama");
 
   const reader = amountsInWords(summary("reader"), true);

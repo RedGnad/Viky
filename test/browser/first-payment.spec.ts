@@ -172,7 +172,7 @@ test.describe("the first payment, and the way back to it", () => {
       const made = (over: Record<string, unknown>) =>
         page.evaluate(
           (record) => window.sessionStorage.setItem("viky.giftMade", JSON.stringify(record)),
-          { giftId: "7", claimUrl: `${funder.baseURL}/g/7?t=AbCdEfGhIjKlMnOpQrStUv`, atMs: Date.now(), recipientName: "Boo", funderName: "Maman", conditionId: "duolingo-daily", amount: "30000000", days: 30, ...over },
+          { giftId: "7", claimUrl: `${funder.baseURL}/g/7?t=AbCdEfGhIjKlMnOpQrStUv`, atMs: Date.now(), recipientName: "Boo", funderName: "Mom", conditionId: "duolingo-daily", amount: "30000000", days: 30, ...over },
         );
       await made({});
       await page.goto("/fund?step=done");
@@ -199,7 +199,7 @@ test.describe("the first payment, and the way back to it", () => {
       await expect.poll(() => signedIn(iphone.context), { timeout: 30_000 }).toBe(true);
       await iphone.page.evaluate(
         (record) => window.sessionStorage.setItem("viky.giftMade", JSON.stringify(record)),
-        { giftId: "7", claimUrl: `${iphone.baseURL}/g/7?t=AbCdEfGhIjKlMnOpQrStUv`, atMs: Date.now(), recipientName: "Boo", funderName: "Maman", conditionId: "duolingo-daily", amount: "30000000", days: 30 },
+        { giftId: "7", claimUrl: `${iphone.baseURL}/g/7?t=AbCdEfGhIjKlMnOpQrStUv`, atMs: Date.now(), recipientName: "Boo", funderName: "Mom", conditionId: "duolingo-daily", amount: "30000000", days: 30 },
       );
       await iphone.page.goto("/fund?step=done");
       await iphone.page.locator('[data-decide="messages"]').click();

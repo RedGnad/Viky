@@ -8,7 +8,7 @@ import { GIFT_NAME_MAX_LENGTH, giftNameProblem, tidyGiftName } from "../src/gift
  */
 
 test("a name people write is accepted, in any script, with the punctuation names carry", () => {
-  for (const name of ["Léa", "Maman", "Tom", "Anne-Marie", "O'Neil", "Aïssatou", "Nguyễn Văn", "J. R.", "Zoë", "마리아", "Mamie 2"]) {
+  for (const name of ["Léa", "Mom", "Tom", "Anne-Marie", "O'Neil", "Aïssatou", "Nguyễn Văn", "J. R.", "Zoë", "마리아", "Mamie 2"]) {
     assert.equal(giftNameProblem(name), undefined, name);
   }
 });
@@ -25,6 +25,6 @@ test("an empty name, a name too long for a card, or anything that is not a name 
 
 test("a name is stored as it will be printed: spaces collapsed and trimmed", () => {
   assert.equal(tidyGiftName("  Anne   Marie "), "Anne Marie");
-  assert.equal(tidyGiftName("Léa\nMaman"), "Léa Maman", "a line break typed or pasted is a space");
+  assert.equal(tidyGiftName("Léa\nMom"), "Léa Mom", "a line break typed or pasted is a space");
   assert.equal(tidyGiftName("Léa"), "Léa", "composed, so the same name is the same text");
 });

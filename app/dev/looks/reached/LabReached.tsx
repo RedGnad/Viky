@@ -17,7 +17,7 @@ export function LabReached({ status, who }: Readonly<{ status: MilestoneStatus; 
   if (!loaded) return null;
   // The moment is a modal: nothing beside it can be pressed while it is open. Once it is closed, by its own action,
   // the laboratory offers it again.
-  if (!closed) return <ReachedMoment key={playing} gift={reachedOfStatus(status, who, { recipientName: "Boo", funderName: "Maman" })} onClose={() => setClosed(true)} />;
+  if (!closed) return <ReachedMoment key={playing} gift={reachedOfStatus(status, who, { recipientName: "Boo", funderName: "Mom" })} onClose={() => setClosed(true)} />;
   return (
     <button
       type="button"

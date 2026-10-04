@@ -58,7 +58,7 @@ function input(over: Partial<LiveInput>): LiveInput {
   return {
     moment: "counting",
     voice: "recipient",
-    funderName: "Maman",
+    funderName: "Mom",
     recipientName: "Boo",
     source: "Duolingo",
     amountDisplay: "$16.80",
@@ -137,7 +137,7 @@ test("an older day is named by its date, the last day has no day after it, and d
 test("once a day has gone back it takes the right column, and how long is left is a sentence under the state", () => {
   const withBack = { returnedDisplay: "$2.40" };
   const open = card({ ...GIFT, missedDays: 0 }, NOW, withBack);
-  assert.deepEqual(open.back, { label: "Back to Maman", value: "$2.40" });
+  assert.deepEqual(open.back, { label: "Back to Mom", value: "$2.40" });
   assert.equal(open.nextAt, null);
   assert.equal(open.next, "9 h 12 left today.");
   const behind = card({ ...GIFT, creditedDays: 0 }, NOW, { ...withBack, voice: "funder" });

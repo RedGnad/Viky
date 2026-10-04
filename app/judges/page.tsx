@@ -573,34 +573,20 @@ export default async function JudgesPage() {
             ) : null}
           </li>
           <li>
-            <strong>Exam results services&apos; terms.</strong> Five examination results are shown by the person from
+            <strong>Exam results services&apos; terms.</strong> Two examination results are shown by the person from
             their own account with the examining body (D176), the way the TOEFL score is: Cambridge English&apos;s
-            Results Service for Candidates, the British Council&apos;s IELTS Test Taker Portal, and the baccalauréat
-            services of Morocco (Bac Digital), Cameroon (Epim-Exam) and France (Cyclades). Each provider is ours,
+            Results Service for Candidates and the British Council&apos;s IELTS Test Taker Portal. Each provider is ours,
             registered from a real candidate&apos;s session, and none exists yet; the definitions in docs/reclaim say
             the page, the sign-in the candidate types in their own browser, and the fields. The terms read on 23 Sep
             2026: Cambridge&apos;s website terms forbid scraping or storing the site&apos;s content on a server and
             building a database from it; the British Council&apos;s forbid copying its content, misusing data on its
-            services and sharing a password, and name no automated access; Bac Digital and Epim-Exam show no terms on
-            their public pages, and Cyclades&apos;s legal notice opens only inside the application. Whether a candidate
-            showing their own result once falls under any of these is a question these lines do not answer: it is the
-            founder&apos;s call before each line opens, and nothing is shown until then.
-          </li>
-          <li>
-            <strong>School portals&apos; terms.</strong> An average at school is shown by the pupil, or the family,
-            from their own EcoleDirecte account (D179). Aplim, its publisher and host, says (read 23 Sep 2026) that
-            the holder of a password reaches only the information about themselves or those they answer for, that the
-            school alone answers for the information, and that Aplim makes the site&apos;s content available to no third
-            party; no clause names a program, and the school is not asked. PRONOTE was built on the founder&apos;s decision of 23 Sep 2026, its publisher&apos;s
-            terms against it and the risk assumed, then parked the same night for a technical reason: every answer of a
-            PRONOTE space is AES-encrypted with a key made at sign-in, and the bulletin it hands out as a PDF is itself
-            encrypted with the PDF standard&apos;s own encryption (both read on the demonstration space). The family sees
-            the marks because their browser decrypts them; a witness attests the bytes on the wire, which are ciphertext,
-            so nothing in them could be proved. It is offered to nobody.
+            services and sharing a password, and name no automated access. Whether a candidate showing their own result
+            once falls under either of these is a question these lines do not answer: it is the founder&apos;s call
+            before each line opens, and nothing is shown until then.
           </li>
           <li>
             <strong>What the number read is worth to anybody else.</strong> For a result the person shows from their
-            own account (an exam, the Study rail, School, a course), the number is seen once, on their own screen, and
+            own account (an exam, the Study rail, a course), the number is seen once, on their own screen, and
             by nobody else (D185): under the target nothing is relayed and they are told with the number; at or over
             it the attestation the contract receives carries the target as its value, which is the verdict. The
             readings table keeps no number and no proof for these lines, and the session row keeps the verdict alone.
@@ -741,13 +727,6 @@ export default async function JudgesPage() {
             takes no new reading of that platform, and one already waiting its turn is put off too; a reading put off is
             told to try again later, and nothing is counted for it. The pace is held in the service&apos;s memory: a
             restart or a redeploy of the service forgets a pause and starts the day&apos;s count again.
-          </li>
-          <li>
-            <strong>WAEC&apos;s terms.</strong> WASSCE credits are shown by the person from WAEC&apos;s own result checker
-            (D217), and not read for them, because WAEC&apos;s privacy policy tells the holder of an access code it allocates
-            &quot;you must not disclose it to any third party&quot;, and the result card&apos;s PIN is one. The card is typed on WAEC&apos;s page and
-            never reaches Viky. waecdirect.org publishes no terms of use and no robots file. Each opening spends one of the
-            card&apos;s uses, which the person bought.
           </li>
           <li>
             <strong>Coursera.</strong> Nothing published says a certificate was earned under supervision: Coursera

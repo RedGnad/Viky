@@ -32,7 +32,7 @@ export function gift(giftId: string, who: Who, over: Record<string, unknown>) {
     conditionId: "toefl-mybest-shown",
     youAreTheRecipient: who === "recipient",
     youAreTheFunder: who === "funder",
-    names: { recipientName: "Boo", funderName: "Maman" },
+    names: { recipientName: "Boo", funderName: "Mom" },
     goalAccount: { username: null, bound: true, code: null, codeExpiresAt: null, namedByFunder: true },
     amount: "25000000",
     amountDisplay: "$25.00",

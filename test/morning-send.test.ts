@@ -19,7 +19,7 @@ const RECIPIENT = "0x000000000000000000000000000000000000B0B0";
 
 const FACTS: GiftFacts = {
   funder: FUNDER,
-  names: { recipientName: "Léa", funderName: "Maman" },
+  names: { recipientName: "Léa", funderName: "Mom" },
   perDayDisplay: "$3.57",
   amountDisplay: "$25.00",
   words: { yesterday: "yesterday's lesson" },
@@ -83,7 +83,7 @@ test("a returned day tells both sides too, because that is the day nobody would 
   assert.equal(await tellAboutDays("2", [{ day: 20_709, outcome: "returned" }], deps(sent)), 2);
   assert.deepEqual(
     sent.map((entry) => entry.message).sort(),
-    ["Yesterday came back to you: $3.57.", "Yesterday went back to Maman. Today still counts."].sort(),
+    ["Yesterday came back to you: $3.57.", "Yesterday went back to Mom. Today still counts."].sort(),
   );
 });
 
@@ -165,7 +165,7 @@ test("a milestone reached and a milestone expired are told once each, with the w
   assert.deepEqual(sent.map((entry) => entry.message).sort(), ["Léa reached it. $25.00 is theirs.", "You reached it. $25.00 is yours."].sort());
   sent.length = 0;
   assert.equal(await tellAboutMilestone("12", "expired", deps(sent)), 2);
-  assert.deepEqual(sent.map((entry) => entry.message).sort(), ["The time is up. $25.00 came back to you.", "The time is up. $25.00 went back to Maman."].sort());
+  assert.deepEqual(sent.map((entry) => entry.message).sort(), ["The time is up. $25.00 came back to you.", "The time is up. $25.00 went back to Mom."].sort());
 });
 
 test("a gift this deployment cannot read tells nobody, rather than telling them something untrue", async () => {

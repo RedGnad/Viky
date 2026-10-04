@@ -58,7 +58,7 @@ test.describe("a gift had or not, as its two people read it", () => {
       await messages.getByRole("button", { name: "Close" }).click();
       await page.getByText("What was agreed").click();
       await expect(page.getByText("This gift is for: enrolled at that university.")).toBeVisible();
-      await expect(page.getByText(/^Prove it by .+ and it is yours\. If not, it goes back to Maman two weeks later\.$/)).toBeVisible();
+      await expect(page.getByText(/^Prove it by .+ and it is yours\. If not, it goes back to Mom two weeks later\.$/)).toBeVisible();
       await page.getByText("How this is checked").click();
       await expect(page.getByText(/^It is yours when it is proved, by .+\.$/)).toBeVisible();
       await expect(page.getByText(/Reach 1 on|reach 1,|Target 1/)).toHaveCount(0);
@@ -93,7 +93,7 @@ test.describe("a gift had or not, as its two people read it", () => {
       state = { phase: "overdue", deadlineMs: (now() - 3 * DAY) * 1000 };
       await page.goto(`/g/${GIFT}`);
       await expect(page.getByText("The last day passed without it.", { exact: true })).toBeVisible();
-      await expect(page.getByText(/^It goes back to Maman after .+\.$/)).toBeVisible();
+      await expect(page.getByText(/^It goes back to Mom after .+\.$/)).toBeVisible();
       await expect(page.getByRole("button", { name: /^Show it$/ })).toHaveCount(0);
       await shot(page, size.name, "3e-yours-past-the-last-day");
       await device.context.close();
@@ -112,7 +112,7 @@ test.describe("a gift had or not, as its two people read it", () => {
           json({
             account: "",
             gifts: [
-              { giftId: GIFT, role: "funder", goalType: 40, goalUsername: null, usernameSource: null, recipientName: "Boo", funderName: "Maman", catchUpSeconds: 108_000, days: [], fundedAt: now() - 5 * DAY, startDay: 0, endDay: 0, amountDisplay: "$25.00", perDayDisplay: "$0.00", durationDays: 30, creditedDays: 0, missedDays: 0, opened: true, counting: true, finished: false, cancelled: false, earnedDisplay: "$0.00", theirsDisplay: "$0.00", returnedDisplay: "$0.00", milestone: enrolment("funder", state) },
+              { giftId: GIFT, role: "funder", goalType: 40, goalUsername: null, usernameSource: null, recipientName: "Boo", funderName: "Mom", catchUpSeconds: 108_000, days: [], fundedAt: now() - 5 * DAY, startDay: 0, endDay: 0, amountDisplay: "$25.00", perDayDisplay: "$0.00", durationDays: 30, creditedDays: 0, missedDays: 0, opened: true, counting: true, finished: false, cancelled: false, earnedDisplay: "$0.00", theirsDisplay: "$0.00", returnedDisplay: "$0.00", milestone: enrolment("funder", state) },
             ],
           }),
         ),

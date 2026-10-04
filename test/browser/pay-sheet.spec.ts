@@ -141,7 +141,7 @@ test.describe("the pay sheet of 3 Oct 2026", () => {
     // Nothing in the account, and thirty dollars a gift has already paid this person and still holds: Home says
     // $30.00, and this sheet said "Pay by card" for a gift of nineteen euros (the founder, 4 Oct 2026).
     const holdings: Holdings = { ausd: 0n, mon: 0n, usdc: 0n };
-    const mine = { giftId: "1000", role: "recipient", funderName: "Maman", recipientName: "Boo", fundedAt: 1, takeable: "30000000" };
+    const mine = { giftId: "1000", role: "recipient", funderName: "Mom", recipientName: "Boo", fundedAt: 1, takeable: "30000000" };
     const funder = await toTheSheet(browser, baseURL, { ausd: 0n, signedIn: true, gifts: [mine], holdings });
     const { page } = funder;
     await expect(sheet(page).locator("[data-pay-total]")).toHaveText("€19.00");

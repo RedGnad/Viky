@@ -85,7 +85,7 @@ async function main() {
     claimToken: newClaimToken(),
     createdTx: `0x${"90".repeat(32)}`,
     recipientName: "Léa",
-    funderName: "Maman",
+    funderName: "Mom",
   });
   record("a gift is recorded on the test database", true, `gift ${GIFT}, funder ${FUNDER.address.slice(0, 10)}`);
 

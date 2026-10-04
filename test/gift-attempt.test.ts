@@ -9,7 +9,7 @@ import { attemptFor, forgetsAttempt } from "../src/gift-attempt";
  * is a new gift to the server; if the first one's money had moved, that could pay for the same gift twice.
  */
 
-const terms = { account: "0x350aF869ABa6ff26AB33517ECd3E38ACaF107761", username: "ama_learns", recipientName: "Léa", funderName: "Maman", goalType: 1, dailyTarget: 10, durationDays: 7, amount: "25000000" };
+const terms = { account: "0x350aF869ABa6ff26AB33517ECd3E38ACaF107761", username: "ama_learns", recipientName: "Léa", funderName: "Mom", goalType: 1, dailyTarget: 10, durationDays: 7, amount: "25000000" };
 const request = {
   goalType: 1,
   dailyTarget: 10,

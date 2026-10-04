@@ -8,7 +8,7 @@ import { Arrival, ArrivalAmount, Reveal, type ArrivalGift } from "@/app/kit/Moti
 import { Shell } from "@/app/kit/Shell";
 import { AMOUNT_IN_TITLE, BODY, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "@/app/components/ui";
 import { HOME } from "@/src/sentences";
-import { ACCOUNT, fromMaman, labHref, LAST_VISIT, toAma } from "../example";
+import { ACCOUNT, fromMom, labHref, LAST_VISIT, toAma } from "../example";
 
 /**
  * Home with two gifts (product structure, section 4): the money first and as the title, one primary action, the way
@@ -19,7 +19,7 @@ import { ACCOUNT, fromMaman, labHref, LAST_VISIT, toAma } from "../example";
 export function HomeScreen() {
   const nowMs = useMinute();
   const shown = `${ACCOUNT.symbol}${ACCOUNT.euros.toFixed(2)}`;
-  const gifts = [fromMaman(nowMs), toAma(nowMs)];
+  const gifts = [fromMom(nowMs), toAma(nowMs)];
   const arriving: ArrivalGift[] = gifts.map((gift) => ({
     id: gift.giftId,
     days: charactersOf(gift, gift.catchUpSeconds, nowMs, gift.days),

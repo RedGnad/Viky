@@ -26,7 +26,7 @@ const VOICES: Voice[] = ["recipient", "funder", "reader"];
 const input = (over: Partial<LiveInput> = {}): LiveInput => ({
   moment: "counting",
   voice: "recipient",
-  funderName: "Maman",
+  funderName: "Mom",
   recipientName: "Léa",
   source: "Duolingo",
   amountDisplay: "$7.00",
@@ -99,15 +99,15 @@ test("a climb leads with what is left, and where they stand is the figure", () =
 
 test("a day counted is said in the morning message's own words, without its money", () => {
   assert.equal(liveOf(input({ lastJudged: "earned" })).headline, "Yesterday counted.");
-  assert.equal(liveOf(input({ lastJudged: "returned" })).headline, "Yesterday went back to Maman. Today still counts.");
+  assert.equal(liveOf(input({ lastJudged: "returned" })).headline, "Yesterday went back to Mom. Today still counts.");
   assert.equal(liveOf(input({ lastJudged: "returned", voice: "funder" })).headline, "Yesterday came back to you. Today still counts.");
   assert.equal(liveOf(input({ started: false })).headline, "Nothing has been counted yet.");
   // A gift settled before Viky kept a record of each day: the totals are true, the last day is not known.
   assert.equal(liveOf(input({ lastJudged: null })).headline, "It is counting.");
   // Yesterday went back to the funder: "to you" is true of the funder alone, never of a reader of the link.
   assert.equal(liveOf(input({ lastJudged: "returned", voice: "funder" })).headline, "Yesterday came back to you. Today still counts.");
-  assert.equal(liveOf(input({ lastJudged: "returned", voice: "reader" })).headline, "Yesterday went back to Maman. Today still counts.");
-  assert.equal(liveOf(input({ lastJudged: "returned", voice: "recipient" })).headline, "Yesterday went back to Maman. Today still counts.");
+  assert.equal(liveOf(input({ lastJudged: "returned", voice: "reader" })).headline, "Yesterday went back to Mom. Today still counts.");
+  assert.equal(liveOf(input({ lastJudged: "returned", voice: "recipient" })).headline, "Yesterday went back to Mom. Today still counts.");
   assert.equal(liveOf(input({ lastJudged: "returned", voice: "reader", funderName: null })).headline, "Yesterday went back to the person who offered it. Today still counts.", "never 'them', which could be either of the two");
   // A proof shown from the person's own account is shown, never shared (D162).
   assert.equal(liveOf(input({ moment: "awaitingProof", shown: true, source: "ETS" })).headline, "Show it from your own ETS account, and it is yours.");
@@ -119,7 +119,7 @@ test("a day counted is said in the morning message's own words, without its mone
 
 test("what came back is said beside what is theirs, never as a zero, and never where it is the whole story", () => {
   // The mockup's right column: what has gone back to the funder so far, in the meta voice.
-  assert.deepEqual(liveOf(input({ moment: "counting" })).back, { label: "Back to Maman", value: "$1.00" });
+  assert.deepEqual(liveOf(input({ moment: "counting" })).back, { label: "Back to Mom", value: "$1.00" });
   assert.deepEqual(liveOf(input({ moment: "counting", voice: "funder" })).back, { label: "Back to you", value: "$1.00" });
   // Nothing has gone back: the column is not drawn rather than drawn as nothing.
   assert.equal(liveOf(input({ moment: "counting", returnedDisplay: "$0.00" })).back, null);
@@ -129,9 +129,9 @@ test("what came back is said beside what is theirs, never as a zero, and never w
 });
 
 test("the line above the name never says 'your' to somebody the gift is not theirs to read as theirs", () => {
-  assert.equal(eyebrowOf("funder", "Maman"), "Your gift");
-  assert.equal(eyebrowOf("recipient", "Maman"), "A gift from Maman");
-  assert.equal(eyebrowOf("reader", "Maman"), "A gift from Maman", "a reader holding the link is given the names");
+  assert.equal(eyebrowOf("funder", "Mom"), "Your gift");
+  assert.equal(eyebrowOf("recipient", "Mom"), "A gift from Mom");
+  assert.equal(eyebrowOf("reader", "Mom"), "A gift from Mom", "a reader holding the link is given the names");
   assert.equal(eyebrowOf("reader", null), "A gift", "a reader given no names reads no possessive");
   assert.equal(eyebrowOf("recipient", null), "Your gift", "a gift made before the names, to the person it is for");
   assert.equal(titleOf("recipient", "Léa"), "For you");
@@ -143,10 +143,10 @@ test("the line above the name never says 'your' to somebody the gift is not thei
 
 test("the next moment is only said where there is one, and it is the reader's own clock", () => {
   assert.equal(liveOf(input({ moment: "counting" })).next, "Next reading: tomorrow at 9:00 AM your time.");
-  assert.equal(liveOf(input({ moment: "unopened" })).next, "Open it by 3 Oct 2026: after 14 days unopened, it goes back to Maman.");
+  assert.equal(liveOf(input({ moment: "unopened" })).next, "Open it by 3 Oct 2026: after 14 days unopened, it goes back to Mom.");
   // The headline already says who has not opened or connected what: the next line says the date and nothing again.
   assert.equal(liveOf(input({ moment: "unopened", voice: "funder" })).next, "If not by 3 Oct 2026, it comes back to you.");
-  assert.equal(liveOf(input({ moment: "openedNotConnected" })).next, "By 7 Oct 2026, or it goes back to Maman.");
+  assert.equal(liveOf(input({ moment: "openedNotConnected" })).next, "By 7 Oct 2026, or it goes back to Mom.");
   assert.equal(liveOf(input({ moment: "openedNotConnected", voice: "funder" })).next, "If not by 7 Oct 2026, it comes back to you.");
   assert.equal(liveOf(input({ moment: "openedNotConnected", voice: "reader" })).next, null, "a reader is told no deadline that is not theirs to meet");
   // The promise's rule under the money, so the headline's "in your name" is said once.
@@ -169,22 +169,22 @@ test("the next moment is only said where there is one, and it is the reader's ow
 test("at the endings, 'back to you' is said to the funder and to nobody else, and each side reads its own question", () => {
   // Départ trop haut: the reason, and what happens to the money.
   assert.equal(liveOf(input({ moment: "startTooHigh", voice: "funder" })).figure?.label, "Comes back to you");
-  assert.equal(liveOf(input({ moment: "startTooHigh", voice: "reader" })).figure?.label, "Goes back to Maman");
+  assert.equal(liveOf(input({ moment: "startTooHigh", voice: "reader" })).figure?.label, "Goes back to Mom");
   // Échéance passée: "c'est fini ?" to the person, "je récupère quoi ?" to the funder.
   assert.equal(liveOf(input({ moment: "over" })).headline, "The time is up.");
   assert.equal(liveOf(input({ moment: "over", voice: "funder" })).headline, "Léa did not make it in time.");
   assert.deepEqual(liveOf(input({ moment: "over", voice: "funder" })).figure, { label: "Back to you", value: "$7.00" });
-  assert.deepEqual(liveOf(input({ moment: "over", voice: "reader" })).figure, { label: "Back to Maman", value: "$7.00" });
+  assert.deepEqual(liveOf(input({ moment: "over", voice: "reader" })).figure, { label: "Back to Mom", value: "$7.00" });
   // Repris: where the money went, to the person; that it is back, to the funder.
-  assert.equal(liveOf(input({ moment: "cameBack" })).headline, "Maman took it back before it was opened.");
+  assert.equal(liveOf(input({ moment: "cameBack" })).headline, "Mom took it back before it was opened.");
   assert.equal(liveOf(input({ moment: "cameBack", voice: "funder" })).headline, "It is in your account again.");
   assert.equal(liveOf(input({ moment: "cameBack", voice: "funder" })).figure?.label, "Came back");
 });
 
 test("a gift nobody opened says whose name it is in, and the funder reads whether it was seen", () => {
-  assert.equal(liveOf(input({ moment: "unopened" })).headline, "Maman put this in your name.");
+  assert.equal(liveOf(input({ moment: "unopened" })).headline, "Mom put this in your name.");
   assert.equal(liveOf(input({ moment: "unopened", voice: "funder" })).headline, "Léa has not opened it yet.");
-  assert.equal(liveOf(input({ moment: "unopened", voice: "reader" })).headline, "Maman put this in Léa's name.");
+  assert.equal(liveOf(input({ moment: "unopened", voice: "reader" })).headline, "Mom put this in Léa's name.");
   // The amount is the figure at that moment, and the sentence leaves it to the figure.
   assert.equal(liveOf(input({ moment: "unopened" })).figure?.value, "$7.00");
   assert.doesNotMatch(liveOf(input({ moment: "unopened" })).headline, /\$/);
@@ -242,7 +242,7 @@ test("an ended gift says who ended it, when, and where the money went, each figu
   assert.equal(yours.when, "Ended 1 Oct 2026", "the day is a label of four words at most");
   assert.equal(yours.headline, "You ended this gift.");
   assert.deepEqual(yours.figure, { label: "Yours", value: "$2.00" });
-  assert.deepEqual(yours.back, { label: "Back to Maman", value: "$5.00" }, "what went back is a figure beside it, not a sentence");
+  assert.deepEqual(yours.back, { label: "Back to Mom", value: "$5.00" }, "what went back is a figure beside it, not a sentence");
   assert.equal(yours.next, null);
 
   const theirs = liveOf(input({ moment: "ended", voice: "funder", ended }));
@@ -252,12 +252,12 @@ test("an ended gift says who ended it, when, and where the money went, each figu
 
   const reading = liveOf(input({ moment: "ended", voice: "reader", ended }));
   assert.equal(reading.headline, "This gift was ended.");
-  assert.deepEqual(reading.back, { label: "Back to Maman", value: "$5.00" });
+  assert.deepEqual(reading.back, { label: "Back to Mom", value: "$5.00" });
 
   // Nothing kept: the whole amount, once, as the one figure, and no figure that would read "$0.00".
   const nothing = { onInWords: "1 Oct 2026", keptDisplay: "$0.00", givenBackDisplay: "$7.00" };
   const allBack = liveOf(input({ moment: "ended", voice: "recipient", ended: nothing }));
-  assert.deepEqual(allBack.figure, { label: "Back to Maman", value: "$7.00" });
+  assert.deepEqual(allBack.figure, { label: "Back to Mom", value: "$7.00" });
   assert.equal(allBack.back, null);
   assert.deepEqual(liveOf(input({ moment: "ended", voice: "funder", ended: nothing })).figure, { label: "Back to you", value: "$7.00" });
   for (const live of [yours, theirs, reading, allBack]) assert.ok((live.when ?? "").split(" ").length <= 4, "a label is four words at most");

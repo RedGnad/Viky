@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Shell } from "../kit/Shell";
 import Link from "next/link";
 import { privacyWords } from "@/src/condition-privacy";
-import { BUILDING, CONDITIONS } from "@/src/conditions";
+import { buildingForAdults, CONDITIONS } from "@/src/conditions";
 import { DISPLAY, TITLE } from "../components/ui";
 import { cardServices } from "@/src/rails";
 
@@ -78,7 +78,7 @@ export default function PrivacyPage() {
           into the public program.
         </p>
         <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)]">
-          {[...CONDITIONS, ...BUILDING].map((condition) => (
+          {[...CONDITIONS, ...buildingForAdults()].map((condition) => (
             <li key={condition.id}>
               <strong>{condition.name}.</strong> {privacyWords(condition)}
             </li>

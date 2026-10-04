@@ -69,7 +69,7 @@ test("the first proposal is kept on the device, and written on an account that h
 const CARD: PendingGiftTerms = {
   account: "0xabc",
   recipientName: "Léa",
-  funderName: "Maman",
+  funderName: "Mom",
   conditionId: "duolingo-lesson",
   username: "lea",
   dollars: "45",
@@ -83,7 +83,7 @@ test("the card's cookie carries its figures and none of its people", () => {
   const written = cardCookieFrom(CARD, 1_000_000);
   const text = decodeURIComponent(written);
   assert.equal(text.includes("Léa"), false, "a first name is not sent with every request for a font");
-  assert.equal(text.includes("Maman"), false);
+  assert.equal(text.includes("Mom"), false);
   assert.equal(text.includes("0xabc"), false, "nor the account");
   assert.equal(text.includes("lea"), false, "nor the name of the goal's own account");
   const read = cardFromCookie(written, 1_000_000);

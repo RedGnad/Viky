@@ -26,7 +26,7 @@ before(async () => {
   };
   configureGiftStore(executor);
   await ensureGiftSchema();
-  await saveGift({ giftId: "21", funder: FUNDER, contactHash: `0x${"51".repeat(32)}`, claimToken: newClaimToken(), goalType: 1, dailyTarget: 10, durationDays: 7, amount: 25_000_000n, createdTx: `0x${"21".repeat(32)}`, escrow: "0x00000000000000000000000000000000000000e1", recipientName: "Léa", funderName: "Maman" });
+  await saveGift({ giftId: "21", funder: FUNDER, contactHash: `0x${"51".repeat(32)}`, claimToken: newClaimToken(), goalType: 1, dailyTarget: 10, durationDays: 7, amount: 25_000_000n, createdTx: `0x${"21".repeat(32)}`, escrow: "0x00000000000000000000000000000000000000e1", recipientName: "Léa", funderName: "Mom" });
 });
 after(async () => {
   configureGiftStore(undefined);
@@ -51,7 +51,7 @@ test("a gift keeps the currency its funder was reading in when they made it, onc
 });
 
 test("the title names its amount in any currency, so the picture can set it in the text face", () => {
-  const record = { amount: 25_000_000n, funderName: "Maman", goalType: 1 };
+  const record = { amount: 25_000_000n, funderName: "Mom", goalType: 1 };
   assert.deepEqual(previewOf(record, true, {}, { currency: "EUR", rates: RATES }).amount, "€20.00");
   assert.match(previewOf(record, true, {}, { currency: "XOF", rates: RATES }).amount!, /^F\sCFA\s13,119$/);
   assert.equal(previewOf(record, true, {}, { currency: "KRW", rates: RATES }).amount, "₩32,000");
@@ -99,7 +99,7 @@ test("the faces carry the sign of every currency offered, and names in Cyrillic 
 
 test("a link is shared with who gave it, how much in their own currency, and what it is", () => {
   const lesson = conditionById("duolingo-daily");
-  assert.equal(sharedWith("Maman", "about €21.67", previewLine(lesson, false)), `Maman put about €21.67 in your name. ${previewLine(lesson, false)}`);
+  assert.equal(sharedWith("Mom", "about €21.67", previewLine(lesson, false)), `Mom put about €21.67 in your name. ${previewLine(lesson, false)}`);
   assert.equal(sharedWith("  ", "$25.00", "It becomes yours as you go."), "This is for you: $25.00 in your name. It becomes yours as you go.");
   assert.equal(sharedWith(null, "$25.00", previewLine(undefined, true)), "This is for you: $25.00 in your name. It becomes yours when you reach it.");
   // The link follows the words: it is the share's own address, on both screens that share one.
@@ -125,7 +125,7 @@ test("a message sent outside the app speaks the currency of the account it is se
     ] as never,
     claim: async () => true,
     forgetEndpoint: async () => undefined,
-    facts: async () => ({ funder: FUNDER, names: { recipientName: "Léa", funderName: "Maman" }, perDayDisplay: "$3.57", amountDisplay: "$25.00", perDayUnits: 3_570_000n, amountUnits: 25_000_000n, words: { yesterday: "yesterday's lesson" } }),
+    facts: async () => ({ funder: FUNDER, names: { recipientName: "Léa", funderName: "Mom" }, perDayDisplay: "$3.57", amountDisplay: "$25.00", perDayUnits: 3_570_000n, amountUnits: 25_000_000n, words: { yesterday: "yesterday's lesson" } }),
     send: async (subscription, payload) => {
       sent.push({ account: subscription.account, message: (JSON.parse(payload) as { message: string }).message });
       return { ok: true };

@@ -65,8 +65,8 @@ test("the second half of the agreement points at the amount rather than printing
   // The amount of a day is written once, by the sentence that says what a day earns. The one about a day missed
   // says "the same", because the whole point of it is that the two are the same amount, and because a figure said
   // twice on one screen is what document J measures (19 Sep 2026).
-  assert.equal(GIFT_PAGE.goesBackToThem("Maman"), "The same goes back to Maman for each day without it that is not caught up the next day. Nobody else ever profits from a missed day.");
+  assert.equal(GIFT_PAGE.goesBackToThem("Mom"), "The same goes back to Mom for each day without it that is not caught up the next day. Nobody else ever profits from a missed day.");
   assert.match(GIFT_PAGE.goesBackToThem(null), /^The same goes back to them/);
   assert.match(GIFT_PAGE.comesBackToYou, /^The same comes back to you/);
-  for (const said of [GIFT_PAGE.goesBackToThem("Maman"), GIFT_PAGE.comesBackToYou]) assert.doesNotMatch(said, /\$/);
+  for (const said of [GIFT_PAGE.goesBackToThem("Mom"), GIFT_PAGE.comesBackToYou]) assert.doesNotMatch(said, /\$/);
 });

@@ -1394,17 +1394,7 @@ export const FRONTIERS: readonly Frontier[] = [
     name: "A state diploma",
     state: "no-public-page",
     why: "In France the holder draws an attestation from the state's own service, and a check needs the control key printed on it. Nothing anybody can open, and what a program could read would be that attestation rather than the diploma. Read on 19 Sep 2026 on diplome.gouv.fr.",
-    // The baccalauréat is a state diploma, and its three lines (D176) print under "School & studies" with the frontier's
-    // word: this line says they are on their way and names none, so nothing is printed twice.
-    building: "the baccalauréat passed, shown by the candidate from the examining body's own results page, in Morocco, Cameroon and France, with the two words SHOWN BY THEM on it.",
-  },
-  {
-    id: "school-marks",
-    name: "School marks",
-    state: "no-public-page",
-    why: "They live in a school's own portal, which opens for the family and for nobody else. No source publishes a page about a pupil.",
-    // Viky is for adults, on both sides, and the lines for pupils stay closed (the founder, 4 Oct 2026): this page
-    // names neither school portal any more and says nothing is on its way. The code of both lines is kept.
+    // Nothing is on its way for it: the lines that were (the baccalauréat, D176) are pupils', and stay closed.
     building: null,
   },
 ];
@@ -1455,10 +1445,17 @@ export function chooserSections(offered: readonly Condition[]): readonly Conditi
 export type CatalogueSection = ConditionSection & Readonly<{ building: readonly Condition[] }>;
 
 /**
- * The lines built for pupils, whose accounts are a school's portal (the founder, 4 Oct 2026): Viky is for adults, on
- * both sides, so they stay closed and the public page does not print them. Their code and their conditions are kept.
+ * The lines built for pupils (the founder, 4 Oct 2026): an average shown from a school's portal, and the examinations
+ * that end school, the baccalauréat and the WASSCE, whose candidates are mostly under 18. Viky is for adults, on both
+ * sides, so they stay closed and no page prints them: neither the public page, nor the privacy page, nor the judges
+ * page. Their code and their conditions are kept.
  */
-export const FOR_PUPILS: readonly string[] = ["ecoledirecte-grade-shown", "pronote-grade-shown"];
+export const FOR_PUPILS: readonly string[] = ["ecoledirecte-grade-shown", "pronote-grade-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown"];
+
+/** The lines being built that a page may print: every one but the pupils'. */
+export function buildingForAdults(): readonly Condition[] {
+  return BUILDING.filter((condition) => !FOR_PUPILS.includes(condition.id));
+}
 
 /**
  * What "What Viky can check" lists: every family with a line in the register or a line being built. A condition
@@ -1468,13 +1465,11 @@ export const FOR_PUPILS: readonly string[] = ["ecoledirecte-grade-shown", "prono
  */
 export function catalogueSections(): readonly CatalogueSection[] {
   const onFrontier = new Set(FRONTIERS.map((frontier) => frontier.conditionId).filter((id): id is string => Boolean(id)));
-  // And never a line for pupils (the founder, 4 Oct 2026): Viky is for adults, and those lines stay closed.
-  for (const id of FOR_PUPILS) onFrontier.add(id);
   return FAMILIES.map(({ id, title }) => ({
     family: id,
     title,
     conditions: CONDITIONS.filter((condition) => condition.family === id),
-    building: BUILDING.filter((condition) => condition.family === id && !onFrontier.has(condition.id)),
+    building: buildingForAdults().filter((condition) => condition.family === id && !onFrontier.has(condition.id)),
   })).filter((section) => section.conditions.length > 0 || section.building.length > 0);
 }
 

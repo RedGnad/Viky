@@ -123,7 +123,7 @@ const code = (error: unknown) => (error instanceof GiftApiError ? error.code : S
 test("a record that fails after the relay leaves a pending creation with its transaction, and no gift row", async () => {
   const w = world({ saveFailures: 1 });
   const { params, nonce } = terms(1);
-  await assert.rejects(makeGift({ params, nonce, authorization: { ...AUTH, nonce }, recipientName: "Léa", funderName: "Maman" }, w.deps), /the database refused/);
+  await assert.rejects(makeGift({ params, nonce, authorization: { ...AUTH, nonce }, recipientName: "Léa", funderName: "Mom" }, w.deps), /the database refused/);
   assert.equal(w.relays(), 1);
   const row = await loadCreation(nonce);
   assert.equal(row?.status, "pending");
@@ -134,14 +134,14 @@ test("a record that fails after the relay leaves a pending creation with its tra
 test("a retry of the same terms completes that creation with a fresh key, and relays nothing", async () => {
   const w = world({ saveFailures: 1 });
   const { params, nonce } = terms(2);
-  await assert.rejects(makeGift({ params, nonce, authorization: { ...AUTH, nonce }, recipientName: "Léa", funderName: "Maman" }, w.deps));
+  await assert.rejects(makeGift({ params, nonce, authorization: { ...AUTH, nonce }, recipientName: "Léa", funderName: "Mom" }, w.deps));
   const failedKeyHash = (await loadCreation(nonce))?.claimTokenHash;
 
-  const made = await makeGift({ params, nonce, authorization: { ...AUTH, nonce }, recipientName: "Léa", funderName: "Maman" }, w.deps);
+  const made = await makeGift({ params, nonce, authorization: { ...AUTH, nonce }, recipientName: "Léa", funderName: "Mom" }, w.deps);
   assert.equal(w.relays(), 1, "the money moved once");
   const gift = await loadGift(made.giftId);
   assert.ok(gift, "the gift is recorded");
-  assert.equal(gift?.funderName, "Maman");
+  assert.equal(gift?.funderName, "Mom");
   assert.ok(gift && holdsGiftLink(gift, made.claimToken), "the link answered now opens it");
   assert.notEqual(gift?.claimTokenHash, failedKeyHash, "the key of the failed attempt, never shown, does not");
   assert.equal((await loadCreation(nonce))?.status, "complete");
@@ -180,7 +180,7 @@ test("a refusal before anything was submitted leaves the same terms free to go a
 test("the keeper's pass completes a creation left pending, with the key hash of the attempt that made it", async () => {
   const w = world({ saveFailures: 1 });
   const { params, nonce } = terms(5);
-  await assert.rejects(makeGift({ params, nonce, authorization: { ...AUTH, nonce }, funderName: "Maman" }, w.deps));
+  await assert.rejects(makeGift({ params, nonce, authorization: { ...AUTH, nonce }, funderName: "Mom" }, w.deps));
   const pending = await loadCreation(nonce);
 
   // Within the lease nothing is touched: the request may still be finishing.
@@ -204,7 +204,7 @@ test("the keeper's pass completes a creation left pending, with the key hash of 
   assert.ok(report.lines.some((entry) => entry.step === "create" && entry.giftId === completed?.giftId && entry.result === "completed"));
   const gift = await loadGift(String(completed?.giftId));
   assert.equal(gift?.claimTokenHash, pending?.claimTokenHash);
-  assert.equal(gift?.funderName, "Maman");
+  assert.equal(gift?.funderName, "Mom");
   assert.equal(w.relays(), 1);
 });
 

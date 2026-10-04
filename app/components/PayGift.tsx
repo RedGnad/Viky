@@ -49,7 +49,6 @@ import { Said } from "../kit/Said";
 import { FoldChevron } from "../kit/GiftLive";
 import { whereTheRailsServe } from "@/src/client/rails";
 import { CASH_OUT as C, FUND as W, MILESTONE_FUND as M, OFFER, OFFER as O, PAY as P } from "@/src/sentences";
-import { ExactLine } from "../kit/LedAmount";
 import { Figure } from "../kit/Figure";
 import { FieldRefusal } from "../kit/FieldRefusal";
 import { Success } from "../kit/Motion";
@@ -618,7 +617,6 @@ export function PayGift() {
         }
       >
         <section className="flex flex-col gap-[var(--space-sm)]">
-          <ExactLine amount={led} />
           {madeMilestone ? (
             <>
               <p className={BODY}>{M.made.terms(spokenAmount(led, true), made.goal ?? "", made.days, madeCondition?.source ?? "")}</p>
