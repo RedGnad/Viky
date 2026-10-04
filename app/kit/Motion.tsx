@@ -219,6 +219,19 @@ function playGift(root: Element, appears = true): Animation[] {
 }
 
 /**
+ * One movement of a day, by itself and from its start, for the looks laboratory alone (app/dev/looks): the founder
+ * judges each animation and plays it as many times as he wants. The product never calls this: there a day moves
+ * because it changed since the last visit, once. Nothing moves under reduced motion, as everywhere.
+ */
+export function playMoment(moment: "earned" | "returned" | "woken", root: Element): void {
+  if (reduced()) return;
+  for (const running of root.getAnimations({ subtree: true })) running.cancel();
+  if (moment === "earned") playEarned(root, 0, true);
+  else if (moment === "woken") playWoken(root, 0);
+  else playReturned(root, 0);
+}
+
+/**
  * The gift character answering a gesture that succeeded: it arrives once when it is mounted, which is when the gesture
  * brought the person here, and again each time `gesture` changes, which is each time the gesture is made again.
  */
