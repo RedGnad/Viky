@@ -28,7 +28,7 @@ import { CHARACTERS_FILE } from "./character-file";
  * `data-part` so the motion (app/kit/Motion.tsx) can move a body, a face or a bow without knowing how they are drawn.
  */
 
-export type CharacterState = "toCome" | "today" | "todayAsleep" | "catchable" | "earned" | "returned" | "gift" | "diamond";
+export type CharacterState = "toCome" | "today" | "catchable" | "earned" | "returned" | "gift" | "diamond";
 
 const ONE = "var(--character-1)";
 const TWO = "var(--character-2)";
@@ -234,22 +234,6 @@ function drawing(
           </>
         ) : null,
       };
-    // The day of today, in a row of days (the founder, 4 Oct 2026): a day sleeps until it is done, and today is no
-    // exception. It keeps its triangle, which is what says "today"; its eyes are closed like a day to come's. The
-    // triangle awake, above, is still drawn wherever it is not a day: a goal waited for, a choice, the landing's crowd.
-    case "todayAsleep":
-      return {
-        body: <path d={TRIANGLE} style={bodyFill(TWO)} />,
-        gloss: <Gloss cx={25} cy={27} r={3.4} dot={{ cx: 30, cy: 22, r: 1.7 }} />,
-        shade: <Shade cx={32} cy={51} rx={15} ry={2.4} />,
-        face: face ? (
-          <>
-            <ClosedEye x={26 + gaze} y={37} />
-            <ClosedEye x={38 + gaze} y={37} />
-            <circle cx={32 + gaze} cy={45.5} r={1.9} style={{ fill: FACE }} />
-          </>
-        ) : null,
-      };
     case "catchable":
       return {
         body: <path d={TRIANGLE} style={bodyFill(TWO)} />,
@@ -393,6 +377,7 @@ export function Character({
   drawn: how = "referenced",
   limbs = false,
   pose,
+  wakes = false,
   className,
 }: Readonly<{
   state: CharacterState;
@@ -417,6 +402,12 @@ export function Character({
   limbs?: boolean;
   /** How the limbs are held, when they are out: hanging, or in one of the poses `Limbs` knows. */
   pose?: LimbPose;
+  /**
+   * The day of today, written into the page, carries the sleeping capsule it was until it opened (the founder, 4 Oct
+   * 2026): the waking is that capsule becoming this triangle, then the eyes opening (app/kit/Motion.tsx). The capsule
+   * is not seen outside that movement (app/globals.css).
+   */
+  wakes?: boolean;
   className?: string;
 }>) {
   const large = size === "large";
@@ -434,6 +425,7 @@ export function Character({
   // and a row of small shapes without faces read as a chart rather than as days.
   const parts = drawing(state, true, variant, TONES[drawn]);
   const leaving = state === "returned";
+  const was = wakes && state === "today" ? drawing("toCome", true, variant, TONES[drawn]) : null;
   return (
     <svg
       aria-hidden
@@ -458,6 +450,14 @@ export function Character({
           rx={3}
           style={{ fill: "var(--character-shadow)", fillOpacity: "var(--character-shadow-opacity)", ...FROM_MIDDLE }}
         />
+      ) : null}
+      {was ? (
+        <g data-part="was">
+          {was.body}
+          {was.shade}
+          {was.gloss}
+          {was.face}
+        </g>
       ) : null}
       <g data-part="figure" style={{ ...FROM_FLOOR, ...(leaving ? { transform: "translateX(-6px)", opacity: 0.6 } : null) }}>
         {/* With limbs, one more group turning from its own middle: the whirl of the hero moment (D219). A day earned
