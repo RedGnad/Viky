@@ -6,6 +6,7 @@ import { subscribeToCardDraft } from "@/src/card-draft";
 import { useRampnowPending } from "@/src/client/rampnow-pending";
 import { formatAusd } from "@/src/gift-reader";
 import { dollarsToUnits } from "@/src/money";
+import { giftAsTyped } from "@/src/pay-sum";
 import { loadPendingGift, peekPendingGift } from "@/src/pending-gift";
 import { WAY_IN_USDC } from "@/src/rails";
 import { rampnowFrameOn } from "@/src/rampnow-frame";
@@ -35,7 +36,9 @@ export function FinishTheGift() {
     useCallback(() => {
       const kept = address ? loadPendingGift(address) : peekPendingGift();
       if (!kept?.wayIn) return null;
-      return JSON.stringify({ amount: formatAusd(dollarsToUnits(kept.dollars)), recipient: kept.recipientName ?? "", byRampnow: kept.wayIn === WAY_IN_USDC.name });
+      // The gift as it was typed, in the money it was typed in (src/pay-sum.ts): somebody who typed 45 euros read
+      // "$50.51 for Boo" here (the founder, 4 Oct 2026).
+      return JSON.stringify({ amount: giftAsTyped(kept, formatAusd(dollarsToUnits(kept.dollars))), recipient: kept.recipientName ?? "", byRampnow: kept.wayIn === WAY_IN_USDC.name });
     }, [address]),
     nothingOnTheServer,
   );

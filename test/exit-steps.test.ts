@@ -145,7 +145,7 @@ test("the way out shows one accent surface at a time, on the action it is waitin
   // coin cut the same way. Nothing on a card is computed on the six-decimal balance any more. What the gifts hold for
   // the account is part of that number, since the way out takes it first (D208).
   assert.match(screen, /const changeable = toTheCent\(ausd \+ giftsHold \+ arrived, AUSD\.decimals\) \+ arrivedCoinWorth;/);
-  assert.match(screen, /const dollarsHeld = dollarsToTheCent\(ausd \+ giftsHold, held\(USDC\)\) \+ arrivedCoinWorth;/);
+  assert.match(screen, /const dollarsHeld = dollarsToTheCent\(ausd \+ giftsHold, held\(USDC\)\) \+ coinHeldWorth;/);
   assert.match(screen, /netOfEverything\(changeable, way\.fee, money\.rates, way === WAY_OUT_EURO \? \(bankPays\?\.currency \?\? "EUR"\) : undefined\)/);
   assert.doesNotMatch(screen, /netOfEverything\(ausd,/);
   // The card in Viky's words (D270): its name, its nature, its two lines, and no source on it; the sources are behind

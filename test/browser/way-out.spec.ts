@@ -177,7 +177,7 @@ test.describe("money a card just delivered is money in the account, not a withdr
     await person(device, { ausd: 660_000n, usdc: 5_600_948n, mon: 0n }, FRANCE);
     await page.goto("/");
     const money = page.locator(".money-display-box");
-    await expect(money.getByRole("heading", { name: "In your account" })).toBeVisible();
+    await expect(money.getByRole("heading", { name: "Yours" })).toBeVisible();
     await expect(money.locator("[data-amount]")).toContainText("$6.26");
     await expect(money).not.toContainText(/ready|Ramp|Mercuryo/i);
     await expect(money.locator("p")).toHaveCount(1);
@@ -199,7 +199,7 @@ test.describe("money a card just delivered is money in the account, not a withdr
     await person(device, { ausd: 0n, usdc: 0n, mon: 11n * ONE + (13_843n * ONE) / 100n }, FRANCE);
     await page.goto("/");
     const money = page.locator(".money-display-box");
-    await expect(money.getByRole("heading", { name: "In your account" })).toBeVisible();
+    await expect(money.getByRole("heading", { name: "Yours" })).toBeVisible();
     await expect(money.locator("[data-amount]")).toContainText("$3.73");
     // The heading and the figure, and nothing else: no "about", no line under it.
     await expect(money).not.toContainText(/about|ready|Ramp|Mercuryo|138/i);
@@ -356,6 +356,33 @@ test.describe("money a card just delivered is money in the account, not a withdr
     await expect(page.getByText("about €8.80 of it is ready to send to Ramp.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Continue with Ramp" })).toBeVisible();
     await shot(page, "390", "4a-an-open-withdrawal-in-the-account-s-currency");
+    await device.context.close();
+  });
+
+  test("a withdrawal by card that is open: 'Yours' counts the coin readied for it, as Home does, and says how much of it is ready", async ({ browser, baseURL }) => {
+    const device = await profile(browser, baseURL, { width: 390, height: 844 });
+    const { page } = device;
+    // Dakar: ten dollars of what a gift holds, and 138.43 of the card service's coin above what the account keeps, made
+    // ready for it a minute ago. "Yours" used to say $10.00 while Home said $13.73 (the founder, 4 Oct 2026).
+    await person(device, { ausd: 10_000_000n, usdc: 0n, mon: 11n * ONE + (13_843n * ONE) / 100n }, { country: "sn", bank: "does-not", card: "serves" }, { coin: CHAIN_COIN, atLeast: ((13_843n * ONE) / 100n).toString(), sinceMs: Date.now() - 60_000 });
+    await page.goto("/");
+    const home = page.locator(".money-display-box");
+    await expect(home.getByRole("heading", { name: "Yours" })).toBeVisible();
+    await expect(home.locator("[data-amount]")).toContainText("$13.73");
+    await expect(home).not.toContainText(/ready|Mercuryo/i);
+    await shot(page, "390", "8a-home-with-a-card-withdrawal-open");
+    // The same name over the same figure, and under it how much of it is ready for the card service, as for the bank's.
+    await page.goto("/cash-out");
+    const yours = page.locator(".money-display-box");
+    await expect(yours).toContainText("Yours");
+    await expect(yours).toContainText("$13.73");
+    await expect(yours.getByText(/^about \$3\.7\d of it is ready to send to Mercuryo\.$/)).toBeVisible();
+    await expect(yours.getByRole("button", { name: "Continue with Mercuryo" })).toBeVisible();
+    await shot(page, "390", "8b-yours-counts-the-coin-readied-for-the-card");
+    // You: the same figure under the same name.
+    await page.goto("/me");
+    await expect(page.getByText("Yours", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("$13.73", { exact: true }).first()).toBeVisible();
     await device.context.close();
   });
 

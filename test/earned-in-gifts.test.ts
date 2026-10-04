@@ -51,7 +51,7 @@ test("the way out reads the gifts' part with the balances, counts it, and takes 
   assert.match(client, /getJson<\{ gifts: EarnedInGift\[\] \}>\("\/api\/gifts\/earned"\)/);
   assert.match(out, /Promise\.all\(COINS\.map\(\(coin\) => readCoinBalance\(coin, address\)\)\),\n[\s\S]{0,200}loadEarnedInGifts\(\),/, "read with the balances");
   assert.match(out, /const changeable = toTheCent\(ausd \+ giftsHold \+ arrived, AUSD\.decimals\) \+ arrivedCoinWorth;/, "counted in every way's figure, with what a card delivered");
-  assert.match(out, /const dollarsHeld = dollarsToTheCent\(ausd \+ giftsHold, held\(USDC\)\) \+ arrivedCoinWorth;/, "and in the figure at the head");
+  assert.match(out, /const dollarsHeld = dollarsToTheCent\(ausd \+ giftsHold, held\(USDC\)\) \+ coinHeldWorth;/, "and in the figure at the head");
   assert.match(out, /const start = async \(way: WayOut\) => \{\n\s*const now = await gather\(\);\n\s*if \(!now\) return;/, "taken first, and a refusal stops there");
   assert.match(out, /await takeFromGifts\(account, inGifts\);/);
   assert.match(client, /await withdrawEarned\(\{ account, giftId: gift\.giftId, escrow: gift\.escrow, amount: BigInt\(gift\.earned\), nonce: BigInt\(gift\.nonce\) \}\)/, "the whole of each gift's part, at the nonce the contract expects");

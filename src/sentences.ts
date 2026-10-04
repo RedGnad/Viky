@@ -370,8 +370,18 @@ export const PAY = {
   pay: "Pay",
   payByCard: (amount: string) => `Pay ${amount} by card`,
   payFromAccount: (amount: string, recipient: string) => `Put ${amount} in ${their(recipient)} name`,
-  /** Above that action, for an account the judge code credited and only for it (D295, the founder's words of 28 Sep 2026). */
-  fromJudgeCredit: "Paid from your judge credit. A funder pays by card, inside this sheet, once our payment partner is embedded.",
+  /**
+   * Above that action, for an account the judge code credited and only for it (D295). It says how a funder pays by
+   * card as the build and this browser really do it (the founder, 4 Oct 2026): it said "inside this sheet, once our
+   * payment partner is embedded" after the frame was switched on. In a frame, with the limit the judges page gives
+   * it; in a sheet of Viky's own; or on the card service's page in a tab, which is also where the frame is never shown.
+   */
+  fromJudgeCredit: (how: "frame" | "sheet" | "tab", service: string) =>
+    how === "frame"
+      ? `Paid from your judge credit. A funder pays by card through ${service}, in a frame inside Viky that has to stay open until the money arrives.`
+      : how === "sheet"
+        ? `Paid from your judge credit. A funder pays by card through ${service}, in a sheet inside Viky.`
+        : `Paid from your judge credit. A funder pays by card on ${service}'s page, in a tab of its own.`,
   /** The judge code in the pay sheet, as a code is asked at a checkout (D297, the founder's choice A of 28 Sep 2026). */
   code: {
     have: "Have a code?",
@@ -464,7 +474,11 @@ export const HOME = {
     "They connect what they do. Each day they reach the goal, that day's share becomes theirs.",
     "Each day they miss comes back to you, by itself. Nobody profits from anyone failing.",
   ],
-  inAccount: "In your account",
+  /**
+   * The name of the one amount, on Home and on Me as on the screen that takes money out (the founder, 4 Oct 2026): one
+   * figure, one name. It said "In your account" over money part of which is still in the person's gifts.
+   */
+  yours: "Yours",
   /** Under the amount at display size: what is approximate, when the rate was read, and the dollars themselves. */
   /**
    * The balance's own action (the founder, 29 Sep 2026): a first outside tester read "Use your money" as "use it to make
@@ -2178,7 +2192,7 @@ export const CASH_OUT = {
 
 /** The home page's card about money in the account, which is where the way out begins (W1). */
 export const YOUR_MONEY = {
-  label: "In your account",
+  label: "Yours",
   /**
    * The balance's own action (the founder, 29 Sep 2026): a first outside tester read "Use your money" as "use it to make
    * a gift". Both verbs, since the ways out lead with gift cards and phone credit, which are spent, not withdrawn.

@@ -227,7 +227,11 @@ export function PaySheet({
     if (!address) onMaking(true);
     try {
       const account = address ?? (await ensureAccount()).address;
-      savePendingGift({ ...draftToTerms(draft, account), wayIn: way.name });
+      // What this sheet said the gift is, in its one money, is what every screen after it says (src/pay-sum.ts): it
+      // is kept with the gift, on the card and with the payment started.
+      const said: GiftDraft = gift === undefined ? draft : { ...draft, typedAmount: String(gift), typedIn: code };
+      onChange(said);
+      savePendingGift({ ...draftToTerms(said, account), wayIn: way.name });
       // A card paid inside Viky opens on the wait, in a sheet of its own, by this same press.
       if (!enough && way.embedded) return router.push("/fund?step=paying&card=1");
       // Rampnow in a frame of our own, when it is switched on (src/rampnow-frame.ts): opened on the wait, by this press.
@@ -254,6 +258,12 @@ export function PaySheet({
       setBusy(false);
     }
   };
+
+  /**
+   * How a funder pays by card here, for the line a judge reads above "Put … in their name": the same test the pay press
+   * makes. Read when the line is drawn, which is in a browser.
+   */
+  const cardPaidHow = (): "frame" | "sheet" | "tab" => (way.embedded ? "sheet" : way === WAY_IN_USDC && rampnowFrameOn() && frameKeepsSignIn(navigator.userAgent) ? "frame" : "tab");
 
   /** Somebody whose account was made on another device: their passkey is asked for, and none is made. The sheet stays. */
   const signInFirst = async () => {
@@ -316,7 +326,7 @@ export function PaySheet({
 
       {/* Only when the gift is paid from a balance no larger than the judge credit, with nothing gone out of the
           account since it arrived (D295): the balance is then the credit alone. */}
-      {judgeLineIsTrue({ gift: units, held, untouchedCredit }) ? <p className={HELP}>{W.fromJudgeCredit}</p> : null}
+      {judgeLineIsTrue({ gift: units, held, untouchedCredit }) ? <p className={HELP}>{W.fromJudgeCredit(cardPaidHow(), way.name)}</p> : null}
       {!enough && cardClosed ? (
         <CardNotOffered country={card?.country ?? null} whole />
       ) : (

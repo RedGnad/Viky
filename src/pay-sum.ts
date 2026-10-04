@@ -75,3 +75,39 @@ export function heldIn(units: bigint, code: string, rates: Rates | undefined): n
   if (euro === undefined || !(usdPerEur && usdPerEur > 0)) return undefined;
   return toDecimals((dollars / usdPerEur) * euro, code);
 }
+
+/**
+ * One writing of money on the way to a gift (the founder, 4 Oct 2026): what the person typed is what they read, on
+ * the sheet that pays and on every screen after it, the wait, the gift being made, the card that says it is not made
+ * yet. Somebody who typed 45 euros read "$50.51" from the wait on. The exact dollars are said where the gift made
+ * says them already ("About €45.00… Exactly $50.51, at the rate of…"), and nowhere before.
+ *
+ * The figure kept with the gift is the one the pay sheet showed, in the sheet's own money. A gift kept without one
+ * (written before this, or by a card nobody typed on) is said in dollars, which is what it holds.
+ */
+export function giftAsTyped(gift: Readonly<{ typedAmount?: string; typedIn?: string }>, dollars: string): string {
+  if (gift.typedAmount !== undefined && gift.typedIn) {
+    const typed = Number(gift.typedAmount.trim().replace(",", "."));
+    try {
+      if (Number.isFinite(typed) && typed > 0) return moneyIn(toDecimals(typed, gift.typedIn), gift.typedIn);
+    } catch {
+      // A money this build does not know: the dollars below.
+    }
+  }
+  return dollars;
+}
+
+/**
+ * The money those screens write everything else in: the one the gift was typed in, when the day's rate for it was
+ * read; dollars otherwise. What the account holds, what arrived, what is left to pay are dollars said in it.
+ */
+export function moneyTypedIn(gift: Readonly<{ typedAmount?: string; typedIn?: string }>, rates: Rates | undefined): string {
+  return gift.typedAmount !== undefined && gift.typedIn && gift.typedIn !== "USD" && perEuro(gift.typedIn, rates) !== undefined && rates?.usdPerEur ? gift.typedIn : "USD";
+}
+
+/** Dollars held, said in that money: "€8.24", or the dollars themselves when it is the dollar or no rate was read. */
+export function dollarsSaidIn(units: bigint, code: string, rates: Rates | undefined, dollars: string): string {
+  if (code === "USD") return dollars;
+  const read = heldIn(units, code, rates);
+  return read === undefined ? dollars : moneyIn(read, code);
+}

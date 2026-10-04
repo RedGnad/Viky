@@ -86,6 +86,9 @@ export function pendingGiftFor(raw: string | null, account: string | undefined, 
     ...(text("cadence") !== undefined ? { cadence: text("cadence") } : {}),
     ...(typeof record.standing === "number" ? { standing: record.standing } : {}),
     ...(text("standingReadAt") !== undefined ? { standingReadAt: text("standingReadAt") } : {}),
+    // The figure typed, kept with the payment started, so the gift is said as it was typed wherever it is picked up
+    // again (the founder, 4 Oct 2026). It was written down and never read back.
+    ...(text("typedAmount") !== undefined ? { typedAmount: text("typedAmount"), typedIn: text("typedIn") ?? "USD" } : {}),
     savedAtMs: typeof record.savedAtMs === "number" ? record.savedAtMs : undefined,
   };
   if (gift.account === undefined || gift.username === undefined || !gift.dollars || !gift.days || !gift.target || gift.savedAtMs === undefined) {

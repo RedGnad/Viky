@@ -285,7 +285,7 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
       {
         name: "The account holds something",
         when: "anything at all is in the account, of any of the three coins, from a gift taken, a change, or a payment left over",
-        says: ["In your account", "Spend or withdraw", "Offer a gift"],
+        says: ["Yours", "Spend or withdraw", "Offer a gift"],
       },
       {
         name: "Something is ready to send to a payout service",

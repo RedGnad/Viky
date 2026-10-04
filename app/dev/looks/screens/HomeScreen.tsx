@@ -30,7 +30,7 @@ export function HomeScreen() {
     <Arrival storageKey="viky.lab.home" amount gifts={arriving}>
       <Shell kind="destination" active="home">
         <section className="money-display-box flex flex-col gap-[var(--space-xs)]">
-          <h1 className={HELP}>{HOME.inAccount}</h1>
+          <h1 className={HELP}>{HOME.yours}</h1>
           <p data-amount className={`money-display ${AMOUNT_IN_TITLE} tracking-[-0.02em]`} style={{ "--amount-chars": shown.length } as CSSProperties}>
             <ArrivalAmount from={LAST_VISIT.homeEuros} to={ACCOUNT.euros} symbol={ACCOUNT.symbol} />
           </p>

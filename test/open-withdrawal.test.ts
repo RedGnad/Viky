@@ -194,11 +194,16 @@ test("the chain's own coin a card delivered is money in the account: counted at 
   // The withdrawal screen: the coin with no withdrawal open on it is counted and changed first. Its figure takes no
   // "about" of its own, and no line under it calls dollars that hold a quote exact.
   const screen = readFileSync("app/components/CashOut.tsx", "utf8");
-  assert.match(screen, /const arrivedCoin = openWithdrawal !== undefined && !heldForWithdrawal\(openWithdrawal, MON\.address, held\(MON\)\) \? chainCoinToChange\(held\(MON\)\) : 0n;/);
-  assert.match(screen, /const arrivedCoinWorth = arrivedCoin > 0n && coinWorth\.state === "worth" \? coinWorth\.units : 0n;/);
-  assert.match(screen, /const dollarsHeld = dollarsToTheCent\(ausd \+ giftsHold, held\(USDC\)\) \+ arrivedCoinWorth;/);
+  // The coin is counted in "Yours" whatever it is held for, at the quote Home counts it with: with a withdrawal by card
+  // open on it, "Yours" used to leave it out while Home counted it (the founder, 4 Oct 2026). Only the coin with no
+  // withdrawal open on it is changed back when a way is chosen.
+  assert.match(screen, /const coinHeld = chainCoinToChange\(held\(MON\)\);/);
+  assert.match(screen, /const coinHeldWorth = coinHeld > 0n && coinWorth\.state === "worth" \? coinWorth\.units : 0n;/);
+  assert.match(screen, /const arrivedCoin = openWithdrawal !== undefined && !heldForWithdrawal\(openWithdrawal, MON\.address, held\(MON\)\) \? coinHeld : 0n;/);
+  assert.match(screen, /const arrivedCoinWorth = arrivedCoin > 0n \? coinHeldWorth : 0n;/);
+  assert.match(screen, /const dollarsHeld = dollarsToTheCent\(ausd \+ giftsHold, held\(USDC\)\) \+ coinHeldWorth;/);
   assert.match(screen, /return estimated \? \{ \.\.\.led, rateDate: undefined \} : led;/, "no line calling the dollars exact");
-  assert.match(screen, /const figureUnknown = arrivedCoin > 0n && \(coinWorth\.state === "reading" \|\| \(coinWorth\.state === "unread" && dollarsHeld === 0n\)\);/);
+  assert.match(screen, /const figureUnknown = coinHeld > 0n && \(coinWorth\.state === "reading" \|\| \(coinWorth\.state === "unread" && dollarsHeld === 0n\)\);/);
   assert.match(screen, /if \(arrivedCoin > 0n\) \{\n\s*readying = true;\n\s*const conversion = await fundingQuote\(arrivedCoin\);\n\s*await sendWithExplicitGas\(account, \{ to: conversion\.to, data: conversion\.data, value: BigInt\(conversion\.value\) \}\);/);
   assert.doesNotMatch(screen, /moreUnread|data-more-unread/);
 });
