@@ -32,7 +32,7 @@ test("one live line: read every minute while in front, one at a time, the second
   assert.match(live, /document\.addEventListener\("visibilitychange"/, "back in front, it reads again");
   assert.match(PAGE, /outcome\.kind === "reached" \|\| \(outcome\.kind === "notYet" && outcome\.rating !== shownReading\)\) void refresh\(\)/, "a new figure or the target reached refreshes the page, and the moment plays");
   assert.doesNotMatch(PAGE, /Last updated|lastUpdated|nextClimbReading/);
-  assert.doesNotMatch(MILESTONE_PAGE.ruleYours(1430, "by 30 Sep"), /Checked|every day|at about/);
+  assert.deepEqual([MILESTONE_PAGE.lines.toReach, MILESTONE_PAGE.lines.onSource(1430, "Chess.com")], ["To reach", "1430 on Chess.com"]);
 });
 
 test("no hero character on a gift in progress, no nature label and no 'where you are' on a milestone's page", () => {

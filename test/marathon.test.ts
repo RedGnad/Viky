@@ -252,7 +252,7 @@ test("the routes build the account from the gift's race and bound bib, never fro
   assert.match(proofScreen, /\{marathon\.bibOpen \? \(\s*<button type="button" onClick=\{\(\) => setChanging\(true\)\}/);
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
   assert.match(page, /if \(milestone\.conditionId === "marathon-finish"\) return <MarathonProof/);
-  assert.match(page, /milestone\.marathon && read\.action !== "shareProof" \? <MarathonStanding/);
+  assert.match(page, /milestone\.marathon && read\.action !== "shareProof" \? marathonLine\(milestone\.marathon\) : null,/);
   const sheet = readFileSync("app/kit/offer/WillSheet.tsx", "utf8");
   assert.match(sheet, /certificate\.course\?\.search\?\.races \? \(/);
 });

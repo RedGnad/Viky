@@ -13,6 +13,12 @@ export function openDayInWords(countableUntil: number, mine: boolean, recipientN
   return mine ? LIMIT.dayYours(until) : LIMIT.dayTheirs(recipientName, until);
 }
 
+/** The same, as the line of the fold "What you can do": a label and its value. */
+export function openDayLine(countableUntil: number, mine: boolean, recipientName: string | null, nowMs: number = Date.now()): readonly [string, string] {
+  const until = momentInWords(countableUntil * 1_000, nowMs);
+  return mine ? LIMIT.lines.dayYours(until) : LIMIT.lines.dayTheirs(recipientName, until);
+}
+
 /**
  * "... It resumes tomorrow, 4 Oct, at 02:00. ..." A day's ceiling is lifted when the next UTC day begins, which is an
  * hour of the reader's own day: the browser knows which.

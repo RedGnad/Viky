@@ -494,16 +494,20 @@ test("one sentence in the open names the service by the gift's own source and th
   assert.equal(LIMIT.said("Duolingo", "readings", "1 Nov", true), LIMIT.said("Duolingo", "readings", "1 Nov"));
   assert.ok(LIMIT.isSaid(LIMIT.said("their university", "proofs", "1 Nov", true)));
   assert.equal(LIMIT.said("their university", "proofs", "1 Nov"), "Viky can't check their university right now: this month's proofs are used up. It starts again on 1 Nov.");
-  // What is folded under "What you can do", a line each.
+  // Under a press that was refused, the hour until which the open day can still be counted is a sentence.
   assert.equal(LIMIT.can, "What you can do");
   assert.equal(LIMIT.dayYours("tomorrow, 5 Oct, at 08:00"), "Your day can still be counted until tomorrow, 5 Oct, at 08:00.");
   assert.equal(LIMIT.dayTheirs("Boo", "tomorrow, 5 Oct, at 08:00"), "Boo's day can still be counted until tomorrow, 5 Oct, at 08:00.");
   assert.equal(LIMIT.dayTheirs(null, "tomorrow, 5 Oct, at 08:00"), "Their day can still be counted until tomorrow, 5 Oct, at 08:00.");
-  assert.equal(LIMIT.takeYours, "What is already yours can be taken out as usual.");
-  assert.equal(LIMIT.takeTheirs, "What is already theirs can be taken out as usual.");
-  assert.equal(LIMIT.untouched.readings, "Gifts proved by a document someone shows are not touched.");
-  assert.equal(LIMIT.untouched.proofs, "Gifts that Viky reads by itself are not touched.");
-  assert.equal(LIMIT.write("hello@viky.cash"), "Write to hello@viky.cash: we can reopen it sooner.");
+  // What is folded under "What you can do": lines, a label and its value, four at most (the founder, 4 Oct 2026).
+  assert.deepEqual(LIMIT.lines.dayYours("tomorrow, 5 Oct, at 08:00"), ["Your day counts until", "tomorrow, 5 Oct, at 08:00"]);
+  assert.deepEqual(LIMIT.lines.dayTheirs("Boo", "tomorrow, 5 Oct, at 08:00"), ["Boo's day counts until", "tomorrow, 5 Oct, at 08:00"]);
+  assert.deepEqual(LIMIT.lines.dayTheirs(null, "tomorrow, 5 Oct, at 08:00"), ["Their day counts until", "tomorrow, 5 Oct, at 08:00"]);
+  assert.deepEqual(LIMIT.lines.takeYours, ["What is already yours", "taken out as usual"]);
+  assert.deepEqual(LIMIT.lines.takeTheirs, ["What is already theirs", "taken out as usual"]);
+  assert.deepEqual(LIMIT.lines.untouched.readings, ["Gifts proved by a document", "not touched"]);
+  assert.deepEqual(LIMIT.lines.untouched.proofs, ["Gifts Viky reads by itself", "not touched"]);
+  assert.deepEqual(LIMIT.lines.write("hello@viky.cash"), ["To reopen it sooner", "hello@viky.cash"]);
   // Beside a condition in a list: four words.
   assert.equal(LIMIT.backOn("1 Nov"), "Back on 1 Nov");
   assert.ok(LIMIT.backOn("1 Nov").split(" ").length <= 4);
@@ -617,12 +621,13 @@ test("the gift's page says the limit where it says where the gift stands, folds 
   assert.match(page, /const nextReading = nowMs === 0 \|\| gift\.finished \|\| gift\.cancelled \|\| readingsStopped \|\| asItGoes \? null :/, "and no next reading is announced");
   // In the open: the source and the day. Folded: the open day's hour, what is theirs, what is not touched, where to write.
   assert.match(page, /said: LIMIT\.said\(source, emptyReserve, limit\.again, mine\),/);
-  assert.match(page, /openDayInWords\(limit\.countableUntil, mine, recipientName, nowMs\)/, "the hour in the reader's own clock, to each of the two people");
-  assert.match(page, /mine \? LIMIT\.takeYours : LIMIT\.takeTheirs,\n\s*LIMIT\.untouched\[emptyReserve\],\n\s*contactEmail\(\) \? LIMIT\.write\(contactEmail\(\) as string\) : null,/);
+  assert.match(page, /openDayLine\(limit\.countableUntil, mine, recipientName, nowMs\)/, "the hour in the reader's own clock, to each of the two people");
+  assert.match(page, /mine \? LIMIT\.lines\.takeYours : LIMIT\.lines\.takeTheirs,\n\s*LIMIT\.lines\.untouched\[emptyReserve\],\n\s*contactEmail\(\) \? LIMIT\.lines\.write\(contactEmail\(\) as string\) : null,/);
   assert.match(page, /limit=\{limitSaid\}/, "in the card, where the state is said");
   const card = readFileSync("app/kit/GiftLive.tsx", "utf8");
   assert.match(card, /\{limit \? \(\n\s*<p className="limit-said" role="status" data-limit-said>\n\s*\{limit\.said\}/, "one sentence, in the quiet colour of the labels");
   assert.match(card, /<details className="gift-fold" data-limit-can>\n\s*<summary className="gift-fold-name">\n\s*\{LIMIT\.can\}/, "the rest folded under its own name");
+  assert.match(card, /<div className="gift-fold-body">\n\s*<Lines quiet rows=\{limit\.can\} \/>/, "as lines, a label and its value, never paragraphs (the founder, 4 Oct 2026)");
   assert.ok(card.indexOf("data-limit-can") < card.indexOf("{L.agreed}"), "before what was agreed: it is what the person came to ask");
   assert.match(page, /&& !gift\.sourceClosed && !readingsStopped && !asItGoes \? \(/, "and no count is offered");
   assert.match(page, /const readsTheDay = Boolean\(asItGoes && \(mine \|\| readerIsFunder\) && !readingsStopped && lessonWouldPay\(today\)\);/, "nor does a habit read as its page opens look");

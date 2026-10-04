@@ -317,7 +317,8 @@ test.describe("the recipient's yes and stop, on two devices", () => {
     await expect(first.page.locator("[data-consent-line]")).toHaveCount(0);
     await expect(first.page.locator('[data-decide="stop"]')).toBeVisible();
     await first.page.getByText("How this is checked", { exact: true }).click();
-    await expect(first.page.getByText(/^Viky reads your rapid rating for this gift\. You agreed on /)).toBeVisible();
+    // A line, a label and its value (the founder, 4 Oct 2026: a fold holds lines, never paragraphs).
+    await expect(first.page.locator("dl.said-lines > div").filter({ hasText: "Viky reads your rapid rating" })).toHaveText(/^Viky reads your rapid ratingyou agreed on /);
     expect(await promptsOf(first.page), "the yes asks the passkey for nothing more, with or without the public record").toBe(promptsBeforeYes);
     await hold(first.page);
     expect(server.kept.map((row) => row.kind)).toEqual(["yes"]);
@@ -331,7 +332,7 @@ test.describe("the recipient's yes and stop, on two devices", () => {
     expect(await signIn(second.page, second.context, false), "the same passkey is the same account").toBe(account);
     await openTheGift(second.page);
     await second.page.getByText("How this is checked", { exact: true }).click();
-    await expect(second.page.getByText(/^Viky reads your rapid rating for this gift\. You agreed on /), "the yes signed on the first device").toBeVisible();
+    await expect(second.page.locator("dl.said-lines > div").filter({ hasText: "Viky reads your rapid rating" }), "the yes signed on the first device").toHaveText(/^Viky reads your rapid ratingyou agreed on /);
     await hold(second.page);
     await second.page.locator('[data-decide="stop"]').click();
     await second.page.locator('[data-option="break"]').click();

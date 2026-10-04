@@ -113,7 +113,7 @@ test("nothing asks for the permission except a press", () => {
  */
 test("the messages are offered under the card and under the funder's link, never in a fold, and only behind an account", () => {
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
-  const fold = page.slice(page.indexOf("const checked = ("), page.indexOf("const stopCost"));
+  const fold = page.slice(page.indexOf("const checkedRows: Row[] = ["), page.indexOf("const stopCost"));
   assert.doesNotMatch(fold, /MorningMessage|ReachAlert|YouDecide/, "nothing of it inside the fold");
   const open = page.slice(page.indexOf("<GiftLive"));
   // The person it is for: a round button, drawn for every opened gift that is neither over nor taken back.
@@ -130,7 +130,7 @@ test("the messages are offered under the card and under the funder's link, never
   assert.match(decide, /const tells = about !== null && told\.step !== "unsupported";/, "no button where the browser has nothing to grant at all");
   // Under the link the funder has just been given, the three shapes of gift each with their own.
   const link = readFileSync("app/components/PayGift.tsx", "utf8");
-  const made = link.slice(link.indexOf("W.made.findItAgain"), link.indexOf("W.made.seeIt"));
+  const made = link.slice(link.indexOf("W.made.lostLink"), link.indexOf("W.made.seeIt"));
   assert.match(made, /<FunderControls\s+giftId=\{made\.giftId\}\s+about=\{!madeMilestone \? \{ kind: "morning" \} : certificateById\(made\.conditionId\) \? \{ kind: "hadOrNot" \} : \{ kind: "reach", target: String\(made\.target\) \}\}/);
   const funder = readFileSync("app/kit/FunderControls.tsx", "utf8");
   assert.match(funder, /<MessagesSheet open=\{open === "messages"\} onClose=\{\(\) => setOpen\(null\)\} told=\{told\} about=\{about\} yours=\{false\} \/>/);

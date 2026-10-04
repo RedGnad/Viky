@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { Character } from "@/app/kit/Character";
+import { Lines } from "@/app/kit/Lines";
 import { Reveal, Success } from "@/app/kit/Motion";
 import { Shell } from "@/app/kit/Shell";
 import { BODY, CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "@/app/components/ui";
 import { DUOLINGO_DAILY } from "@/src/conditions";
-import { FUND as W } from "@/src/sentences";
+import { FUND as W, PAY as P } from "@/src/sentences";
 import { labHref, TO_NOE } from "../example";
 
 /**
@@ -35,11 +36,7 @@ export function Made() {
       </section>
       <Reveal className="flex flex-col gap-[var(--space-md)]">
         <h2 className={TITLE}>{W.made.nextTitle}</h2>
-        <ol className={`flex list-decimal flex-col gap-[var(--space-sm)] pl-[var(--space-lg)] ${BODY}`}>
-          {W.made.next(TO_NOE.recipient, condition.words.theyConnect ?? W.made.theyConnectAny, condition.words.eachDay ?? "", TO_NOE.perDay, TO_NOE.settlingTime).map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ol>
+        <Lines rows={[P.fold.missedDay, P.fold.notOpened, W.made.lostLink]} />
       </Reveal>
       <Link href={labHref("gift")} className={SECONDARY_BUTTON}>
         {W.made.seeIt}

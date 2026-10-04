@@ -548,6 +548,16 @@ export type WayOut = Readonly<{
 }>;
 
 /** "Ramp keeps 0.99 % with a minimum of 1.99 EUR", built from the published figures and never retyped. */
+/**
+ * What a service keeps, in a few words, for a line of a fold whose label is the service's name (the founder, 4 Oct
+ * 2026): "0.99 %, at least €1.99". The same published figures as the sentence below.
+ */
+export function feeUnderItsName(way: { fee: PublishedFee }): string {
+  const euro = (amount: number) => moneyIn(amount, way.fee.currency);
+  const share = `${way.fee.upTo ? "up to " : ""}${way.fee.percent} %${way.fee.plus ? ` + ${euro(way.fee.plus)}` : ""}`;
+  return way.fee.minimum > 0 ? `${share}, at least ${euro(way.fee.minimum)}` : share;
+}
+
 export function feeSentence(way: { name: string; fee: PublishedFee; embedded?: true }): string {
   // A way in that publishes no fee of its own: what was measured through it, said as measured.
   if (way.embedded) return `Through ${way.name}, a card payment bought up to ${way.fee.percent} % less than the day's rate when it was read`;
@@ -676,6 +686,8 @@ export const WAYS_OUT: readonly WayOut[] = [WAY_OUT_EURO, WAY_OUT_CARD];
  */
 export const RATE_SOURCE = {
   name: "European Central Bank, euro foreign exchange reference rates",
+  /** The same source in the few words a line has room for. */
+  short: "European Central Bank",
   /** The daily file, one line per currency against the euro, dated by its own `time` attribute. */
   url: "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml",
   /** Published around 16:00 CET on TARGET working days, so a Friday's figure is the latest until Monday. */

@@ -342,9 +342,11 @@ export type RecipientWords = Readonly<{
   notYours: string;
   /** Connected. */
   countingFrom: (firstDay: string) => string;
+  /**
+   * When it is read, the value of the line "Read" in "How this is checked" (the founder, 4 Oct 2026: a fold holds
+   * lines, never paragraphs). It names nobody, so it is the same to the person the gift is for and to anybody else.
+   */
   reads: string;
-  /** The same sentence to anybody who is not the person the gift is for: the funder, and a reader of neither side. */
-  readsTheirs: string;
   /** A day that is neither counted nor lost yet, to each side. */
   catchUpYours: (deadline: string) => string;
   catchUpTheirs: (deadline: string) => string;
@@ -356,15 +358,15 @@ export type RecipientWords = Readonly<{
    */
   asItGoes?: Readonly<{
     /**
-     * What is agreed and guaranteed about the day's pay, read in "What was agreed" (the re-read of 3 Oct 2026, C2):
-     * nothing a reading's own timing could make untrue is promised there. The exact rule is on the judges page.
+     * What is agreed and guaranteed about the day's pay, a line of "What was agreed" (the re-read of 3 Oct 2026, C2):
+     * nothing a reading's own timing could make untrue is promised there. The exact rule is on the judges page. A
+     * label and its value since 4 Oct 2026; the second lesson of a day, which was never promised, is no longer said.
      */
-    agreed: string;
+    agreed: readonly [label: string, value: string];
     /** Connected: the first day is the day of the connection. */
     countingFrom: (firstDay: string) => string;
-    /** How it is read, in "How this is checked", to the person it is for and to anybody else. */
+    /** When it is read, the value of the line "Read" in "How this is checked". */
     reads: string;
-    readsTheirs: string;
     /** Today is open and what is done each day has not been seen yet. */
     notIn: string;
     /** It has been seen, and the attested reading is under way. */
@@ -454,16 +456,14 @@ export const DUOLINGO_DAILY: Condition = {
     anotherUsername: "Use another username",
     notYours: "Not your Duolingo name?",
     countingFrom: (firstDay) => `Done. From tomorrow, ${firstDay}, every day with your lesson is yours, counted by itself.`,
-    reads: "Viky reads your Duolingo every day at that time and counts the day before.",
-    readsTheirs: "Viky reads their Duolingo every day at that time and counts the day before.",
+    reads: "every day, for the day before",
     catchUpYours: (deadline) => `Yesterday is not counted yet, and not lost either. Do a lesson before ${deadline} your time and it still counts.`,
     catchUpTheirs: (deadline) => `Yesterday is not counted yet, and not lost either: a lesson before ${deadline} your time still earns that day.`,
     alreadyRead: "Viky already read your Duolingo today. Come back tomorrow.",
     asItGoes: {
-      agreed: "One lesson pays one day. A second lesson the same day counts for tomorrow only if today was already counted when it was taken.",
+      agreed: ["One lesson", "pays one day"],
       countingFrom: (firstDay) => `Done. From today, ${firstDay}, every day with your lesson is yours, counted the day you do it.`,
-      reads: "Viky looks at your Duolingo when this page opens, and through the day. A lesson is counted the day you do it.",
-      readsTheirs: "Viky looks at their Duolingo when this page opens, and through the day. A lesson is counted the day it is done.",
+      reads: "when this page opens, and through the day",
       notIn: "Today's lesson is not in yet.",
       inYours: "Your lesson is in.",
       inTheirs: (name) => (name ? `${name}'s lesson is in.` : "Their lesson is in."),

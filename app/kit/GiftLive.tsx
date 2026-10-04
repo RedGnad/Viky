@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Live } from "@/src/gift-live";
 import { GIFT_LIVE as L, LIMIT } from "@/src/sentences";
 import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE } from "../components/ui";
+import { Lines } from "./Lines";
 
 /**
  * A gift's page, drawn from the founder's mockup of 19 Sep 2026 (`gift.html`): the card of cream paper on the ink
@@ -66,7 +67,7 @@ export function GiftLive({
    * A month's reserve is used up (src/sentences.ts, LIMIT): the one sentence said in the open, in the quiet colour of the labels, and what
    * the person can do, a line each, folded under its own name with the card's other folds.
    */
-  limit?: Readonly<{ said: string; can: readonly string[] }> | null;
+  limit?: Readonly<{ said: string; can: ReadonlyArray<readonly [label: string, value: string]> }> | null;
   /**
    * A reading that started by itself is under way (a gift read as its page opens): the wheel and the step, under the
    * state, where the next moment would have been said. Nothing was pressed, so no button carries it.
@@ -153,9 +154,7 @@ export function GiftLive({
               <FoldChevron />
             </summary>
             <div className="gift-fold-body">
-              {limit.can.map((line) => (
-                <p key={line}>{line}</p>
-              ))}
+              <Lines quiet rows={limit.can} />
             </div>
           </details>
         ) : null}

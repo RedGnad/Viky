@@ -118,12 +118,11 @@ export function WcaProof({ giftId, status, yours, onChanged }: Readonly<{ giftId
   );
 }
 
-/** Where the competition stands, for whoever reads the page outside the competitor's own moment: the registration once checked, and the result once read. */
-export function WcaStanding({ wca }: Readonly<{ wca: NonNullable<MilestoneStatus["wca"]> }>) {
-  return (
-    <>
-      <p className={BODY}>{wca.registered ? W.registered(wca.registered.who, wca.title) : W.notRegisteredYet(wca.title)}</p>
-      {wca.result ? <p className={BODY}>{W.line(wca.result.name, wca.eventLabel, wca.result.inWords)}</p> : null}
-    </>
-  );
+/**
+ * Where a WCA gift stands, as one line of "What was agreed" (the founder, 4 Oct 2026: a fold holds lines, never
+ * paragraphs): the result read once it is, the competitors list before it.
+ */
+export function wcaLine(wca: NonNullable<MilestoneStatus["wca"]>): readonly [string, string] {
+  if (wca.result) return [W.lines.read, W.lines.result(wca.result.name, wca.result.inWords)];
+  return [W.lines.list, wca.registered ? wca.registered.who : W.lines.notYet];
 }

@@ -223,7 +223,7 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
       {
         name: "Drawn from the totals",
         when: "a settled day with no row in the keeper's record, settled before the record existed",
-        says: ["Some days here are drawn from the totals"],
+        says: ["Days settled before the record", "drawn from the totals"],
         gap: "those days are drawn earned first and then returned, because the contract gives counts and not the order; every day settled since the record exists is drawn at its date (D86).",
       },
       {
@@ -239,7 +239,7 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
     file: "src/sentences.ts",
     states: [
       { name: "Before the first reading", when: "a milestone gift opened and not connected: its clock has not started", says: ["of connecting"] },
-      { name: "Before the deadline", when: "a milestone gift connected and read", says: ["It is yours when you reach", "Started at", "If not, it"] },
+      { name: "Before the deadline", when: "a milestone gift connected and read", says: ["To reach", "Started at", "If not"] },
       { name: "Reached or not", when: "the keeper read it reached, or the deadline passed (the moments of the gift's page say it since V4)", says: ["Reached on", "did not make it in time."] },
       { name: "Opening, connecting and taking a milestone gift", when: "the recipient's gestures on a milestone gift (C2)", says: ["Get my code", "Check my profile", "into your account"] },
       {
@@ -319,7 +319,7 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
       {
         name: "The two ways out",
         when: "nothing is ready yet: a card per service, with where it pays, what it keeps, and where that was read",
-        says: ["Send to my bank", "Send to my card", "Send to another Viky account of mine", "Read from"],
+        says: ["Send to my bank", "Send to my card", "Send to another Viky account of mine", ", read "],
       },
       {
         name: "Where is your bank or card",

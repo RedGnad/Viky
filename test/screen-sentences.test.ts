@@ -34,18 +34,11 @@ const GOAL_SHEET = 'the fold "How this is checked" at the foot of a goal\'s shee
 
 /** Over the limit, and read in a fold or in a sheet: where. */
 const FOLDED: Readonly<Record<string, string>> = {
-  "GIFT_PAGE.goesBackToThem": 'the fold "What was agreed" of a gift',
-  "GIFT_PAGE.comesBackToYou": 'the fold "What was agreed" of a gift',
-  "GIFT_PAGE.fromCountsNote": HOW_CHECKED,
   "GIFT_PAGE.takeReview": 'the sheet "Take $2.00?"',
   "GIFT_PAGE.linkAgainWhy": 'the sheet "Get the link again"',
   "GIFT_PAGE.linkFindWhy": 'the sheet "Find the link again"',
   "GIFT_LIVE.climbing.alertRefused": 'the sheet "Notifications"',
   "MORNING.refused": 'the sheet "Notifications"',
-  "CONSENT.funderBefore": HOW_CHECKED,
-  "END_GIFT.funderMay": 'the fold "What was agreed" of a gift',
-  "FUND.made.next": 'the fold "What happens next", under the link of a gift just made',
-  "MILESTONE_FUND.made.next": 'the fold "What happens next", under the link of a gift just made',
   "app/kit/CheckThisDay.tsx: Take the reading behind a day that count": `under "Check this day yourself", in ${HOW_CHECKED}`,
   "app/kit/CheckThisDay.tsx: What it proves: the source itself answer": `under "Check this day yourself", in ${HOW_CHECKED}`,
   "app/kit/CheckThisReading.tsx: Take a reading this gift rests on, and c": `under "Check this reading yourself", in ${HOW_CHECKED}`,
