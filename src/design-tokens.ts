@@ -148,7 +148,12 @@ export const APP_COLUMN_MAX = 480;
  *   its spacer is 24, so two of them plus two 24 margins is 792. Anything narrower is two cramped columns
  *   pretending to be a layout.
  */
-export const DESTINATION_MAX = 680;
+/**
+ * A gift's card, and with the page's margins the column of the three destinations (the founder, 20 Sep and 4 Oct
+ * 2026): Home, Gifts and Me share it, so nothing changes width from one tab to the next and a gift card is 440
+ * wherever it stands. Gifts and Me took a column of 680 until then, and their cards were 632 wide.
+ */
+export const GIFT_CARD_WIDTH = 440;
 export const TWO_PANE_FROM = 840;
 
 /** The smallest width the layout must survive, from WCAG 1.4.10 Reflow: 320 CSS pixels, no sideways scroll. */

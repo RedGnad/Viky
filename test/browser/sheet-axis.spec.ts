@@ -61,10 +61,23 @@ test.describe("a sheet stands on the axis of the page it covers, at 1440", () =>
     // The page for nobody draws no rail: its column, as wide as its widest line, is centred in the window, and what a
     // sheet covers there is the card.
     await page.goto("/");
+    // The line that runs under the card is wider than a sheet: it shows while no sheet is open, and not under one,
+    // where its two ends stood out on either side (the founder, 4 Oct 2026).
+    const running = page.locator("[data-goals-going-by]");
+    await expect(running).toHaveCSS("visibility", "visible");
     const home = await measure(page);
     expect(home.kind).toBe("destination");
     expect(Math.abs(home.column.centre - DESK.width / 2)).toBeLessThanOrEqual(1);
     held("/ for nobody", home, CARD_COLUMN);
+    await expect(running).toHaveCSS("visibility", "hidden");
+    // Gifts and Me without an account draw no rail either, and keep no room for one: they stood 44 pixels to the right.
+    for (const path of ["/gifts", "/me"]) {
+      await page.goto(path);
+      const read = await measure(page);
+      expect(read.kind, path).toBe("destination");
+      expect(Math.abs(read.column.centre - DESK.width / 2), `${path} without an account: the column is centred in the window`).toBeLessThanOrEqual(1);
+      held(path, read, CARD_COLUMN);
+    }
     // A task: no rail, and none kept room for.
     await page.goto("/fund");
     const fund = await measure(page);
@@ -92,12 +105,14 @@ test.describe("a sheet stands on the axis of the page it covers, at 1440", () =>
     await page.route("**/api/gifts/earned", (route) => route.fulfill(json({ gifts: [] })));
     await page.route("**/api/exit/open", (route) => route.fulfill(json({ open: null })));
     await makeAnAccount(person);
-    // The three destinations: the rail is drawn, and the column and every sheet over it stand beside it.
+    // The three destinations: the rail is drawn, and the column and every sheet over it stand beside it. One column
+    // for the three, the gift card's with its margins: it was wider on Gifts and Me, and changed from tab to tab.
     for (const path of ["/", "/gifts", "/me"]) {
       await page.goto(path);
       const read = await measure(page);
       expect(read.kind, path).toBe("destination");
       expect(Math.abs(read.column.centre - (DESK.width + RAIL) / 2), `${path}: the column is centred in what the rail leaves`).toBeLessThanOrEqual(1);
+      expect(Math.abs(read.column.width - CARD_COLUMN), `${path}: the column is the card's (${read.column.width})`).toBeLessThanOrEqual(1);
       held(path, read);
     }
     // Home's own sheet, the one that pays: the same axis, and the card's column.

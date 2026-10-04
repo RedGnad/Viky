@@ -77,7 +77,7 @@ export function GoalsGoingBy({ first, kinds }: Readonly<{ first: string; kinds: 
 
   if (!first) return null;
   return (
-    <div ref={root} className="flex w-full flex-col items-center gap-[var(--space-sm)] text-center">
+    <div ref={root} data-goals-going-by="" className="flex w-full flex-col items-center gap-[var(--space-sm)] text-center">
       <p className="sr-only">{HOME.waitsFor.all}</p>
       <p aria-hidden className={`${SAY} text-[var(--muted)]`}>
         {HOME.waitsFor.lead}
