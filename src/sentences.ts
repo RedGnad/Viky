@@ -2394,7 +2394,10 @@ export const MARATHON_PROOF = {
   countryFilter: "Country",
   readingRaces: "Reading the races",
   racesUnreadable: "The races could not be read right now. Close this and try again in a moment.",
-  raceLine: (town: string, country: string, day: string) => `${town}, ${country}. Starts ${day}.`,
+  /** A race's line starts with its distances (the founder, 4 Oct 2026): the list said none, and they are the choice. */
+  raceLine: (distances: string, town: string, country: string, day: string) => `${distances}. ${town}, ${country}. Starts ${day}.`,
+  distanceAll: "Distance · all",
+  distanceFilter: "Distance",
   bibLabel: "Your bib number",
   bibHelp: (race: string) => `The number on your bib for the ${race}, before the start. After the finish, Viky reads your line on the timing company's results page.`,
   bibClosed: (race: string) => `The ${race} has started and no bib was entered before it, so this gift cannot be read. What was put in it goes back at the deadline.`,

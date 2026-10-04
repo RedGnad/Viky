@@ -5,6 +5,7 @@ import type { GiftDraft } from "@/src/gift-draft";
 import { byDate, countriesOf, inCountryOrAll } from "@/src/marathon-choice";
 import { MARATHON_PROOF as R, WCA_PROOF as W } from "@/src/sentences";
 import { countryInWords } from "@/src/rail-country";
+import { WCA_SEVERAL_COUNTRIES } from "@/src/wca";
 import { CHIP, HELP } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
 import { WaitLine } from "../Waiting";
@@ -38,7 +39,11 @@ export function WcaChooser({ open, draft, named, onChoose }: Readonly<{ open: bo
   if (competitions === "unreadable") return <p className={HELP}>{W.competitionsUnreadable}</p>;
   const [chosenId, chosenEvent] = (draft.course ?? "").split("/");
   const competitionId = picked ?? (chosenId || null);
-  const competition = competitions.find((one) => one.competitionId === competitionId);
+  /**
+   * A place in words: the WCA's own name for a competition held in several countries at once, read first, because a
+   * browser asked for the name of a region it does not know answers the code itself; then a country by its name.
+   */
+  const placeInWords = (code: string) => WCA_SEVERAL_COUNTRIES[code.toUpperCase()] ?? countryInWords(code);
   const shown = inCountryOrAll(competitions, country);
   const choose = (one: ListedCompetition, eventId: string) => {
     const event = one.events.find((each) => each.id === eventId);
@@ -52,7 +57,7 @@ export function WcaChooser({ open, draft, named, onChoose }: Readonly<{ open: bo
         <button type="button" aria-pressed={country === null} onClick={() => setCountry(null)} className={chip(country === null)}>
           {R.countryAll}
         </button>
-        {countriesOf(competitions).map((one) => (
+        {countriesOf(competitions, placeInWords).map((one) => (
           <button key={one.code} type="button" aria-pressed={country === one.code} onClick={() => setCountry(country === one.code ? null : one.code)} className={chip(country === one.code)}>
             {one.name}
           </button>
@@ -72,19 +77,22 @@ export function WcaChooser({ open, draft, named, onChoose }: Readonly<{ open: bo
         options={shown.map((one) => ({
           value: one.competitionId,
           label: one.name,
-          tag: <span className={HELP}>{W.competitionLine(one.city, countryInWords(one.country) ?? one.country, day(one.startsAt))}</span>,
+          tag: <span className={HELP}>{W.competitionLine(one.city, placeInWords(one.country) ?? one.country, day(one.startsAt))}</span>,
+          // Several events: the question opens here, under the competition just chosen, and not under the whole list
+          // (the founder, 4 Oct 2026, of a race's distances: the same was true of a competition's events).
+          under:
+            one.events.length > 1 ? (
+              <ChoiceList
+                name="event"
+                legend={W.whichEvent}
+                shape="lines"
+                value={one.competitionId === chosenId ? chosenEvent || null : null}
+                onChange={(value) => choose(one, value)}
+                options={one.events.map((each) => ({ value: each.id, label: each.label }))}
+              />
+            ) : undefined,
         }))}
       />
-      {competition && competition.events.length > 1 ? (
-        <ChoiceList
-          name="event"
-          legend={W.whichEvent}
-          shape="lines"
-          value={competitionId === chosenId ? chosenEvent || null : null}
-          onChange={(value) => choose(competition, value)}
-          options={competition.events.map((one) => ({ value: one.id, label: one.label }))}
-        />
-      ) : null}
       {draft.course && draft.courseTitle ? <p className="font-medium">{named(draft.courseTitle)}</p> : null}
     </div>
   );

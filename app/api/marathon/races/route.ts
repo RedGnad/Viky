@@ -25,7 +25,9 @@ export async function GET(request: Request) {
     country: race.country,
     startsAt: race.startsAt,
     timer: race.timer,
-    events: race.events.map((one) => ({ distance: one.distance, label: DISTANCE_LABELS[one.distance], heat: one.label })),
+    // Each event: its distance, the distance in words, and the name its organiser gives it. The results site's own
+    // key for it stays on the server.
+    events: race.events.map((one) => ({ distance: one.distance, label: DISTANCE_LABELS[one.distance], named: one.label })),
     ...(race.operatorOnly ? { operatorOnly: true } : {}),
   }));
   return NextResponse.json({ races }, { headers: NO_STORE });

@@ -1,5 +1,5 @@
 "use client";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { CARD_LABEL, CHOICE, HELP } from "../components/ui";
 
 /**
@@ -31,6 +31,11 @@ export type Choice<T extends string> = Readonly<{
    * every line, chosen or not: the nature is what a funder compares the options by, where the help is read once.
    */
   tag?: ReactNode;
+  /**
+   * Drawn right under this option while it is the chosen one, outside its row: the question a choice opens ("Which
+   * distance?" under the race just picked), where the person is looking, rather than under the whole list.
+   */
+  under?: ReactNode;
 }>;
 
 export function ChoiceList<T extends string>({
@@ -73,8 +78,8 @@ export function ChoiceList<T extends string>({
             ? "items-center border-transparent bg-transparent"
             : "items-start border-[var(--divider)] bg-[var(--surface)]";
         return (
+          <Fragment key={option.value}>
           <label
-            key={option.value}
             className={`flex min-h-[var(--tap-target)] cursor-pointer gap-[var(--space-md)] rounded-[var(--radius-control)] border-[length:var(--card-border-width)] ${lines && !chosen ? "px-[var(--space-md)] py-[var(--space-sm)]" : "p-[var(--space-md)]"} ${box}`}
           >
             <input
@@ -102,6 +107,8 @@ export function ChoiceList<T extends string>({
               {option.note && (chosen || !lines) ? <span className={HELP}>{option.note}</span> : null}
             </span>
           </label>
+          {chosen && option.under ? <div className="pl-[var(--space-lg)]">{option.under}</div> : null}
+          </Fragment>
         );
       })}
     </fieldset>
