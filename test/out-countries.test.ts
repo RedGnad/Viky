@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { countryOfNumber } from "../src/client/account-country";
+import { forgetKeptCoverage } from "../src/mobile-money-server";
 import { outCountries } from "../src/out-countries";
 import { isCountry } from "../src/preferences-store";
 
@@ -50,6 +51,44 @@ test("without Mercuryo's restrictions, none of its countries is offered, and it 
     assert.deepEqual(read.countries, ["fr"]);
     assert.deepEqual(read.unread, ["Mercuryo"]);
   } finally {
+    globalThis.fetch = realFetch;
+    process.env = realEnv;
+  }
+});
+
+test("a country mobile money alone serves can be picked, when that way is open, and not while it is off", async () => {
+  // The advisor, 4 Oct 2026: the list united Ramp, Mercuryo and Bitrefill, and not the countries Switch pays.
+  const realFetch = globalThis.fetch;
+  const realEnv = { ...process.env };
+  for (const name of Object.keys(process.env)) if (name.startsWith("BITREFILL")) delete process.env[name];
+  const corridor = (country: string, currency: string) => ({ country, currency: [currency], channel: ["MOBILEMONEY"], direction: ["OFFRAMP"], payout_limit: { MOBILEMONEY: { min: "$1", max: "$200" } }, settlement_time: { MOBILEMONEY: "5-10 minutes" } });
+  globalThis.fetch = answers({
+    "payout-methods": [{ countries: ["FR"] }],
+    "lib/countries": { data: [{ code: "fr", phone_prefix: "33" }] },
+    "lib/currencies": { data: { config: { crypto_currencies: [{ currency: "MON", network: "MONAD", restricted_countries_offramp: [] }] } } },
+    // Switch: Ghana and Kenya have a corridor; Kenya's currency has no rate, so the way is not offered there.
+    "coverage?direction=OFFRAMP": { success: true, data: [corridor("GH", "GHS"), corridor("KE", "KES"), { ...corridor("NG", "NGN"), channel: ["BANK"] }] },
+    "rates?direction=OFFRAMP": { success: true, data: [{ currency: "GHS", rate: 15.2 }] },
+  });
+  try {
+    forgetKeptCoverage();
+    delete process.env.MOBILE_MONEY_OUT;
+    const off = await outCountries(Date.now() + 450_000_000);
+    assert.deepEqual(off.countries, ["fr"], "switched off: no country of its own, and nothing said unread");
+    assert.deepEqual(off.unread, []);
+    process.env.MOBILE_MONEY_OUT = "on";
+    process.env.SWITCH_SERVICE_KEY = "a-test-key";
+    const on = await outCountries(Date.now() + 650_000_000);
+    assert.deepEqual(on.countries, ["fr", "gh"], "Ghana, which mobile money alone serves, can be picked; Kenya, with no rate, cannot");
+    assert.deepEqual(on.unread, []);
+    // Switch not answering: nothing of its own is added, and it is said unread.
+    forgetKeptCoverage();
+    globalThis.fetch = answers({ "payout-methods": [{ countries: ["FR"] }], "lib/countries": { data: [{ code: "fr", phone_prefix: "33" }] }, "lib/currencies": { data: { config: { crypto_currencies: [{ currency: "MON", network: "MONAD", restricted_countries_offramp: [] }] } } } });
+    const silent = await outCountries(Date.now() + 850_000_000);
+    assert.deepEqual(silent.countries, ["fr"]);
+    assert.deepEqual(silent.unread, ["Switch"]);
+  } finally {
+    forgetKeptCoverage();
     globalThis.fetch = realFetch;
     process.env = realEnv;
   }

@@ -64,9 +64,14 @@ export function JudgesWhoUsed({ index }: Readonly<{ index: IndexRead | null }>) 
         <dt className={MUTED}>Gifts</dt>
         <dd className={HELP} data-who-used="gifts">
           {count(usage.gifts, "gift", "gifts")} made, {formatAusd(usage.funded)} put into them in all, {usage.opened} opened.{" "}
-          {usage.onSecondVersion === 0
+          {usage.onSecondVersion === 0 && usage.onThirdVersion === 0
             ? "None of them is on the second version of the contracts yet: it was deployed on 2 Oct 2026."
-            : `${count(usage.onSecondVersion, "is", "are")} on the second version of the contracts.`}
+            : [
+                usage.onSecondVersion > 0 ? `${count(usage.onSecondVersion, "is", "are")} on the second version of the contracts` : null,
+                usage.onThirdVersion > 0 ? `${count(usage.onThirdVersion, "is", "are")} on the third daily contract` : null,
+              ]
+                .filter(Boolean)
+                .join(", and ") + "."}
         </dd>
         <dt className={MUTED}>Who funded them</dt>
         <dd className={HELP} data-who-used="funders">

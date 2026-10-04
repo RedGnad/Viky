@@ -92,15 +92,16 @@ test("opened and not connected is the one moment where the whole agreement is re
   }
 });
 
-test("a gift that runs asks for nothing, even with money earned: taking it out is the action of the end (V4)", () => {
+test("a gift that runs asks for nothing, even with money earned, and neither does its end: the money is used from Home", () => {
   // The founder's table of 23 Sep 2026: "En cours: aucune. C'est une page qu'on regarde." It overrules #76, which
   // offered the money at every moment some had been earned.
   const halfway = giftOfSummary(daily({ opened: true, counting: true, creditedDays: 2, earnedDisplay: "$2.00" }));
   assert.equal(momentOf(halfway), "counting");
   for (const voice of ["recipient", "funder", "reader"] as const) assert.equal(readAs(halfway, voice).action, null);
-  // At the end, taking it out is the one action, and only while there is something to take.
+  // At the end, taking it out was the one action until 4 Oct 2026. Home counts what a gift paid in "Yours", and
+  // whatever the money is used for takes it from the gift first: the gesture did the same thing twice (the advisor).
   const won = giftOfSummary(daily({ opened: true, finished: true, creditedDays: 2, earnedDisplay: "$2.00" }));
-  assert.equal(readAs(won, "recipient").action, "take");
+  assert.equal(readAs(won, "recipient").action, null);
   assert.equal(readAs(won, "funder").action, null, "what was earned leaves only to the person it is for");
   const takenAlready = giftOfSummary(daily({ opened: true, finished: true, creditedDays: 2, earnedDisplay: "$0.00" }));
   assert.equal(readAs(takenAlready, "recipient").action, null);
@@ -133,10 +134,10 @@ test("a start too high says why, and the only way on is another gift", () => {
   assert.equal(readAs(gift, "reader").action, null);
 });
 
-test("reached is the money, and taking it out is the action; the deadline passed asks nothing of anybody", () => {
+test("reached is the money, and the page asks nothing more; the deadline passed asks nothing of anybody", () => {
   const won = giftOfMilestone(climb({ opened: true, connected: true, finished: true, reached: true, phase: "reached", earned: "50000000", earnedDisplay: "$50.00" }));
   assert.equal(momentOf(won), "won");
-  assert.equal(readAs(won, "recipient").action, "take");
+  assert.equal(readAs(won, "recipient").action, null);
   assert.equal(readAs(won, "funder").action, null);
 
   const over = giftOfMilestone(climb({ opened: true, connected: true, finished: true, phase: "overdue" }));
@@ -187,10 +188,10 @@ test("a reader who is neither of the two people is offered nothing, at every mom
 });
 
 /** The audit of 1 Oct 2026, section 3.6: the person a gift is for may end it, on the second version of the contracts. */
-test("a gift its recipient ended is its own moment: never won, never over, and what was counted is still theirs to take", () => {
+test("a gift its recipient ended is its own moment: never won, never over, and what was counted is theirs, used from Home", () => {
   const kept = giftOfSummary(daily({ opened: true, finished: true, creditedDays: 2, earnedDisplay: "$2.00", ended: true }));
   assert.equal(momentOf(kept), "ended", "two days counted and then ended is not a gift that was won");
-  assert.equal(readAs(kept, "recipient").action, "take");
+  assert.equal(readAs(kept, "recipient").action, null);
   assert.equal(readAs(kept, "funder").action, null);
   assert.equal(readAs(kept, "reader").action, null);
   assert.equal(funderMayTakeItBack(kept, "funder"), false, "the rest went back in the ending itself");

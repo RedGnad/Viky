@@ -126,24 +126,19 @@ test.describe("you decide", () => {
     expect(sent[0].nonce).toBe("0");
     expect(sent[0].signature).toMatch(/^0x[0-9a-f]{130}$/);
 
-    // The gift once ended: the day as a label, a headline, two figures, one action, and nothing left to decide.
+    // The gift once ended: the day as a label, a headline, two figures, and nothing left to decide or to press. What
+    // stayed theirs is used from Home: "Take $2.00" stood here and did the same thing twice (the advisor, 4 Oct 2026).
     await expect(page.locator(".gift-when")).toHaveText(/^Ended \d{1,2} \w{3} \d{4}$/);
     await expect(page.locator(".gift-figures")).toHaveText(/\$2\.00Yours\$5\.00Back to Mom/);
-    await expect(page.getByRole("button", { name: "Take $2.00" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Take/ })).toHaveCount(0);
+    await page.getByText("What was agreed", { exact: true }).click();
+    await expect(page.locator("details.gift-fold").first().locator("dl.said-lines > div").filter({ hasText: "Yours already" })).toHaveText("Yours alreadyuse it from Home");
     await expect(decide(page)).toHaveCount(0);
     await expect(page.getByText(/gave up|quit|failed|lost/i)).toHaveCount(0);
     // No day of it is drawn as still to come.
     await expect(page.locator(".day-row-day[aria-label*='to come' i]")).toHaveCount(0);
     await shot(page, "05-habit-ended");
 
-    // Taking what stayed theirs: the sentence is read in a sheet, with the press and "Not now".
-    await page.getByRole("button", { name: "Take $2.00" }).click();
-    const take = page.getByRole("dialog", { name: "Take $2.00?" });
-    await expect(take.getByText("It goes into your account, and it stays yours: from there you can send it to your bank. Nothing to pay.")).toBeVisible();
-    await expect(take.getByRole("button", { name: "Take $2.00" })).toBeVisible();
-    await shot(page, "17-ended-take-sheet", false);
-    await take.getByRole("button", { name: "Not now" }).click();
-    await expect(take).toBeHidden();
     await device.context.close();
   });
 

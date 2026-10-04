@@ -760,7 +760,7 @@ test("every gesture on a gift's page answers beside its own button, and nothing 
   assert.match(page, /const \[answer, setAnswer\] = useState<\{ at: Where; text: string; failed: boolean \} \| null>\(null\);/);
   assert.match(page, /const answerAt = \(where: Where\): ReactNode =>/);
   assert.match(page, /<p role="status" className=\{BODY\}>/);
-  for (const gesture of ["open", "count", "take"]) {
+  for (const gesture of ["open", "count"]) {
     assert.ok(page.includes(`answerAt("${gesture}")`), `${gesture} answers where it was pressed`);
   }
   // Naming the account and taking the first reading answer inside the component that asks for them, under the

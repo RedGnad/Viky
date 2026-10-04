@@ -1,4 +1,6 @@
 import { bitrefillConfigured, refillCountries } from "./bitrefill";
+import { mobileMoneyOn } from "./mobile-money";
+import { mobileMoneyCountries } from "./mobile-money-server";
 import { countryCode } from "./rail-country";
 import { cardRailRestricted, euroRailCountries } from "./rail-availability";
 import { CARD_PAYOUT_CLOSED } from "./use-money";
@@ -10,7 +12,9 @@ import { CARD_PAYOUT_CLOSED } from "./use-money";
  * - Ramp's payout methods and their countries (`euroRailCountries`, D96);
  * - Mercuryo's own list of countries (`GET https://api.mercuryo.io/v1.6/lib/countries`, no key, read 27 Sep 2026),
  *   less where it will not sell (`cardRailRestricted`) and where it pays no card (the EEA and the United States, D72);
- * - Bitrefill's phone top-ups (`refillCountries`), when its key is configured.
+ * - Bitrefill's phone top-ups (`refillCountries`), when its key is configured;
+ * - the countries Switch pays to mobile money (`mobileMoneyCountries`), when that way is open (the advisor, 4 Oct
+ *   2026: a country mobile money alone serves could not be picked by hand).
  * Server only. A service that could not be read adds nothing and is said so in `unread`.
  *
  * Mercuryo's list also carries each country's calling prefix, sent with the list, which is how a number already known
@@ -46,11 +50,13 @@ async function mercuryoCountries(): Promise<{ codes: readonly string[]; prefixes
 
 export async function outCountries(now = Date.now()): Promise<OutCountries> {
   if (held && held.at <= now && now - held.at < (held.complete ? HELD_FOR_MS : FAILURE_HELD_FOR_MS)) return held.value;
-  const [ramp, mercuryo, restricted, bitrefill] = await Promise.all([
+  const mobileOpen = mobileMoneyOn();
+  const [ramp, mercuryo, restricted, bitrefill, mobile] = await Promise.all([
     euroRailCountries(now),
     mercuryoCountries(),
     cardRailRestricted(now),
     bitrefillConfigured() ? refillCountries().catch(() => null) : Promise.resolve(null),
+    mobileOpen ? mobileMoneyCountries({ now: () => now }).catch(() => null) : Promise.resolve(null),
   ]);
   const union = new Set<string>(ramp ?? []);
   // Mercuryo's countries count only when its restrictions were read too: without them, a country it refuses could be offered.
@@ -60,7 +66,11 @@ export async function outCountries(now = Date.now()): Promise<OutCountries> {
     if (!refused.includes(code) && !CARD_PAYOUT_CLOSED.includes(code)) union.add(code);
   }
   for (const code of bitrefill ?? []) union.add(code);
-  const unread = [ramp ? null : "Ramp", cardRead ? null : "Mercuryo", bitrefill || !bitrefillConfigured() ? null : "Bitrefill"].filter((name): name is string => name !== null);
+  for (const code of mobile ?? []) {
+    const country = countryCode(code);
+    if (country) union.add(country);
+  }
+  const unread = [ramp ? null : "Ramp", cardRead ? null : "Mercuryo", bitrefill || !bitrefillConfigured() ? null : "Bitrefill", mobile || !mobileOpen ? null : "Switch"].filter((name): name is string => name !== null);
   const value: OutCountries = { countries: [...union].sort(), prefixes: mercuryo?.prefixes ?? {}, unread };
   held = { at: now, value, complete: unread.length === 0 };
   return value;

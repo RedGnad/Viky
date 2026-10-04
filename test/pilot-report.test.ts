@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { buildReport, fundingOf, groupOf, heldBy, KURU_ROUTER, kindOfAccount, reportInWords, shortAccount, totalsOf, type Arrival, type PilotGift } from "../src/pilot-report";
+import { buildReport, fundingOf, groupOf, heldBy, KURU_ROUTER, kindOfAccount, precedesAMobilePayout, reportInWords, SENT_BY_THE_FOUNDER, shortAccount, totalsOf, type Arrival, type PilotGift } from "../src/pilot-report";
 
 /**
  * The pilot's report (the founder, 1 Oct 2026): what each gift did, and totals nobody can inflate. The founder's
@@ -25,7 +25,7 @@ test("how a gift was paid is read from what reached the account, and says what i
   assert.equal(paid({ arrivals: [arrival(KURU_ROUTER, OTHER)] }).how, "received", "the exchange paying out in somebody else's transaction is not this account's card");
   assert.deepEqual(paid({ arrivals: [arrival(ESCROW, OTHER)] }), { how: "balance", basis: "money back from an earlier gift" });
   assert.deepEqual(paid({}), { how: "balance", basis: "nothing reached the account in the 2 hours before the gift" });
-  assert.deepEqual(paid({ arrivals: [arrival(OTHER, OTHER)] }), { how: "received", from: "0x0000…0b00", basis: "sent by another Viky account" });
+  assert.deepEqual(paid({ arrivals: [arrival(OTHER, OTHER)] }), { how: "received", from: "0x0000…0b00", basis: "sent by another Viky account", founder: false });
   assert.equal(paid({ arrivals: [arrival("0x00000000000000000000000000000000000dead0", OTHER)] }).basis, "sent by an address Viky does not know");
   assert.equal(paid({ judgeCreditBefore: true }).how, "judge credit");
   assert.equal(paid({ judgeCreditBefore: true, arrivals: [arrival(OTHER, OTHER)] }).how, "judge credit", "a credited account's gift is never passed off as a tester's");
@@ -36,9 +36,9 @@ test("how a gift was paid is read from what reached the account, and says what i
   assert.deepEqual(paid({ arrivals: [arrival(CONVERTER.toLowerCase(), OTHER)], converter: CONVERTER }), { how: "card", service: "Rampnow", basis: "USDC, which only its card payment delivers here, changed by Viky's converter just before the gift" });
   assert.equal(paid({ arrivals: [arrival(CONVERTER.toLowerCase(), OTHER)] }).how, "received", "a run that does not know the converter says only what it read");
   const script = readFileSync("scripts/pilot-report.ts", "utf8");
-  assert.match(script, /converter: USDC_ROUTER \}\),/);
+  assert.match(script, /converter: USDC_ROUTER, founders, /);
   // A conversion is written where a way out is, and takes nothing out: it is not counted as money taken out by card.
-  assert.match(script, /FROM viky_exits WHERE state = 'sent'`\)\)\.filter\(\(row\) => String\(row\.token_out\)\.toLowerCase\(\) !== AUSD_ADDRESS\.toLowerCase\(\)\);/);
+  assert.match(script, /FROM viky_exits WHERE state = 'sent'`\)\)\.filter\(\n\s*\(row\) => String\(row\.token_out\)\.toLowerCase\(\) !== AUSD_ADDRESS\.toLowerCase\(\) && !precedesAMobilePayout\(/);
 });
 
 const gift = (over: Partial<PilotGift>): PilotGift => ({
@@ -68,6 +68,12 @@ test("every gift is in one group only, and the founder and judge accounts never 
   const founder = { account: shortAccount(FOUNDER), kind: "founder" as const };
   const judge = { account: shortAccount(JUDGE), kind: "judge" as const };
   assert.equal(groupOf(gift({})), "testers");
+  // A tester's gift is counted by where its money came from (the advisor, 4 Oct 2026): the tester's own card, money
+  // the founder sent, or neither. With his money it read as the tester's own, and as "balance" once the hours passed.
+  assert.equal(groupOf(gift({ funding: { how: "card", service: "Rampnow", basis: "x" } })), "testers, own card");
+  assert.equal(groupOf(gift({ funding: { how: "received", from: "0x0000…0001", basis: "sent by the founder's account", founder: true } })), "testers, founder's money");
+  assert.equal(groupOf(gift({ funding: { how: "received", from: "0x0000…0b00", basis: "sent by another Viky account", founder: false } })), "testers");
+  assert.equal(groupOf(gift({ funder: founder, funding: { how: "card", service: "Rampnow", basis: "x" } })), "founder to tester", "his own card is his gift, not a tester's");
   assert.equal(groupOf(gift({ funder: founder })), "founder to tester");
   assert.equal(groupOf(gift({ funder: founder, recipient: founder })), "founder only");
   assert.equal(groupOf(gift({ funder: founder, recipient: null })), "founder only", "a gift of his nobody opened");
@@ -89,7 +95,7 @@ test("the totals count people and money once, and average only what happened", (
   assert.deepEqual([totals.put, totals.earned, totals.returned], ["31.00", "5.00", "25.00"]);
   assert.equal(totals.hoursToOpen, 3, "two gifts were opened, after 2 and 4 hours");
   assert.equal(totals.hoursToFirstCount, 12, "one gift had a counted reading");
-  assert.deepEqual(totals.out, { "bank exit": 1, "card exit": 0, send: 1, "gift card": 0, "top-up": 0 }, "the same send, seen under two gifts of one account, is one send");
+  assert.deepEqual(totals.out, { "bank exit": 1, "card exit": 0, "mobile money": 0, send: 1, "gift card": 0, "top-up": 0 }, "the same send, seen under two gifts of one account, is one send");
   assert.equal(totalsOf([]).hoursToOpen, null);
 });
 
@@ -112,7 +118,9 @@ test("the report names nobody: gift numbers and abbreviated accounts, in words a
     assert.doesNotMatch(text, /@|username|recipient_name|funder_name/i);
   }
   assert.match(words, /Each gift is in one group only\. The groups are never added together\./);
-  assert.match(words, /Testers' own gifts[^\n]*\n  1 gift\(s\), 1 funder\(s\), 1 recipient\(s\)\./);
+  assert.match(words, /Testers' other gifts[^\n]*\n  1 gift\(s\), 1 funder\(s\), 1 recipient\(s\)\./);
+  assert.match(words, /Testers' gifts paid by the tester's own card: neither side is the founder's account\.\n  None\./);
+  assert.match(words, /Testers' gifts paid with money the founder sent: neither side is his account, the money was his\.\n  None\./);
   assert.match(words, /Gift 1, duolingo-daily: \$20\.00, partly earned\. Group: testers\./);
   // With no founder account given, the report says the separation rests on nothing.
   assert.match(reportInWords(buildReport({ readAt: "2026-10-01T04:00:00.000Z", founderAccounts: [], judgeAccounts: [], gifts: [] })), /none given, so nothing below is separated from him/);
@@ -159,7 +167,7 @@ test("each gift is counted under the version of the contract that holds it, with
   assert.deepEqual(report.groups["founder only"].byVersion, { 1: 0, 2: 0, 3: 1 });
   assert.deepEqual(totalsOf([]).byVersion, { 1: 0, 2: 0, 3: 0 });
   const words = reportInWords(report);
-  assert.match(words, /Testers' own gifts[^\n]*\n(  [^\n]*\n)*  By version of the contracts: 1 on the first, 2 on the second, 0 on the third\./);
+  assert.match(words, /Testers' other gifts[^\n]*\n(  [^\n]*\n)*  By version of the contracts: 1 on the first, 2 on the second, 0 on the third\./);
   assert.match(words, /The founder's own tries[^\n]*\n(  [^\n]*\n)*  By version of the contracts: 0 on the first, 0 on the second, 1 on the third\./);
   assert.match(words, /Gift 1000, duolingo-daily: [^\n]*\n  Held by the third version of the daily contract\./);
   assert.match(words, /Gift 1000012, duolingo-daily: [^\n]*\n  Held by the second version of the milestone contract\./);
@@ -171,4 +179,52 @@ test("the command reads and never writes, and selects no name", () => {
   assert.doesNotMatch(script, /recipient_name|funder_name|goal_username|username|phone_number|external_id/, "no first name, no source account, no phone number");
   assert.doesNotMatch(script, /writeContract|sendTransaction|RELAYER_PRIVATE_KEY/, "nothing is sent to the chain");
   assert.equal(JSON.parse(readFileSync("package.json", "utf8")).scripts["pilot:report"], "tsx scripts/pilot-report.ts");
+});
+
+test("money the founder sent is said as his, at whatever time it was sent, and a card just before the gift is the tester's own", () => {
+  const FOUNDER = "0x0000000000000000000000000000000000000001";
+  const founders = new Set([FOUNDER]);
+  const base = { funder: TESTER, judgeCreditBefore: false, giftContracts: new Set<string>(), vikyAccounts: new Set([FOUNDER, OTHER.toLowerCase()]), hours: 2, founders };
+  // Within the hours: the chain's own arrival names his account. Written "sent by the founder's account", never "another Viky account".
+  assert.deepEqual(fundingOf({ ...base, arrivals: [arrival(FOUNDER, FOUNDER)] }), { how: "received", from: "0x0000…0001", basis: "sent by the founder's account", founder: true });
+  assert.equal(SENT_BY_THE_FOUNDER, "sent by the founder's account");
+  // Past the hours nothing arrived: it used to read "balance". Viky's own record of sends has no limit of hours.
+  assert.deepEqual(fundingOf({ ...base, arrivals: [] }), { how: "balance", basis: "nothing reached the account in the 2 hours before the gift" });
+  assert.deepEqual(fundingOf({ ...base, arrivals: [], founderSentFrom: FOUNDER }), { how: "received", from: "0x0000…0001", basis: "sent by the founder's account", founder: true });
+  // Money back from an earlier gift, on an account he sent money to: still his money.
+  const backFromAGift = arrival("0x00000000000000000000000000000000000000e5", TESTER);
+  assert.equal(fundingOf({ ...base, giftContracts: new Set(["0x00000000000000000000000000000000000000e5"]), arrivals: [backFromAGift], founderSentFrom: FOUNDER }).how, "received");
+  assert.deepEqual(fundingOf({ ...base, giftContracts: new Set(["0x00000000000000000000000000000000000000e5"]), arrivals: [backFromAGift] }), { how: "balance", basis: "money back from an earlier gift" });
+  // A card paid just before the gift: the tester's own card, whatever he sent before.
+  const byCard = fundingOf({ ...base, arrivals: [arrival(KURU_ROUTER, TESTER)], founderSentFrom: FOUNDER });
+  assert.equal(byCard.how, "card");
+  // An account the judge code credited stays a judge credit.
+  assert.equal(fundingOf({ ...base, judgeCreditBefore: true, arrivals: [], founderSentFrom: FOUNDER }).how, "judge credit");
+  // The script reads his sends from Viky's own record, with their destination, and never for a gift he made himself.
+  const script = readFileSync("scripts/pilot-report.ts", "utf8");
+  assert.match(script, /SELECT account, destination, amount, sent_at FROM viky_sends/);
+  assert.match(script, /founderSentFrom: founders\.has\(funder\.toLowerCase\(\)\) \? null : founderSentBefore\(funder, createdAt\)/);
+});
+
+test("a payout to mobile money is its own way out, read from its own table, and its exchange is not counted beside it", () => {
+  // The advisor, 4 Oct 2026: every exit to USDC was named "bank exit", and viky_mobile_payouts was not read.
+  const out = [
+    { route: "mobile money" as const, dollars: "12.00", at: "2026-10-03T10:00:00.000Z", where: "SN, Wave" },
+    { route: "bank exit" as const, dollars: "30.00", at: "2026-10-02T10:00:00.000Z" },
+  ];
+  const report = buildReport({ readAt: "2026-10-04T00:00:00.000Z", founderAccounts: [], judgeAccounts: [], gifts: [gift({ out })] });
+  assert.equal(report.groups.testers.out["mobile money"], 1);
+  assert.equal(report.groups.testers.out["bank exit"], 1);
+  const words = reportInWords(report);
+  assert.match(words, /Money taken out by recipients: 1 bank exit, 1 mobile money\./);
+  assert.match(words, /mobile money \(SN, Wave\) \$12\.00 on 2026-10-03/, "the country and the operator, never the number");
+  // The exchange a payout names as its own is left out of the exits: counted once.
+  const payouts = new Set(["0xabc"]);
+  assert.equal(precedesAMobilePayout("0xABC", payouts), true);
+  assert.equal(precedesAMobilePayout("0xdef", payouts), false);
+  assert.equal(precedesAMobilePayout(null, payouts), false);
+  const script = readFileSync("scripts/pilot-report.ts", "utf8");
+  assert.match(script, /SELECT account, country, network, units, exit_tx, completed_at FROM viky_mobile_payouts WHERE status = 'COMPLETED'/);
+  assert.doesNotMatch(script.slice(script.indexOf("FROM viky_mobile_payouts") - 120, script.indexOf("FROM viky_mobile_payouts")), /number/, "the number is never read");
+  assert.match(script, /!precedesAMobilePayout\(row\.tx_hash as string \| null, payoutExitTxs\)/);
 });

@@ -1006,14 +1006,7 @@ export const GIFT_PAGE = {
     cancelled: "This gift went back before it started counting.",
   } as Record<string, string>,
 
-  take: (amount: string) => `Take ${amount}`,
-  /** The sheet the action opens, where the one sentence of taking is read before the press that signs it. */
-  takeTitle: (amount: string) => `Take ${amount}?`,
-  takeReview: "It goes into your account, and it stays yours: from there you can send it to your bank. Nothing to pay.",
   notNow: "Not now",
-  taking: "Taking it",
-  taken: (amount: string, when: string, giftId: string, take: number) => `${amount} is in your account, ${when}. Reference: gift ${giftId}, take ${take}.`,
-  sendToBank: "Send it to my bank",
 
   finished: (range: string) => `This gift is finished. ${range}.`,
   cameBack: (count: number, amount: string) => `${days(count)} came back to you: ${amount}.`,
@@ -1362,10 +1355,6 @@ export const MILESTONE_ACTIONS = {
   startTooHighTheirs: (start: number, target: number, recipient: string | null) =>
     `${recipient ?? "They"} had already reached ${target} when they connected, at ${start}, so this gift cannot count it. It comes back to you at the end.`,
   opened: "It is yours to earn.",
-  take: (amount: string) => `Take ${amount}`,
-  notNow: "Not now",
-  taking: "Taking it",
-  taken: (amount: string, when: string, giftId: string) => `${amount} is in your account, ${when}. Reference: gift ${giftId}.`,
   failed: "That did not go through, and nothing was changed. Try again.",
   outcome: {
     started: (start: number, target: number) => `Done. You start at ${start}. Reach ${target} and all of it is yours. You can take the code out of your name now.`,
@@ -1473,7 +1462,6 @@ export const WAITS = {
   recordingStart: "Writing down the first reading.",
   counting: (source: string) => `Asking ${source}, certifying its answer, then writing it down.`,
   naming: (source: string) => `Asking ${source} for that name.`,
-  taking: "Moving it into your account.",
   takingBack: "Bringing it back into your account.",
   newLink: "Making the new link.",
   choice: "Writing down your choice.",
@@ -1560,7 +1548,6 @@ export const REACHED_MOMENT = {
   yours: "Yours",
   inTheirName: "In their name",
   theirs: "Theirs",
-  take: (amount: string) => `Take ${amount}`,
   seeTheGift: "See the gift",
   close: "Close",
   seeItAgain: "See it again",

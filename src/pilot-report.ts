@@ -39,7 +39,10 @@ export type Funding =
   | Readonly<{ how: "card"; service: string; basis: string }>
   | Readonly<{ how: "judge credit"; basis: string }>
   | Readonly<{ how: "balance"; basis: string }>
-  | Readonly<{ how: "received"; from: string; basis: string }>;
+  | Readonly<{ how: "received"; from: string; basis: string; /** The sender is one of the founder's accounts. */ founder: boolean }>;
+
+/** What the report writes of money one of the founder's accounts sent: never "another Viky account". */
+export const SENT_BY_THE_FOUNDER = "sent by the founder's account";
 
 /** The exchange a card's coin is changed through: the address its quotes ask an account to call (read 1 Oct 2026). */
 export const KURU_ROUTER = "0xb3e6778480b2e488385e8205ea05e20060b813cb";
@@ -59,6 +62,10 @@ export const CARD_SENDERS: Readonly<Record<string, string>> = {};
  * - A card through Rampnow, when what a gift holds came out of Viky's own converter: that is USDC, the other dollar
  *   coin, being changed for the account, and Rampnow's way in is the only one that delivers it.
  * - A card through a service whose paying address is known (`CARD_SENDERS`).
+ * - Money the founder sent, when one of his accounts sent money to this one before the gift, at any time: Viky's own
+ *   record of sends has no limit of hours, and the chain's arrivals of the last hours say it too. Said before money
+ *   back from an earlier gift and before the account's own balance, which is what that money became once the hours
+ *   had passed (the advisor, 4 Oct 2026: a tester's gift paid with the founder's money read as the tester's own).
  * - Money back from an earlier gift, when a gift contract sent it: the account's own balance.
  * - Received from another account, of Viky's or not, abbreviated.
  * - The account's own balance when nothing arrived in those hours.
@@ -72,6 +79,10 @@ export function fundingOf(input: Readonly<{
   hours: number;
   /** Viky's converter of USDC into what a gift holds (src/usdc-router.ts), when this run knows it. */
   converter?: string;
+  /** The founder's accounts, in lower case. */
+  founders?: ReadonlySet<string>;
+  /** The founder's account that sent money to this one before the gift, at any time, when Viky's record of sends has one. */
+  founderSentFrom?: string | null;
 }>): Funding {
   const funder = input.funder.toLowerCase();
   const latest = input.arrivals[0];
@@ -84,9 +95,15 @@ export function fundingOf(input: Readonly<{
       return { how: "card", service: "Rampnow", basis: "USDC, which only its card payment delivers here, changed by Viky's converter just before the gift" };
     }
     if (CARD_SENDERS[from]) return { how: "card", service: CARD_SENDERS[from], basis: `${latest.coin} sent by that service's own paying address` };
+    if (!input.judgeCreditBefore && input.founders?.has(from)) return { how: "received", from: shortAccount(latest.from), basis: SENT_BY_THE_FOUNDER, founder: true };
+  }
+  // No card paid just before the gift: money the founder sent earlier, at whatever time, is what the gift was paid with.
+  if (!input.judgeCreditBefore && input.founderSentFrom) return { how: "received", from: shortAccount(input.founderSentFrom), basis: SENT_BY_THE_FOUNDER, founder: true };
+  if (latest) {
+    const from = latest.from.toLowerCase();
     if (input.giftContracts.has(from)) return { how: "balance", basis: "money back from an earlier gift" };
     if (!input.judgeCreditBefore) {
-      return { how: "received", from: shortAccount(latest.from), basis: input.vikyAccounts.has(from) ? "sent by another Viky account" : "sent by an address Viky does not know" };
+      return { how: "received", from: shortAccount(latest.from), basis: input.vikyAccounts.has(from) ? "sent by another Viky account" : "sent by an address Viky does not know", founder: false };
     }
   }
   if (input.judgeCreditBefore) return { how: "judge credit", basis: "the account was credited by the judge code before this gift" };
@@ -94,8 +111,18 @@ export function fundingOf(input: Readonly<{
 }
 
 /** A way money left an account, in the words the report totals by. */
-export type OutRoute = "bank exit" | "card exit" | "send" | "gift card" | "top-up";
-export type Outflow = Readonly<{ route: OutRoute; dollars: string; at: string }>;
+export type OutRoute = "bank exit" | "card exit" | "mobile money" | "send" | "gift card" | "top-up";
+/** `where` is said of a mobile money payout alone: its country and its operator, never the number. */
+export type Outflow = Readonly<{ route: OutRoute; dollars: string; at: string; where?: string }>;
+
+/**
+ * Whether an exchange into the other dollar coin was the first step of a mobile money payout, by the transaction that
+ * payout names as its own (`exit_tx`): it is then counted once, as mobile money, and never as a bank exit beside it
+ * (the advisor, 4 Oct 2026: every exit to USDC was named "bank exit", and the payouts' table was not read).
+ */
+export function precedesAMobilePayout(exitTx: string | null | undefined, payoutExitTxs: ReadonlySet<string>): boolean {
+  return Boolean(exitTx) && payoutExitTxs.has(String(exitTx).toLowerCase());
+}
 
 /** What a gift came to. */
 export type Outcome = "reached" | "returned" | "partly earned" | "running" | "never opened";
@@ -157,11 +184,17 @@ export type PilotGift = Readonly<{
   out: readonly Outflow[];
 }>;
 
-/** The four groups, each gift in exactly one. */
-export type Group = "testers" | "founder to tester" | "founder only" | "judge credit";
+/**
+ * The groups, each gift in exactly one. A tester's gift is counted by where its money came from (the advisor, 4 Oct
+ * 2026): paid by the tester's own card, paid with money the founder sent, or neither, which is said as it is rather
+ * than counted with the cards.
+ */
+export type Group = "testers, own card" | "testers, founder's money" | "testers" | "founder to tester" | "founder only" | "judge credit";
 
 export const GROUPS: Readonly<Record<Group, string>> = {
-  testers: "Testers' own gifts: neither side is the founder's account, and no judge credit paid for it",
+  "testers, own card": "Testers' gifts paid by the tester's own card: neither side is the founder's account",
+  "testers, founder's money": "Testers' gifts paid with money the founder sent: neither side is his account, the money was his",
+  testers: "Testers' other gifts: neither side is the founder's account, and neither a card, money he sent nor a judge credit paid for it",
   "founder to tester": "The founder's gifts to testers: his money, a tester's effort",
   "founder only": "The founder's own tries: his account on both sides, a gift of his nobody opened, or a gift made to him",
   "judge credit": "Paid from a judge credit, or by an account the judge code credited",
@@ -170,7 +203,10 @@ export const GROUPS: Readonly<Record<Group, string>> = {
 export function groupOf(gift: Pick<PilotGift, "funder" | "recipient" | "funding">): Group {
   if (gift.funding.how === "judge credit" || gift.funder.kind === "judge" || gift.recipient?.kind === "judge") return "judge credit";
   if (gift.funder.kind === "founder") return gift.recipient?.kind === "tester" ? "founder to tester" : "founder only";
-  return gift.recipient?.kind === "founder" ? "founder only" : "testers";
+  if (gift.recipient?.kind === "founder") return "founder only";
+  // A tester's gift, by where its money came from.
+  if (gift.funding.how === "received" && gift.funding.founder) return "testers, founder's money";
+  return gift.funding.how === "card" ? "testers, own card" : "testers";
 }
 
 export type Totals = Readonly<{
@@ -194,7 +230,7 @@ const hoursBetween = (from: string, to: string) => (Date.parse(to) - Date.parse(
 const mean = (values: readonly number[]) => (values.length === 0 ? null : Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 10) / 10);
 
 export function totalsOf(gifts: readonly PilotGift[]): Totals {
-  const out: Record<OutRoute, number> = { "bank exit": 0, "card exit": 0, send: 0, "gift card": 0, "top-up": 0 };
+  const out: Record<OutRoute, number> = { "bank exit": 0, "card exit": 0, "mobile money": 0, send: 0, "gift card": 0, "top-up": 0 };
   // One account's money leaving is counted once, however many gifts that account opened.
   const seen = new Set<string>();
   for (const gift of gifts) {
@@ -276,7 +312,7 @@ export function reportInWords(report: PilotReport): string {
     lines.push(`  Opened ${day(gift.openedAt)}. Source connected ${day(gift.connectedAt)}. First counted reading ${day(gift.firstCountedAt)}.`);
     lines.push(`  Readings: ${gift.readings.attested} attested, ${gift.readings.looks} look(s), ${gift.readings.daysEarned} day(s) earned, ${gift.readings.daysReturned} returned.`);
     lines.push(`  Earned $${gift.earned}, returned $${gift.returned}.`);
-    lines.push(`  Out of the recipient's account since: ${gift.out.map((flow) => `${flow.route} $${flow.dollars} on ${flow.at.slice(0, 10)}`).join("; ") || "nothing"}.`);
+    lines.push(`  Out of the recipient's account since: ${gift.out.map((flow) => `${flow.route}${flow.where ? ` (${flow.where})` : ""} $${flow.dollars} on ${flow.at.slice(0, 10)}`).join("; ") || "nothing"}.`);
   }
   return lines.join("\n");
 }

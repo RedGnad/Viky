@@ -22,8 +22,10 @@ import { reduced } from "./Motion";
  * page has finished loading, so nothing else moves while it plays. Several reached gifts play one after another.
  *
  * The whole screen, on the page's own ground: the amount turns from "in your name" to "yours", the confetti falls
- * across the screen for about three seconds, and one action stands under it. For the person it is for, taking it; for
- * the funder, "They did it" and what that means for the money. A device that asks for less motion gets the same
+ * across the screen for about three seconds, and one action stands under it: seeing the gift. For the funder, "They
+ * did it" and what that means for the money. Taking the money was the action of the person it is for until 4 Oct
+ * 2026: Home counts it in "Yours" and whatever it is used for takes it from the gift first, so the gesture was a
+ * second way to do the same thing. A device that asks for less motion gets the same
  * screen, still: the amount already "yours", no confetti. No character and no other movement here until the animated
  * mockup the founder is having made replaces this one (29 Sep 2026).
  *
@@ -39,8 +41,6 @@ export type ReachedGift = Readonly<{
   what: string;
   /** The amount, in the coin's units, as a decimal string. */
   units: string;
-  /** What the take button says, exact dollars: the gesture is irreversible. */
-  takeDisplay: string;
   reachedAtMs: number | null;
 }>;
 
@@ -59,7 +59,6 @@ export function reachedOfStatus(status: MilestoneStatus, role: "funder" | "recip
     funderName: names.funderName,
     what: conditionById(status.conditionId)?.name ?? "",
     units: status.amount,
-    takeDisplay: status.earnedDisplay,
     reachedAtMs: status.reachedAtMs,
   };
 }
@@ -105,18 +104,18 @@ export function ReachedMoments({ gifts, here }: Readonly<{ gifts: readonly Reach
 }
 
 /**
- * What the moment's one action does when the moment is played over the gift's own page. There, a link to the gift is a
- * link to the page one is already on: nothing closed the moment and two presses did nothing (the audit of 1 Oct 2026).
- * So the action is a button: it closes the moment, and for the person the gift is for it then opens the review of the
- * take. Whatever replaces the animation keeps this: the gesture belongs to the page, not to the drawing.
+ * Whether the moment is played over the gift's own page. There, a link to the gift is a link to the page one is
+ * already on: nothing closed the moment and two presses did nothing (the audit of 1 Oct 2026). So the action is a
+ * button that closes the moment. Whatever replaces the animation keeps this: the gesture belongs to the page, not to
+ * the drawing.
  */
-export type OnItsPage = Readonly<{ onTake: () => void }>;
+export type OnItsPage = boolean;
 
 /**
  * On the gift's own page: the moment, when this account arrives here before it has had it (from a notification, a
  * link), and "See it again", which replays it whenever asked and writes nothing.
  */
-export function ReachedOnItsPage({ gift, onTake }: Readonly<{ gift: ReachedGift; onTake: () => void }>) {
+export function ReachedOnItsPage({ gift }: Readonly<{ gift: ReachedGift }>) {
   const [owed, setOwed] = useState(false);
   const [again, setAgain] = useState(false);
   useEffect(() => {
@@ -132,11 +131,11 @@ export function ReachedOnItsPage({ gift, onTake }: Readonly<{ gift: ReachedGift;
   }, [gift.giftId]);
   return (
     <>
-      <ReachedMoments gifts={owed ? [gift] : []} here={{ onTake }} />
+      <ReachedMoments gifts={owed ? [gift] : []} here />
       <button type="button" onClick={() => setAgain(true)} className={`${SMALL_BUTTON} self-start`}>
         {W.seeItAgain}
       </button>
-      {again ? <ReachedMoment gift={gift} here={{ onTake }} onClose={() => setAgain(false)} /> : null}
+      {again ? <ReachedMoment gift={gift} here onClose={() => setAgain(false)} /> : null}
     </>
   );
 }
@@ -257,20 +256,9 @@ export function ReachedMoment({ gift, here, onClose }: Readonly<{ gift: ReachedG
         </div>
         <div className="mt-[var(--space-md)] w-full">
           {here ? (
-            <button
-              type="button"
-              className={PRIMARY_BUTTON}
-              onClick={() => {
-                close();
-                if (recipient) here.onTake();
-              }}
-            >
-              {recipient ? W.take(gift.takeDisplay) : W.seeTheGift}
+            <button type="button" className={PRIMARY_BUTTON} onClick={close}>
+              {W.seeTheGift}
             </button>
-          ) : recipient ? (
-            <Link href={`/g/${gift.giftId}?take=1`} className={`${PRIMARY_BUTTON} block text-center no-underline`}>
-              {W.take(gift.takeDisplay)}
-            </Link>
           ) : (
             <Link href={`/g/${gift.giftId}`} className={`${PRIMARY_BUTTON} block text-center no-underline`}>
               {W.seeTheGift}

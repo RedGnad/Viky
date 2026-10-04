@@ -105,6 +105,18 @@ export async function offerIn(country: string | null, deps: { reader?: SwitchRea
   }
 }
 
+/**
+ * The countries the way is offered in: where Switch has a corridor to mobile money and publishes a rate for its
+ * currency, which is what `offerIn` asks before it offers the way there. Nothing while the way is switched off, so
+ * the list of countries a person picks from never names one for a way that is not open. It throws when Switch does
+ * not answer: whoever asks says it could not be read.
+ */
+export async function mobileMoneyCountries(deps: { reader?: SwitchReader; env?: Readonly<Record<string, string | undefined>>; now?: () => number } = {}): Promise<readonly string[] | null> {
+  if (!mobileMoneyOn(deps.env)) return null;
+  const read = await corridors(deps.reader ?? liveSwitch, (deps.now ?? Date.now)());
+  return read.rows.filter((row) => Boolean(read.rates.get(row.currency))).map((row) => row.country.toLowerCase());
+}
+
 /** A refusal from Switch, said to the person: what happened and that nothing was taken. */
 export function switchRefusal(error: unknown): GiftApiError {
   if (error instanceof GiftApiError) return error;

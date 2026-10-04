@@ -44,10 +44,13 @@ test("reduced motion is the same screen, still: the amount already theirs, nothi
   assert.match(MOMENT, /if \(still\) return;\n[\s\S]*rain\(layer\.current\)/, "the rain and the jump are after the door");
 });
 
-test("one action: taking it for the person it is for, the gift for the funder, and See it again on the page", () => {
-  assert.match(MOMENT, /href=\{`\/g\/\$\{gift\.giftId\}\?take=1`\}/);
-  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /useState\(openTake\)/, "arriving with the review open");
-  assert.equal(REACHED_MOMENT.take("$25.00"), "Take $25.00");
+test("one action: seeing the gift, for the person it is for as for the funder, and See it again on the page", () => {
+  // "Take $25.00" was the action of the person it is for until 4 Oct 2026: Home counts what a gift paid in "Yours" and
+  // whatever the money is used for takes it from the gift first, so the gesture did the same thing twice (the advisor).
+  assert.match(MOMENT, /href=\{`\/g\/\$\{gift\.giftId\}`\} className=\{`\$\{PRIMARY_BUTTON\} block text-center no-underline`\}>\n\s*\{W\.seeTheGift\}/);
+  assert.doesNotMatch(MOMENT, /take=1|onTake|W\.take\(/);
+  assert.doesNotMatch(readFileSync("app/components/GiftPage.tsx", "utf8"), /openTake|withdrawEarned|takeReview/);
+  assert.equal(REACHED_MOMENT.seeTheGift, "See the gift");
   assert.equal(REACHED_MOMENT.theyDidIt, "They did it.");
   assert.match(MOMENT, /\{W\.seeItAgain\}/);
 });

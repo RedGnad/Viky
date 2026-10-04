@@ -29,7 +29,7 @@ function Address({ address }: Readonly<{ address: string }>) {
  * the index does not answer the line says so and gives no figure. The figures of "Why Monad" are the measured ones
  * (src/measured.ts), each with its date in the section that states it in full.
  */
-export function JudgesMinute({ index, contracts }: Readonly<{ index: IndexRead | null; contracts: Readonly<{ daily: string | null; milestone: string | null; anchor: string | null; version: 1 | 2 }> }>) {
+export function JudgesMinute({ index, contracts }: Readonly<{ index: IndexRead | null; contracts: Readonly<{ daily: string | null; milestone: string | null; anchor: string | null; version: 1 | 2 | 3 }> }>) {
   const usage = index ? usageOf(index.gifts, founderAccounts(operatorAccounts())) : null;
   return (
     <section className="space-y-[var(--space-sm)]" id="minute">
@@ -83,7 +83,11 @@ export function JudgesMinute({ index, contracts }: Readonly<{ index: IndexRead |
               The recipient&apos;s yes and stop: <Address address={contracts.anchor} />.{" "}
             </>
           ) : null}
-          {contracts.version === 2 ? "These are the second version, where a gift is made today; the first version's contracts are under " : "The other contracts are under "}
+          {contracts.version === 3
+            ? "A gift is made on these today: the daily one is the third version of its contract, the two others the second; the earlier contracts are under "
+            : contracts.version === 2
+              ? "These are the second version, where a gift is made today; the first version's contracts are under "
+              : "The other contracts are under "}
           <a className="underline" href="#network">
             Network
           </a>

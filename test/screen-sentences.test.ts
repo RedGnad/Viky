@@ -34,7 +34,6 @@ const GOAL_SHEET = 'the fold "How this is checked" at the foot of a goal\'s shee
 
 /** Over the limit, and read in a fold or in a sheet: where. */
 const FOLDED: Readonly<Record<string, string>> = {
-  "GIFT_PAGE.takeReview": 'the sheet "Take $2.00?"',
   "GIFT_PAGE.linkAgainWhy": 'the sheet "Get the link again"',
   "GIFT_PAGE.linkFindWhy": 'the sheet "Find the link again"',
   "GIFT_LIVE.climbing.alertRefused": 'the sheet "Notifications"',
