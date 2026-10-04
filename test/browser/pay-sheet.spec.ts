@@ -147,7 +147,12 @@ test.describe("the pay sheet of 3 Oct 2026", () => {
     });
     await sheet(page).getByRole("button", { name: "Put €19.00 in Boo's name" }).click();
     await page.waitForURL(/\/fund\?step=paying/, { timeout: 60_000 });
-    await expect.poll(() => calls.join(", "), { timeout: 30_000 }).toBe("withdraw 1000 30000000, create");
+    await expect.poll(() => calls[0], { timeout: 30_000 }).toBe("withdraw 1000 30000000");
+    // Then the gift is made from the account. Nothing can be made in this test, on a build with the contracts set or
+    // without them, so the making stops on its refusal, which only the making leads to.
+    await expect(page.getByRole("button", { name: "Try again" })).toBeVisible({ timeout: 30_000 });
+    expect(calls.filter((call) => call.startsWith("withdraw")), "taken once").toHaveLength(1);
+    expect(calls.indexOf("create"), "and never made before it was taken").not.toBe(0);
     // No card was asked for at any moment: the wait never offered one.
     await expect(page.getByRole("link", { name: /by card/ })).toHaveCount(0);
     await funder.context.close();
