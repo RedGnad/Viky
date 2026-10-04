@@ -1552,6 +1552,34 @@ details > summary.gift-fold-name::-webkit-details-marker {
 }
 
 /*
+ * Numbered steps (app/kit/Steps.tsx, the founder, 4 Oct 2026): the number stands before the words, at the label's
+ * weight, and what a step carries (a code, a button) is set under its words, on the words' own edge.
+ */
+.said-steps {
+  counter-reset: said-step;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.said-step {
+  counter-increment: said-step;
+  position: relative;
+  padding-left: 1.75em;
+}
+
+.said-step::before {
+  content: counter(said-step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: var(--type-body);
+  line-height: var(--type-body-leading);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
  * "You decide" (app/kit/YouDecide.tsx, the founder's mockup you-decide.html of 1 Oct 2026): the standing controls of
  * the person a gift is for, under the card, on the ground. Three round buttons with two words each and never a
  * sentence (rule 6): a white disc of 64 with the ink outline and the relief every key stands on, its name under it in

@@ -169,10 +169,11 @@ test("the funder's review says what the certificate must show, and what happens 
   assert.match(said, /120 or more/);
   assert.match(said, /test date inside these days/);
   assert.match(DET_MILESTONE.words.ifNot, /comes back to you/);
-  // Said where the money is about to move, which since the mockups of 19 Sep 2026 is the sheet that pays.
+  // The sheet that pays says what comes back and when, in short lines (the founder, 4 Oct 2026): what the certificate
+  // must show was a paragraph of its fold, and a fold holds no paragraph any more.
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
-  assert.match(sheet, /certificate\.words\.mustShow\(draft\.subject\.trim\(\), target, draft\.scale\)/);
-  assert.match(sheet, /certificate\.words\.ifNot/);
+  assert.match(sheet, /milestone \? W\.fold\.notReached : certificate \? W\.fold\.notShown : W\.fold\.missedDay/);
+  assert.doesNotMatch(sheet, /mustShow|ifNot/);
 });
 
 test("a gift on this result ends well inside the two years, on the screen as in the register", () => {

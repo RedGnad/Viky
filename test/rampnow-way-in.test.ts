@@ -2,9 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { cardReach } from "../src/card-rail";
-import { scanSource } from "../src/consumer-words";
 import { arrivesInDollars, DOLLAR_COIN_ALLOWANCE, eurosNeededOn, serviceChargeEur, wayInFor } from "../src/gift-amount";
-import { feeSentence, RAMPNOW_OPEN_IN, rampnowPage, rampnowWayIn, WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAY_IN_USDC, wayInAsksNothing, wayInFillsIn, wayInPage, WAYS_IN, waysIn } from "../src/rails";
+import { feeInALine, feeSentence, RAMPNOW_OPEN_IN, rampnowPage, rampnowWayIn, WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAY_IN_USDC, wayInAsksNothing, wayInFillsIn, wayInPage, WAYS_IN, waysIn } from "../src/rails";
 import { FUND, PAY } from "../src/sentences";
 
 /**
@@ -107,23 +106,25 @@ test("it is offered where Rampnow says it fully serves, and gives way by one sen
 });
 
 test("the sheet says what the person meets, in the founder's words, and the terms line carries its name and link", () => {
-  const said = PAY.partnerLocked("Rampnow");
-  assert.equal(
-    said,
-    "At Rampnow, the first time: your details, a code by text and your ID. Your account and the amount are already filled in. Come back here: the gift starts by itself.",
-  );
   // Under the pay sheet's button, one line: who takes the card, its ID the first time, and its terms (the mockup of 3 Oct 2026).
   assert.equal(
     `${PAY.cardLine.before(WAY_IN_USDC.name)}${PAY.cardLine.link(WAY_IN_USDC.name)}${PAY.cardLine.after}`,
     "Rampnow takes your card, with your ID the first time. By paying you are 18 or older and accept Rampnow's terms.",
   );
-  assert.deepEqual(scanSource("sentence", said), [], "through the consumer words check");
-  // The founder's words of 1 Oct 2026, once the conversion needs no gesture (src/usdc-router.ts).
-  assert.equal(FUND.waiting.thenConfirmed, "When it lands, Viky turns it into what the gift holds and starts your gift.");
   assert.equal(`${PAY.cardTerms.before}${PAY.cardTerms.link(WAY_IN_USDC.name)}${PAY.cardTerms.after}`, "By paying by card, you confirm you are 18 or older and accept Rampnow's terms.");
   assert.equal(WAY_IN_USDC.terms, "https://rampnow.io/terms-and-conditions");
-  const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
-  assert.match(sheet, /: way === WAY_IN_USDC\n\s*\? W\.partnerLocked\(way\.name\)/);
+  // The pay sheet's fold says the fee in a short line (the founder, 4 Oct 2026), true of the payment on the sheet:
+  // the published share, or the service's floor where the floor is what that payment pays.
+  assert.equal(feeInALine(WAY_IN_USDC, 50), "Rampnow, 7 % + €0.40");
+  assert.equal(feeInALine(WAY_IN_USDC), "Rampnow, 7 % + €0.40");
+  assert.equal(feeInALine(WAY_IN_USDC, 5), "Rampnow, €1.00", "7 % of 5 EUR and 0.40 is under its floor of one euro");
+  // The wait: two short steps, in the frame or on Rampnow's page beside.
+  assert.equal(FUND.waiting.steps.pay, "Pay by card.");
+  assert.equal(FUND.waiting.steps.keepOpen, "Keep the window open until the money lands: your gift starts by itself.");
+  assert.equal(FUND.waiting.steps.payBeside("Rampnow"), "Pay by card on Rampnow's page.");
+  assert.equal(FUND.waiting.steps.comeBack, "Come back here: your gift starts by itself.");
   const wait = readFileSync("app/components/PayGift.tsx", "utf8");
-  assert.match(wait, /\{wayIn\.arrives === "usdc" && !cardClosed \? <p className=\{HELP\}>\{W\.waiting\.thenConfirmed\}<\/p> : null\}/);
+  assert.match(wait, /<Step says=\{W\.waiting\.steps\.payBeside\(wayIn\.name\)\}>/);
+  assert.match(wait, /<Step says=\{W\.waiting\.steps\.comeBack\} \/>/);
+  assert.match(wait, /<Step says=\{W\.waiting\.steps\.keepOpen\} \/>/);
 });

@@ -195,7 +195,7 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
       { name: "Taking it out", when: "the person takes what is earned, at the end: a review first, then the confirmation", says: ["It goes into your account, and it stays yours: from there you can send it to your bank. Nothing to pay.", "Not now", "Reference: gift", "Send it to my bank"] },
       { name: "Échéance passée", when: "the time ran out with nothing earned: what goes back, and to whom", says: ["The time is up.", "did not make it in time.", "Nothing to do: it goes back by itself.", "Back on"] },
       { name: "Repris", when: "the funder took it back before it was opened", says: ["took it back before it was opened.", "It is in your account again.", "Taken back"] },
-      { name: "R4, the code", when: "the recipient named the account themselves", says: ["Copy the code", "After that, ask for a new one here.", "This code has expired.", "Get a new code", "Check my profile", "You can take the code out of your name as soon as this screen says it is done.", "Keep the name I had"] },
+      { name: "R4, the code", when: "the recipient named the account themselves", says: ["Copy the code", "This code has expired.", "Get a new code", "Check my profile", "Come back here and press:", "Keep the name I had"] },
       { name: "R5, named by the funder", when: "the funder gave the source's name", says: ["Start counting", "to check the name. Nothing counts until it is right."] },
       { name: "A reader", when: "somebody who is neither of the two people: signed in, or with no account at all", says: ["This gift is not yours.", "Sign in if this gift is yours."] },
       { name: "The session closed", when: "somebody was signed in on the page and the session went", says: ["Your session closed while you were away", "Nothing moved and nothing was taken."] },
@@ -274,7 +274,7 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
       {
         name: "Where the code goes",
         when: "the recipient has a code to put in their name, and the register says where that field is",
-        says: ["On Chess.com, open Settings, then Profile. In Details, add this code to your first name, and save:"],
+        says: ["Add it to your first name on Chess.com: Settings, Profile, Details. Save."],
       },
     ],
   },

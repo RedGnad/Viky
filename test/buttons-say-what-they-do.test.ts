@@ -20,27 +20,28 @@ test("what only opens a sentence is a fold named by a question, drawn as the fol
   assert.ok(words);
   assert.equal(words.notYours, "Not your Duolingo name?");
   assert.equal(words.notYet, "No Duolingo yet?");
-  for (const [mark, name, sentence] of [
-    ["data-not-your-name", "words.notYours", "W.namedWrong(funderName)"],
-    ["data-no-source-yet", "field.notYet", "W.notYetBody(funderName)"],
+  for (const [mark, name, inside] of [
+    ["data-not-your-name", "words.notYours", "{W.namedWrong(funderName)}"],
+    ["data-no-source-yet", "field.notYet", "{field.notYetHow.says}"],
   ] as const) {
     const from = connect.indexOf(`<details className="said-fold" ${mark}="">`);
     assert.ok(from > 0, mark);
     const fold = connect.slice(from, connect.indexOf("</details>", from));
     assert.ok(fold.includes(`<summary className="said-fold-name">`) && fold.includes(`{${name}}`) && fold.includes("<FoldChevron />"), `${mark}: the fold's own name and chevron`);
-    assert.ok(fold.includes(`<div className="said-fold-body`) && fold.includes(`{${sentence}}`), `${mark}: the sentence inside`);
+    assert.ok(fold.includes(`<div className="said-fold-body`) && fold.includes(inside), `${mark}: what it holds`);
     assert.doesNotMatch(fold, /<button/, "no button in it");
   }
-  // "No Duolingo yet?" says what to do before it says what becomes of the money, and a button opens Duolingo's own
-  // site and says so.
+  // "No Duolingo yet?": the button that opens Duolingo's own site and says so, and one line (the founder, 4 Oct 2026).
+  // It held two sentences more: how to get it, and what becomes of the money.
   const how = words.notYetHow;
-  assert.equal(how.says, "Duolingo is free. Install it, make your account, then come back here with your username.");
+  assert.equal(how.says, "Free. Come back with your username.");
   assert.equal(how.open, "Open Duolingo");
   assert.equal(how.href, "https://www.duolingo.com");
   const noSource = connect.slice(connect.indexOf(`data-no-source-yet=""`));
-  assert.ok(noSource.indexOf("{field.notYetHow.says}") > 0 && noSource.indexOf("{field.notYetHow.says}") < noSource.indexOf("{field.notYetHow.open}"), "what to do, then the button");
-  assert.ok(noSource.indexOf("{field.notYetHow.open}") < noSource.indexOf("{W.notYetBody(funderName)}"), "the money after");
-  assert.match(noSource, /<a href=\{field\.notYetHow\.href\} target="_blank" rel="noopener noreferrer" className=\{`\$\{SMALL_BUTTON\} self-start`\} data-open-the-source="">\n\s*\{field\.notYetHow\.open\}/);
+  const fold = noSource.slice(0, noSource.indexOf("</details>"));
+  assert.ok(fold.indexOf("{field.notYetHow.open}") > 0 && fold.indexOf("{field.notYetHow.open}") < fold.indexOf("{field.notYetHow.says}"), "the button, then the line");
+  assert.equal((fold.match(/<p /g) ?? []).length, 1, "one line, and no paragraph beside it");
+  assert.match(fold, /<a href=\{field\.notYetHow\.href\} target="_blank" rel="noopener noreferrer" className=\{`\$\{SMALL_BUTTON\} self-start`\} data-open-the-source="">\n\s*\{field\.notYetHow\.open\}/);
   // The same component as the pay sheet's "Have a code?".
   assert.match(readFileSync("app/kit/offer/JudgeCode.tsx", "utf8"), /<details className="said-fold" data-have-a-code="">\n\s*<summary className="said-fold-name">/);
   assert.doesNotMatch(connect, /notMineOpen|notYetOpen/, "nothing of the page's own opens them");

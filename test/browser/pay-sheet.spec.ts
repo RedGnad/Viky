@@ -90,11 +90,16 @@ test.describe("the pay sheet of 3 Oct 2026", () => {
     await expect(sheet(page).getByText(/takes your card, with your ID the first time\. By paying you are 18 or older/)).toBeVisible();
     await expect(sheet(page).locator("summary", { hasText: "How it works" })).toHaveCount(0);
     await shot(page, "1-signed-in");
-    // The one fold, opened: what happens to the money, the card service's first time, its fee and the rate.
+    // The one fold, opened: three short lines, a label and its value, and no paragraph (the founder, 4 Oct 2026).
     await sheet(page).locator("summary", { hasText: "What happens to my money" }).click();
     await page.waitForTimeout(400);
-    await expect(sheet(page).getByText("Boo's name and yours show on the gift, to whoever opens its link.")).toBeVisible();
-    await expect(sheet(page).getByText(/Euros at the European Central Bank's rate of/)).toBeVisible();
+    const fold = sheet(page).locator("[data-what-happens]");
+    await expect(fold.locator("dl > div")).toHaveCount(3);
+    await expect(fold.locator("dt")).toHaveText(["A missed day", "Not opened in 14 days", "Card fee"]);
+    const folded = await fold.locator("dd").allInnerTexts();
+    expect(folded.slice(0, 2)).toEqual(["back to you", "back to you"]);
+    expect(folded[2], "the service's name and its fee, in a few characters").toMatch(/^\S+, (up to )?\d+(\.\d+)? %( \+ €\d+\.\d{2})?$|^\S+, €\d+\.\d{2}$/);
+    await expect(fold.locator("p")).toHaveCount(0);
     await sheet(page).locator("[data-what-happens]").scrollIntoViewIfNeeded();
     await shot(page, "4-fold-open");
     await funder.context.close();
@@ -109,7 +114,7 @@ test.describe("the pay sheet of 3 Oct 2026", () => {
     await funder.context.close();
   });
 
-  test("no name: the field shows its example, and the fold's sentence stands whole", async ({ browser, baseURL }) => {
+  test("no name: the field shows its example, and the fold says nothing of names", async ({ browser, baseURL }) => {
     const funder = await toTheSheet(browser, baseURL, { ausd: 10_000_000n, signedIn: true, gifts: [] });
     const { page } = funder;
     const name = sheet(page).getByLabel("Your name, as Boo knows you");
@@ -117,7 +122,8 @@ test.describe("the pay sheet of 3 Oct 2026", () => {
     await expect(name).toHaveAttribute("placeholder", "Mum");
     await shot(page, "3-name-empty");
     await sheet(page).locator("summary", { hasText: "What happens to my money" }).click();
-    await expect(sheet(page).getByText("Boo's name shows on the gift, to whoever opens its link.")).toBeVisible();
+    await expect(sheet(page).locator("[data-what-happens] dt")).toHaveText(["A missed day", "Not opened in 14 days", "Card fee"]);
+    await expect(sheet(page).getByText(/show(s)? on the gift/)).toHaveCount(0);
     await funder.context.close();
   });
 
@@ -178,9 +184,11 @@ test.describe("the pay sheet of 3 Oct 2026", () => {
     await expect(sheet(page).locator("[data-pay-lines] > div > span:last-child").first()).toHaveText("€19.00");
     await sheet(page).getByRole("button", { name: /^Pay \S+ by card$/ }).click();
     await page.waitForURL(/\/fund\?step=paying/, { timeout: 60_000 });
-    // The wait: the gift as it was typed, and the account in the same money. No dollar on the screen.
-    await expect(page.getByText("Your gift: €19.00 for Boo, 30 days.")).toBeVisible();
-    await expect(page.getByText(/^In your account now: €\d+\.\d{2}$/)).toBeVisible();
+    // The wait: two short lines, the gift as it was typed and the account in the same money. No dollar on the screen.
+    const lines = page.locator("main dl.said-lines").first();
+    await expect(lines.locator("dt")).toHaveText(["Your gift", "In your account"]);
+    await expect(lines.locator("dd").first()).toHaveText("€19.00 for Boo, 30 days");
+    await expect(lines.locator("dd").nth(1)).toHaveText(/^€\d+\.\d{2}$/);
     await expect(page.locator("main")).not.toContainText("$");
     await shot(page, "8-the-wait-in-the-money-typed");
     // Home and Gifts: the card that says the gift is not made yet says it as typed too.

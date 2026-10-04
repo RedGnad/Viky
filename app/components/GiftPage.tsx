@@ -576,10 +576,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         stillNeeds: A.connectTitle(source),
         anotherUsername: undefined,
         proveTitle: account.username ? A.proveTitle(account.username) : A.connectTitle(source),
-        proveSteps: milestoneById(milestone.conditionId)?.words.codeSteps ?? "",
+        codeStep: milestoneById(milestone.conditionId)?.words.codeStep ?? "",
         connectNow: A.connectNow,
-        firstReading: A.firstReading,
-        firstReadingThen: A.firstReadingThen,
         start: A.startReading(source),
         added: A.added,
         getCode: A.getCode,
@@ -600,7 +598,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
           anotherUsername: words.anotherUsername,
           notYours: words.notYours,
           proveTitle: account.username ? words.proveTitle(account.username) : words.stillNeeds,
-          proveSteps: words.proveSteps,
+          codeStep: words.codeStep,
           slowToShow: words.slowToShow,
           start: W.startCounting,
           added: W.iAddedIt,
@@ -670,7 +668,6 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
             refusal={
               answer?.failed && (answer.at === "name" || answer.at === "start") ? { where: answer.at, text: answer.text } : null
             }
-            validUntil={account.codeExpiresAt && nowMs !== 0 ? momentInWords(new Date(account.codeExpiresAt).getTime(), nowMs) : null}
             onName={milestone ? undefined : name}
             onAskCode={askCode}
             onStart={start}

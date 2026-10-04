@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { cardOffered, cardReach } from "../src/card-rail";
-import { scanSource } from "../src/consumer-words";
 import { wayInFor } from "../src/gift-amount";
 import { MONAD_CHAIN_ID } from "../src/monad/chain";
 import { reachOfWaysIn, swapperQuotesIn } from "../src/rail-availability";
@@ -52,7 +51,6 @@ test("with the id, Swapper stands first where it serves, and gives way by its ow
     const abidjan = wayInFor(30_000_000n, ways, 1.15, cardReach("ci"));
     assert.equal(abidjan.way, WAY_IN_CHAIN_COIN, "Ivory Coast had no quote at 20 EUR, and Ramp does not sell there");
     assert.deepEqual(abidjan.insteadOf, { way: WAY_IN_EMBEDDED, because: "country" });
-    assert.equal(PAY.instead.country("Swapper", abidjan.way.name), "Swapper does not serve your country, so this goes through Mercuryo.");
     // Under its smallest payment, the next way takes the gift.
     const small = wayInFor(5_000_000n, ways, 1.15, cardReach("fr"));
     assert.equal(small.way, WAY_IN_GIFT_COIN);
@@ -114,14 +112,7 @@ test("its card services are asked live for the payer's country, only while the i
 });
 
 test("on that path nothing is chosen and nothing is pasted, and the sentences say what the person meets", () => {
-  const said = PAY.partnerEmbedded("Swapper", 29);
-  assert.equal(
-    said,
-    "The card payment opens next, by our partner Swapper. Enter 29 EUR there: it shows what your gift receives. A card service then takes your card in its own window, once with your ID, and calls the money USDC. Come back here: the gift starts by itself.",
-  );
-  assert.doesNotMatch(said, /Choose|Paste|code/);
-  assert.deepEqual(scanSource("sentence", said), [], "through the consumer words check");
-  assert.match(PAY.partnerEmbedded("Swapper", undefined), /Enter the amount there/);
+  // What the person meets there is said by the card's own sheet; the pay sheet's fold holds short lines only.
   assert.deepEqual(PAY.card, { title: "Pay by card", frame: "Card payment" });
   assert.deepEqual([FUND.waiting.openCard, FUND.waiting.openCardAgain], ["Pay by card", "Open the card payment again"]);
   assert.equal(feeSentence(WAY_IN_EMBEDDED), "Through Swapper, a card payment bought up to 9 % less than the day's rate when it was read");
@@ -129,7 +120,6 @@ test("on that path nothing is chosen and nothing is pasted, and the sentences sa
 
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   assert.match(sheet, /if \(!enough && way\.embedded\) return router\.push\("\/fund\?step=paying&card=1"\);/, "the same press opens the card on the wait, after the account is made and the gift kept");
-  assert.match(sheet, /way\.embedded\n\s*\? W\.partnerEmbedded\(way\.name, euros\)\n/);
   assert.match(sheet, /\{byCard \? <CardLine way=\{way\} \/> : null\}/, "the line under the button follows, with the way's own name and link");
   const wait = readFileSync("app/components/PayGift.tsx", "utf8");
   assert.match(wait, /\{wayInAsksNothing\(wayIn\) && !cardClosed \? null : \(\n\s*<section className=\{CARD\}>/, "no settings and no code to give on the wait either");

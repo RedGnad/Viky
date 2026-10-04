@@ -155,7 +155,8 @@ export type MilestoneCondition = Readonly<{
     whenReached: string;
     ifNot: string;
     /** Where, on the source's own site, the recipient puts the code. */
-    codeSteps: string;
+    /** The second of the three steps of the code: where it goes at the source, in a few words. */
+    codeStep: string;
     /** The source has closed the account (U1). The same sentence for both sides: it says the fact, and accuses nobody. */
     accountClosed: string;
   }>;
@@ -205,7 +206,7 @@ export const CHESS_MILESTONE: MilestoneCondition = {
     whenReached: "When they reach it, all of this becomes theirs",
     ifNot: "If they do not reach it in time, all of it comes back to you. Nothing is kept by anybody else.",
     // Chess.com's help centre, read 17 Sep 2026: Settings, then Profile, then the Details section, first and last name.
-    codeSteps: "On Chess.com, open Settings, then Profile. In Details, add this code to your first name, and save:",
+    codeStep: "Add it to your first name on Chess.com: Settings, Profile, Details. Save.",
     accountClosed: "Chess.com has closed this account, so this gift can no longer be earned.",
   },
 };
@@ -257,7 +258,7 @@ export const CHESS_TACTICS_MILESTONE: MilestoneCondition = {
     durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from the day they connect Chess.com`,
     whenReached: "When they beat it, all of this becomes theirs",
     ifNot: "If they do not beat it in time, all of it comes back to you. Nothing is kept by anybody else.",
-    codeSteps: "On Chess.com, open Settings, then Profile. In Details, add this code to your first name, and save:",
+    codeStep: "Add it to your first name on Chess.com: Settings, Profile, Details. Save.",
     accountClosed: "Chess.com has closed this account, so this gift can no longer be earned.",
   },
 };
@@ -299,7 +300,7 @@ export const CODEFORCES_MILESTONE: MilestoneCondition = {
     durationHelp: "Counted from the day they connect Codeforces, so opening the link late costs them nothing.",
     durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from the day they connect Codeforces`,
     // Codeforces' settings, Social tab: first name and last name, in English (unverified on a live account, 26 Sep 2026).
-    codeSteps: "On Codeforces, open Settings, then Social. Put this code in your last name (English), and save:",
+    codeStep: "Put it in your last name (English) on Codeforces: Settings, Social. Save.",
     accountClosed: "Codeforces has closed this account, so this gift can no longer be earned.",
   },
 };

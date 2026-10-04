@@ -43,6 +43,8 @@ import { clearRampnowPending, noteRampnowPending, payAtRampnowBeside, readRampno
 import { noteInRampnowJournal } from "@/src/client/rampnow-journal";
 import { dollarsSaidIn, giftAsTyped, heldIn, moneyIn, moneyTypedIn } from "@/src/pay-sum";
 import { FunderControls } from "../kit/FunderControls";
+import { Lines } from "../kit/Lines";
+import { Step, Steps } from "../kit/Steps";
 import { Said } from "../kit/Said";
 import { FoldChevron } from "../kit/GiftLive";
 import { whereTheRailsServe } from "@/src/client/rails";
@@ -844,7 +846,7 @@ export function PayGift() {
               {W.failures.tryAgain}
             </button>
           )}
-          <p className={HELP}>{W.waiting.staysInAccount}</p>
+          {held > 0n ? <p className={HELP}>{W.waiting.staysInAccount}</p> : null}
         </Shell>
       );
     }
@@ -853,11 +855,18 @@ export function PayGift() {
     const toBuy = balance === null || earned === null ? undefined : eurosToBuyOn(units - held - totalEarned(earned), wayIn, money.rates?.usdPerEur);
     const start = address.slice(0, 4);
     const end = address.slice(-4);
+    /** A card paid through Rampnow, in its frame or on its page beside: the wait is two short steps. */
+    const byRampnow = wayIn === WAY_IN_USDC && rampnowFrameOn() && !cardClosed;
     return (
       <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.waiting.title(toBuy ? moneyIn(toBuy, "EUR") : undefined)}>
         <section className="flex flex-col gap-[var(--space-xs)]">
-          <p className={HELP}>{W.waiting.inAccountNow(balance === null ? "…" : said(held))}</p>
-          <p className={BODY}>{milestone ? M.account.yourGift(gift, recipient) : W.account.yourGift(gift, recipient, days)}</p>
+          {/* Two short lines, a label and its value, where two sentences stood (the founder, 4 Oct 2026). */}
+          <Lines
+            rows={[
+              [W.waiting.lines.gift, W.waiting.giftSaid(gift, recipient, milestone ? undefined : days)],
+              [W.waiting.lines.account, balance === null ? "…" : said(held)],
+            ]}
+          />
           {/* Where a first funder lands once pay has made their account: the judge code is asked here too (D299). A
               credit that covers the gift is made into it by the watch above, as any payment that lands is. */}
           <JudgeCode
@@ -895,15 +904,11 @@ export function PayGift() {
           <p className={HELP}>{W.waiting.startsEnds(start, end)}</p>
         </section>
         )}
-        {/* A dollar coin that arrives is changed by this screen, with nothing to confirm: said before it lands. */}
-        {wayIn.arrives === "usdc" && !cardClosed ? <p className={HELP}>{W.waiting.thenConfirmed}</p> : null}
-        {/* Not said while a payment is at Rampnow: the gift is kept, but that payment finishes only on Rampnow's page. */}
-        {wayIn === WAY_IN_USDC && rampnowFrameOn() && rampnowPending ? null : (
-          <p className={BODY}>
-            {wayIn.takes && !cardClosed ? `${W.check.delay(wayIn.name, wayIn.takes)} ` : ""}
-            {keptOnDevice ? W.waiting.leave : W.waiting.stay}
-          </p>
-        )}
+        {/* Each help comes when it serves (the founder, 4 Oct 2026): four sentences stood here whatever the moment.
+            That this device would not keep the gift is a warning, and stays. On the way a card is paid through
+            Rampnow, what comes next is the second of two short steps; on another service's page, where the person
+            leaves with a code, how long it takes and that they may leave are said as before. */}
+        {!keptOnDevice ? <p className={BODY}>{W.waiting.stay}</p> : byRampnow ? null : <p className={BODY}>{[wayIn.takes && !cardClosed ? W.check.delay(wayIn.name, wayIn.takes) : "", W.waiting.leave].filter(Boolean).join(" ")}</p>}
         {cardClosed ? (
           <CardNotOffered country={card?.country ?? null} />
         ) : wayIn.embedded ? (
@@ -938,37 +943,43 @@ export function PayGift() {
         ) : wayIn === WAY_IN_USDC && rampnowBeside ? (
           // No frame here: the button that pays is a link to Rampnow's page in a tab of its own, which no browser
           // refuses, and from that press the payment is followed as one started from a tab.
-          <>
-            <a
-              href={wayInPage(wayIn, { account: address, euros: toBuy })}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={PRIMARY_BUTTON}
-              data-rampnow-pay-beside=""
-              onClick={() => {
-                noteInRampnowJournal("Viky: the card page was opened beside, from the wait");
-                noteRampnowPending(address, { via: "tab" });
-              }}
-            >
-              {toBuy ? P.payByCard(moneyIn(toBuy, "EUR")) : W.waiting.openCard}
-            </a>
-            <CardTermsLine way={wayIn} />
-          </>
+          <Steps>
+            <Step says={W.waiting.steps.payBeside(wayIn.name)}>
+              <a
+                href={wayInPage(wayIn, { account: address, euros: toBuy })}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={PRIMARY_BUTTON}
+                data-rampnow-pay-beside=""
+                onClick={() => {
+                  noteInRampnowJournal("Viky: the card page was opened beside, from the wait");
+                  noteRampnowPending(address, { via: "tab" });
+                }}
+              >
+                {toBuy ? P.payByCard(moneyIn(toBuy, "EUR")) : W.waiting.openCard}
+              </a>
+              <CardTermsLine way={wayIn} />
+            </Step>
+            <Step says={W.waiting.steps.comeBack} />
+          </Steps>
         ) : wayIn === WAY_IN_USDC && rampnowFrameOn() ? (
-          <>
-            {rampnowFailed ? <FieldRefusal id="rampnow-failed">{P.rampnow.failed}</FieldRefusal> : null}
-            <button
-              type="button"
-              className={PRIMARY_BUTTON}
-              onClick={() => {
-                setRampnowFailed(false);
-                setFrame({ mode: "new" });
-              }}
-            >
-              {toBuy ? P.payByCard(moneyIn(toBuy, "EUR")) : W.waiting.openCard}
-            </button>
-            <CardTermsLine way={wayIn} />
-          </>
+          <Steps>
+            <Step says={W.waiting.steps.pay}>
+              {rampnowFailed ? <FieldRefusal id="rampnow-failed">{P.rampnow.failed}</FieldRefusal> : null}
+              <button
+                type="button"
+                className={PRIMARY_BUTTON}
+                onClick={() => {
+                  setRampnowFailed(false);
+                  setFrame({ mode: "new" });
+                }}
+              >
+                {toBuy ? P.payByCard(moneyIn(toBuy, "EUR")) : W.waiting.openCard}
+              </button>
+              <CardTermsLine way={wayIn} />
+            </Step>
+            <Step says={W.waiting.steps.keepOpen} />
+          </Steps>
         ) : (
           <>
             <a href={wayInPage(wayIn, { account: address, euros: toBuy })} target="_blank" rel="noopener noreferrer" className={PRIMARY_BUTTON} onClick={() => setPartnerOpened(true)}>

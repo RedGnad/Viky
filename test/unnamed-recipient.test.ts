@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { FUND, MILESTONE_FUND, PAY } from "../src/sentences";
+import { FUND, PAY } from "../src/sentences";
 import { sharedWith } from "../src/preview-line";
 
 /**
@@ -15,7 +15,7 @@ test("with no name, nothing reads 'for ,' or 's name', and with a name nothing c
     PAY.rows.gift(""),
     FUND.check.linkRisk(""),
     FUND.check.putIt("$30.00", ""),
-    FUND.account.yourGift("$34.20", "", 30),
+    FUND.waiting.giftSaid("$34.20", "", 30),
     FUND.arrived.putting(undefined, "$30.00", ""),
     FUND.closed.kept("$30.00", ""),
     FUND.closed.keptWhileOpen("$30.00", ""),
@@ -23,12 +23,12 @@ test("with no name, nothing reads 'for ,' or 's name', and with a name nothing c
     FUND.made.title("$30.00", ""),
     sharedWith("", "$30.00", "It becomes yours as you go."),
     FUND.made.onlyThem(""),
-    MILESTONE_FUND.account.yourGift("$30.00", ""),
+    FUND.waiting.giftSaid("$30.00", ""),
   ];
   for (const sentence of empty) assert.doesNotMatch(sentence, broken, sentence);
-  assert.equal(FUND.account.yourGift("$34.20", "", 30), "Your gift: $34.20, 30 days.");
+  assert.equal(FUND.waiting.giftSaid("$34.20", "", 30), "$34.20, 30 days");
   assert.equal(PAY.title(""), "Pay for their gift");
   assert.equal(FUND.check.linkRisk(""), "The link you will get opens the gift for whoever opens it first. Send it only to the person it is for.");
-  assert.equal(FUND.account.yourGift("$30.00", "Noah", 30), "Your gift: $30.00 for Noah, 30 days.");
+  assert.equal(FUND.waiting.giftSaid("$30.00", "Noah", 30), "$30.00 for Noah, 30 days");
   assert.equal(PAY.title("Noah"), "Pay for Noah's gift");
 });
