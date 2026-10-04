@@ -5,9 +5,10 @@ import { ApiError } from "@/src/client/api";
 import { followMobileMoney, priceMobileMoney, sendToMobileMoney, type AccountOffer, type FollowedPayout, type MobilePrice } from "@/src/client/mobile-money";
 import { AUSD } from "@/src/coins";
 import { twoDecimalsDown } from "@/src/exit-steps";
-import { delayInWords, localInWords, MOBILE_REFUSALS } from "@/src/mobile-money";
+import { delayInWords, localInWords, localOfUnits, MOBILE_REFUSALS } from "@/src/mobile-money";
 import { MOBILE_OUT as W, USE_MONEY } from "@/src/sentences";
 import { ChoiceList } from "../kit/ChoiceList";
+import { FieldRefusal } from "../kit/FieldRefusal";
 import { BODY, CARD, CARD_AMOUNT, CARD_LABEL, FIELD, HELP, PRIMARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
 import { ButtonWords, WaitLine } from "../kit/Waiting";
 
@@ -38,12 +39,6 @@ function localTyped(typed: string): number | null {
   return amount > 0 ? amount : null;
 }
 
-/** Dollars of six decimals in local money at a rate: cut down, or, for a bound that must be reached, raised. */
-function inLocal(units: bigint, rate: number, round: "down" | "up"): number {
-  const value = (Number(units) / 1e6) * rate;
-  return round === "up" ? Math.ceil(value) : Math.floor(value);
-}
-
 /** "2 Oct, 21:40 UTC": the moment a quote was made, in the time every pass and every date of the product is said in. */
 function momentOf(iso: string): string {
   const at = new Date(iso);
@@ -60,8 +55,8 @@ export function MobileMoneyOut(props: Readonly<{ offer: Offered; ausd: bigint; e
   // The bounds of one payout now, in dollars: the corridor's, the ceilings', and what the balance holds.
   const least = BigInt(offer.minimumUnits);
   const mostUnits = [BigInt(offer.mostUnits), BigInt(offer.maximumUnits), props.ausd].reduce((low, value) => (value < low ? value : low));
-  const leastLocal = inLocal(least, offer.rate, "up");
-  const mostLocal = inLocal(mostUnits, offer.rate, "down");
+  const leastLocal = localOfUnits(least, offer.rate, "up");
+  const mostLocal = localOfUnits(mostUnits, offer.rate, "down");
   const dayReached = BigInt(offer.mostUnits) < least;
   // What it starts at: the most one payout may be now, in the country's money, at Switch's published rate.
   const [typed, setTyped] = useState(() => (mostLocal >= leastLocal ? String(mostLocal) : ""));
@@ -69,6 +64,8 @@ export function MobileMoneyOut(props: Readonly<{ offer: Offered; ausd: bigint; e
   const [step, setStep] = useState<Step | null>(null);
   const [payout, setPayout] = useState<FollowedPayout | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  /** The button was pressed: from then on each field says what it is missing, until it is right. */
+  const [pressed, setPressed] = useState(false);
 
   const operatorName = offer.operators.find((operator) => operator.code === network)?.name ?? "";
   const local = localTyped(typed);
@@ -120,7 +117,11 @@ export function MobileMoneyOut(props: Readonly<{ offer: Offered; ausd: bigint; e
   }, [waiting, payout, props]);
 
   const send = async () => {
-    if (!price || price === "unpriced" || !network) return;
+    // The button answers every press (the founder, 4 Oct 2026: it was only grey, and said nothing): a field that is
+    // missing or wrong says so under itself, and nothing is asked of the passkey until all of them are right.
+    setPressed(true);
+    if (!network || !numberFits || !holderFits || !within) return;
+    if (!price || price === "unpriced") return;
     let account: LocalAccount;
     try {
       account = await props.ensureSigner();
@@ -193,8 +194,37 @@ export function MobileMoneyOut(props: Readonly<{ offer: Offered; ausd: bigint; e
     );
   }
 
+  // The balance is under the country's smallest payout: said in place of the form, as the day's ceiling is, with the
+  // minimum in the country's money and what the person has. The field used to open empty, between two bounds the
+  // wrong way round ("From 590 F to 294 F at a time."), over a button that did nothing.
+  if (mostLocal < leastLocal) {
+    return (
+      <section className={CARD}>
+        <h2 className={TITLE}>{W.title}</h2>
+        <p className={BODY} data-mobile-under-minimum>
+          {W.underMinimum(localInWords(leastLocal, offer.currency), localInWords(localOfUnits(props.ausd, offer.rate, "down"), offer.currency))}
+        </p>
+        <button type="button" onClick={props.onBack} className={`${SMALL_BUTTON} self-start`}>
+          {W.back}
+        </button>
+      </section>
+    );
+  }
+
   const busy = step !== null;
-  const ready = price !== null && price !== "unpriced" && network !== null && numberFits && holderFits && within && !busy;
+  const missing = {
+    operator: pressed && !network ? MOBILE_REFUSALS.chooseOperator : null,
+    number: pressed && !numberFits ? MOBILE_REFUSALS.numberNotTaken : null,
+    holder: pressed && !holderFits ? MOBILE_REFUSALS.writeTheName : null,
+    amount:
+      pressed && !within
+        ? local === null
+          ? W.amountMissing
+          : local < leastLocal
+            ? W.amountUnder(localInWords(leastLocal, offer.currency))
+            : W.amountOver(localInWords(mostLocal, offer.currency))
+        : null,
+  };
   return (
     <section className={CARD}>
       <h2 className={TITLE}>{W.title}</h2>
@@ -207,20 +237,22 @@ export function MobileMoneyOut(props: Readonly<{ offer: Offered; ausd: bigint; e
         onChange={setNetwork}
         disabled={busy}
       />
+      <FieldRefusal id="mobile-operator-refusal">{missing.operator}</FieldRefusal>
+      {/* Each field: its help while nothing is wrong with it, and what it is missing in its place after a press. */}
       <label className="flex flex-col gap-[var(--space-xs)]">
         <span className={CARD_LABEL}>{W.number}</span>
-        <input value={number} onChange={(event) => setNumber(event.target.value)} inputMode="tel" autoComplete="tel" className={FIELD} disabled={busy} />
-        <span className={HELP}>{W.numberHelp}</span>
+        <input value={number} onChange={(event) => setNumber(event.target.value)} inputMode="tel" autoComplete="tel" className={FIELD} disabled={busy} aria-invalid={missing.number ? true : undefined} aria-describedby={missing.number ? "mobile-number-refusal" : undefined} />
+        {missing.number ? <FieldRefusal id="mobile-number-refusal">{missing.number}</FieldRefusal> : <span className={HELP}>{W.numberHelp}</span>}
       </label>
       <label className="flex flex-col gap-[var(--space-xs)]">
         <span className={CARD_LABEL}>{W.holder}</span>
-        <input value={holder} onChange={(event) => setHolder(event.target.value)} autoComplete="name" className={FIELD} disabled={busy} />
-        <span className={HELP}>{W.holderHelp}</span>
+        <input value={holder} onChange={(event) => setHolder(event.target.value)} autoComplete="name" className={FIELD} disabled={busy} aria-invalid={missing.holder ? true : undefined} aria-describedby={missing.holder ? "mobile-holder-refusal" : undefined} />
+        {missing.holder ? <FieldRefusal id="mobile-holder-refusal">{missing.holder}</FieldRefusal> : <span className={HELP}>{W.holderHelp}</span>}
       </label>
       <label className="flex flex-col gap-[var(--space-xs)]">
         <span className={CARD_LABEL}>{W.amount}</span>
-        <input value={typed} onChange={(event) => setTyped(event.target.value)} inputMode="numeric" className={FIELD} disabled={busy} />
-        <span className={HELP}>{W.amountHelp(localInWords(leastLocal, offer.currency), localInWords(mostLocal, offer.currency))}</span>
+        <input value={typed} onChange={(event) => setTyped(event.target.value)} inputMode="numeric" className={FIELD} disabled={busy} aria-invalid={missing.amount ? true : undefined} aria-describedby={missing.amount ? "mobile-amount-refusal" : undefined} />
+        {missing.amount ? <FieldRefusal id="mobile-amount-refusal">{missing.amount}</FieldRefusal> : <span className={HELP}>{W.amountHelp(localInWords(leastLocal, offer.currency), localInWords(mostLocal, offer.currency))}</span>}
       </label>
       {/* The figure on the number, and when it was priced: Switch's quote, never a rate of ours. */}
       <div aria-live="polite" className="flex flex-col gap-[var(--space-xs)]" data-mobile-figure>
@@ -238,7 +270,8 @@ export function MobileMoneyOut(props: Readonly<{ offer: Offered; ausd: bigint; e
           {problem}
         </p>
       ) : null}
-      <button type="button" onClick={() => void send()} disabled={!ready} className={PRIMARY_BUTTON}>
+      {/* Pressable while nothing is under way, as the giver's sheet is: a press says what is missing. */}
+      <button type="button" onClick={() => void send()} disabled={busy} className={PRIMARY_BUTTON}>
         <ButtonWords busy={step !== null} doing={step ? W.steps[step] : ""}>
           {operatorName ? W.send(operatorName) : USE_MONEY.mobile.action}
         </ButtonWords>

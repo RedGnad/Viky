@@ -4,7 +4,7 @@ import { USDC } from "./coins";
 import { exitRouterAbi } from "./exit-router-abi";
 import { exitRouterAddress } from "./exit-relay";
 import { GiftApiError } from "./gift-api";
-import { ceilingProblem, mobileMoneyOn, mostNow, numberEnd, operatorInWords, phaseOf, settled, type PayoutPhase } from "./mobile-money";
+import { ceilingProblem, MOBILE_REFUSALS, mobileMoneyOn, mostNow, numberEnd, operatorInWords, phaseOf, settled, type PayoutPhase } from "./mobile-money";
 import { dropUnpaidPayout, loadPayout, notePayoutState, payoutOfExit, recordPayout, usedToday, type MobilePayout } from "./mobile-money-store";
 import { relayerClients } from "./relayer";
 import { mobileMoneyCoverage, openPayout, payoutFields, payoutRates, payoutStatus, quotePayout, SwitchError, type Corridor, type PayoutFields, type PayoutQuote } from "./switch";
@@ -206,9 +206,9 @@ export async function startPayout(
 ): Promise<StartedPayout> {
   const offer = await offerIn(input.country, { reader: deps.reader, env: deps.env, now: deps.now });
   if (!offer.offered) throw new GiftApiError("NOT_OFFERED", "Mobile money is not offered for this country. Nothing was taken.", 409);
-  if (!offer.operators.some((operator) => operator.code === input.network)) throw new GiftApiError("UNKNOWN_OPERATOR", "Choose your operator from the list.", 400);
-  if (!new RegExp(offer.numberRule).test(input.number)) throw new GiftApiError("INVALID_NUMBER", "That number is not one this operator takes. Digits only, as your operator gives it.", 400);
-  if (!new RegExp(offer.nameRule).test(input.holderName)) throw new GiftApiError("INVALID_NAME", "Write the name on the account, as your operator has it.", 400);
+  if (!offer.operators.some((operator) => operator.code === input.network)) throw new GiftApiError("UNKNOWN_OPERATOR", MOBILE_REFUSALS.chooseOperator, 400);
+  if (!new RegExp(offer.numberRule).test(input.number)) throw new GiftApiError("INVALID_NUMBER", MOBILE_REFUSALS.numberNotTaken, 400);
+  if (!new RegExp(offer.nameRule).test(input.holderName)) throw new GiftApiError("INVALID_NAME", MOBILE_REFUSALS.writeTheName, 400);
 
   const existing = await payoutOfExit(input.exitTx);
   if (existing) {

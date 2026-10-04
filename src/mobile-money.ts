@@ -19,9 +19,22 @@ const dollars = (units: bigint) => `$${(units / DOLLAR).toString()}.${((units % 
 export const MOBILE_REFUSALS = {
   overPayout: () => `One payout can be ${dollars(BigInt(MOBILE_CEILINGS.usdPerPayout) * DOLLAR)} at most for now. Nothing was taken.`,
   overDay: (used: bigint) => `Up to ${dollars(BigInt(MOBILE_CEILINGS.usdPerAccountPerDay) * DOLLAR)} a day can go to mobile money for now, and ${dollars(used)} already went today. Nothing was taken.`,
+  /**
+   * What a field is missing, said under it after a press (the founder, 4 Oct 2026: the button was only grey, and said
+   * nothing). The route refuses with the same sentences, so the screen and the server never say two things.
+   */
+  chooseOperator: "Choose your operator from the list.",
+  numberNotTaken: "That number is not one this operator takes. Digits only, as your operator gives it.",
+  writeTheName: "Write the name on the account, as your operator has it.",
   /** Said in place of the form once the day's ceiling leaves less than the smallest payout. */
   dayReached: () => `You have sent ${dollars(BigInt(MOBILE_CEILINGS.usdPerAccountPerDay) * DOLLAR)} to mobile money today, the most for a day. It opens again tomorrow.`,
 } as const;
+
+/** Dollars of six decimals in a country's money at a rate: cut down, or, for a bound that must be reached, raised. */
+export function localOfUnits(units: bigint, rate: number, round: "down" | "up"): number {
+  const value = (Number(units) / 1e6) * rate;
+  return round === "up" ? Math.ceil(value) : Math.floor(value);
+}
 
 /** What one more payout of this many dollars may be, given what the account already sent today; a refusal names the ceiling met. */
 export function ceilingProblem(units: bigint, usedToday: bigint): string | null {
