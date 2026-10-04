@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { MOST_LINES_IN_A_FOLD } from "../app/kit/Lines";
+import { CHESS_MODES } from "../src/chess-com";
 import { BUILDING, conditionById, CONDITIONS, PRONOTE_GRADE_SHOWN, readWhen } from "../src/conditions";
 import { helpLine } from "../src/help-line";
 import { certificateById } from "../src/milestone-conditions";
@@ -159,6 +160,36 @@ test("a name not everybody knows says what it is in the grey line under it", () 
   assert.equal(wca?.under, "Rubik's Cube and others, WCA");
   assert.equal(Object.keys(WCA_EVENTS).length, 17);
   assert.deepEqual(Object.keys(WCA_EVENTS).filter((id) => !wcaEventIsTimed(id)), ["333fm", "333mbf"]);
-  for (const condition of [...CONDITIONS, ...BUILDING]) if (condition.under) assert.ok(condition.under.length <= 32 && !/\.$/.test(condition.under), `${condition.id}: a few words, no full stop`);
-  assert.match(read("app/kit/offer/WillSheet.tsx"), /\{option\.under \? \(\n\s*<span className=\{HELP\} data-what-it-is="">\n\s*\{option\.under\}\n\s*<\/span>\n\s*\) : null\}/);
+  // Every line has one, so every row of a list is the same height (the founder, 5 Oct 2026): a few words, no full
+  // stop, never a reservation, and never the line's own name again.
+  for (const condition of [...CONDITIONS, ...BUILDING, PRONOTE_GRADE_SHOWN]) {
+    // Two to five words, and short enough to hold on one line of a 360 pixel phone (31 characters do, measured).
+    // The race's line is the one he kept longer: "A marathon, a half or a 10 km".
+    const words = condition.under.split(" ").length;
+    assert.ok(words >= 2 && (words <= 5 || condition.id === "marathon-finish") && condition.under.length <= 32 && !/\.$/.test(condition.under), `${condition.id}: two to five words, no full stop ("${condition.under}")`);
+    assert.doesNotMatch(condition.under, /\bnot\b|\bonly\b|\bunless\b|\bexcept\b/i, `${condition.id}: no reservation`);
+    assert.notEqual(condition.under.toLowerCase(), condition.name.toLowerCase(), condition.id);
+  }
+  // The ten the founder added, each checked against what its reading counts.
+  assert.equal(under("duolingo-english-test"), "Taken online, on camera");
+  assert.equal(under("edx-certificate"), "Online courses");
+  assert.equal(under("mitx-online-certificate"), "Online, on MITx");
+  assert.equal(under("coursera-certificate"), "Online courses");
+  assert.equal(under("chess-rating"), "Rapid, blitz, bullet or daily");
+  assert.deepEqual([...CHESS_MODES], ["rapid", "blitz", "bullet", "daily"]);
+  assert.equal(under("chess-tactics"), "Their best puzzle rating");
+  assert.equal(under("fitbit-daily"), "From their activity tracker");
+  // Proposed as "Enrolment, a year passed or a grade": seven words, and two lines on a 360 pixel phone, so that row
+  // stood taller than the others. The same three things in five words.
+  for (const id of ["university-enrollment-shown", "university-year-passed-shown", "university-grade-shown"]) assert.equal(under(id), "Enrolment, year passed or grade", id);
+  // Two were proposed narrower than what the reading counts, and say what is true in the same form. A day on
+  // Duolingo is the profile's whole XP, whatever the course, and Duolingo teaches math, music and chess beside
+  // languages; a day on Strava is the distance of every activity, whatever its kind.
+  assert.equal(under("duolingo-daily"), "Languages, math, music or chess");
+  assert.match(read("src/duolingo-public.ts"), /"totalXp":\(\?<totalXp>/);
+  assert.equal(under("strava-daily"), "Runs, rides, walks and more");
+  const strava = read("src/strava.ts");
+  assert.match(strava, /if \(at >= start && at < end\) metres \+= distance;/);
+  assert.doesNotMatch(strava.slice(strava.indexOf("export function distanceOfDay"), strava.indexOf("/** The day's verdict")), /sport_type|\.type\b/, "no kind of activity is left out");
+  assert.match(read("app/kit/offer/WillSheet.tsx"), /<span className=\{HELP\} data-what-it-is="">\n\s*\{option\.under\}\n\s*<\/span>/);
 });
