@@ -72,9 +72,26 @@ test.describe("taking money out", () => {
       await expect(page.getByText("$9.99 of it is ready to send to Ramp.")).toBeVisible();
       await expect(page.getByRole("heading", { name: /^Step 2 of 3/ })).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Send to my bank" })).toBeEnabled();
-      // One sentence in the open on the card that decides, and the partner's ID check folded under it (rule 4).
+      // One sentence in the open on the card that decides, and four lines folded under "How it works": what the
+      // person gets, in how long, what it costs, what it takes (the founder, 4 Oct 2026).
       await expect(page.getByText("A transfer in euros to your IBAN, within two working days.", { exact: true })).toBeVisible();
-      await expect(page.locator(".said-fold").getByText("Our partner Ramp asks for your ID, once.", { exact: true })).toHaveCount(1);
+      const how = page.locator('[data-how-it-works="bank"]');
+      await how.locator("summary").click();
+      await expect(how.locator("dl.said-lines > div")).toHaveText(["You geteuros on your IBAN", "Timewithin two working days", "Cost0.99 %, at least €1.99", "You needyour ID, once, and your own account"]);
+      await expect(how.locator("p")).toHaveCount(0);
+      await how.scrollIntoViewIfNeeded();
+      await shot(page, size.name, "1a1-how-the-bank-works");
+      await how.locator("summary").click();
+      // The phone and the gift card say theirs the same way, and no card of this screen folds a paragraph.
+      for (const use of ["phone", "giftcard"]) {
+        const fold = page.locator(`[data-how-it-works="${use}"]`);
+        await fold.locator("summary").click();
+        await expect(fold.locator("dl.said-lines > div")).toHaveCount(4);
+        await fold.scrollIntoViewIfNeeded();
+        await shot(page, size.name, `1a1-how-the-${use}-works`);
+        await fold.locator("summary").click();
+      }
+      await expect(page.locator("[data-how-it-works] p")).toHaveCount(0);
       await shot(page, size.name, "1a-first-screen-with-money-ready");
       // Where the figures come from, folded under everything: a line a service, a label and its value, never a
       // paragraph (the founder, 4 Oct 2026), and the rate's source last.
@@ -148,7 +165,10 @@ test.describe("taking money out", () => {
       await american.page.goto("/cash-out");
       const bank = american.page.locator("section", { has: american.page.getByRole("heading", { name: "Your bank" }) });
       await expect(bank.getByText("A transfer in dollars to your bank account.", { exact: true })).toBeVisible();
-      await expect(bank.locator(".said-fold").getByText("Our partner Ramp asks for your ID, once.", { exact: true })).toHaveCount(1);
+      // How it works there: dollars, and no time, which its service publishes for a transfer in euros alone.
+      await bank.locator(".said-fold summary").click();
+      await expect(bank.locator(".said-fold dl.said-lines > div")).toHaveText(["You getdollars on your bank account", "Cost0.99 %, at least €1.99", "You needyour ID, once, and your own account"]);
+      await bank.locator(".said-fold summary").click();
       await expect(bank.getByText(/IBAN|euros/)).toHaveCount(0);
       // A hundred dollars less the service's 1.99 EUR minimum, counted back at the day's rate: said in dollars.
       await expect(bank.getByText("$97.74")).toBeVisible();

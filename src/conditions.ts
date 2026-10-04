@@ -270,6 +270,13 @@ export type Condition = Readonly<{
    * here only where the table said more than the register already did.
    */
   help: string;
+  /**
+   * "How this is checked", on the sheet where a condition is chosen (the founder, 4 Oct 2026): four lines, a label
+   * and its value. Where it is read from, when, what counts, what the person has to do. The subject stays exact: the
+   * account did it, never "they did it", and nothing says it cannot be cheated. What a reading does not prove is said
+   * on the judges page, condition by condition (src/condition-proof.ts), and not on this sheet.
+   */
+  checked: Readonly<{ from: string; when: string; counts: string; they: string }>;
   link: ConditionLink;
   /**
    * The title of the step that asks the condition's own detail (structure, section 5, step 3): who is read, and what
@@ -389,7 +396,8 @@ export const DUOLINGO_DAILY: Condition = {
   source: "Duolingo",
   family: "learn",
   name: "A Duolingo lesson each day",
-  help: "Read each morning from their public Duolingo profile, with nothing to install: it proves the account did the lesson, not who held the phone.",
+  help: "Read each morning from their public Duolingo profile, with nothing to install: it proves the account did the lesson.",
+  checked: { from: "their public Duolingo profile", when: "every day, for the day before", counts: "a lesson the account did that day", they: "connect Duolingo once" },
   link: {
     kind: "username",
     label: "Their Duolingo name",
@@ -492,6 +500,7 @@ export const CHESS_RATING: Condition = {
   family: "play",
   name: "A chess rating on Chess.com",
   help: "Their public Chess.com rating, read every day: Chess.com polices cheating itself, and Viky never pays an account it has closed.",
+  checked: { from: "their public Chess.com profile", when: "every day", counts: "the rating the account reaches", they: "connect their account once" },
   link: {
     kind: "username",
     label: "Their Chess.com name",
@@ -543,6 +552,7 @@ export const CHESS_TACTICS_RECORD: Condition = {
   family: "play",
   name: "A puzzle record on Chess.com",
   help: "The best puzzle rating that account ever reached, on the same public page as their rating: it only goes up, and Viky never pays an account Chess.com has closed.",
+  checked: { from: "their public Chess.com profile", when: "every day", counts: "the best puzzle rating it reaches", they: "connect their account once" },
   link: {
     kind: "username",
     label: "Their Chess.com name",
@@ -591,6 +601,7 @@ export const DUOLINGO_ENGLISH_TEST: Condition = {
   family: "exam",
   name: "A Duolingo English Test score",
   help: "Sat on camera with an identity document, marked by examiners: the score is read from the page they share, and nobody can award it to themselves.",
+  checked: { from: "the certificate page they share", when: "when they share its link", counts: "the score printed on it", they: "share their certificate's link" },
   link: {
     kind: "link",
     label: "The link to your certificate",
@@ -620,7 +631,8 @@ export const COURSERA_CERTIFICATE: Condition = {
   source: "Coursera",
   family: "exam",
   name: "A Coursera certificate",
-  help: "The certificate's public page, shared when they have it: the course and the day are read from it, and Coursera checks identity once, not each piece of work.",
+  help: "The certificate's public page, shared when they have it: the course and the day are read from it, and Coursera checks identity once.",
+  checked: { from: "the certificate's public page", when: "when they share its link", counts: "the course, the name and the day", they: "share their certificate's link" },
   link: { kind: "link", label: "The link to your certificate", help: "In Coursera, open the certificate and choose Share, then paste the link here." },
   reading: "coursera-certificate",
   words: {
@@ -650,6 +662,7 @@ export const EDX_CERTIFICATE: Condition = {
   // The schools behind the courses, which is what a funder recognises (the founder, 29 Sep 2026), in the register's 30.
   name: "Harvard, MIT and more, on edX",
   help: "The verified certificate's public page on edX, shared when they have it: the course and the day are read from it, and edX checks identity for that track.",
+  checked: { from: "the certificate's public page on edX", when: "when they share its link", counts: "the course, the name and the day", they: "share their certificate's link" },
   link: { kind: "link", label: "The link to your certificate", help: "In edX, open the certificate and copy the whole link from your browser, courses.edx.org/certificates/ followed by its id, then paste it here." },
   reading: "edx-certificate",
   words: {
@@ -677,6 +690,7 @@ export const MITX_ONLINE_CERTIFICATE_LINE: Condition = {
   family: "exam",
   name: "An MIT course certificate",
   help: "The certificate's public page on MITx Online, shared when they have it: the course and the day are read from it. It proves a course taken, not a place at MIT.",
+  checked: { from: "the certificate's page on MITx Online", when: "when they share its link", counts: "the course, the name and the day", they: "share their certificate's link" },
   link: { kind: "link", label: "The link to your certificate", help: "In MITx Online, open the certificate from your dashboard and copy the whole link from your browser, mitxonline.mit.edu/certificate/ followed by its id, then paste it here." },
   reading: "mitx-online-certificate",
   words: {
@@ -710,6 +724,7 @@ export const CREDLY_BADGE: Condition = {
   family: "learn",
   name: "A certification on Credly",
   help: "The badge its issuer published, read from Credly's own record of it: the issuer awards the badge, and nobody can award one to themselves.",
+  checked: { from: "Credly's own record of the badge", when: "when they share its link", counts: "the certification, in their name", they: "share their badge's link" },
   link: { kind: "link", label: "The link to your badge", help: "In Credly, open the badge and choose Share, then paste the link here." },
   reading: "credly-assertion",
   words: {
@@ -738,6 +753,7 @@ export const ACCREDIBLE_CREDENTIAL: Condition = {
   family: "learn",
   name: "A credential on Accredible",
   help: "The credential its issuer published on Accredible, read from its public record: the title, the issuer and the day, and nobody can issue one to themselves.",
+  checked: { from: "Accredible's public record of it", when: "when they share its link", counts: "the credential, in their name", they: "share their credential's link" },
   link: { kind: "link", label: "The link to your credential", help: "Open your credential on credential.net and copy the whole link from your browser, then paste it here." },
   reading: "accredible-credential",
   words: {
@@ -765,7 +781,8 @@ export const TOEFL_MYBEST_SHOWN: Condition = {
   source: "ETS",
   family: "exam",
   name: "A TOEFL score, shown",
-  help: "A score they hold, shown from their own ETS account: it proves the account that signed in, not who sat the test, and when it was earned is not read.",
+  help: "A score they hold, shown from their own ETS account: it proves the account that signed in holds it, and when it was earned is not read.",
+  checked: { from: "their own ETS account", when: "when they show it", counts: "the score the account holds", they: "sign in to ETS and show it" },
   link: { kind: "link", label: "Show it from your ETS account", help: "Press Show it on your gift's page and sign in to ETS in the tab that opens. Nothing to paste." },
   reading: "toefl-mybest-shown",
   words: {
@@ -795,7 +812,8 @@ export const UNIVERSITY_ENROLLMENT_SHOWN: Condition = {
   family: "exam",
   name: "Enrolled at university, shown",
   group: { id: "university", mode: "Enrolled" },
-  help: "Shown by them from their own student portal: the page that says they are enrolled, no marks read. It proves the account, not who sits in class.",
+  help: "Shown by them from their own student portal: the page that says they are enrolled, no marks read. It proves the account is enrolled.",
+  checked: { from: "their own student portal", when: "when they show it", counts: "the page that says enrolled", they: "sign in and show the page" },
   link: { kind: "link", label: "Show it from your student portal", help: "Press Show it on your gift's page and sign in to your university's portal in the tab that opens. Nothing to paste." },
   reading: "university-enrollment-shown",
   words: {
@@ -825,7 +843,8 @@ export const UNIVERSITY_YEAR_PASSED_SHOWN: Condition = {
   family: "exam",
   name: "Passed the year at university",
   group: { id: "university", mode: "The year passed" },
-  help: "The results page of their own student portal, shown by them, saying they passed the year or the semester: it proves the account, not who sat the exams.",
+  help: "The results page of their own student portal, shown by them, saying they passed the year or the semester: it proves the account passed.",
+  checked: { from: "their own student portal", when: "when they show it", counts: "the page that says passed", they: "sign in and show the page" },
   link: { kind: "link", label: "Show it from your student portal", help: "Press Show it on your gift's page and sign in to your university's portal in the tab that opens. Nothing to paste." },
   reading: "university-year-passed-shown",
   words: {
@@ -856,7 +875,8 @@ export const UNIVERSITY_GRADE_SHOWN: Condition = {
   family: "exam",
   name: "Reached a grade at university",
   group: { id: "university", mode: "A grade" },
-  help: "The results page of their own student portal, shown by them, with the grade read on the university's own scale: it proves the account, not who sat the exams.",
+  help: "The results page of their own student portal, shown by them, with the grade read on the university's own scale: it proves the account's grade.",
+  checked: { from: "their own student portal", when: "when they show it", counts: "the grade on the results page", they: "sign in and show the page" },
   link: { kind: "link", label: "Show it from your student portal", help: "Press Show it on your gift's page and sign in to your university's portal in the tab that opens. Nothing to paste." },
   reading: "university-grade-shown",
   words: {
@@ -884,7 +904,8 @@ export const CHSI_ENROLMENT_SHOWN: Condition = {
   source: "CHSI",
   family: "exam",
   name: "Enrolled in China, shown",
-  help: "Their own student-status report on CHSI, the Ministry's register, opened by them with its code: enrolled or not. It proves the report's holder, not who sits in class.",
+  help: "Their own student-status report on CHSI, the Ministry's register, opened by them with its code: enrolled or not. It proves what the report says.",
+  checked: { from: "their own CHSI report", when: "when they show it", counts: "the report that says enrolled", they: "open their report and show it" },
   link: { kind: "link", label: "Show it from your CHSI report", help: "Press Show it on your gift's page, then type your report's verification code in the tab that opens. Nothing to paste here." },
   reading: "chsi-enrolment-shown",
   words: {
@@ -911,7 +932,8 @@ export const WAEC_RESULT_SHOWN: Condition = {
   source: "WAEC",
   family: "exam",
   name: "WASSCE credits, shown",
-  help: "Their own WASSCE result on WAEC's checker, opened by them with their result card: the credits, English and Mathematics among them. It proves the result, not who sat the exam.",
+  help: "Their own WASSCE result on WAEC's checker, opened by them with their result card: the credits, English and Mathematics among them. It proves the result.",
+  checked: { from: "WAEC's own result checker", when: "when they show it", counts: "the credits on the result", they: "open their result and show it" },
   link: { kind: "link", label: "Show it from WAEC's result checker", help: "Press Show it on your gift's page, then type your examination number and your card on WAEC's page in the tab that opens. Nothing to paste here." },
   reading: "waec-result-shown",
   words: {
@@ -942,7 +964,8 @@ export const FITBIT_DAILY: Condition = {
   source: "Fitbit",
   family: "move",
   name: "Active minutes a day, Fitbit",
-  help: "Connected once through Google: each morning, did yesterday's Fitbit reach the minutes? Viky keeps only yes or no. It proves the tracker moved, not the wearer.",
+  help: "Connected once through Google: each morning, did yesterday's Fitbit reach the minutes? Viky keeps only yes or no. It proves the tracker moved.",
+  checked: { from: "their Fitbit, through Google", when: "each morning, for the day before", counts: "the tracker's active minutes", they: "connect Fitbit once" },
   link: {
     kind: "connect",
     label: "Connect your Fitbit",
@@ -1004,7 +1027,8 @@ export const CODEFORCES_RATING: Condition = {
   source: "Codeforces",
   family: "learn",
   name: "Reach a Codeforces rating",
-  help: "Their public Codeforces rating, read every day: Codeforces polices cheating itself and makes rounds unrated when it must. It proves the rating, not who solved.",
+  help: "Their public Codeforces rating, read every day: Codeforces polices cheating itself and makes rounds unrated when it must. It proves the rating.",
+  checked: { from: "their public Codeforces profile", when: "every day", counts: "the rating the account reaches", they: "connect their account once" },
   link: {
     kind: "username",
     label: "Their Codeforces handle",
@@ -1054,7 +1078,8 @@ export const WCA_TIME_LINE: Condition = {
   family: "play",
   // The founder's "Set a time at a WCA competition" is thirty-one characters; the card holds thirty (21 Sep 2026).
   name: "A time at a WCA competition",
-  help: "Their result in one event at one competition, read from the WCA's public results: the name, the event, the best single. It proves the result, not who solved.",
+  help: "Their result in one event at one competition, read from the WCA's public results: the name, the event, the best single. It proves the result.",
+  checked: { from: "the WCA's public results", when: "after the competition", counts: "the result under their name", they: "register for the event, then compete" },
   link: { kind: "link", label: "Your WCA ID or your name", help: "Before the competition, check on your gift's page that you are on its competitors list. After it, Viky reads your result." },
   reading: "wca-person-results",
   words: {
@@ -1083,7 +1108,8 @@ export const MARATHON_FINISH_LINE: Condition = {
   source: "Breizh Chrono",
   family: "move",
   name: "Finish a marathon",
-  help: "Their line on the timing company's results page, read for them: the name, the bib and the official time. It proves the result, not who wore the bib.",
+  help: "Their line on the timing company's results page, read for them: the name, the bib and the official time. It proves the result.",
+  checked: { from: "the timing company's results page", when: "after the finish", counts: "the line with their bib and name", they: "enter their bib before the start" },
   link: { kind: "link", label: "Your bib number", help: "Enter the number on your bib on your gift's page before the race starts. After the finish, Viky reads your line on the results page." },
   reading: "breizh-chrono-runner",
   words: {
@@ -1106,7 +1132,8 @@ export const STRAVA_DAILY: Condition = {
   source: "Strava",
   family: "move",
   name: "Kilometres each day, on Strava",
-  help: "Connected once: each morning, did yesterday's Strava activities reach the distance? Viky keeps only yes or no. It proves the account moved, not who moved.",
+  help: "Connected once: each morning, did yesterday's Strava activities reach the distance? Viky keeps only yes or no. It proves the account moved.",
+  checked: { from: "their Strava activities", when: "each morning, for the day before", counts: "the account's kilometres that day", they: "connect Strava once" },
   link: {
     kind: "connect",
     label: "Connect your Strava",
@@ -1173,7 +1200,8 @@ export const CAMBRIDGE_ENGLISH_SHOWN: Condition = {
   source: "Cambridge English",
   family: "exam",
   name: "A Cambridge English result, shown",
-  help: "Their Statement of Results, shown from their own Cambridge English account: the overall score on the Cambridge English Scale and its level. It proves the account, not who sat the exam.",
+  help: "Their Statement of Results, shown from their own Cambridge English account: the overall score on the Cambridge English Scale and its level. It proves the account's result.",
+  checked: { from: "their own Cambridge English account", when: "when they show it", counts: "the score on the account", they: "sign in and show the page" },
   link: EXAM_LINK,
   reading: "cambridge-english-shown",
   words: {
@@ -1195,7 +1223,8 @@ export const IELTS_SHOWN: Condition = {
   source: "British Council",
   family: "exam",
   name: "An IELTS band, shown",
-  help: "Their result, shown from their own British Council test taker account: the overall band. It proves the account, not who sat the test.",
+  help: "Their result, shown from their own British Council test taker account: the overall band. It proves the account's result.",
+  checked: { from: "their own British Council account", when: "when they show it", counts: "the band on the account", they: "sign in and show the page" },
   link: EXAM_LINK,
   reading: "ielts-shown",
   words: {
@@ -1217,7 +1246,8 @@ export const BAC_MOROCCO_SHOWN: Condition = {
   source: "Bac Digital",
   family: "exam",
   name: "The baccalauréat passed, Morocco",
-  help: "The Ministry's own Bac Digital service, opened by the candidate with their CNE and CIN in their own browser, shown by them: passed or not. It proves the candidate's numbers, not who sat the exam.",
+  help: "The Ministry's own Bac Digital service, opened by the candidate with their CNE and CIN in their own browser, shown by them: passed or not. It proves the result for those numbers.",
+  checked: { from: "the Ministry's own results service", when: "when they show it", counts: "the page that says passed", they: "sign in and show the page" },
   link: EXAM_LINK,
   reading: "bac-morocco-shown",
   words: {
@@ -1239,7 +1269,8 @@ export const BAC_CAMEROON_SHOWN: Condition = {
   source: "Epim-Exam",
   family: "exam",
   name: "The baccalauréat passed, Cameroon",
-  help: "The candidate's own space on Epim-Exam, the Office du Baccalauréat's platform, shown by them: passed or not. It proves the account, not who sat the exam.",
+  help: "The candidate's own space on Epim-Exam, the Office du Baccalauréat's platform, shown by them: passed or not. It proves the account's result.",
+  checked: { from: "the candidate's own space", when: "when they show it", counts: "the page that says passed", they: "sign in and show the page" },
   link: EXAM_LINK,
   reading: "bac-cameroon-shown",
   words: {
@@ -1261,7 +1292,8 @@ export const BAC_FRANCE_SHOWN: Condition = {
   source: "Cyclades",
   family: "exam",
   name: "The baccalauréat passed, France",
-  help: "The candidate's own Cyclades space, shown by them: passed or not, as the results page says it. It proves the account, not who sat the exam.",
+  help: "The candidate's own Cyclades space, shown by them: passed or not, as the results page says it. It proves the account's result.",
+  checked: { from: "the candidate's own space", when: "when they show it", counts: "the page that says passed", they: "sign in and show the page" },
   link: EXAM_LINK,
   reading: "bac-france-shown",
   words: {
@@ -1287,7 +1319,8 @@ export const ECOLEDIRECTE_GRADE_SHOWN: Condition = {
   source: ECOLEDIRECTE_SOURCE,
   family: "exam",
   name: "Reach an average at school, shown",
-  help: "Their own EcoleDirecte account, or the family's, shown by them: the overall average out of 20 on the grades page. It proves the account, not who did the work.",
+  help: "Their own EcoleDirecte account, or the family's, shown by them: the overall average out of 20 on the grades page. It proves the account's average.",
+  checked: { from: "their own EcoleDirecte account", when: "when they show it", counts: "the average on the account", they: "sign in and show the page" },
   link: { kind: "link", label: "Show it from your EcoleDirecte account", help: "Press Show it on your gift's page and sign in to EcoleDirecte in the tab that opens. Nothing to paste." },
   reading: "ecoledirecte-grade-shown",
   words: {
@@ -1314,7 +1347,8 @@ export const PRONOTE_GRADE_SHOWN: Condition = {
   source: PRONOTE_SOURCE,
   family: "exam",
   name: "An average on PRONOTE, shown",
-  help: "The family's own PRONOTE space, shown by them: the overall average out of 20. It proves the account, not who did the work.",
+  help: "The family's own PRONOTE space, shown by them: the overall average out of 20. It proves the account's average.",
+  checked: { from: "their own PRONOTE space", when: "when they show it", counts: "the average on the account", they: "sign in and show the page" },
   link: { kind: "link", label: "Show it from your PRONOTE space", help: "Press Show it on your gift's page and sign in to the school's PRONOTE space in the tab that opens. Nothing to paste." },
   reading: "pronote-grade-shown",
   words: {
@@ -1451,6 +1485,17 @@ export type CatalogueSection = ConditionSection & Readonly<{ building: readonly 
  * page. Their code and their conditions are kept.
  */
 export const FOR_PUPILS: readonly string[] = ["ecoledirecte-grade-shown", "pronote-grade-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown"];
+
+/**
+ * When a condition is read, the value of the line "Read": on the sheet where it is chosen, the same value the gift's
+ * own page prints for it in "How this is checked" (the founder, 4 Oct 2026). A habit read for the person says it in
+ * its own words, and differently when a day is paid the day it is read; every other condition has one answer.
+ */
+export function readWhen(condition: Condition, sameDay: boolean): string {
+  const words = condition.recipient;
+  if (words) return sameDay && words.asItGoes ? words.asItGoes.reads : words.reads;
+  return condition.checked.when;
+}
 
 /** The lines being built that a page may print: every one but the pupils'. */
 export function buildingForAdults(): readonly Condition[] {
