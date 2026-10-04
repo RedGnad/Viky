@@ -45,7 +45,7 @@ test("a reader is offered no gesture at all, and the two people keep theirs", ()
   for (const gift of [unopened, counting, won]) assert.equal(readAs(gift, "reader").action, null, "a reader is offered something");
 
   assert.equal(readAs(unopened, "recipient").action, "open");
-  assert.equal(readAs(won, "recipient").action, "take");
+  assert.equal(readAs(won, "recipient").action, null, "what a gift paid is used from Home: the page asks nothing");
   assert.equal(readAs(unopened, "funder").action, "linkAgain", "the link lives with the account that made the gift");
   assert.equal(readAs(won, "funder").action, null, "what was earned leaves only to the person it is for");
   assert.equal(readAs(counting, "funder").action, null);

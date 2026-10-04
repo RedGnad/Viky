@@ -5,7 +5,7 @@ import { giftStatusFor, type AnyGiftStatus } from "@/src/gift-status";
 import { originOfThePage, signedInAccount } from "@/src/who-is-reading";
 import { GiftPage } from "../../components/GiftPage";
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ t?: string; take?: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ t?: string }> };
 
 /**
  * What the link carries in `?t=` as the page accepts it, or nothing: the link's key on the first version of the
@@ -61,8 +61,8 @@ async function giftOnTheServer(id: string, linkKey: string | null): Promise<AnyG
 /** The page a recipient lands on from the link. No install, no crypto words, one screen. */
 export default async function Page(props: Props) {
   const { id } = await props.params;
-  const { t, take } = await props.searchParams;
+  const { t } = await props.searchParams;
   if (!/^\d{1,78}$/.test(id)) notFound();
   const linkKey = keyOf(t);
-  return <GiftPage giftId={id} linkKey={linkKey} initialStatus={await giftOnTheServer(id, linkKey)} openTake={take === "1"} />;
+  return <GiftPage giftId={id} linkKey={linkKey} initialStatus={await giftOnTheServer(id, linkKey)} />;
 }

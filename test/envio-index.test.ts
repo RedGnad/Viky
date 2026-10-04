@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { envioGraphqlUrl, heldPerContract, INDEX_TIMEOUT_MS, readIndex } from "../src/envio-index";
+import { envioGraphqlUrl, heldPerContract, INDEX_TIMEOUT_MS, readIndex, versionOf } from "../src/envio-index";
 
 /**
  * The index of the contracts' events, as the judges page reads it (the audit of 1 Oct 2026, D-14). One POST, cut at
@@ -125,4 +125,18 @@ test("the judges page shows the index beside the chain, and says so when it cann
   assert.match(readFileSync("app/judges/JudgesMera.tsx", "utf8"), /How many are written there could not be read from the index just now\./);
   assert.match(readFileSync("app/judges/JudgesMinute.tsx", "utf8"), /The index of the contracts' events could not be read just now, so no count is given here: /);
   assert.match(readFileSync("src/envio-index.ts", "utf8"), /\} catch \{\s*return null;\s*\}\s*\}/, "the reading answers nothing, it never throws");
+});
+
+test("a gift's version is read as the index writes it: 1, 2 or 3, and anything else refuses the reading", () => {
+  // Every version that was not 2 used to be read as 1 (the advisor, 4 Oct 2026): once the index reads the third daily
+  // contract, its gifts would have been counted with the first version's on the judges page.
+  assert.deepEqual([versionOf(1), versionOf(2), versionOf(3), versionOf("3")], [1, 2, 3, 3]);
+  for (const other of [0, 4, -1, 2.5, null, undefined, "three"]) assert.throws(() => versionOf(other), `${String(other)} is no version`);
+  const source = readFileSync("src/envio-index.ts", "utf8");
+  assert.match(source, /version: versionOf\(gift\.version\),/);
+  assert.doesNotMatch(source, /=== 2 \? 2 : 1/);
+  // The judges' minute names the contracts a gift is made on today: the third daily one once it is set.
+  const page = readFileSync("app/judges/page.tsx", "utf8");
+  assert.match(page, /thirdVersionSet\n\s*\? \{ daily: giftEscrowV3Address\(\), milestone: milestoneV2, anchor, version: 3 \}/);
+  assert.match(readFileSync("app/judges/JudgesMinute.tsx", "utf8"), /contracts\.version === 3\n\s*\? "A gift is made on these today: the daily one is the third version of its contract, the two others the second; the earlier contracts are under "/);
 });

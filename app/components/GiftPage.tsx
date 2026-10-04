@@ -21,7 +21,6 @@ import {
   countNow,
   loadGiftStatus,
   nameGoalAccount,
-  withdrawEarned,
   type GiftStatus,
   type PublicOutcome,
 } from "@/src/client/gift";
@@ -29,7 +28,7 @@ import { checkMilestone, requestMilestoneCode, startMilestone, type MilestoneOut
 import { conditionById, conditionOfGoal } from "@/src/conditions";
 import { dayNow, lessonWouldPay } from "@/src/day-now";
 import { stripFromRecord } from "@/src/day-states";
-import { spokenAmount, whenInWords } from "@/src/display-currency";
+import { spokenAmount } from "@/src/display-currency";
 import { giftOfMilestone, giftOfSummary, funderMayTakeItBack, readAs } from "@/src/gift-moment";
 import { asItGoesNow, eyebrowOf, liveOf, titleOf } from "@/src/gift-live";
 import { notTheirs, voiceOf, type Voice } from "@/src/gift-voice";
@@ -71,12 +70,11 @@ import { LiveLine, useLiveReading } from "../kit/LiveReading";
 import { openDayLine } from "@/src/client/limit";
 import { contactEmail } from "@/src/contact";
 import { Arrival, ArrivalAmount, Reacts, useLastSeen } from "../kit/Motion";
-import { Sheet } from "../kit/Sheet";
 import { Shell } from "../kit/Shell";
 import { ButtonWords, StepInProgress, WaitLine } from "../kit/Waiting";
 import { YouDecide } from "../kit/YouDecide";
 import { AccountPanel } from "./AccountPanel";
-import { BODY, CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "./ui";
+import { BODY, HELP, PRIMARY_BUTTON, SMALL_BUTTON } from "./ui";
 
 /**
  * A gift's page: the card of Home, alive (the vision of 19 Sep 2026, section 5; document J).
@@ -93,8 +91,8 @@ import { BODY, CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from
  * at the one moment a signature is needed.
  */
 
-type Busy = "idle" | "opening" | "naming" | "starting" | "counting" | "taking";
-type Where = "open" | "name" | "start" | "count" | "take";
+type Busy = "idle" | "opening" | "naming" | "starting" | "counting";
+type Where = "open" | "name" | "start" | "count";
 
 
 /** Our own typed sentences verbatim; anything else as one plain line, so no library's words reach a person. */
@@ -111,7 +109,7 @@ function screenMessage(error: unknown): string {
  * one tree and then the entrance animation of another. What the browser still does is ask again after something
  * happens on the screen, which is a refresh of the same tree and not a second screen.
  */
-export function GiftPage({ giftId, linkKey, initialStatus, openTake = false }: Readonly<{ giftId: string; linkKey: string | null; initialStatus?: AnyGiftStatus | null; openTake?: boolean }>) {
+export function GiftPage({ giftId, linkKey, initialStatus }: Readonly<{ giftId: string; linkKey: string | null; initialStatus?: AnyGiftStatus | null }>) {
   const [status, setStatus] = useState<GiftStatus | MilestoneStatus | null>(initialStatus ?? null);
   const [loadError, setLoadError] = useState<string | null>(null);
   /** Whether the gift on screen is the one the server just read, which needs no second reading to be true. */
@@ -170,7 +168,7 @@ export function GiftPage({ giftId, linkKey, initialStatus, openTake = false }: R
       </Shell>
     );
   }
-  return <LiveGift status={status} linkKey={linkKey} reload={reload} refresh={refresh} openTake={openTake} />;
+  return <LiveGift status={status} linkKey={linkKey} reload={reload} refresh={refresh} />;
 }
 
 const onHashChange = (changed: () => void) => {
@@ -187,7 +185,7 @@ function useOpeningSecret(): string | null {
   return useSyncExternalStore(onHashChange, () => openingSecretOf(window.location.hash), () => null);
 }
 
-function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ status: GiftStatus | MilestoneStatus; linkKey: string | null; reload: () => Promise<void>; refresh: () => Promise<void>; openTake: boolean }>) {
+function LiveGift({ status, linkKey, reload, refresh }: Readonly<{ status: GiftStatus | MilestoneStatus; linkKey: string | null; reload: () => Promise<void>; refresh: () => Promise<void> }>) {
   const { address, hasCredential, ensureSigner, status: accountStatus } = useAccount();
   const openingSecret = useOpeningSecret();
   const door = useDoor();
@@ -200,11 +198,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
   /** The step a running gesture is on, named under its button once the wait has passed ten seconds (app/kit/Waiting.tsx). */
   const [step, setStep] = useState<string | null>(null);
   const [answer, setAnswer] = useState<{ at: Where; text: string; failed: boolean } | null>(null);
-  // The moment's "Take" arrives here with the review open, which is the one press left (app/kit/ReachedMoment.tsx).
-  const [reviewing, setReviewing] = useState(openTake);
   /** A signed-out reader of an opened gift asked to sign in: the quiet line opens the door, it is not the moment's action. */
   const [signingIn, setSigningIn] = useState(false);
-  const [taken, setTaken] = useState<{ amount: string; atMs: number; take: number } | null>(null);
   // Whether an account was signed in on this page before it went: then the session closed while they were here,
   // rather than a page opened again with nobody signed in (D74, D80).
   const [hadAccount, setHadAccount] = useState(false);
@@ -306,7 +301,6 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
   const working = busy !== "idle" || accountStatus === "busy";
   const earned = BigInt(milestone ? milestone.earned : (daily?.earned ?? "0"));
   const amountDisplay = milestone ? milestone.amountDisplay : (daily?.amountDisplay ?? "");
-  const earnedDisplay = milestone ? milestone.earnedDisplay : (daily?.earnedDisplay ?? "");
   const returnedDisplay = milestone ? milestone.returnedDisplay : (daily?.returnedDisplay ?? "");
   const theirsDisplay = milestone
     ? milestone.reached
@@ -377,7 +371,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
     nextReadingInWords: moment === "counting" || moment === "climbing" ? nextReading : null,
     nextReadingAt: moment === "counting" && nextPass !== null ? hourInWords(nextPass) : null,
     cameBackOnInWords: cameBackOn,
-    takeableFromHome: !milestone && earned > 0n,
+    // What a gift paid is used from Home, a habit's as a milestone's: nothing on this page takes it any more.
+    takeableFromHome: earned > 0n,
     proof: proofStands,
     lateUntilInWords: lateUntilMs === null ? null : dateInWords(lateUntilMs, zone),
     // Ended by the person it is for: the day in this reader's clock, and the two amounts the ending moved.
@@ -527,28 +522,6 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
     );
   const countToday = () =>
     run("counting", "count", async () => (milestone ? milestoneOutcome(await checkMilestone(giftId)) : dailyOutcome(await countNow(giftId))), WAITS.counting(source));
-  const take = () =>
-    run(
-      "taking",
-      "take",
-      async () => {
-        // The passkey is opened here, at the one moment a signature is needed, rather than assumed to be open.
-        const signer = await ensureSigner();
-        const takeNumber = Number(milestone ? milestone.withdrawNonce : (daily?.withdrawNonce ?? "0")) + 1;
-        setStep(WAITS.taking);
-        await withdrawEarned({
-          account: signer,
-          giftId,
-          escrow: milestone ? milestone.escrow : (daily?.escrow as `0x${string}`),
-          amount: earned,
-          nonce: BigInt(milestone ? milestone.withdrawNonce : (daily?.withdrawNonce ?? "0")),
-        });
-        setReviewing(false);
-        setTaken({ amount: earnedDisplay, atMs: Date.now(), take: takeNumber });
-        return null;
-      },
-      WAITS.passkey,
-    );
 
   const answerAt = (where: Where): ReactNode =>
     answer && answer.at === where ? (
@@ -687,40 +660,6 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         ) : (
           <CertificateProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} onProved={reloadAll} />
         );
-      case "take":
-        // The one sentence of taking is read in a sheet, over the card (rule 4: a sentence that long is not left in
-        // the open), and the press that signs is there, with "Not now" under it.
-        return (
-          <>
-            <button type="button" onClick={() => setReviewing(true)} disabled={working} className={PRIMARY_BUTTON}>
-              {W.take(earnedDisplay)}
-            </button>
-            <Sheet
-              open={reviewing}
-              title={W.takeTitle(earnedDisplay)}
-              onClose={() => {
-                if (busy !== "taking") setReviewing(false);
-              }}
-              footer={
-                <>
-                  <button type="button" onClick={take} disabled={working} className={PRIMARY_BUTTON}>
-                    <ButtonWords busy={busy === "taking"} doing={W.taking}>
-                      {W.take(earnedDisplay)}
-                    </ButtonWords>
-                  </button>
-                  <StepInProgress busy={busy === "taking"} step={step} />
-                  <button type="button" onClick={() => setReviewing(false)} disabled={working} className={SECONDARY_BUTTON}>
-                    {W.notNow}
-                  </button>
-                  {answerAt("take")}
-                </>
-              }
-            >
-              <p className={BODY}>{W.takeReview}</p>
-              {money.about(earned) ? <p className={HELP}>{money.about(earned)}</p> : null}
-            </Sheet>
-          </>
-        );
       case "linkAgain":
         // Shared with who gave it, how much in the reader's own currency (the funder's), and what it is.
         return <LinkAgain giftId={giftId} found={linkOpened} shareText={sharedWith(funderName, spokenAmount(money.led(BigInt(status.amount))), previewLine(condition, Boolean(milestone)))} />;
@@ -785,8 +724,9 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
     readerIsFunder && linkOpened && !gift.finished && !gift.cancelled ? ([W.lines.canEnd(recipientName), W.lines.theRest] as const) : null,
     // On the third daily contract a day is paid the day it is read: what that guarantees, and no more.
     daily && paysTheSameDay(status.version) && words?.asItGoes ? words.asItGoes.agreed : null,
-    // Where money already theirs goes (rule 5).
-    live.quiet ? ([W.lines.yoursAlready, W.lines.fromHome] as const) : null,
+    // Where money already theirs goes (rule 5), at every moment it has some: while it counts, and once it is reached
+    // or ended, where "Take $2.00" stood until 4 Oct 2026.
+    mine && earned > 0n ? ([W.lines.yoursAlready, W.lines.fromHome] as const) : null,
     milestone && milestone.startReading !== null ? ([M.lines.startedAt, String(milestone.startReading)] as const) : null,
     readerIsFunder ? ([W.lines.made, W.lines.madeOn(dateInWords(status.createdAtChain * 1000, zone), giftId)] as const) : null,
   ]
@@ -961,18 +901,9 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         {/* The moment a gift is reached, to its two people and to nobody else (decision B): played here when this is
             where they arrive first, and again whenever they ask. */}
         {milestone?.reached && (mine || readerIsFunder) ? (
-          <ReachedOnItsPage gift={reachedOfStatus(milestone, mine ? "recipient" : "funder", { recipientName, funderName })} onTake={() => setReviewing(true)} />
+          <ReachedOnItsPage gift={reachedOfStatus(milestone, mine ? "recipient" : "funder", { recipientName, funderName })} />
         ) : null}
 
-        {taken ? (
-          <section className={CARD} role="status">
-            <p className="font-medium">{W.taken(taken.amount, whenInWords(taken.atMs), giftId, taken.take)}</p>
-            {/* The money has just moved into the account, so the way out is what this screen is waiting for now. */}
-            <Link href="/cash-out" className={PRIMARY_BUTTON}>
-              {W.sendToBank}
-            </Link>
-          </section>
-        ) : null}
       </Shell>
     </Arrival>
   );

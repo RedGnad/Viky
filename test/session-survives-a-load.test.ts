@@ -47,7 +47,8 @@ test("every money path opens the passkey at the signature, and none assumes it i
     "app/components/CashOut.tsx",
   ]) {
     const source = readFileSync(screen, "utf8");
-    assert.match(source, /ensureSigner\(\)/, `${screen} opens the signing session where it signs`);
+    // A gift's page signs through what it calls, which it hands the opener to: it takes nothing out itself any more.
+    assert.match(source, screen.endsWith("GiftPage.tsx") ? /ensureSigner\b/ : /ensureSigner\(\)/, `${screen} opens the signing session where it signs`);
     assert.doesNotMatch(source, /mera\.currentAccount\(\)/, `${screen} must not reach for a key that a load has lost`);
   }
 });

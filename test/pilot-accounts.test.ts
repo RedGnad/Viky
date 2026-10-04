@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import type { IndexedGift } from "../src/envio-index";
 import { between, FOUNDER_TEST_ACCOUNTS, founderAccounts, shortOf, usageOf } from "../src/pilot-accounts";
@@ -74,6 +75,13 @@ test("the count: gifts, who funded and who opened them, what was earned and what
   assert.deepEqual(usage.recipients, { all: 3, founders: 1 });
   assert.deepEqual(usage.between, { "two others": 1, "founder to another": 1, "another to founder": 0, "the founder's own try": 2 });
   assert.equal(usage.onSecondVersion, 1);
+  assert.equal(usage.onThirdVersion, 0);
+  // A gift on the third daily contract is counted there, and with neither the first version's nor the second's (the
+  // advisor, 4 Oct 2026: the index read every version that was not 2 as 1).
+  const withTheThird = usageOf([gift({ giftId: "1000", kind: "daily", version: 3 }), gift({ giftId: "4", kind: "daily", version: 2 }), gift({ giftId: "3", kind: "daily", version: 1 })], founderAccounts());
+  assert.deepEqual([withTheThird.onSecondVersion, withTheThird.onThirdVersion, withTheThird.gifts], [1, 1, 3]);
+  const who = readFileSync("app/judges/JudgesWhoUsed.tsx", "utf8");
+  assert.match(who, /usage\.onThirdVersion > 0 \? `\$\{count\(usage\.onThirdVersion, "is", "are"\)\} on the third daily contract` : null,/);
   // Nothing indexed is nothing counted, not an error.
   assert.equal(usageOf([], founderAccounts()).gifts, 0);
 });

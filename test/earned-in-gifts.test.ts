@@ -42,7 +42,8 @@ test("Home's amount is everything the person can take out now: the account and w
 test("a daily gift that counts offers no gesture to its recipient: the way out is on Home", () => {
   const gift = { opened: true, cancelled: false, finished: false, connected: true, earnedAnything: true, shape: "days" as const, startTooHigh: false, sourceClosed: false, moneyToTake: true };
   assert.equal(readAs(gift, "recipient").action, null);
-  assert.equal(readAs({ ...gift, finished: true }, "recipient").action, "take", "at the end the gift's page still offers it");
+  // Nor at the end (the advisor, 4 Oct 2026): "Take $2.00" stood there and was a second way to do what Home does.
+  assert.equal(readAs({ ...gift, finished: true }, "recipient").action, null, "at the end the gift's page offers no gesture either");
 });
 
 test("the way out reads the gifts' part with the balances, counts it, and takes it before a way", () => {
@@ -57,7 +58,7 @@ test("the way out reads the gifts' part with the balances, counts it, and takes 
   assert.match(client, /await withdrawEarned\(\{ account, giftId: gift\.giftId, escrow: gift\.escrow, amount: BigInt\(gift\.earned\), nonce: BigInt\(gift\.nonce\) \}\)/, "the whole of each gift's part, at the nonce the contract expects");
   assert.ok(!out.includes("earned-in-gifts"), "the browser never imports the server's reader");
   assert.match(readFileSync("app/kit/Home.tsx", "utf8"), /holdsAnything\(holdings, gifts\)/);
-  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /takeableFromHome: !milestone && earned > 0n,/, "the line is said of a daily gift that holds something");
+  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /takeableFromHome: earned > 0n,/, "the line is said of a gift that holds something, a habit's as a milestone's");
   assert.match(readFileSync("src/my-gifts.ts", "utf8"), /takeable: role === "recipient" \? gift\.earnedBalance\.toString\(\) : "0",/);
   const route = readFileSync("app/api/gifts/earned/route.ts", "utf8");
   assert.match(route, /readAccountAuthSession\(request\)/, "only the signed-in account's own gifts");

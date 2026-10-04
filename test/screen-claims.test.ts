@@ -296,14 +296,13 @@ test("the example gift says it is an example, and reads as a gift under way", ()
  * the money has been taken, the gesture that carried it is done: what the screen is now waiting for is the way out,
  * and the relecture of 18 Sep found it offered in the plain shape.
  */
-test("once what was earned has been taken, the way out carries the accent", () => {
+test("what a gift paid is used from Home: its page takes nothing out and offers no way out of its own", () => {
+  // "Take $2.00", its review and "Send it to my bank" stood on a gift's page at its end. Home counts that money in
+  // "Yours" and whatever it is used for takes it from the gift first (the advisor, 4 Oct 2026).
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
-  const block = page.slice(page.indexOf("{taken ? ("), page.indexOf("</Arrival>"));
-  assert.match(block, /href="\/cash-out" className=\{PRIMARY_BUTTON\}/, "the next step is offered in the plain shape again");
-  // And the gesture that had the accent is gone by then: taking is the moment's action only while it is that moment,
-  // and a gift whose money has been taken is no longer at it (src/gift-moment.ts).
-  // A gift its recipient ended shares the rule: what was counted before the ending is taken the same way.
-  assert.match(readFileSync("src/gift-moment.ts", "utf8"), /case "won":\n    case "ended":\n(?:[^\n]*\n){1,2}      return \{ moment, action: gift\.moneyToTake \? "take" : null, agreementOpen \};/);
+  assert.doesNotMatch(page, /\{taken \? \(|href="\/cash-out"|case "take":/);
+  assert.doesNotMatch(readFileSync("src/gift-moment.ts", "utf8"), /"take"/);
+  assert.match(page, /mine && earned > 0n \? \(\[W\.lines\.yoursAlready, W\.lines\.fromHome\] as const\) : null,/, "where the money is used is said in what was agreed, at every moment it has some");
 });
 
 /**

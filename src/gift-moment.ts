@@ -48,7 +48,6 @@ export type MomentAction =
   | "connect"
   | "shareProof"
   | "askAgain"
-  | "take"
   | "linkAgain"
   /** A start too high, to the funder: the way on is another gift, made from Home. */
   | "offerAgain"
@@ -178,12 +177,10 @@ export function readAs(gift: Gift, voice: Voice, moment: Moment = momentOf(gift)
       return { moment, action: "shareProof", agreementOpen };
     case "startTooHigh":
       return { moment, action: "askAgain", agreementOpen };
-    case "won":
-    case "ended":
-      // Nothing to take once it is taken: the moment stays, and the page is read. What was counted before an ending
-      // is theirs to take exactly as before.
-      return { moment, action: gift.moneyToTake ? "take" : null, agreementOpen };
     default:
+      // Reached, or ended by the person it is for: a page that is read too. What it paid is theirs already: Home
+      // counts it in "Yours", and whatever the money is used for takes it from the gift first. "Take $2.00" stood
+      // here and did the same thing twice (the advisor, 4 Oct 2026).
       // Counting, climbing, over, came back: a page that is looked at. Whatever a person may still do here is said
       // quietly, because nothing on this screen is waiting for them.
       return { moment, action: null, agreementOpen };
