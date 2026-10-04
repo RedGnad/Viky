@@ -48,9 +48,11 @@ test.describe("the nature of a condition", () => {
     // Every condition, and only the conditions: the frontier's lines are not conditions and carry no nature.
     const frontier = 4;
     expect(await tags.count()).toBe((await conditions.count()) - frontier);
-    // And each frontier line says whether the other reading is being built for it: all four are, since D179 (D163, D165, D176).
-    await expect(page.getByText(/^Being built: /)).toHaveCount(4);
-    await expect(page.getByText("Not being built.")).toHaveCount(0);
+    // And each frontier line says whether the other reading is being built for it (D163, D165, D176): three are. School
+    // marks are not: Viky is for adults, and the lines for pupils stay closed (the founder, 4 Oct 2026).
+    await expect(page.getByText(/^Being built: /)).toHaveCount(3);
+    await expect(page.getByText("Not being built.")).toHaveCount(1);
+    await expect(page.getByText(/PRONOTE|EcoleDirecte/i)).toHaveCount(0);
   });
 
   test("the account screen has no condition and says nothing about one", async ({ page }) => {
