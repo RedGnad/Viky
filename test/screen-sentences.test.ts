@@ -38,7 +38,7 @@ const FOLDED: Readonly<Record<string, string>> = {
   "GIFT_PAGE.comesBackToYou": 'the fold "What was agreed" of a gift',
   "GIFT_PAGE.fromCountsNote": HOW_CHECKED,
   "GIFT_PAGE.takeReview": 'the sheet "Take $2.00?"',
-  "GIFT_PAGE.notYetBody": 'under "I do not have Duolingo yet", once it is pressed',
+  "GIFT_PAGE.notYetBody": 'the fold "No Duolingo yet?"',
   "GIFT_PAGE.linkAgainWhy": 'the sheet "Get the link again"',
   "GIFT_PAGE.linkFindWhy": 'the sheet "Find the link again"',
   "GIFT_LIVE.climbing.alertRefused": 'the sheet "Notifications"',

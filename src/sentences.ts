@@ -813,9 +813,10 @@ export const FUND = {
      */
     takesSeconds: "This takes a few seconds.",
     pageMayClose: "If this page closes, look under your gifts: what was made is there, with its link. What was not can be picked up again.",
-    short: (arrived: string, amount: string, euros: number, held: string) =>
-      `${arrived} arrived, less than the ${amount} for this gift. Pay ${euros} EUR more, or make the gift ${held}.`,
-    payMore: (euros: number) => `Pay ${euros} EUR more`,
+    /** What is still to pay, written as every button of this screen writes an amount: "€5.00" (the founder, 4 Oct 2026). */
+    short: (arrived: string, amount: string, more: string, held: string) =>
+      `${arrived} arrived, less than the ${amount} for this gift. Pay ${more} more, or make the gift ${held}.`,
+    payMore: (more: string) => `Pay ${more} more`,
     makeIt: (held: string) => `Make it ${held}`,
     priceMoved: "The price changed and nothing was changed. Viky will try again in a moment.",
   },

@@ -101,7 +101,7 @@ export const FUNDER_JOURNEY: readonly CatalogueScreen[] = [
       {
         name: "The payment arrived",
         when: "a card payment is in the account: turned into dollars, then the gift is made, or the screen says it falls short",
-        says: ["Your payment arrived", "Getting it ready, a few seconds.", "less than the", "Pay", "EUR more", "The price changed and nothing was changed. Viky will try again in a moment."],
+        says: ["Your payment arrived", "Getting it ready, a few seconds.", "less than the", "Pay", "more", "The price changed and nothing was changed. Viky will try again in a moment."],
       },
       {
         name: "The session closed while paying",

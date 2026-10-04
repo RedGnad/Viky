@@ -351,8 +351,8 @@ export const SCENARIOS: Scenario[] = [
       await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
       await s.settle();
       await s.text(/Named by Maman/, 30_000);
-      await s.click("Not my name");
-      await s.shot("recipient", "named by the funder", `${HOME}: the gift under "What's moving", named by the funder: Not my name`);
+      await s.click("Not your Duolingo name?");
+      await s.shot("recipient", "named by the funder", `${HOME}: the gift under "What's moving", named by the funder: Not your Duolingo name?`);
     },
   },
   {
