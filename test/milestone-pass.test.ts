@@ -6,7 +6,7 @@ import { canExpire, milestonePhase, type MilestoneState } from "../src/milestone
 import { milestonePass, type MilestonePassDeps } from "../src/milestone-pass";
 import type { MilestoneOutcome } from "../src/milestone-reading";
 import { MILESTONE_DORMANT_SECONDS, MILESTONE_LATE_PROOF_SECONDS, MILESTONE_PROOF_GRACE_SECONDS, SHAPE_HAVE_OR_NOT, ZERO_SUBJECT } from "../src/milestone-protocol";
-import { FUND, MILESTONE_ACTIONS, MILESTONE_FUND } from "../src/sentences";
+import { MILESTONE_ACTIONS, PAY } from "../src/sentences";
 
 const CONTRACT = "0x00000000000000000000000000000000000000c2" as const;
 const ZERO = `0x${"0".repeat(64)}` as const;
@@ -217,19 +217,16 @@ test("before connecting, the recipient is told that only what comes after counts
   assert.match(page, /connectNow: A\.connectNow,/);
   const connect = readFileSync("app/kit/ConnectTheSource.tsx", "utf8");
   assert.equal(
-    connect.match(/<p className="font-medium">\{words\.connectNow\}<\/p>/g)?.length,
+    connect.match(/\{words\.connectNow \? <p className=\{HELP\}>\{words\.connectNow\}<\/p> : null\}/g)?.length,
     3,
     "the way in that reads straight away, the one asking for the code, and the one showing it",
   );
-  // The funder's check keeps the fourteen days: the longest they can wait before it all comes back.
-  assert.equal(
-    MILESTONE_FUND.check.fourteenDays,
-    "If nobody opens it within 14 days, it all comes back to you, and the same if it is opened and never connected.",
-  );
-  // Something had or not is never connected, so its sentence stops at the fourteen days; when it comes back once
-  // opened is said by its own "if not", dated (the audit of 1 Oct 2026).
-  assert.match(readFileSync("app/kit/offer/PaySheet.tsx", "utf8"), /milestone \? MILESTONE_FUND\.check\.fourteenDays : certificate \? FUND\.check\.fourteenDaysUnopened : FUND\.check\.fourteenDays/);
-  assert.equal(FUND.check.fourteenDaysUnopened, "If nobody opens it within 14 days, it all comes back to you.");
+  // One line, where three stood: the two that followed restated it (the founder, 4 Oct 2026).
+  assert.doesNotMatch(connect, /firstReading/);
+  // The funder's sheet keeps the fourteen days, as a short line (the founder, 4 Oct 2026): the longest they can wait
+  // before it all comes back, whatever the kind of gift.
+  assert.deepEqual(PAY.fold.notOpened, ["Not opened in 14 days", "back to you"]);
+  assert.match(readFileSync("app/kit/offer/PaySheet.tsx", "utf8"), /W\.fold\.notOpened/);
 });
 
 test("the delays mirrored here are the contract's own", () => {

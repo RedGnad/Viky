@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { PAY } from "../src/sentences";
 import { RAMP_BARE_PAGE, WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, wayInFillsIn, wayInPage } from "../src/rails";
 
 /**
@@ -27,9 +26,6 @@ test("with Ramp's partner key, the page carries the account, the amount in euros
 test("without the key, Ramp opens bare, where it works, and nothing says it is filled in", () => {
   assert.equal(wayInPage(WAY_IN_GIFT_COIN, { account: ACCOUNT, euros: 26 }, undefined), RAMP_BARE_PAGE);
   assert.equal(wayInFillsIn(WAY_IN_GIFT_COIN, undefined), false);
-  const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
-  assert.match(sheet, /wayInFillsIn\(way\)\n\s*\? W\.partnerFilledIn\n\s*: W\.partnerPaste\(way\.name, way\.delivers\.coin, way\.delivers\.network, way\.arrives === "gift"\)/);
-  assert.match(PAY.partnerFilledIn, /Your account is already filled in\./);
 });
 
 test("Mercuryo keeps its own page: filling it in needs a partner widget id", () => {
@@ -48,14 +44,8 @@ test("every screen that opens the partner opens the page this builds, and the ju
 });
 
 test("without the key, the sheet says what to choose on the partner's page and where the code goes, and offers the code (D294)", () => {
-  assert.equal(
-    PAY.partnerPaste(WAY_IN_GIFT_COIN.name, WAY_IN_GIFT_COIN.delivers.coin, WAY_IN_GIFT_COIN.delivers.network, true),
-    "Our partner Ramp takes your card, once with your ID. Choose AUSD on Monad there: that is what your gift holds. Paste your code where it asks for an address. Come back here: the gift starts by itself.",
-  );
-  // Mercuryo delivers the chain's coin, which one confirmed step turns into what a gift holds (D101): never "by itself".
-  const mercuryo = PAY.partnerPaste(WAY_IN_CHAIN_COIN.name, WAY_IN_CHAIN_COIN.delivers.coin, WAY_IN_CHAIN_COIN.delivers.network, WAY_IN_CHAIN_COIN.arrives === "gift");
-  assert.equal(mercuryo, "Our partner Mercuryo takes your card, once with your ID. Choose MON on Monad there. Paste your code where it asks for an address. Come back here to confirm the last step.");
-  assert.doesNotMatch(mercuryo, /by itself|what your gift holds/);
+  // What to choose on the partner's page and where the code goes is said on the screen that waits, as settings;
+  // the pay sheet's fold holds short lines only (the founder, 4 Oct 2026).
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   // The code exists once the account does: before the first press there is no account, and nothing to copy.
   assert.match(sheet, /!enough && \(cardClosed \|\| \(!wayInFillsIn\(way\) && !way\.embedded\)\) && address \? \(/);

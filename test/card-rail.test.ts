@@ -94,7 +94,6 @@ test("in the countries where Ramp does not sell what a gift holds, the sheet goe
   const germany = wayInFor(30_000_000n, WAYS_IN, 1.1355, cardReach("de"));
   assert.equal(germany.way, WAY_IN_CHAIN_COIN);
   assert.deepEqual(germany.insteadOf, { way: WAY_IN_GIFT_COIN, because: "country" });
-  assert.equal(PAY.instead.notSold("Ramp", germany.way.name), "Ramp does not sell what a gift holds in your country, so this goes through Mercuryo.");
   // France is left as it was until a real purchase settles it.
   assert.equal(wayInFor(30_000_000n, WAYS_IN, 1.1355, cardReach("fr")).way, WAY_IN_GIFT_COIN);
   // Hungary and Iceland are on Mercuryo's own list too: no card partner is left, and the true sentence says so.

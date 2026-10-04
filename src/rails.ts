@@ -568,6 +568,17 @@ export function feeInWords(way: { name: string; fee: PublishedFee }): string {
   return way.fee.minimum > 0 ? `${way.name} keeps ${share}, at least ${euro(way.fee.minimum)}` : `${way.name} keeps ${share}`;
 }
 
+/**
+ * A service's fee in a few characters, for a line of a fold (the founder, 4 Oct 2026): "Rampnow, 7 % + €0.40". Where
+ * the service's floor is what a payment of `euros` pays, the line says the floor, so it is true of that payment.
+ */
+export function feeInALine(way: { name: string; fee: PublishedFee }, euros?: number): string {
+  const euro = (amount: number) => moneyIn(amount, way.fee.currency);
+  const share = `${way.fee.upTo ? "up to " : ""}${way.fee.percent} %${way.fee.plus ? ` + ${euro(way.fee.plus)}` : ""}`;
+  const atThisAmount = euros === undefined ? undefined : (euros * way.fee.percent) / 100 + (way.fee.plus ?? 0);
+  return way.fee.minimum > 0 && atThisAmount !== undefined && atThisAmount < way.fee.minimum ? `${way.name}, ${euro(way.fee.minimum)}` : `${way.name}, ${share}`;
+}
+
 /** Where a service's figures were read, said of it: "Rampnow's own quotes" is "its own quotes" after its name. */
 export function sourceOfIts(way: { name: string; source: string }): string {
   return way.source.startsWith(`${way.name}'s `) ? `its ${way.source.slice(way.name.length + 3)}` : way.source;
