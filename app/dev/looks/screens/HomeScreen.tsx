@@ -8,8 +8,7 @@ import { Arrival, ArrivalAmount, Reveal, type ArrivalGift } from "@/app/kit/Moti
 import { Shell } from "@/app/kit/Shell";
 import { AMOUNT_IN_TITLE, BODY, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "@/app/components/ui";
 import { HOME } from "@/src/sentences";
-import { ACCOUNT, fromMaman, labHref, LAST_VISIT, rateDate, toAma } from "../example";
-import { LAB } from "../words";
+import { ACCOUNT, fromMaman, labHref, LAST_VISIT, toAma } from "../example";
 
 /**
  * Home with two gifts (product structure, section 4): the money first and as the title, one primary action, the way
@@ -34,8 +33,6 @@ export function HomeScreen() {
           <p data-amount className={`money-display ${AMOUNT_IN_TITLE} tracking-[-0.02em]`} style={{ "--amount-chars": shown.length } as CSSProperties}>
             <ArrivalAmount from={LAST_VISIT.homeEuros} to={ACCOUNT.euros} symbol={ACCOUNT.symbol} />
           </p>
-          {/* Zero is "no clock yet" (app/kit/clock.ts): a rate dated from it would name a day in 1970. */}
-          {nowMs === 0 ? null : <p className={HELP}>{LAB.rateCaption(rateDate(nowMs), ACCOUNT.dollars)}</p>}
         </section>
         <Link href={labHref("amount")} className={PRIMARY_BUTTON}>
           {HOME.offer}

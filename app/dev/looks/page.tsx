@@ -46,7 +46,36 @@ export default async function Page() {
             <td className="py-2">{LAB.motion}</td>
             <td className="py-2" colSpan={3}>
               <Link className="underline" href={labHref("motion")}>
-                {LAB.motion}
+                {LAB.eachMovement}
+              </Link>
+            </td>
+          </tr>
+          {/* Every page of the laboratory is one press from here (the founder, 4 Oct 2026). */}
+          <tr className="border-t border-current/20">
+            <td className="py-2">{LAB.moments.reached}</td>
+            <td className="py-2" colSpan={3}>
+              <Link className="underline" href="/dev/looks/reached?who=recipient">
+                {LAB.reachedFor.recipient}
+              </Link>
+              {" · "}
+              <Link className="underline" href="/dev/looks/reached?who=funder">
+                {LAB.reachedFor.funder}
+              </Link>
+            </td>
+          </tr>
+          <tr className="border-t border-current/20">
+            <td className="py-2">{LAB.giftMoments}</td>
+            <td className="py-2" colSpan={3}>
+              <Link className="underline" href="/dev/looks/gift-moments">
+                {LAB.giftMoments}
+              </Link>
+            </td>
+          </tr>
+          <tr className="border-t border-current/20">
+            <td className="py-2">{LAB.character}</td>
+            <td className="py-2" colSpan={3}>
+              <Link className="underline" href="/dev/looks/character">
+                {LAB.character}
               </Link>
             </td>
           </tr>
