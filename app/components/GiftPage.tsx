@@ -597,6 +597,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
             notYet: words.notYet,
           },
           notMine: words.notMine,
+          notYours: words.notYours,
           proveTitle: account.username ? words.proveTitle(account.username) : words.stillNeeds,
           proveSteps: words.proveSteps,
           slowToShow: words.slowToShow,

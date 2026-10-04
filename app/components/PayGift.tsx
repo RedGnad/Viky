@@ -697,7 +697,7 @@ export function PayGift() {
       const makeIt = twoDecimalsDown(held, 6);
       return (
         <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.arrived.title}>
-          <Said text={W.arrived.short(arrivedFigure, gift, more, `$${makeIt}`)} />
+          <Said text={W.arrived.short(arrivedFigure, gift, moneyIn(more, "EUR"), `$${makeIt}`)} />
           {cardClosed ? (
             <CardNotOffered country={card?.country ?? null} />
           ) : (
@@ -713,7 +713,7 @@ export function PayGift() {
                 }}
                 className={PRIMARY_BUTTON}
               >
-                {W.arrived.payMore(more)}
+                {W.arrived.payMore(moneyIn(more, "EUR"))}
               </button>
               <CardTermsLine way={wayIn} />
             </>

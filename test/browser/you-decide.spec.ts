@@ -367,10 +367,15 @@ test.describe("you decide", () => {
     );
     await makeAnAccount(device);
     await page.goto(`/g/${GIFT}`);
-    // The way out for somebody who is not that account is a second pill under the one action, never a link.
-    const notMine = page.getByRole("button", { name: "Not my name" });
-    await expect(notMine).toBeVisible();
-    expect((await notMine.boundingBox())?.width, "as wide as the action above it").toBe((await page.getByRole("button", { name: "Start counting" }).boundingBox())?.width);
+    // What somebody who is not that account is told sits in a fold under the one action, named by a question: pressing
+    // it opens a sentence and does nothing else, so it is no button (the founder, 4 Oct 2026).
+    await expect(page.getByRole("button", { name: /Not (my|your)/ })).toHaveCount(0);
+    const notYours = page.locator("details[data-not-your-name]");
+    await expect(notYours.locator("summary")).toHaveText("Not your Duolingo name?");
+    await expect(notYours.locator("p")).toBeHidden();
+    await notYours.locator("summary").click();
+    await expect(notYours.locator("p")).toHaveText("Ask Maman to check the name. Nothing counts until it is right.");
+    await notYours.locator("summary").click();
     await expect(page.getByRole("button", { name: "End this gift" })).toHaveCount(0);
     await expect(decide(page).getByRole("button")).toHaveCount(3);
     await shot(page, "14-opened-not-connected");

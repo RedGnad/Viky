@@ -328,7 +328,13 @@ export type RecipientWords = Readonly<{
   namedBy: (username: string, funder: string) => string;
   /** How an account the funder named is read, said in "How this is checked" at the moment it is connected. */
   namedHow: string;
+  /** The button that opens the name's field again, where the person typed the name themselves. */
   notMine: string;
+  /**
+   * The fold under the one action, where the funder named the account: pressing it does nothing but open a sentence,
+   * so it is a fold with a question for its name, not a button (the founder, 4 Oct 2026).
+   */
+  notYours: string;
   /** Connected. */
   countingFrom: (firstDay: string) => string;
   reads: string;
@@ -431,13 +437,15 @@ export const DUOLINGO_DAILY: Condition = {
     usernameHelp: "The name under your picture in Duolingo, like ama_learns. Your profile must be public.",
     typeToContinue: "Type your Duolingo name to continue.",
     noPassword: "No password, no sign-in: your lessons are read from your public profile. Next, a short code proves the profile is yours.",
-    notYet: "I do not have Duolingo yet",
+    // A fold's name, a question: pressing it opens a sentence and does nothing else (the founder, 4 Oct 2026).
+    notYet: "No Duolingo yet?",
     proveTitle: (username) => `Prove ${username} is yours`,
     proveSteps: "In Duolingo, open Profile, then Settings, then Name, and add this code to your name:",
     slowToShow: "Duolingo can take a minute to show a new name. If Viky cannot see the code yet, wait a minute and press again.",
     namedBy: (username, funder) => `Your Duolingo: ${username}. Named by ${funder}.`,
     namedHow: "Nothing to sign in to, nothing to install: your lessons are read from your public profile.",
     notMine: "Not my name",
+    notYours: "Not your Duolingo name?",
     countingFrom: (firstDay) => `Done. From tomorrow, ${firstDay}, every day with your lesson is yours, counted by itself.`,
     reads: "Viky reads your Duolingo every day at that time and counts the day before.",
     readsTheirs: "Viky reads their Duolingo every day at that time and counts the day before.",
