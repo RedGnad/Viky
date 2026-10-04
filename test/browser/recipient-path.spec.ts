@@ -151,7 +151,7 @@ test.describe("the path of the person a gift is for", () => {
       await expect(page.getByText("Viky reads nothing for this gift until you agree.")).toHaveCount(0);
       await expect(page.getByRole("button", { name: /^Agree$/ })).toHaveCount(0);
       await page.getByText("How this is checked", { exact: true }).click();
-      await expect(page.getByText(/^Viky reads your rapid rating for this gift\. You agreed on /)).toBeVisible();
+      await expect(page.locator("dl.said-lines > div").filter({ hasText: "Viky reads your rapid rating" })).toHaveText(/^Viky reads your rapid ratingyou agreed on /);
       await page.locator('[data-decide="stop"]').scrollIntoViewIfNeeded();
       await shot(page, size.name, "2b-after-the-start");
       await device.context.close();
@@ -185,7 +185,7 @@ test.describe("the path of the person a gift is for", () => {
       await expect.poll(() => signedIn(context), { timeout: 30_000 }).toBe(true);
       await expect.poll(() => reads, { message: "the gift is read again for the account that signed in" }).toBeGreaterThan(before);
       await expect(page.getByRole("button", { name: "Open my gift" })).toHaveCount(0);
-      await expect(page.getByText(/^Made .+\. Reference: gift 1999995\.$/)).toBeAttached();
+      await expect(page.locator("dl.said-lines > div").filter({ hasText: /^Made/ })).toHaveText(/^Made.+, gift 1999995$/);
       await shot(page, size.name, "5b-own-link-signed-in");
       await device.context.close();
     });

@@ -74,11 +74,11 @@ test("nothing a reader is shown speaks to them in the second person", () => {
   assert.doesNotMatch(GIFT_CARD.theirsGoneBack("$8.00", "$20.00", "$4.00"), you);
   assert.doesNotMatch(GIFT_PAGE.dayWords.returnedReading, you);
   assert.doesNotMatch(GIFT_PAGE.readingWhose("Mom", "Ama"), you);
-  // The sentence beside the next reading: the register carries both persons, and a reader gets the third one.
+  // When it is read is the value of a line since 4 Oct 2026, and names nobody: the same to a reader and to the person.
   for (const condition of CONDITIONS) {
     if (!condition.recipient) continue;
-    assert.doesNotMatch(condition.recipient.readsTheirs, you, `${condition.id} tells a reader Viky reads their own account`);
-    assert.match(condition.recipient.reads, you, `${condition.id} no longer speaks to the person it is for`);
+    assert.doesNotMatch(condition.recipient.reads, you, `${condition.id} tells a reader Viky reads their own account`);
+    assert.doesNotMatch(condition.recipient.reads, /\bthey\b|\btheir\b|\.$/i, `${condition.id}: a value, not a sentence about somebody`);
   }
   // With no account the page cannot know whose gift it is, so it asks rather than assumes.
   assert.match(GIFT_PAGE.signInToSee, /^Sign in if/);
@@ -138,7 +138,7 @@ test("the page decides who may do what in one place, and not in ten conditions o
   // What a reader who is neither of the two people is told, and the row of days, still follow the voice.
   assert.match(page, /const outsider = notTheirs\(voice, Boolean\(address\)\);/);
   assert.match(page, /voice=\{voice\}/, "the row of days still speaks in one fixed voice");
-  assert.match(page, /voice === "recipient" \? \(words\?\.reads \?\? ""\) : \(words\?\.readsTheirs \?\? ""\)/, "the reading sentence is back in the second person for everybody");
+  assert.match(page, /asItGoes && !readingsStopped \? \(\[W\.lines\.read, asItGoes\.reads\] as const\) : nextReading && !gift\.finished && words\?\.reads \? \(\[W\.lines\.read, words\.reads\] as const\) : null,/, "when it is read is one line, the same for everybody");
   // And the words of every moment are one module's, not the screen's: `liveOf` composes them for this reader.
   assert.match(page, /const said = liveOf\(liveInput\);/);
   // The funder's page, small, in the sheet that says what they see, is the same module in their voice.

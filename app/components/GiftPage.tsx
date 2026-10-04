@@ -41,11 +41,11 @@ import type { MilestoneStatus } from "@/src/milestone-view";
 import { contractDayInWords, contractRangeInWords, dateInWords, hourInWords, momentInWords, nextPassMs } from "@/src/moments";
 import { COUNTING_PASS_UTC, settlingTimeInWords } from "@/src/pass-schedule";
 import { reserveOf } from "@/src/reserves";
-import { ACCOUNT_DOOR, CONSENT as C, END_GIFT as E, GIFT_LIVE as L, GIFT_PAGE as W, LIMIT, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M, WAITS } from "@/src/sentences";
+import { ACCOUNT_DOOR, CONSENT as C, GIFT_LIVE as L, GIFT_PAGE as W, LIMIT, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M, WAITS } from "@/src/sentences";
 import { AskAgain } from "../kit/AskAgain";
 import { CertificateProof } from "../kit/CertificateProof";
-import { MarathonProof, MarathonStanding } from "../kit/MarathonProof";
-import { WcaProof, WcaStanding } from "../kit/WcaProof";
+import { MarathonProof, marathonLine } from "../kit/MarathonProof";
+import { WcaProof, wcaLine } from "../kit/WcaProof";
 import { ReachedOnItsPage, reachedOfStatus } from "../kit/ReachedMoment";
 import { Nature } from "../kit/Nature";
 import { ShowProof } from "../kit/ShowProof";
@@ -53,7 +53,7 @@ import { CheckThisDay } from "../kit/CheckThisDay";
 import { CheckThisReading } from "../kit/CheckThisReading";
 import { ConnectTheAccount } from "../kit/ConnectTheAccount";
 import { Character } from "../kit/Character";
-import { ConsentLine, FunderConsent, RecipientConsent, useGiftConsent, type StopCost } from "../kit/Consent";
+import { ConsentLine, funderConsentRows, recipientConsentRows, useGiftConsent, type StopCost } from "../kit/Consent";
 import { ConnectTheSource, type ConnectWords } from "../kit/ConnectTheSource";
 import { dayReadingFailure, useDayReading } from "../kit/DayReading";
 import { DayRow } from "../kit/DayRow";
@@ -62,12 +62,13 @@ import { FieldRefusal } from "../kit/FieldRefusal";
 import { FunderControls } from "../kit/FunderControls";
 import { GiftLive } from "../kit/GiftLive";
 import { HeadCharacter } from "../kit/HeadCharacter";
+import { Lines, MOST_LINES_IN_A_FOLD } from "../kit/Lines";
 import { LinkAgain } from "../kit/LinkAgain";
 import { Climb } from "../kit/Climb";
 import { HadOrNot } from "../kit/HadOrNot";
 import type { ToldAbout } from "../kit/MorningMessage";
 import { LiveLine, useLiveReading } from "../kit/LiveReading";
-import { openDayInWords } from "@/src/client/limit";
+import { openDayLine } from "@/src/client/limit";
 import { contactEmail } from "@/src/contact";
 import { Arrival, ArrivalAmount, Reacts, useLastSeen } from "../kit/Motion";
 import { Sheet } from "../kit/Sheet";
@@ -318,18 +319,18 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
   // A gift read as the day goes announces no next reading: its page looked as it opened.
   const nextReading = nowMs === 0 || gift.finished || gift.cancelled || readingsStopped || asItGoes ? null : W.nextReading(momentInWords(nextPassMs(COUNTING_PASS_UTC, nowMs), nowMs));
   // One sentence in the open: which service is not checked, by this gift's own source, and the day it starts again.
-  // The rest is folded: until when the open day can still be counted, in the reader's clock, that what is theirs is
-  // taken out as usual, what the empty reserve does not touch, and where to write.
+  // The rest is folded, a line each: until when the open day can still be counted, in the reader's clock, that what is
+  // theirs is taken out as usual, what the empty reserve does not touch, and where to write.
   const limitSaid =
     emptyReserve && limit && !gift.finished && !gift.cancelled
       ? {
           said: LIMIT.said(source, emptyReserve, limit.again, mine),
           can: [
-            emptyReserve === "readings" && limit.countableUntil && nowMs !== 0 && (mine || readerIsFunder) ? openDayInWords(limit.countableUntil, mine, recipientName, nowMs) : null,
-            mine ? LIMIT.takeYours : LIMIT.takeTheirs,
-            LIMIT.untouched[emptyReserve],
-            contactEmail() ? LIMIT.write(contactEmail() as string) : null,
-          ].filter((line): line is string => Boolean(line)),
+            emptyReserve === "readings" && limit.countableUntil && nowMs !== 0 && (mine || readerIsFunder) ? openDayLine(limit.countableUntil, mine, recipientName, nowMs) : null,
+            mine ? LIMIT.lines.takeYours : LIMIT.lines.takeTheirs,
+            LIMIT.lines.untouched[emptyReserve],
+            contactEmail() ? LIMIT.lines.write(contactEmail() as string) : null,
+          ].filter((line): line is Row => Boolean(line)),
         }
       : null;
   // Both contracts give an unopened gift back 14 days after it was funded, and an opened gift nothing started 14 days
@@ -748,81 +749,68 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
     <DayRow id={giftId} gift={daily} catchUpSeconds={daily.catchUpSeconds} records={daily.days} voice={voice} silent={Boolean(live.when)} each={daily.perDayDisplay} leadOnToday={Boolean(asItGoes)} />
   ) : null;
 
-  /** What was agreed: the amount, what it counts, how long, and what happens to what is not earned. Read once. */
-  const agreed = (
-    <>
-      {milestone ? (
-        <>
-          {hadOrNot ? (
-            // What it asks in the register's words, or a grade's own; never "Reach 1 on their university".
-            hadOrNot.asked ? (
-              <p className={BODY}>{M.asked(hadOrNot.asked)}</p>
-            ) : hadOrNot.targetWords ? (
-              <p className={BODY}>{M.target(hadOrNot.targetWords, source)}</p>
-            ) : null
-          ) : milestone.target !== null ? (
-            <p className={BODY}>{M.target(milestone.targetWords ?? milestone.target, source)}</p>
-          ) : null}
-          <p className={BODY}>
-            {hadOrNot
-              ? readerIsFunder
-                ? M.provedByTheirs(milestoneBy(milestone, zone))
-                : M.provedByYours(milestoneBy(milestone, zone), funderName)
-              : readerIsFunder
-                ? M.atDeadlineTheirs(milestoneBy(milestone, zone))
-                : M.atDeadlineYours(milestoneBy(milestone, zone), funderName)}
-          </p>
-          {milestone.startReading !== null ? <p className={HELP}>{M.startedAt(milestone.startReading)}</p> : null}
-          {/* A marathon's bib and the line read, to whoever is not at the moment of entering or reading them (D273). */}
-          {milestone.marathon && read.action !== "shareProof" ? <MarathonStanding marathon={milestone.marathon} /> : null}
-          {milestone.wca && read.action !== "shareProof" ? <WcaStanding wca={milestone.wca} /> : null}
-        </>
-      ) : daily ? (
-        <>
-          <p className={BODY}>
-            {readerIsFunder || voice === "reader"
-              ? W.becomesTheirs(daily.perDayDisplay, words?.eachDayTheirs ?? condition?.words.eachDay ?? "", agreedWhen(daily))
-              : W.becomesYours(daily.perDayDisplay, words?.eachDayYours ?? condition?.words.eachDay ?? "", agreedWhen(daily))}
-          </p>
-          <p className={BODY}>{readerIsFunder ? W.comesBackToYou : W.goesBackToThem(funderName)}</p>
-          {/* On the third daily contract a day is paid the day it is read: what that guarantees, and no more. */}
-          {paysTheSameDay(status.version) && words?.asItGoes ? <p className={BODY}>{words.asItGoes.agreed}</p> : null}
-        </>
-      ) : null}
-      {readerIsFunder ? <p className={HELP}>{W.made(dateInWords(status.createdAtChain * 1000, zone), giftId)}</p> : null}
-      {/* The ending (the audit of 1 Oct 2026): only a gift of the second version of the contracts has one. The funder
-          reads here that it can happen, before as after the gift is opened; the person it is for has the gesture,
-          under the card, in "You decide". */}
-      {readerIsFunder && linkOpened && !gift.finished && !gift.cancelled ? <p className={HELP}>{E.funderMay(recipientName)}</p> : null}
-      {/* Where money already theirs goes: a sentence, so it is read here and not in the card's small capitals (rule 5). */}
-      {live.quiet ? <p className={HELP}>{live.quiet}</p> : null}
-    </>
-  );
+  /**
+   * What was agreed, as lines (the founder, 4 Oct 2026: a fold holds a label and its value, four at most, never a
+   * paragraph): what it pays for, how long, and where what is not earned goes. Then, while there is room, what the
+   * reader can still learn here: where a marathon or a competition stands, that the person it is for can end it,
+   * that what is theirs is used from Home, where a climb started, and the day it was made.
+   */
+  const backToFunder = readerIsFunder ? W.lines.backToYou : W.lines.backTo(funderName);
+  const eachDay = daily ? ((readerIsFunder || voice === "reader" ? words?.eachDayTheirs : words?.eachDayYours) ?? condition?.words.eachDay ?? "") : "";
+  const agreedRows: Row[] = [
+    ...(milestone
+      ? [
+          // What it asks in the register's words, or a grade's own; never "Reach 1 on their university".
+          hadOrNot
+            ? hadOrNot.asked
+              ? ([M.lines.isFor, hadOrNot.asked] as const)
+              : hadOrNot.targetWords
+                ? ([M.lines.toReach, M.lines.onSource(hadOrNot.targetWords, source)] as const)
+                : null
+            : milestone.target !== null
+              ? ([M.lines.toReach, M.lines.onSource(milestone.targetWords ?? milestone.target, source)] as const)
+              : null,
+          [M.lines.when, milestoneBy(milestone, zone)] as const,
+          // What was not proved in time goes back two weeks later: the time left to show it (MILESTONE_LATE_PROOF_SECONDS).
+          [M.lines.ifNot, hadOrNot ? M.lines.twoWeeksLater(backToFunder) : backToFunder] as const,
+          // A marathon's bib and the line read, to whoever is not at the moment of entering or reading them (D273).
+          milestone.marathon && read.action !== "shareProof" ? marathonLine(milestone.marathon) : null,
+          milestone.wca && read.action !== "shareProof" ? wcaLine(milestone.wca) : null,
+        ]
+      : daily
+        ? [[eachDay.charAt(0).toUpperCase() + eachDay.slice(1), daily.perDayDisplay] as const, [W.lines.days, agreedWhen(daily)] as const, [W.lines.missedDay, backToFunder] as const]
+        : []),
+    // The ending (the audit of 1 Oct 2026): only a gift of the second version of the contracts has one. The funder
+    // reads here that it can happen; the person it is for has the gesture, under the card, in "You decide".
+    readerIsFunder && linkOpened && !gift.finished && !gift.cancelled ? ([W.lines.canEnd(recipientName), W.lines.theRest] as const) : null,
+    // On the third daily contract a day is paid the day it is read: what that guarantees, and no more.
+    daily && paysTheSameDay(status.version) && words?.asItGoes ? words.asItGoes.agreed : null,
+    // Where money already theirs goes (rule 5).
+    live.quiet ? ([W.lines.yoursAlready, W.lines.fromHome] as const) : null,
+    milestone && milestone.startReading !== null ? ([M.lines.startedAt, String(milestone.startReading)] as const) : null,
+    readerIsFunder ? ([W.lines.made, W.lines.madeOn(dateInWords(status.createdAtChain * 1000, zone), giftId)] as const) : null,
+  ]
+    .filter((row): row is Row => Boolean(row))
+    .slice(0, MOST_LINES_IN_A_FOLD);
+  const agreed = <Lines quiet rows={agreedRows} />;
 
-  /** How this is checked: what the source is, when it is read, and the proof anybody may take away. */
+  /**
+   * How this is checked, as lines too: when it is read, what is read and who agreed to it, and under them the proof
+   * anybody may take away. The rule a milestone pays by is said once, in "What was agreed".
+   */
+  const checkedRows: Row[] = [
+    asItGoes && !readingsStopped ? ([W.lines.read, asItGoes.reads] as const) : nextReading && !gift.finished && words?.reads ? ([W.lines.read, words.reads] as const) : null,
+    daily && !stripFromRecordSafe(daily, nowMs) ? ([W.lines.olderDays, W.lines.fromTotals] as const) : null,
+    // How an account the funder named is read, at the moment it is connected: it stood above the action (rule 4).
+    mine && moment === "openedNotConnected" && account.namedByFunder && words ? ([W.lines.nothingToInstall, W.lines.fromProfile] as const) : null,
+    ...(mine ? recipientConsentRows(consent.answer, zone) : []),
+    ...(readerIsFunder ? funderConsentRows(consent.answer, recipientName, zone) : []),
+  ]
+    .filter((row): row is Row => Boolean(row))
+    .slice(0, MOST_LINES_IN_A_FOLD);
   const checked = (
     <>
-      {nextReading && !gift.finished ? (
-        <p className={HELP}>{voice === "recipient" ? (words?.reads ?? "") : (words?.readsTheirs ?? "")}</p>
-      ) : null}
-      {asItGoes && !readingsStopped ? <p className={HELP}>{voice === "recipient" ? asItGoes.reads : asItGoes.readsTheirs}</p> : null}
-      {hadOrNot ? (
-        <p className={HELP}>{readerIsFunder ? M.ruleProvedTheirs(milestoneBy(hadOrNot, zone)) : M.ruleProvedYours(milestoneBy(hadOrNot, zone))}</p>
-      ) : milestone && milestone.target !== null ? (
-        <p className={HELP}>{readerIsFunder ? M.ruleTheirs(milestone.target, milestoneBy(milestone, zone)) : M.ruleYours(milestone.target, milestoneBy(milestone, zone))}</p>
-      ) : null}
-      {daily && !stripFromRecordSafe(daily, nowMs) ? <p className={HELP}>{W.fromCountsNote}</p> : null}
-      {/* How an account the funder named is read, at the moment it is connected: it stood above the action (rule 4). */}
-      {mine && moment === "openedNotConnected" && account.namedByFunder && words ? <p className={HELP}>{words.namedHow}</p> : null}
-      {mine ? <RecipientConsent answer={consent.answer} zone={zone} /> : null}
-      {readerIsFunder ? (
-        <FunderConsent
-          answer={consent.answer}
-          recipientName={recipientName}
-          rest={milestone ? C.funderMilestoneRest(targetToName, milestoneBy(milestone, zone), amountDisplay) : C.funderDailyRest}
-          zone={zone}
-        />
-      ) : null}
+      <Lines quiet rows={checkedRows} />
       {/* Asking for a reading now is not the moment's action, so it is not offered beside it: it lives here, with the
           rest of how a gift is checked. Being told is offered in the open, under the card (the founder, 1 Oct 2026). */}
       {/* A milestone is read as its page opens, so it has no button for it (the founder, 29 Sep 2026). */}
@@ -1002,9 +990,12 @@ function milestoneBy(status: MilestoneStatus, zone: string): string {
   return status.deadlineMs === null ? M.withinDays(status.durationDays) : M.byDate(dateInWords(status.deadlineMs, zone));
 }
 
+/** One line of a fold: a label and its value. */
+type Row = readonly [label: string, value: string];
+
 /** The dates a daily gift runs between, or how long it runs once it is connected. */
 function agreedWhen(gift: Readonly<{ startDay: number; endDay: number; durationDays: number; version?: GiftStatus["version"] }>): string {
-  return gift.startDay === 0 ? W.forDaysFromConnecting(gift.durationDays, paysTheSameDay(gift.version)) : contractRangeInWords(gift.startDay, gift.endDay);
+  return gift.startDay === 0 ? W.lines.fromConnecting(gift.durationDays, paysTheSameDay(gift.version)) : contractRangeInWords(gift.startDay, gift.endDay);
 }
 
 /** Whether the day row is drawn from the record of each day rather than from the totals alone. */

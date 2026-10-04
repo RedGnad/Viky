@@ -239,7 +239,7 @@ test.describe("the funder's page", () => {
     await makeAnAccount(running);
     await running.page.goto(`/g/44`);
     await running.page.getByText("What was agreed", { exact: true }).click();
-    await expect(running.page.getByText("Boo can end this gift at any time. What they have earned stays theirs, and the rest comes back to you.", { exact: true })).toBeVisible();
+    await expect(running.page.locator("dl.said-lines > div").filter({ hasText: "Boo can end it" })).toHaveText("Boo can end itthe rest comes back to you");
     await running.context.close();
   });
 
@@ -261,12 +261,12 @@ test.describe("the funder's page", () => {
     await expect(page.getByText(/over 7 days/)).toHaveCount(0);
     // What happens next is folded, with the way back to a lost link at its foot.
     const next = page.locator("[data-made-next]");
-    await expect(next.getByText("Boo opens the link and connects their Duolingo.")).toBeHidden();
+    await expect(next.getByText("A lost link")).toBeHidden();
     await expect(controls(page).getByRole("button")).toHaveCount(1);
     await shot(page, "11-made-habit");
     await next.getByText("What happens next", { exact: true }).click();
-    await expect(next.locator("li")).toHaveCount(3);
-    await expect(next.getByText("Lose this link and the gift's page makes you a new one, as long as nobody has opened it.")).toBeVisible();
+    // Lines, a label and its value: what the pay sheet said of a missed day and of a link nobody opens, and a lost link.
+    await expect(next.locator("dl.said-lines > div")).toHaveText(["A missed dayback to you", "Not opened in 14 daysback to you", "A lost linkthis gift's page makes a new one"]);
     await shot(page, "11b-made-habit-next-open");
 
     await made({ conditionId: "chess-rating", amount: "25000000", days: 30, goal: "1500 in rapid", target: 1500, namedByFunder: true });

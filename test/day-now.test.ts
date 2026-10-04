@@ -152,22 +152,21 @@ test("a gift on the first two versions reads as it always did, and the first day
   assert.equal(before.headline, "Yesterday counted.");
   assert.deepEqual(before.nextAt, { label: "Next reading", value: "02:30" });
   // The first day: the day after the connection on the first two versions, the day of the connection on the third.
-  assert.equal(GIFT_PAGE.forDaysFromConnecting(7), "for 7 days from the day after it is connected");
-  assert.equal(GIFT_PAGE.forDaysFromConnecting(7, true), "for 7 days from the day it is connected");
+  assert.equal(GIFT_PAGE.lines.fromConnecting(7), "7 days, from the day after it is connected");
+  assert.equal(GIFT_PAGE.lines.fromConnecting(7, true), "7 days, from the day it is connected");
   assert.equal(FUND.made.firstDay("Duolingo"), "First day counted the day after they connect Duolingo.");
   assert.equal(FUND.made.firstDay("Duolingo", true), "First day counted the day they connect Duolingo.");
-  assert.equal(FUND.made.next("Boo", "connects their Duolingo", "each day with a lesson", "$2.40", "09:00")[1], "From the day after, each day with a lesson puts $2.40 in Boo's name.");
-  assert.equal(FUND.made.next("Boo", "connects their Duolingo", "each day with a lesson", "$2.40", "09:00", true)[1], "From that day, each day with a lesson puts $2.40 in Boo's name.");
   assert.equal(WORDS.countingFrom("4 Oct"), "Done. From today, 4 Oct, every day with your lesson is yours, counted the day you do it.");
   // A gift counted on one course is the same condition, with the same words.
   assert.equal(conditionOfGoal(GOAL_TYPE_DUOLINGO_COURSE_XP)?.recipient?.asItGoes, WORDS);
 });
 
 test("what was agreed says only what is guaranteed, and the judges page says the exact rule (the re-read of 3 Oct 2026, C2 and C4)", () => {
-  // The founder's own sentence. The exact case, a second lesson after the day's pay, is not promised here.
-  assert.equal(WORDS.agreed, "One lesson pays one day. A second lesson the same day counts for tomorrow only if today was already counted when it was taken.");
+  // What is guaranteed, as a line since 4 Oct 2026 (the founder: a fold holds lines, never paragraphs). The exact case,
+  // a second lesson after the day's pay, is not promised here, and is no longer mentioned either.
+  assert.deepEqual(WORDS.agreed, ["One lesson", "pays one day"]);
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
-  assert.match(page, /\{paysTheSameDay\(status\.version\) && words\?\.asItGoes \? <p className=\{BODY\}>\{words\.asItGoes\.agreed\}<\/p> : null\}/, "in what was agreed, for a gift on the third contract and for no other");
+  assert.match(page, /daily && paysTheSameDay\(status\.version\) && words\?\.asItGoes \? words\.asItGoes\.agreed : null,/, "in what was agreed, for a gift on the third contract and for no other");
   const judges = readFileSync("app/judges/page.tsx", "utf8");
   // Said only once the third contract is set: until then no gift is on it.
   assert.match(judges, /const thirdVersionSet = giftEscrowV3Address\(\) !== null;/);

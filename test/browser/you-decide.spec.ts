@@ -62,7 +62,7 @@ test.describe("you decide", () => {
     }
     // What stood there before: a wide button, a line of help with a small "Stop", and a link under the card.
     await expect(page.getByRole("button", { name: "Tell me each morning" })).toHaveCount(0);
-    await expect(page.getByText(/^Viky reads your lessons for this gift\. You agreed on /)).toBeHidden();
+    await expect(page.getByText("Viky reads your lessons", { exact: true })).toBeHidden();
     await expect(page.getByText("Check this day yourself")).toBeHidden();
     await expect(page.getByRole("button", { name: "End this gift" })).toHaveCount(0);
     await shot(page, "01-habit-under-way");
@@ -89,10 +89,10 @@ test.describe("you decide", () => {
     // The agreement is folded, with where money already theirs goes at its foot and no ending in it.
     await page.getByText("What was agreed", { exact: true }).click();
     const agreed = page.locator("details.gift-fold").first();
-    await expect(agreed.getByText("It is yours already. Use it from Home whenever you like.")).toBeVisible();
+    await expect(agreed.locator("dl.said-lines > div").filter({ hasText: "Yours already" })).toHaveText("Yours alreadyuse it from Home");
     await page.getByText("How this is checked", { exact: true }).click();
     const checked = page.locator("details.gift-fold").nth(1);
-    await expect(checked.getByText(/^Viky reads your lessons for this gift\. You agreed on \d{1,2} \w{3} \d{4}\.$/)).toBeVisible();
+    await expect(checked.locator("dl.said-lines > div").filter({ hasText: "Viky reads your lessons" })).toHaveText(/^Viky reads your lessonsyou agreed on \d{1,2} \w{3} \d{4}$/);
     await expect(checked.getByText("Check this day yourself")).toBeVisible();
     await expect(checked.getByRole("button", { name: "Count now" })).toBeVisible();
     await shot(page, "03-habit-folds-open");

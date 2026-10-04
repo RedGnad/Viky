@@ -66,13 +66,20 @@ export const LIMIT = {
   said: (source: string, reserve: Reserve, again: string, yours = false): string => `${LIMIT.service(yours ? spokenTo(source) : source, reserve)} ${LIMIT.startsAgain(again)}`,
   /** The fold's name, and what it holds, a line each. */
   can: "What you can do",
+  /** Under a press that was refused, with the limit's sentence: until when the open day can still be counted. */
   dayYours: (until: string) => `Your day can still be counted until ${until}.`,
   dayTheirs: (name: string | null, until: string) => `${name ? `${name}'s` : "Their"} day can still be counted until ${until}.`,
-  takeYours: "What is already yours can be taken out as usual.",
-  takeTheirs: "What is already theirs can be taken out as usual.",
-  /** What an empty reserve does not touch: the gifts that draw on the other one. */
-  untouched: { readings: "Gifts proved by a document someone shows are not touched.", proofs: "Gifts that Viky reads by itself are not touched." } as Record<Reserve, string>,
-  write: (email: string) => `Write to ${email}: we can reopen it sooner.`,
+  /** The fold, each a label and its value (the founder, 4 Oct 2026): a fold holds lines, never paragraphs. */
+  lines: {
+    /** The label carries the words and the value the hour alone: a long value left the label one word a line. */
+    dayYours: (until: string): readonly [string, string] => ["Your day counts until", until],
+    dayTheirs: (name: string | null, until: string): readonly [string, string] => [name ? `${name}'s day counts until` : "Their day counts until", until],
+    takeYours: ["What is already yours", "taken out as usual"] as readonly [string, string],
+    takeTheirs: ["What is already theirs", "taken out as usual"] as readonly [string, string],
+    /** What an empty reserve does not touch: the gifts that draw on the other one. */
+    untouched: { readings: ["Gifts proved by a document", "not touched"], proofs: ["Gifts Viky reads by itself", "not touched"] } as Record<Reserve, readonly [string, string]>,
+    write: (email: string): readonly [string, string] => ["To reopen it sooner", email],
+  },
   /** Beside a condition in a list, where a sentence has no room: four words (rule 5). */
   backOn: (again: string) => `Back on ${again}`,
   /** Whether a sentence is the one said in the open, wherever a screen prints what it was answered to a press: it is then set in the red. */
@@ -829,15 +836,13 @@ export const FUND = {
     share: "Share",
     copyRefused: "Your browser would not let us copy it. Press and hold the link above, then choose Copy.",
     onlyThem: (recipient: string) => `Whoever opens this link takes the gift, so send it only to ${onlyTo(recipient)}.`,
-    /** Because the link is lost the moment this tab closes, and only the gift's page can make another (gift 1000001). */
-    findItAgain: "Lose this link and the gift's page makes you a new one, as long as nobody has opened it.",
     nextTitle: "What happens next",
-    theyConnectAny: "connects what they will do",
-    next: (recipient: string, theyConnect: string, eachDay: string, perDay: string, time: string, sameDay = false) => [
-      `${recipient} opens the link and ${theyConnect}.`,
-      `From ${sameDay ? "that day" : "the day after"}, ${eachDay} puts ${perDay} in ${their(recipient)} name.`,
-      `A day they miss and do not catch up the next day comes back to your account the morning after, at about ${time} your time. If nobody opens the link within 14 days, it all comes back.`,
-    ],
+    /**
+     * Because the link is lost the moment this tab closes, and only the gift's page can make another (gift 1000001).
+     * A line of the fold, after the pay sheet's own lines about a missed day and a link nobody opens (the founder,
+     * 4 Oct 2026: a fold holds lines, never paragraphs).
+     */
+    lostLink: ["A lost link", "this gift's page makes a new one"] as readonly [string, string],
     seeIt: "See this gift",
   },
 
@@ -850,9 +855,6 @@ export const FUND = {
 
 /** "1 day", "2 days". */
 const days = (count: number) => `${count} ${count === 1 ? "day" : "days"}`;
-
-/** A sentence that may open on a figure written "about $2.85" starts with a capital all the same. */
-const sentence = (text: string) => `${text[0].toUpperCase()}${text.slice(1)}`;
 
 /**
  * A gift's page, flows R1 to R12, read by the person it is for or by the funder (R11). What depends on the source is in
@@ -880,13 +882,32 @@ export const GIFT_PAGE = {
     return `${amount} is in someone else's name.`;
   },
   notYours: "This gift is not yours. You can read where it stands; nothing here is yours to do.",
-  becomesYours: (perDay: string, eachDay: string, when: string) => `It becomes yours as you go: ${perDay} for ${eachDay}, ${when}.`,
-  becomesTheirs: (perDay: string, eachDay: string, when: string) => `It becomes theirs as they go: ${perDay} for ${eachDay}, ${when}.`,
-  /** On the third daily contract the first day is the day of the connection; before it, the day after. */
-  forDaysFromConnecting: (count: number, sameDay = false) => `for ${days(count)} from the day ${sameDay ? "" : "after "}it is connected`,
-  goesBackToThem: (funder: string | null) =>
-    sentence(`The same goes back to ${funder ?? "them"} for each day without it that is not caught up the next day. Nobody else ever profits from a missed day.`),
-  comesBackToYou: sentence("The same comes back to you for each day without it that is not caught up the next day. Nobody else ever profits from a missed day."),
+  /**
+   * "What was agreed" and "How this is checked", as lines (the founder, 4 Oct 2026): a fold holds a label and its
+   * value, four at most, never a paragraph. What left with the sentences: that a missed day can be caught up the next
+   * day (the row of days says it of the day it is true of), that nobody else profits from one (the landing says it),
+   * and the date a gift was made.
+   */
+  lines: {
+    days: "Days",
+    /** On the third daily contract the first day is the day of the connection; before it, the day after. */
+    fromConnecting: (count: number, sameDay = false) => `${days(count)}, from the day ${sameDay ? "" : "after "}it is connected`,
+    missedDay: "A missed day",
+    backTo: (who: string | null) => `back to ${who ?? "them"}`,
+    backToYou: "back to you",
+    canEnd: (name: string | null) => `${name ?? "The person it is for"} can end it`,
+    theRest: "the rest comes back to you",
+    yoursAlready: "Yours already",
+    fromHome: "use it from Home",
+    made: "Made",
+    madeOn: (date: string, giftId: string) => `${date}, gift ${giftId}`,
+    /** Its value is the condition's own word for when it is read (src/conditions.ts, `reads`). */
+    read: "Read",
+    nothingToInstall: "Nothing to install",
+    fromProfile: "read from your public profile",
+    olderDays: "Days settled before the record",
+    fromTotals: "drawn from the totals",
+  },
   openBy: (date: string, funder: string | null) => `Open it by ${date}: after 14 days unopened, it goes back to ${funder ?? "the person who offered it"}.`,
 
   createToOpen: "Create your account to open it. Nothing to install.",
@@ -990,7 +1011,6 @@ export const GIFT_PAGE = {
 
   finished: (range: string) => `This gift is finished. ${range}.`,
   cameBack: (count: number, amount: string) => `${days(count)} came back to you: ${amount}.`,
-  made: (date: string, giftId: string) => `Made ${date}. Reference: gift ${giftId}.`,
 
   closedTitle: "Your session closed while you were away",
   closedBody: "Nothing moved and nothing was taken.",
@@ -1007,7 +1027,6 @@ export const GIFT_PAGE = {
     toCome: "to come",
   },
   daysLabel: "Every day of this gift",
-  fromCountsNote: "Some days here are drawn from the totals, earned first and then the days that went back, because they were settled before Viky kept a record of each day.",
 } as const;
 
 /**
@@ -1232,22 +1251,24 @@ export const GIFT_LIVE = {
  */
 export const MILESTONE_PAGE = {
   /** The target as a number, or in words where the contract's number is not what is read (a grade, "14.50 out of 20"). */
-  target: (target: number | string, source: string) => `Reach ${target} on ${source}`,
   /** "by 17 Oct 2026" once the first reading has started the clock; "within 30 days of connecting" before (D46). */
   byDate: (date: string) => `by ${date}`,
   withinDays: (days: number) => `within ${days} ${days === 1 ? "day" : "days"} of connecting`,
-  ruleYours: (target: number, by: string) => `It is yours when you reach ${target}, ${by}.`,
-  ruleTheirs: (target: number, by: string) => `It is theirs when they reach ${target}, ${by}.`,
   /** Something had or not: what it asks in the register's words, and never the contract's 1. */
-  asked: (words: string) => `This gift is for: ${words}.`,
-  ruleProvedYours: (by: string) => `It is yours when it is proved, ${by}.`,
-  ruleProvedTheirs: (by: string) => `It is theirs when it is proved, ${by}.`,
   /** Dated as the contract dates it: what was granted in time can be shown for two weeks more, then it goes back. */
-  provedByYours: (by: string, funder: string | null) => `Prove it ${by} and it is yours. If not, it goes back to ${funder ?? "them"} two weeks later.`,
-  provedByTheirs: (by: string) => `If they prove it ${by} it is theirs. If not, it comes back to you two weeks later.`,
-  startedAt: (reading: number) => `Started at ${reading}.`,
-  atDeadlineYours: (by: string, funder: string | null) => `Reach it ${by} and it is yours. If not, it goes back to ${funder ?? "them"}.`,
-  atDeadlineTheirs: (by: string) => `If they reach it ${by} it is theirs. If not, it comes back to you.`,
+  /**
+   * "What was agreed" of a milestone, as lines (the founder, 4 Oct 2026): what is to be reached or what the gift is
+   * for, when, and where the money goes if not.
+   */
+  lines: {
+    toReach: "To reach",
+    onSource: (target: number | string, source: string) => `${target} on ${source}`,
+    isFor: "For",
+    when: "When",
+    ifNot: "If not",
+    twoWeeksLater: (back: string) => `${back}, two weeks later`,
+    startedAt: "Started at",
+  },
 } as const;
 
 /**
@@ -1291,13 +1312,6 @@ export const MILESTONE_FUND = {
      * first reading and asks nothing of the profile, and only an account they name themselves carries a code. This
      * screen promised a code either way until 19 Sep 2026, which was false for every gift made with a name.
      */
-    next: (recipient: string, source: string, target: number, days: number, time: string, namedByFunder: boolean) => [
-      namedByFunder
-        ? `${recipient} opens the link and starts the first reading of that ${source} account. That reading is where they start.`
-        : `${recipient} opens the link, names their ${source} account and puts a short code in its name, once. That first reading is where they start.`,
-      `Viky reads their rating every day at about ${time} your time. The first reading at ${target} or more puts all of it in ${recipient}'s name.`,
-      `If they do not reach it within ${days} ${days === 1 ? "day" : "days"} of connecting, all of it comes back to your account. If nobody opens the link within 14 days, it all comes back too.`,
-    ],
   },
   failures: {
     standingMoved: "Choose the rating again",
@@ -1379,7 +1393,18 @@ export const MILESTONE_ACTIONS = {
 export const CONSENT = {
   failed: "Viky reads nothing until you agree, and your agreement could not be signed. Try again.",
   stopFailed: "Your stop could not be signed. Nothing changed. Try again.",
-  line: (what: string, date: string) => `Viky reads ${what} for this gift. You agreed on ${date}.`,
+  /** "How this is checked", as lines (the founder, 4 Oct 2026): what is read, and who agreed to it and when. */
+  lines: {
+    reads: (what: string) => `Viky reads ${what}`,
+    youAgreed: (date: string) => `you agreed on ${date}`,
+    theyAgreed: (name: string, date: string) => `${name} agreed on ${date}`,
+    theyStopped: (name: string, date: string) => `${name} stopped it on ${date}`,
+    notYet: (name: string) => `${name} has not said yes yet`,
+    theyCanStop: "They can stop",
+    notReadComesBack: "what is not read comes back to you",
+    nothingRead: "Nothing is read",
+    untilTheyAgree: (name: string) => `until ${name} agrees`,
+  },
   stoppedLine: (what: string, date: string) => `Viky stopped reading ${what} on ${date}.`,
   /** A gift that began before agreements existed: read as before until its person answers (the founder, 29 Sep 2026). */
   askLine: (what: string) => `Viky reads ${what} for this gift. Do you agree?`,
@@ -1396,12 +1421,6 @@ export const CONSENT = {
   stopReading: "Stop reading",
   keepGoing: "Keep going",
   working: "One moment",
-  funderAgreed: (name: string, date: string, what: string) => `${name} agreed on ${date} that Viky reads ${what} for this gift. They can stop at any time.`,
-  funderBefore: (name: string, what: string) => `Viky reads ${what} for this gift. ${name} has not said yes to it yet, and can stop at any time.`,
-  funderMilestoneRest: (target: string | null, by: string, amount: string) => `If ${target ?? "it"} is not read ${by}, the ${amount} comes back to you.`,
-  funderDailyRest: "Each day that is not read comes back to you.",
-  funderStopped: (name: string, date: string) => `${name} stopped Viky reading on ${date}.`,
-  funderWaiting: (name: string) => `${name} has not agreed yet to what Viky reads for this gift. Nothing is read until they do.`,
   someone: "The person it is for",
   theFunder: "the person who offered it",
   meTitle: "What Viky reads",
@@ -1422,7 +1441,6 @@ export const END_GIFT = {
   working: "One moment",
   failed: "The gift could not be ended. Nothing was changed. Try again.",
   /** The funder's side, in the fold "What was agreed", before as after. */
-  funderMay: (name: string | null) => `${name ?? "The person it is for"} can end this gift at any time. What they have earned stays theirs, and the rest comes back to you.`,
   /**
    * The gift's page once it is ended (the founder's mockup you-decide.html of 1 Oct 2026, fourth frame): the day as a
    * label, who ended it as the headline, and the two amounts as two figures. Three sentences said this before.
@@ -1964,7 +1982,10 @@ export const CASH_OUT = {
   moreThan: (gap: string, otherTitle: string) => `${gap} more than to ${otherTitle.toLowerCase()}.`,
   /** The fold under the cards where each service's published figures and their sources are kept for whoever asks. */
   whereFrom: "Where these figures come from",
-  rateLine: (source: string, day: string) => `The rate: ${source}, ${day}.`,
+  /** The fold's lines: what a service keeps with the day it was read, and the rate's source with its day. */
+  keptAndRead: (fee: string, read: string) => `${fee}, read ${read}`,
+  rate: "Rate",
+  rateOf: (source: string, day: string) => `${source}, ${day}`,
   /**
    * The balance while a gesture is being confirmed. It is where you are, not what you are deciding, so it is said in
    * the meta voice and the amount being sent takes the display size (the founder, 19 Sep 2026).
@@ -1988,7 +2009,6 @@ export const CASH_OUT = {
   notReadied: "Part of your money could not be made ready just now. It is still in your account.",
   worthAbout: (dollars: string) => `about $${dollars}`,
   worthLater: "Its value in dollars will show in a moment.",
-  sourceLine: (source: string, read: string) => `Read from ${source}, ${read}.`,
   anotherAccount: "Send to another Viky account of mine",
   /**
    * Where the person's bank or card is (R1). Asked once, and only when the two signals disagree; the answer orders the
@@ -2337,7 +2357,13 @@ export const WCA_PROOF = {
   checkRegistration: "Check my registration",
   checking: "Checking the competitors list",
   registered: (name: string, competition: string) => `${name} is on the competitors list of the ${competition}.`,
-  notRegisteredYet: (competition: string) => `Not checked on the competitors list yet for the ${competition}.`,
+  /** Where the gift stands, as one line of "What was agreed": the result once it is read, the list before. */
+  lines: {
+    read: "Read",
+    result: (name: string, best: string) => `${name}, best single ${best}`,
+    list: "Competitors list",
+    notYet: "not checked yet",
+  },
   beforeTheDay: "Compete. After the competition, come back here to read your result.",
   readMyResult: "Read my result",
   reading: "Reading the WCA's results",
@@ -2361,6 +2387,14 @@ export const MARATHON_PROOF = {
   saveBib: "Keep my bib number",
   saving: "Keeping it",
   bibSet: (bib: string, race: string, distance: string) => `Bib ${bib}, ${race}, ${distance.toLowerCase()}.`,
+  /** Where the gift stands, as one line of "What was agreed": the result once it is read, the bib before. */
+  lines: {
+    read: "Read",
+    result: (runner: string, time: string) => `${runner}, ${time}`,
+    bib: "Bib",
+    bibOf: (bib: string, race: string) => `${bib}, ${race}`,
+    noBib: "not entered yet",
+  },
   beforeTheRace: "Run. After the finish, come back here to read your result.",
   /** Until the start, a bib typed wrong can be entered again (the audit of 1 Oct 2026). */
   changeBib: "Change my bib number",
@@ -2368,7 +2402,6 @@ export const MARATHON_PROOF = {
   afterTheRace: "The race has been run. Read your line on the timing company's results page.",
   readMyResult: "Read my result",
   reading: "Reading the results page",
-  noBibYet: (race: string) => `No bib number entered yet for the ${race}.`,
   line: (runner: string, bib: string, time: string) => `Read on the timing company's page: ${runner}, bib ${bib}, ${time}.`,
   failed: "That did not work. Nothing was changed.",
 } as const;

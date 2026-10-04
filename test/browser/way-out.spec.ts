@@ -76,6 +76,15 @@ test.describe("taking money out", () => {
       await expect(page.getByText("A transfer in euros to your IBAN, within two working days.", { exact: true })).toBeVisible();
       await expect(page.locator(".said-fold").getByText("Our partner Ramp asks for your ID, once.", { exact: true })).toHaveCount(1);
       await shot(page, size.name, "1a-first-screen-with-money-ready");
+      // Where the figures come from, folded under everything: a line a service, a label and its value, never a
+      // paragraph (the founder, 4 Oct 2026), and the rate's source last.
+      const figures = page.locator("details.said-fold").filter({ hasText: "Where these figures come from" });
+      await figures.locator("summary").click();
+      await expect(figures.locator("dl.said-lines > div")).toHaveText(["Ramp0.99 %, at least €1.99, read 16 Sep 2026", "Mercuryoup to 3.95 %, at least €4.00, read 16 Sep 2026", /^RateEuropean Central Bank, \d{1,2} \w{3} \d{4}$/]);
+      await expect(figures.locator("p")).toHaveCount(0);
+      await figures.locator("dl").scrollIntoViewIfNeeded();
+      await shot(page, size.name, "1a2-where-the-figures-come-from");
+      await figures.locator("summary").click();
 
       await page.getByRole("button", { name: "Continue with Ramp" }).click();
       await expect(page.getByRole("heading", { name: "Step 2 of 3: Place your order with Ramp" })).toBeVisible();

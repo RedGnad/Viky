@@ -21,9 +21,10 @@ import { chainCoinToChange, USDC_ARRIVAL_FLOOR } from "@/src/funding-step";
 import { usdcRouterAddress } from "@/src/usdc-router";
 import { formatAusd } from "@/src/gift-reader";
 import { LedFigure } from "../kit/LedAmount";
+import { Lines } from "../kit/Lines";
 import { whereTheRailsServe, type RailsWhere } from "@/src/client/rails";
 import { countryInWords } from "@/src/rail-country";
-import { feeSentence, RATE_SOURCE, WAY_OUT_CARD, WAY_OUT_EURO, wayOutFillsIn, wayOutPage, WAYS_OUT, type WayOut } from "@/src/rails";
+import { feeUnderItsName, RATE_SOURCE, WAY_OUT_CARD, WAY_OUT_EURO, wayOutFillsIn, wayOutPage, WAYS_OUT, type WayOut } from "@/src/rails";
 import { CASH_OUT as W, USE_MONEY as U, WHERE_YOU_LIVE as L } from "@/src/sentences";
 import { useChainCoinWorth } from "../kit/money";
 import { inTheSun, orderUses, usesFor, usesSentence } from "@/src/use-money";
@@ -805,13 +806,11 @@ export function CashOut() {
             {W.whereFrom}
             <FoldChevron />
           </summary>
-          <div className={`${HELP} said-fold-body flex flex-col gap-[var(--space-xs)]`}>
-            {WAYS_OUT.map((way) => (
-              <p key={way.name}>
-                {feeSentence(way)}, and pays {way.pays}. {W.sourceLine(way.source, way.read)}
-              </p>
-            ))}
-            {money.rates ? <p>{W.rateLine(RATE_SOURCE.name, rateDateInWords(money.rates.date))}</p> : null}
+          {/* A line each (the founder, 4 Oct 2026: a fold holds lines, never paragraphs): what the service keeps and
+              the day that figure was read on its own pages (the first day `read` names: a second one is about its
+              countries), then the rate's source and its day. */}
+          <div className="said-fold-body">
+            <Lines quiet rows={[...WAYS_OUT.map((way) => [way.name, W.keptAndRead(feeUnderItsName(way), way.read.split(" (")[0])] as const), ...(money.rates ? [[W.rate, W.rateOf(RATE_SOURCE.short, rateDateInWords(money.rates.date))] as const] : [])]} />
           </div>
         </details>
       </div>

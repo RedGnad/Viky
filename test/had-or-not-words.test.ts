@@ -10,7 +10,7 @@ import { CONDITIONS } from "../src/conditions";
 import { liveOf, type LiveInput } from "../src/gift-live";
 import { askedInWords, certificateById } from "../src/milestone-conditions";
 import { marathonTargetUnderHours } from "../src/marathon";
-import { GIFT_CARD, MILESTONE_PAGE } from "../src/sentences";
+import { GIFT_CARD, GIFT_PAGE, MILESTONE_PAGE } from "../src/sentences";
 
 test("what it asks is said in the register's words, from the contract's own target", () => {
   const asked = (id: string, units: number) => askedInWords(certificateById(id)!, units);
@@ -31,22 +31,20 @@ test("what it asks is said in the register's words, from the contract's own targ
     assert.ok(words && words.length > 3 && !/^\d+$/.test(words), `${condition.id}: ${words}`);
   }
   assert.match(readFileSync("src/milestone-status.ts", "utf8"), /asked: insider && certificate \? askedInWords\(certificate, Number\(state\.target\)\) : null,/, "only to whoever is shown the gift's own figures");
-  assert.equal(MILESTONE_PAGE.asked("enrolled at that university"), "This gift is for: enrolled at that university.");
+  // On the gift's page it is the value of a line, "For": the fold holds lines, never paragraphs (the founder, 4 Oct 2026).
+  assert.equal(MILESTONE_PAGE.lines.isFor, "For");
 });
 
 test("the gift's page never prints the contract's target for this shape, and dates the return", () => {
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
-  const agreed = page.slice(page.indexOf("const agreed = ("), page.indexOf("const checked = ("));
-  assert.match(agreed, /\{hadOrNot \? \(/);
-  assert.match(agreed, /hadOrNot\.asked \? \(\s*<p className=\{BODY\}>\{M\.asked\(hadOrNot\.asked\)\}<\/p>/);
-  assert.match(agreed, /M\.provedByTheirs\(milestoneBy\(milestone, zone\)\)/);
-  const checked = page.slice(page.indexOf("const checked = ("), page.indexOf("const proof ="));
-  assert.match(checked, /\{hadOrNot \? \(\s*<p className=\{HELP\}>\{readerIsFunder \? M\.ruleProvedTheirs/);
+  const agreed = page.slice(page.indexOf("const agreedRows: Row[] = ["), page.indexOf("const checkedRows: Row[] = ["));
+  assert.match(agreed, /hadOrNot\.asked\s*\? \(\[M\.lines\.isFor, hadOrNot\.asked\] as const\)/, "what it asks, in the register's words");
+  assert.match(agreed, /\[M\.lines\.when, milestoneBy\(milestone, zone\)\] as const/);
+  assert.match(agreed, /\[M\.lines\.ifNot, hadOrNot \? M\.lines\.twoWeeksLater\(backToFunder\) : backToFunder\] as const/, "and the return is dated: two weeks later");
   // The sentences that name a target name a climb's number or a grade's words, and "it" for the rest.
   assert.match(page, /const targetToName = !milestone \? null : hadOrNot \? \(milestone\.targetWords \?\? null\)/);
-  assert.equal(MILESTONE_PAGE.provedByTheirs("by 17 Oct 2026"), "If they prove it by 17 Oct 2026 it is theirs. If not, it comes back to you two weeks later.");
-  assert.equal(MILESTONE_PAGE.provedByYours("by 17 Oct 2026", "Mom"), "Prove it by 17 Oct 2026 and it is yours. If not, it goes back to Mom two weeks later.");
-  assert.equal(MILESTONE_PAGE.ruleProvedYours("by 17 Oct 2026"), "It is yours when it is proved, by 17 Oct 2026.");
+  assert.equal(MILESTONE_PAGE.lines.twoWeeksLater(GIFT_PAGE.lines.backToYou), "back to you, two weeks later");
+  assert.equal(MILESTONE_PAGE.lines.twoWeeksLater(GIFT_PAGE.lines.backTo("Mom")), "back to Mom, two weeks later");
 });
 
 test("the card draws no trail and no flag for it, and says where its proof stands", () => {
