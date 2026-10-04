@@ -5,7 +5,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Character, type CharacterState } from "../app/kit/Character";
 import { characterOf } from "../app/kit/DayStrip";
-import { MOTION } from "../src/design-tokens";
+import { MOTION, SPRING } from "../src/design-tokens";
+import { springEasing } from "../src/motion";
 
 // A day sleeps until it is done (the founder, 4 Oct 2026, in the place of "the days wake at the opening"). At the
 // opening, the gift's own character answers, at the head of the page, and the days do not move. A day earned wakes in
@@ -17,8 +18,8 @@ const page = readFileSync("app/components/GiftPage.tsx", "utf8");
 const css = readFileSync("app/globals.css", "utf8");
 
 test("the row of a gift that has not started is asleep, opened or not, and nothing in it moves at the opening", () => {
-  assert.equal("wake" in MOTION, false, "no movement of waking at the opening is left");
-  assert.doesNotMatch(row, /awake|useLayoutEffect|\.animate\(|MOTION\./, "the row plays nothing of its own");
+  // The row plays nothing of its own: opening a gift's page wakes no day. The waking is a day's own, when it opens.
+  assert.doesNotMatch(row, /useLayoutEffect|\.animate\(|MOTION\./, "the row plays nothing of its own");
   assert.match(row, /<ol className="day-row-days" data-days="asleep">/);
   // Every day of it is the sleeping character, named from the characters' file: its eyes are closed and cannot be moved.
   assert.match(row, /<Character state="toCome" variant=\{index\} standing=\{false\} className="h-auto w-full" \/>/);
@@ -48,7 +49,7 @@ test("a day earned wakes in its jump: eyes shut until it lands, one small turn i
   // The turn is in the air only: it starts when the day leaves the floor and is over as it lands.
   assert.match(earned, /\{ offset: gatherMs \/ total, transform: `rotate\(\$\{-360 \* turns\}deg\)`, easing: EASING\.emphasizedDecelerate \},\n\s*\{ offset: jumpMs \/ total, transform: "rotate\(0deg\)" \},/);
   // The day in an arrival wakes; the head of a screen keeps the plain jump, eyes open.
-  assert.match(motion, /step\.moment === "earned" \? playEarned\(element, step\.delay, true\) : playReturned\(element, step\.delay\)/);
+  assert.match(motion, /step\.moment === "earned" \? playEarned\(element, step\.delay, true\) : step\.moment === "woken" \? playWoken\(element, step\.delay\) : playReturned\(element, step\.delay\)/);
   assert.match(motion, /const jumping = playEarned\(element, 0\);/);
   // The drawing gives the turn its group, turning from its own middle, and the characters' file is made from it.
   assert.match(readFileSync("app/kit/Character.tsx", "utf8"), /\{\.\.\.\(withLimbs \|\| state === "earned" \? \{ "data-part": "whirl", style: FROM_MIDDLE \} : \{\}\)\}/);
@@ -65,32 +66,69 @@ test("a day done since the last visit is there from the first image, asleep, and
   assert.match(motion, /const held = drawing && step\.moment === "returned" \? \[drawing\.animate\(\[\{ opacity: 0 \}, \{ opacity: 1 \}\], \{ duration: 1, delay: step\.delay, fill: "backwards" \}\)\] : \[\];/);
   // One after another, once: the arrival's own schedule, and what was seen is written down as it plays.
   assert.match(motion, /earned\.forEach\(\(id, index\) => days\.set\(id, \{ moment: "earned", delay: schedule\.earnedAt\[index\] \}\)\);/);
-  assert.match(motion, /if \(!fromExample\) list\.forEach\(\(gift, index\) => writeSeen\(`\$\{storageKey\}\.\$\{gift\.id\}`, settledNow\[index\]\)\);/);
-  assert.match(motion, /if \(reduced\(\) \|\| \(earned\.length \+ returned\.length === 0 && !amount\)\) \{/, "nothing plays under reduced motion");
+  assert.match(motion, /if \(!fromExample\) \{\n\s*list\.forEach\(\(gift, index\) => \{\n\s*writeSeen\(`\$\{storageKey\}\.\$\{gift\.id\}`, settledNow\[index\]\);/);
+  assert.match(motion, /if \(reduced\(\) \|\| \(earned\.length \+ returned\.length \+ woken\.length === 0 && !amount\)\) \{/, "nothing plays under reduced motion");
 });
 
-test("the day of today sleeps too until it is done: it keeps its triangle, with its eyes closed, in a row of days alone", () => {
-  // In a row of days, today is drawn asleep; the other states are what they were.
-  assert.equal(characterOf("today"), "todayAsleep");
+test("what a row says: a capsule asleep is a day not open yet, the triangle awake is the day open now, and only that day is awake", () => {
+  assert.equal(characterOf("today"), "today");
   assert.deepEqual((["earned", "returned", "catchable", "aboutToReturn", "toCome"] as const).map(characterOf), ["earned", "returned", "catchable", "catchable", "toCome"]);
-  const draw = (state: CharacterState, variant = 0) => renderToStaticMarkup(createElement(Character, { state, variant, standing: false, drawn: "inline" }));
-  const body = (markup: string) => /<g data-part="body">(.*?)<\/g>/.exec(markup)?.[1];
-  const awake = draw("today");
-  const asleep = draw("todayAsleep");
-  // The same triangle, in the same colour: the shape is what says "today".
-  assert.ok(body(asleep));
-  assert.equal(body(asleep), body(awake));
-  // Its eyes: two closed pills, as a day to come's, where the triangle awake has two round eyes.
-  assert.equal(asleep.match(/<rect data-part="eye"/g)?.length, 2);
-  assert.equal(asleep.match(/<circle data-part="eye"/g), null);
-  assert.equal(awake.match(/<circle data-part="eye"/g)?.length, 2);
+  const draw = (state: CharacterState, wakes = false) => renderToStaticMarkup(createElement(Character, { state, standing: false, drawn: "inline", wakes }));
+  // Today: two round eyes, open. A day to come: two closed pills. No sleeping triangle is drawn any more.
+  assert.equal(draw("today").match(/<circle data-part="eye"/g)?.length, 2);
   assert.equal(draw("toCome").match(/<rect data-part="eye"/g)?.length, 2);
-  // Three faces, as the triangle awake has, so a row never repeats one face twice in a row.
-  assert.notEqual(draw("todayAsleep", 0), draw("todayAsleep", 1));
-  // The triangle awake is still drawn wherever it is not a day: a goal waited for, a choice, the landing's crowd.
-  assert.match(readFileSync("app/kit/HadOrNot.tsx", "utf8"), /asleep \? "toCome" : "today"/);
-  assert.match(readFileSync("app/kit/MilestoneMeter.tsx", "utf8"), /return "today";/);
-  assert.match(readFileSync("app/kit/YouDecide.tsx", "utf8"), /<Option character="today"/);
-  // Named from the characters' file like every drawing that does not move.
-  assert.match(readFileSync("public/characters.svg", "utf8"), /<symbol id="todayAsleep-0"/);
+  assert.doesNotMatch(readFileSync("app/kit/Character.tsx", "utf8"), /todayAsleep/);
+  assert.doesNotMatch(readFileSync("public/characters.svg", "utf8"), /todayAsleep/);
+  // The day of today, written into the page, carries the capsule it was, behind the triangle, for its waking alone.
+  const waking = draw("today", true);
+  const was = /<g data-part="was">(.*?)<\/g><g data-part="figure"/.exec(waking)?.[1] ?? "";
+  assert.ok(was.includes("<rect") && was.match(/<rect data-part="eye"/g)?.length === 2, "the capsule, with its eyes closed");
+  assert.equal(draw("today").includes('data-part="was"'), false, "not without being asked");
+  assert.equal(draw("earned", true).includes('data-part="was"'), false, "and only for the day of today");
+  for (const file of ["app/kit/DayRow.tsx", "app/kit/DayStrip.tsx"]) {
+    const row = readFileSync(file, "utf8");
+    assert.match(row, /wakes=\{characterOf\((state|day)\) === "today"\}/, file);
+    assert.match(row, /characterOf\((state|day)\) === "today"[^\n]*\? "inline" : "referenced"/, `${file}: written into the page, so its parts can move`);
+  }
+  // Out of sight outside the movement, and what is drawn while the day waits for its turn.
+  assert.match(css, /\[data-character="today"\] \[data-part="was"\] \{\n  opacity: 0;\n\}/);
+  assert.match(css, /\.arrival-pending svg\[data-character="today"\] \[data-part="was"\] \{\n  opacity: 1;\n\}\n\.arrival-pending svg\[data-character="today"\] \[data-part="figure"\] \{\n  opacity: 0;\n\}/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.arrival-pending svg\[data-character="today"\] \[data-part="was"\] \{\n    opacity: 0;\n  \}\n  \.arrival-pending svg\[data-character="today"\] \[data-part="figure"\] \{\n    opacity: 1;\n  \}/);
+});
+
+test("the waking: the capsule becomes the triangle, then the eyes open; small, with no jump and nothing that overshoots", () => {
+  assert.deepEqual({ becomeMs: MOTION.wake.becomeMs, fromHeight: MOTION.wake.fromHeight }, { becomeMs: 200, fromHeight: 0.64 });
+  assert.equal(MOTION.wake.eyes, SPRING.effects, "the spring that never overshoots");
+  assert.notEqual(MOTION.wake.eyes, MOTION.earned.landing, "not the landing of a day earned");
+  const woken = motion.slice(motion.indexOf("function playWoken"), motion.indexOf("/**\n * The gift arrives on the expressive spring"));
+  assert.match(woken, /figure\.animate\(\[\{ transform: `scaleY\(\$\{fromHeight\}\)` \}, \{ transform: "scaleY\(1\)" \}\], \{ duration: becomeMs, delay, easing, fill: "backwards" \}\)/);
+  assert.match(woken, /was\.animate\(\[\{ opacity: 1 \}, \{ opacity: 0 \}\], \{ duration: becomeMs, delay, easing: fade, fill: "backwards" \}\)/);
+  assert.match(woken, /\{ offset: 0, transform: shut \},\n\s*\{ offset: becomeMs \/ total, transform: shut, easing: open\.easing \},\n\s*\{ offset: 1, transform: "none" \},/, "the eyes open once the triangle is there");
+  assert.match(woken, /for \(const eye of figure\.querySelectorAll<SVGElement>\('\[data-part="eye"\]'\)\)/, "the triangle's eyes, not the capsule's");
+  assert.doesNotMatch(woken, /translateY|rotate|expressive|setTimeout|setInterval|iterations/, "nothing leaves the floor, nothing turns, nothing loops");
+  // Well under the jump of a day earned: shorter, and it is the day's own affair, the head of the screen does not answer it.
+  const wakeMs = MOTION.wake.becomeMs + springEasing(MOTION.wake.eyes).durationMs;
+  const jumpMs = MOTION.earned.gatherMs + MOTION.earned.riseMs + MOTION.earned.fallMs + springEasing(MOTION.earned.landing).durationMs;
+  assert.ok(wakeMs < jumpMs, `${wakeMs} ms against ${jumpMs} ms`);
+  assert.match(motion, /if \(step\.moment === "woken"\) return \(\) => running\.forEach\(\(animation\) => animation\.cancel\(\)\);/);
+});
+
+test("a day wakes when it opens: at the connection of a gift paid the same day, and on arrival when a new day opened since the last visit", () => {
+  const arrival = motion.slice(motion.indexOf("export function Arrival"), motion.indexOf("/** One day of a gift inside an arrival"));
+  // Which day is open, and what the last visit saw of it, kept beside the settled days.
+  assert.match(motion, /const openDayOf = \(gift: ArrivalGift\) => gift\.days\.indexOf\("today"\);/);
+  assert.match(arrival, /const seenOpen = useSeenMany\(gifts\.map\(\(gift\) => `\$\{storageKey\}\.open\.\$\{gift\.id\}`\)\);/);
+  // Open now, and a later day than the one last seen open. A visit that kept nothing wakes nothing: a gift seen for
+  // the first time simply has its day awake. A gift not started is written down as having none open, so its first
+  // day wakes the moment it has one: at the connection when it is paid the same day, the next day otherwise.
+  assert.match(arrival, /if \(open >= 0 && typeof sawOpen === "number" && open > sawOpen\) woken\.push\(`\$\{gift\.id\}:\$\{open\}`\);/);
+  assert.match(arrival, /if \(gift\.days\.length > 0\) writeSeen\(`\$\{storageKey\}\.open\.\$\{gift\.id\}`, openNow\[index\]\);/);
+  // Once, after the jumps of the days earned: when the last of them has landed.
+  assert.match(arrival, /const wokenAt = earned\.length > 0 \? schedule\.earnedAt\[earned\.length - 1\] \+ ARRIVAL_TIMINGS\.earnedAirborneMs : 0;\n\s*woken\.forEach\(\(id\) => days\.set\(id, \{ moment: "woken", delay: wokenAt \}\)\);/);
+  // Reduced motion: nothing plays, the day is simply awake.
+  assert.match(arrival, /if \(reduced\(\) \|\| \(earned\.length \+ returned\.length \+ woken\.length === 0 && !amount\)\) \{/);
+  // A gift that changes while the screen stands is decided again, and drawn in its starting state from the render
+  // that brings the change: what this screen already showed is not pending again.
+  assert.match(arrival, /list\.map\(\(gift, index\) => shown\[gift\.id\]\?\.settled \?\? settled\[index\]\),\n\s*list\.map\(\(gift, index\) => shown\[gift\.id\]\?\.open \?\? open\[index\]\),/);
+  assert.match(arrival, /plan\.decided && plan\.about === giftsKey \? plan : \{ \.\.\.plan, decided: false, pending: changed\.pending \}/);
 });

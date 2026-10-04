@@ -445,6 +445,14 @@ export const MOTION = {
     eyesShut: 0.36,
     mouthShut: 0.4,
   },
+  /**
+   * A day that opens wakes (the founder, 4 Oct 2026): the sleeping capsule becomes the triangle, risen from the
+   * capsule's own height, then its eyes open. A small movement, well under the jump of a day earned, which stays the
+   * only jump: nothing leaves the floor and nothing overshoots. Material's short4 for the becoming, the spring that
+   * never overshoots for the eyes. `fromHeight` is the capsule's height over the triangle's, in the drawing's own
+   * units (30 over 47).
+   */
+  wake: { becomeMs: 200, easing: EASING.emphasizedDecelerate, fade: EASING.standard, fromHeight: 0.64, eyes: SPRING.effects },
   /** A day gone back, on arrival: it slides to the left and fades to its resting opacity. Material's medium2. */
   returned: { durationMs: 300, easing: EASING.standard, fromOffset: 0.22 },
   /** The amount, on arrival and last: it counts to its value once, in under a second. Material's extra-long1. */

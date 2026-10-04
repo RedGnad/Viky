@@ -158,6 +158,40 @@ function playReturned(root: Element, delay: number): Animation[] {
 }
 
 /**
+ * A day that opens wakes (the founder, 4 Oct 2026): the sleeping capsule it was fades as the triangle rises from the
+ * capsule's own height, then its eyes open. A small movement, well under the jump of a day earned, which stays the
+ * only jump: nothing leaves the floor, nothing overshoots. Everything holds its first frame until the day's turn.
+ */
+function playWoken(root: Element, delay: number): Animation[] {
+  const figure = part(root, "figure");
+  if (!figure) return [];
+  const was = part(root, "was");
+  const { becomeMs, easing, fade, fromHeight, eyes } = MOTION.wake;
+  const open = springEasing(eyes);
+  const total = becomeMs + open.durationMs;
+  const animations = [
+    figure.animate([{ transform: `scaleY(${fromHeight})` }, { transform: "scaleY(1)" }], { duration: becomeMs, delay, easing, fill: "backwards" }),
+    figure.animate([{ opacity: 0 }, { opacity: 1 }], { duration: becomeMs, delay, easing: fade, fill: "backwards" }),
+  ];
+  if (was) animations.push(was.animate([{ opacity: 1 }, { opacity: 0 }], { duration: becomeMs, delay, easing: fade, fill: "backwards" }));
+  // The eyes of the triangle alone: shut while it rises, then open, on the spring that never overshoots.
+  const shut = `scaleY(${MOTION.earned.eyesShut})`;
+  for (const eye of figure.querySelectorAll<SVGElement>('[data-part="eye"]')) {
+    animations.push(
+      eye.animate(
+        [
+          { offset: 0, transform: shut },
+          { offset: becomeMs / total, transform: shut, easing: open.easing },
+          { offset: 1, transform: "none" },
+        ],
+        { duration: total, delay, fill: "backwards" },
+      ),
+    );
+  }
+  return animations;
+}
+
+/**
  * The gift arrives on the expressive spring, grown from a little way below, and its bow springs open a beat later.
  * `appears` false is the same movement of a character that is already there: the spring alone, with nothing fading
  * in, since a character on the screen that went out and came back would be a blink.
@@ -234,9 +268,12 @@ export function Reacts({ gesture, children }: Readonly<{ gesture: number; childr
  * then nothing knows yet whether the amount is about to count, and an amount that answers "settled" during that
  * window is answering before the question was asked.
  */
+/** What a day does in an arrival: a day earned jumps awake, a day gone back leaves, a day that opened wakes. */
+type Moment = "earned" | "returned" | "woken";
+
 type Plan = Readonly<{
   round: number;
-  days: ReadonlyMap<string, Readonly<{ moment: "earned" | "returned"; delay: number }>>;
+  days: ReadonlyMap<string, Readonly<{ moment: Moment; delay: number }>>;
   amountAt: number | null;
   decided: boolean;
   /**
@@ -244,10 +281,12 @@ type Plan = Readonly<{
    * draws them not yet there, and the browser starts them from there. Never the final state followed by a restart.
    */
   pending: ReadonlySet<string>;
+  /** The gifts this plan was decided for: gifts that change while the screen stands are decided again. */
+  about: string;
 }>;
 
 /** Outside any arrival there is nothing to wait for, so the question is settled from the first paint. */
-const NOTHING: Plan = { round: 0, days: new Map(), amountAt: null, decided: true, pending: new Set() };
+const NOTHING: Plan = { round: 0, days: new Map(), amountAt: null, decided: true, pending: new Set(), about: "" };
 /** Inside one, before the first frame: what plays is not known yet. */
 const UNDECIDED: Plan = { ...NOTHING, decided: false };
 const ArrivalContext = createContext<Plan>(NOTHING);
@@ -263,6 +302,8 @@ export type ArrivalGift = Readonly<{
 }>;
 
 const isSettled = (day: CharacterState) => day === "earned" || day === "returned";
+/** Which day of a gift is open, to do now: the one drawn awake, or none (not started, or today already done). */
+const openDayOf = (gift: ArrivalGift) => gift.days.indexOf("today");
 
 const ARRIVAL_TIMINGS = {
   earnedAirborneMs: MOTION.earned.gatherMs + MOTION.earned.riseMs + MOTION.earned.fallMs,
@@ -273,42 +314,74 @@ const ARRIVAL_TIMINGS = {
   staggerMs: MOTION.arrival.staggerMs,
 } as const;
 
+/** What a screen has shown of a gift since it arrived: its settled days, and which day was open (-1 for none). */
+type Shown = Readonly<Record<string, Readonly<{ settled: number; open: number }>>>;
+
 /**
  * The arrival on a screen (brief, section 6): what changed since the last visit plays once, in order, every day earned,
- * then every day gone back, then the amount counting, all of it in under two seconds. The last visit is kept on the
- * device, per gift, as the number of settled days it saw; a device that keeps nothing uses the gift's `lastSeen`.
+ * then the day that opened, then every day gone back, then the amount counting, all of it in under two seconds. The
+ * last visit is kept on the device, per gift, as the number of settled days it saw and the day that was open; a device
+ * that keeps nothing uses the gift's `lastSeen`, and wakes nothing.
+ *
+ * A gift that changes while the screen stands (it connects, a day is counted) is decided again, and from the very
+ * render that brings the change its new days are drawn in their starting state: never the final state for a frame,
+ * and then the movement.
  */
 export function Arrival({ storageKey, gifts, amount = false, children }: Readonly<{ storageKey: string; gifts: readonly ArrivalGift[]; amount?: boolean; children: ReactNode }>) {
   const giftsKey = JSON.stringify(gifts);
   const seen = useSeenMany(gifts.map((gift) => `${storageKey}.${gift.id}`));
-  const seenKey = JSON.stringify(seen);
+  const seenOpen = useSeenMany(gifts.map((gift) => `${storageKey}.open.${gift.id}`));
+  const seenKey = JSON.stringify([seen, seenOpen]);
+  /**
+   * What this screen has already shown, as state for what is drawn and as a mark for what is played. A day this
+   * screen has played is not pending again when the gifts change, though the device's last visit still says so.
+   */
+  const [shown, setShown] = useState<Shown>({});
   /**
    * What changed since the last visit, decided while the screen is drawn rather than after it, from the cookie the
    * server read (the fix to #154): the first image is then the arrival's starting state, the days to come not yet
    * there. A first visit, or nothing changed: nothing is pending, and the first image is the final state.
    */
-  const changed = useMemo(() => changesOf(JSON.parse(giftsKey) as ArrivalGift[], JSON.parse(seenKey) as (number | undefined)[]), [giftsKey, seenKey]);
+  const changed = useMemo(() => {
+    const [settled, open] = JSON.parse(seenKey) as [(number | undefined)[], (number | undefined)[]];
+    const list = JSON.parse(giftsKey) as ArrivalGift[];
+    return changesOf(
+      list,
+      list.map((gift, index) => shown[gift.id]?.settled ?? settled[index]),
+      list.map((gift, index) => shown[gift.id]?.open ?? open[index]),
+    );
+  }, [giftsKey, seenKey, shown]);
   const [plan, setPlan] = useState<Plan>({ ...UNDECIDED, pending: changed.pending });
 
   useEffect(() => {
     const list = JSON.parse(giftsKey) as ArrivalGift[];
-    const lastSeen = JSON.parse(seenKey) as (number | undefined)[];
+    const [lastSeen, lastOpen] = JSON.parse(seenKey) as [(number | undefined)[], (number | undefined)[]];
     let round = 0;
     const play = (fromExample: boolean) => {
       round += 1;
-      const { earned, returned, pending, settledNow } = changesOf(list, fromExample ? list.map((gift) => gift.lastSeen) : lastSeen);
-      if (!fromExample) list.forEach((gift, index) => writeSeen(`${storageKey}.${gift.id}`, settledNow[index]));
+      const { earned, returned, woken, pending, settledNow, openNow } = changesOf(list, fromExample ? list.map((gift) => gift.lastSeen) : lastSeen, fromExample ? list.map(() => undefined) : lastOpen);
+      if (!fromExample) {
+        list.forEach((gift, index) => {
+          writeSeen(`${storageKey}.${gift.id}`, settledNow[index]);
+          // A gift whose days are not drawn yet says nothing of which is open: nothing is written of it.
+          if (gift.days.length > 0) writeSeen(`${storageKey}.open.${gift.id}`, openNow[index]);
+        });
+        setShown(Object.fromEntries(list.filter((gift) => gift.days.length > 0).map((gift) => [gift.id, { settled: settledNow[list.indexOf(gift)], open: openNow[list.indexOf(gift)] }])));
+      }
       // Nothing changed at all: nothing to replay. An amount that changed on its own still counts, last and alone.
       // Said out loud rather than by staying silent, because whoever waits for the count waits on this answer.
-      if (reduced() || (earned.length + returned.length === 0 && !amount)) {
-        setPlan({ round, days: new Map(), amountAt: null, decided: true, pending: new Set() });
+      if (reduced() || (earned.length + returned.length + woken.length === 0 && !amount)) {
+        setPlan({ round, days: new Map(), amountAt: null, decided: true, pending: new Set(), about: giftsKey });
         return;
       }
       const schedule: ArrivalSchedule = arrivalSchedule(earned.length, returned.length, amount, ARRIVAL_TIMINGS);
-      const days = new Map<string, { moment: "earned" | "returned"; delay: number }>();
+      const days = new Map<string, { moment: Moment; delay: number }>();
       earned.forEach((id, index) => days.set(id, { moment: "earned", delay: schedule.earnedAt[index] }));
       returned.forEach((id, index) => days.set(id, { moment: "returned", delay: schedule.returnedAt[index] }));
-      setPlan({ round, days, amountAt: schedule.amountAt, decided: true, pending });
+      // The day that opened wakes after the jumps of the days earned: when the last of them has landed.
+      const wokenAt = earned.length > 0 ? schedule.earnedAt[earned.length - 1] + ARRIVAL_TIMINGS.earnedAirborneMs : 0;
+      woken.forEach((id) => days.set(id, { moment: "woken", delay: wokenAt }));
+      setPlan({ round, days, amountAt: schedule.amountAt, decided: true, pending, about: giftsKey });
     };
     const frame = requestAnimationFrame(() => play(false));
     const replay = () => play(true);
@@ -316,21 +389,31 @@ export function Arrival({ storageKey, gifts, amount = false, children }: Readonl
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener(REPLAY_ARRIVAL, replay);
-      list.forEach((gift) => forgetOnThisScreen(`${storageKey}.${gift.id}`));
+      list.forEach((gift) => {
+        forgetOnThisScreen(`${storageKey}.${gift.id}`);
+        forgetOnThisScreen(`${storageKey}.open.${gift.id}`);
+      });
     };
   }, [storageKey, giftsKey, seenKey, amount]);
 
-  // Until the arrival has decided, what is pending is what changed, known from the gifts as soon as they are: a row the
-  // page draws a moment later still starts with its days to come not there, and never shows them first.
-  const value = useMemo(() => (plan.decided ? plan : { ...plan, pending: changed.pending }), [plan, changed]);
+  // Until the arrival has decided for these gifts, what is pending is what changed, known from the gifts as soon as
+  // they are: a row the page draws a moment later, or a gift that changes while the screen stands, starts with its new
+  // days in their starting state, and never shows them first.
+  const value = useMemo(() => (plan.decided && plan.about === giftsKey ? plan : { ...plan, decided: false, pending: changed.pending }), [plan, changed, giftsKey]);
   return <ArrivalContext.Provider value={value}>{children}</ArrivalContext.Provider>;
 }
 
-/** The days that changed since a visit that saw `seen` settled days of each gift (the gift's own count when unknown). */
-function changesOf(list: readonly ArrivalGift[], seen: readonly (number | undefined)[]) {
+/**
+ * The days that changed since a visit that saw `seen` settled days of each gift (the gift's own count when unknown) and
+ * `seenOpen` as its open day. A day wakes when it is open now and a later day than the one the last visit saw open;
+ * a visit that kept nothing of it wakes nothing, and neither does a gift seen for the first time.
+ */
+function changesOf(list: readonly ArrivalGift[], seen: readonly (number | null | undefined)[], seenOpen: readonly (number | null | undefined)[]) {
   const earned: string[] = [];
   const returned: string[] = [];
+  const woken: string[] = [];
   const settledNow: number[] = [];
+  const openNow: number[] = [];
   list.forEach((gift, giftIndex) => {
     const saw = seen[giftIndex] ?? gift.lastSeen;
     let settled = 0;
@@ -340,8 +423,13 @@ function changesOf(list: readonly ArrivalGift[], seen: readonly (number | undefi
       settled += 1;
     });
     settledNow.push(settled);
+    const open = openDayOf(gift);
+    const sawOpen = seenOpen[giftIndex];
+    // What the last visit saw comes through a text and back: a visit that kept nothing reads as null there, not as undefined.
+    if (open >= 0 && typeof sawOpen === "number" && open > sawOpen) woken.push(`${gift.id}:${open}`);
+    openNow.push(open);
   });
-  return { earned, returned, settledNow, pending: new Set([...earned, ...returned]) as ReadonlySet<string> };
+  return { earned, returned, woken, settledNow, openNow, pending: new Set([...earned, ...returned, ...woken]) as ReadonlySet<string> };
 }
 
 /** One day of a gift inside an arrival: it plays its moment if it changed since the last visit, and stands still otherwise. */
@@ -362,7 +450,9 @@ export function ArrivalDay({ gift, index, children }: Readonly<{ gift: string; i
     const drawing = element.querySelector("svg");
     const held = drawing && step.moment === "returned" ? [drawing.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1, delay: step.delay, fill: "backwards" })] : [];
     element.classList.remove("arrival-pending");
-    const running = [...held, ...(step.moment === "earned" ? playEarned(element, step.delay, true) : playReturned(element, step.delay))];
+    const running = [...held, ...(step.moment === "earned" ? playEarned(element, step.delay, true) : step.moment === "woken" ? playWoken(element, step.delay) : playReturned(element, step.delay))];
+    // A day that wakes is the row's own affair: the head of the screen answers a day earned and a day gone back.
+    if (step.moment === "woken") return () => running.forEach((animation) => animation.cancel());
     // The character at the head of the screen answers each day as it happens on screen: the moment is the day's own
     // animation reaching its landing, or, for a day going back, the end of its slide (its start is the very frame the
     // last day earned lands, and the second answer would erase the first), measured by an animation that moves
