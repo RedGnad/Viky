@@ -236,7 +236,7 @@ test("the labels of the recipient's controls are four words at most", () => {
     assert.ok(found, `${label} is not a label of YOU_DECIDE`);
     assert.ok(found[1].split(" ").length <= 4, `${label} runs to ${found[1].split(" ").length} words: "${found[1]}"`);
   }
-  for (const words of ["One thing", "Two things", "Next reading", "Ended 1 Oct 2026", "Back to Maman", "Day 3 of 7"]) assert.ok(words.split(" ").length <= 4, words);
+  for (const words of ["One thing", "Two things", "Next reading", "Ended 1 Oct 2026", "Back to Mom", "Day 3 of 7"]) assert.ok(words.split(" ").length <= 4, words);
 });
 
 test("Me's three round buttons stand under no printed label, and a gift's keep theirs (the founder, 2 Oct 2026)", () => {

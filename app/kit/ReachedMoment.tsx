@@ -12,7 +12,7 @@ import { dateInWords } from "@/src/moments";
 import { springEasing } from "@/src/motion";
 import { REACHED_MOMENT as W } from "@/src/sentences";
 import { AMOUNT_IN_TITLE, BODY, CARD_LABEL, HERO, PRIMARY_BUTTON, SMALL_BUTTON } from "../components/ui";
-import { ExactLine, LedFigure } from "./LedAmount";
+import { LedFigure } from "./LedAmount";
 import { reduced } from "./Motion";
 
 /**
@@ -254,7 +254,6 @@ export function ReachedMoment({ gift, here, onClose }: Readonly<{ gift: ReachedG
           <p className={CARD_LABEL} data-became={became ? "yes" : "no"}>
             {recipient ? (became ? W.yours : W.inYourName) : became ? W.theirs : W.inTheirName}
           </p>
-          <ExactLine amount={led} />
         </div>
         <div className="mt-[var(--space-md)] w-full">
           {here ? (

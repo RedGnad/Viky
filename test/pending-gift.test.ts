@@ -11,7 +11,7 @@ import { PENDING_GIFT_MAX_AGE_MS, pendingGiftExists, pendingGiftFor, pendingGift
 const A = "0x350aF869ABa6ff26AB33517ECd3E38ACaF107761";
 const B = "0x91C964e745ffd6265c75df33cA9137D81c3c454d";
 const NOW = Date.UTC(2026, 8, 15, 20, 13);
-const terms = { account: A, recipientName: "Léa", funderName: "Maman", conditionId: "duolingo-daily", username: "ama_learns", dollars: "25", days: "7", target: "10" };
+const terms = { account: A, recipientName: "Léa", funderName: "Mom", conditionId: "duolingo-daily", username: "ama_learns", dollars: "25", days: "7", target: "10" };
 
 test("the gift set up before paying comes back for the account that set it up", () => {
   const stored = pendingGiftToStore(terms, NOW);

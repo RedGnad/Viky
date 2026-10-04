@@ -82,7 +82,7 @@ function milestoneGift() {
     conditionId: "chess-rating",
     youAreTheRecipient: true,
     youAreTheFunder: false,
-    names: { recipientName: "Léa", funderName: "Maman" },
+    names: { recipientName: "Léa", funderName: "Mom" },
     goalAccount: { username: "lea_plays", bound: true, code: null, codeExpiresAt: null },
     amount: "50000000",
     amountDisplay: "$50.00",
@@ -122,7 +122,7 @@ function card() {
     goalUsername: "lea_plays",
     usernameSource: "funder",
     recipientName: "Léa",
-    funderName: "Maman",
+    funderName: "Mom",
     catchUpSeconds: 108_000,
     days: [],
     fundedAt: FUNDED_AT,
@@ -336,7 +336,7 @@ test.describe("the recipient's yes and stop, on two devices", () => {
     await second.page.locator('[data-decide="stop"]').click();
     await second.page.locator('[data-option="break"]').click();
     await expect(second.page.getByRole("dialog", { name: "Take a break?" })).toBeVisible();
-    await expect(second.page.getByText(/If 1500 is not read by .+, the \$50\.00 goes back to Maman\./)).toBeVisible();
+    await expect(second.page.getByText(/If 1500 is not read by .+, the \$50\.00 goes back to Mom\./)).toBeVisible();
     await hold(second.page);
     const promptsBeforeStop = await promptsOf(second.page);
     await second.page.getByRole("dialog", { name: "Take a break?" }).getByRole("button", { name: "Take a break" }).click();

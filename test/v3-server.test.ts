@@ -435,7 +435,7 @@ test("on the first two versions nothing changed: one reading a day, and a count 
 });
 
 test("a day counted the day it was done is told as today's, to each of the two", () => {
-  const BOTH = { recipientName: "Léa", funderName: "Maman" };
+  const BOTH = { recipientName: "Léa", funderName: "Mom" };
   assert.equal(morningSentence("recipient", { kind: "day", outcome: "earned", amount: "$2.40", today: true }, BOTH), "Today counted. $2.40 is yours.");
   assert.equal(morningSentence("funder", { kind: "day", outcome: "earned", amount: "$2.40", today: true }, BOTH, { yesterday: "yesterday's lesson", today: "today's lesson" }), "Léa did today's lesson. $2.40 is theirs.");
   assert.equal(morningSentence("funder", { kind: "day", outcome: "earned", amount: "$2.40", today: true }, BOTH), "Léa counted today. $2.40 is theirs.");

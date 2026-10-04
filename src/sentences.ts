@@ -1543,12 +1543,12 @@ export const REACHED_MOMENT = {
 } as const;
 
 /**
- * An amount led by the reader's currency (src/display-currency.ts, `ledAmount`): "about" before the converted figure,
- * and the exact dollars under it with the rate's day.
+ * An amount led by the reader's currency (src/display-currency.ts, `ledAmount`): "about" before the converted figure.
+ * The line of exact dollars under it is gone from every screen (the founder, 4 Oct 2026): the person does not need
+ * the dollars.
  */
 export const LED_AMOUNT = {
   about: "about",
-  exactly: (dollars: string, day: string) => `Exactly ${dollars}, at the rate of ${day}.`,
 } as const;
 
 export const LINK_PREVIEW = {

@@ -284,7 +284,7 @@ test.describe("money a card just delivered is money in the account, not a withdr
       goalUsername: "boo_learns",
       usernameSource: "recipient",
       recipientName: "Boo",
-      funderName: "Maman",
+      funderName: "Mom",
       catchUpSeconds: 108_000,
       days: [{ day: today, outcome: "earned" }],
       fundedAt: Math.floor(Date.now() / 1000) - 7_200,

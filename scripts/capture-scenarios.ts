@@ -75,7 +75,7 @@ function gift(over: Record<string, unknown> = {}) {
     giftId: GIFT_ID,
     youAreTheRecipient: false,
     youAreTheFunder: false,
-    names: { recipientName: "Léa", funderName: "Maman" },
+    names: { recipientName: "Léa", funderName: "Mom" },
     amount: "7000000",
     perDay: "1000000",
     takenDisplay: "$0.00",
@@ -150,7 +150,7 @@ function card(over: Record<string, unknown> = {}) {
     goalUsername: null,
     usernameSource: null,
     recipientName: "Léa",
-    funderName: "Maman",
+    funderName: "Mom",
     catchUpSeconds: 108_000,
     days: [],
     fundedAt: Math.floor(Date.now() / 1000) - 5 * 86_400,
@@ -353,7 +353,7 @@ export const SCENARIOS: Scenario[] = [
       await s.signIn();
       await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
       await s.settle();
-      await s.text(/Named by Maman/, 30_000);
+      await s.text(/Named by Mom/, 30_000);
       // A fold, not a button (the founder, 4 Oct 2026): its name is pressed where it stands.
       await s.page.locator("details[data-not-your-name] summary").click();
       await s.settle();
@@ -554,7 +554,7 @@ function milestoneGift(over: Record<string, unknown> = {}) {
     conditionId: "chess-rating",
     youAreTheRecipient: true,
     youAreTheFunder: false,
-    names: { recipientName: "Léa", funderName: "Maman" },
+    names: { recipientName: "Léa", funderName: "Mom" },
     goalAccount: { username: "lea_plays", bound: true, code: null, codeExpiresAt: null },
     amount: "50000000",
     amountDisplay: "$50.00",

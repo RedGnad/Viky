@@ -200,9 +200,9 @@ test("since D91 the only start refused is one already at the target, and the wor
   // Two ordinary wins above the day the funder paid: that is the climb, and it settles as any other.
   assert.equal(milestonePhase({ ...CLIMBING, maximumStart: ceiling, startingValue: ceiling }, STARTED), "climbing");
   assert.equal(milestonePhase({ ...CLIMBING, maximumStart: ceiling, startingValue: CLIMBING.target }, STARTED), "startTooHigh");
-  const mine = MILESTONE_ACTIONS.startTooHighMine(1520, 1500, "Maman");
+  const mine = MILESTONE_ACTIONS.startTooHighMine(1520, 1500, "Mom");
   assert.match(mine, /already reached 1500 when you connected/);
-  assert.match(mine, /Ask Maman for a new one/);
+  assert.match(mine, /Ask Mom for a new one/);
   assert.doesNotMatch(mine, /ceiling|maximum|above the/i, "no jargon, and no number nobody was ever shown");
   assert.match(MILESTONE_ACTIONS.startTooHighTheirs(1520, 1500, "Léa"), /Léa had already reached 1500 when they connected/);
 });
