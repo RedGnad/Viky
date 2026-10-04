@@ -457,12 +457,20 @@ function Book() {
   );
 }
 
+/**
+ * The cap is in the body's own colour, by day and by night (the founder, 4 Oct 2026). It was the third colour, which is
+ * the body's by day and the rim's at night: after dark its band stood purple on a purple rim and could not be seen,
+ * and the rim showed on either side of it like a cut. The body's colour is the purple by day, as before, and the gold
+ * at night, which reads on the rim.
+ */
+const CAP = "var(--character-hero-to)";
+
 function Cap() {
   return (
     <g data-prop="cap" style={FROM_MIDDLE}>
-      <path d="M22 4.5 V9 Q32 13 42 9 V4.5 Z" style={{ fill: "var(--character-3)" }} />
+      <path d="M22 4.5 V9 Q32 13 42 9 V4.5 Z" style={{ fill: CAP }} />
       <path d="M22 4.5 V9 Q32 13 42 9 V4.5 Z" style={{ fill: INK, fillOpacity: 0.3 }} />
-      <path d="M32 -3.2 L51 3.4 Q52.4 4 51 4.6 L32 11.2 L13 4.6 Q11.6 4 13 3.4 Z" style={{ fill: "var(--character-3)" }} />
+      <path d="M32 -3.2 L51 3.4 Q52.4 4 51 4.6 L32 11.2 L13 4.6 Q11.6 4 13 3.4 Z" style={{ fill: CAP }} />
       <path d="M32 4.6 L51 3.4 Q52.4 4 51 4.6 L32 11.2 L13 4.6 Q11.6 4 13 3.4 Z" style={{ fill: INK, fillOpacity: 0.14 }} />
       <path d="M15 3.6 L32 -2.2 L44 1.9" style={{ fill: "none", stroke: SHINE, strokeWidth: 0.7, strokeLinecap: "round" }} />
       <path d="M32 4 Q42 5 46.5 6.5 V14" style={{ fill: "none", stroke: "var(--character-1)", strokeWidth: 1.2, strokeLinecap: "round" }} />

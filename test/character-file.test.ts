@@ -61,3 +61,21 @@ test("every character whose parts move is written into the page", () => {
   assert.match(readFileSync("app/layout.tsx", "utf8"), /preload\(CHARACTERS_FILE, \{ as: "image"/, "the file is asked for in the head");
   assert.match(readFileSync("next.config.mjs", "utf8"), /source: "\/characters\.svg", headers: \[\{ key: "Cache-Control", value: "public, max-age=31536000, immutable" \}\]/);
 });
+
+test("the graduate's cap is in the body's own colour, so its band reads on the rim by day and by night", () => {
+  // After dark the rim is the purple the cap was drawn in: its band could not be seen, and the rim showed on either
+  // side of it like a cut (the founder, 4 Oct 2026, on the tile "School & studies").
+  const figure = readFileSync("app/kit/Figure.tsx", "utf8");
+  assert.match(figure, /const CAP = "var\(--character-hero-to\)";/);
+  const cap = figure.slice(figure.indexOf("function Cap()"), figure.indexOf("function Rook()"));
+  assert.equal((cap.match(/fill: CAP/g) ?? []).length, 2, "the band and the board");
+  assert.doesNotMatch(cap, /fill: "var\(--character-3\)"/);
+  // The body's colour is the cap's old one by day, so nothing changes by day; at night it is the gold, never the rim's.
+  const css = readFileSync("app/globals.css", "utf8");
+  const day = css.slice(0, css.indexOf("@media (prefers-color-scheme: dark)"));
+  assert.match(day, /--character-hero-to: #B79BFF;/);
+  assert.match(day, /--character-3: #B79BFF;/);
+  const night = css.slice(css.indexOf("@media (prefers-color-scheme: dark)"));
+  assert.match(night, /--character-hero-edge: #B79BFF;/, "the rim after dark is the cap's old colour");
+  assert.match(night, /--character-hero-to: #E8B860;/);
+});
