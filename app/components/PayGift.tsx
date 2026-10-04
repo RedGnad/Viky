@@ -41,7 +41,7 @@ import { RampnowWaiting } from "../kit/offer/RampnowWaiting";
 import { frameKeepsSignIn, rampnowFrameOn } from "@/src/rampnow-frame";
 import { clearRampnowPending, noteRampnowPending, payAtRampnowBeside, readRampnowPending, useRampnowPending } from "@/src/client/rampnow-pending";
 import { noteInRampnowJournal } from "@/src/client/rampnow-journal";
-import { moneyIn } from "@/src/pay-sum";
+import { dollarsSaidIn, giftAsTyped, heldIn, moneyIn, moneyTypedIn } from "@/src/pay-sum";
 import { FunderControls } from "../kit/FunderControls";
 import { Said } from "../kit/Said";
 import { FoldChevron } from "../kit/GiftLive";
@@ -167,7 +167,8 @@ export function PayGift() {
    * opens; empty once taken, and after a taking that was refused, which is said and not tried again by itself.
    */
   const [earned, setEarned] = useState<readonly EarnedInGift[] | null>(null);
-  const [arrivedFigure, setArrivedFigure] = useState<string | undefined>(undefined);
+  /** What a payment that fell short brought, in the coin's units: said in the money the gift was typed in. */
+  const [arrived, setArrived] = useState<bigint | undefined>(undefined);
   const [problem, setProblem] = useState<string | null>(null);
   const [problemCode, setProblemCode] = useState<string | null>(null);
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
@@ -493,7 +494,7 @@ export function PayGift() {
           failedAtMs.current = null;
           const after = await readAusdBalance(address);
           setBalance(after);
-          setArrivedFigure(formatAusd(after - read.held));
+          setArrived(after - read.held);
           setProblem(null);
           working.current = false;
           setPhase(after >= wanted ? "giving" : "short");
@@ -525,7 +526,7 @@ export function PayGift() {
           failedAtMs.current = null;
           const after = await readAusdBalance(address);
           setBalance(after);
-          setArrivedFigure(formatAusd(after - read.held));
+          setArrived(after - read.held);
           setProblem(null);
           working.current = false;
           setPhase(after >= wanted ? "giving" : "short");
@@ -736,7 +737,15 @@ export function PayGift() {
     );
   }
 
-  const gift = formatAusd(units);
+  /**
+   * One writing of money (the founder, 4 Oct 2026, src/pay-sum.ts): the gift as it was typed, in the money it was typed
+   * in, and everything else on these screens said in that same money. The figure is the one the pay sheet showed, kept
+   * with the payment started and on the card.
+   */
+  const typed = draft.typedAmount !== undefined ? draft : { typedAmount: kept?.typedAmount, typedIn: kept?.typedIn };
+  const gift = giftAsTyped(typed, formatAusd(units));
+  const typedMoney = moneyTypedIn(typed, money.rates);
+  const said = (amount: bigint) => dollarsSaidIn(amount, typedMoney, money.rates, formatAusd(amount));
 
   // ---------------------------------------------------------------------------------------------------------------
   // Paying: the wait, the payment arriving, the gift being made.
@@ -752,12 +761,16 @@ export function PayGift() {
         </Shell>
       );
     }
-    if (phase === "short" && arrivedFigure) {
+    if (phase === "short" && arrived !== undefined) {
       const more = eurosToBuyOn(units - held, wayIn, money.rates?.usdPerEur) ?? wayIn.smallestEur;
       const makeIt = twoDecimalsDown(held, 6);
+      // What the gift would become, as the button and the sentence say it, and as it is kept if the button is pressed.
+      const makeItUnits = dollarsToUnits(makeIt);
+      const makeItRead = typedMoney === "USD" ? undefined : heldIn(makeItUnits, typedMoney, money.rates);
+      const makeItSaid = said(makeItUnits);
       return (
         <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.arrived.title}>
-          <Said text={W.arrived.short(arrivedFigure, gift, moneyIn(more, "EUR"), `$${makeIt}`)} />
+          <Said text={W.arrived.short(said(arrived), gift, moneyIn(more, "EUR"), makeItSaid)} />
           {cardClosed ? (
             <CardNotOffered country={card?.country ?? null} />
           ) : (
@@ -783,14 +796,18 @@ export function PayGift() {
             <button
               type="button"
               onClick={() => {
-                // The gift becomes what the payment actually bought, on the card as here: there is one gift.
-                keepOnDevice({ ...draft, dollars: makeIt });
+                // The gift becomes what the payment actually bought, on the card as here: there is one gift. And it
+                // is said from now on as this button said it.
+                const next = { ...draft, dollars: makeIt, typedAmount: makeItRead === undefined ? makeIt : String(makeItRead), typedIn: makeItRead === undefined ? "USD" : typedMoney };
+                writeCardDraft(next, address);
+                keepOnDevice(next);
+                setKept(peekPendingGift());
                 setPhase("waiting");
                 go("pay");
               }}
               className={SECONDARY_BUTTON}
             >
-              {W.arrived.makeIt(`$${makeIt}`)}
+              {W.arrived.makeIt(makeItSaid)}
             </button>
           ) : null}
         </Shell>
@@ -839,7 +856,7 @@ export function PayGift() {
     return (
       <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.waiting.title(toBuy ? moneyIn(toBuy, "EUR") : undefined)}>
         <section className="flex flex-col gap-[var(--space-xs)]">
-          <p className={HELP}>{W.waiting.inAccountNow(balance === null ? "…" : formatAusd(held))}</p>
+          <p className={HELP}>{W.waiting.inAccountNow(balance === null ? "…" : said(held))}</p>
           <p className={BODY}>{milestone ? M.account.yourGift(gift, recipient) : W.account.yourGift(gift, recipient, days)}</p>
           {/* Where a first funder lands once pay has made their account: the judge code is asked here too (D299). A
               credit that covers the gift is made into it by the watch above, as any payment that lands is. */}

@@ -246,23 +246,27 @@ export function CashOut() {
    */
   const arrived = openWithdrawal !== undefined && !heldForWithdrawal(openWithdrawal, USDC.address, held(USDC)) && held(USDC) >= USDC_ARRIVAL_FLOOR && usdcRouterAddress() ? held(USDC) : 0n;
   /**
-   * The chain's own coin under the same rule (the founder, 4 Oct 2026): a card can deliver it too. Held with no
-   * withdrawal open on it, it is money in the account, counted at the exchange's own quote (`useChainCoinWorth`) and
-   * changed into what a gift holds the moment a way is chosen. `arrivedCoin` is the coin itself, `arrivedCoinWorth` its
-   * dollars, cut to the cent, once the quote has answered.
+   * The chain's own coin under the same rule (the founder, 4 Oct 2026): a card can deliver it too. It is money in the
+   * account, counted at the exchange's own quote (`useChainCoinWorth`), the quote Home counts it with, so the figure
+   * here is Home's whatever the coin is held for. Held with no withdrawal open on it, it is changed into what a gift
+   * holds the moment a way is chosen: `arrivedCoin` is that coin, `arrivedCoinWorth` its dollars, cut to the cent.
+   * Held for a withdrawal by card that is open, it is counted all the same (the founder, 4 Oct 2026: "Yours" left it
+   * out, and Home did not), and the line under the figure says that much of it is ready for the card service.
    */
-  const arrivedCoin = openWithdrawal !== undefined && !heldForWithdrawal(openWithdrawal, MON.address, held(MON)) ? chainCoinToChange(held(MON)) : 0n;
-  const arrivedCoinWorth = arrivedCoin > 0n && coinWorth.state === "worth" ? coinWorth.units : 0n;
+  const coinHeld = chainCoinToChange(held(MON));
+  const coinHeldWorth = coinHeld > 0n && coinWorth.state === "worth" ? coinWorth.units : 0n;
+  const arrivedCoin = openWithdrawal !== undefined && !heldForWithdrawal(openWithdrawal, MON.address, held(MON)) ? coinHeld : 0n;
+  const arrivedCoinWorth = arrivedCoin > 0n ? coinHeldWorth : 0n;
   /** The figures hold a quote: never said as exact dollars. */
-  const estimated = arrivedCoinWorth > 0n;
+  const estimated = coinHeldWorth > 0n;
   const changeable = toTheCent(ausd + giftsHold + arrived, AUSD.decimals) + arrivedCoinWorth;
-  const dollarsHeld = dollarsToTheCent(ausd + giftsHold, held(USDC)) + arrivedCoinWorth;
+  const dollarsHeld = dollarsToTheCent(ausd + giftsHold, held(USDC)) + coinHeldWorth;
   /**
    * The coin's worth is not known and nothing else is held: no figure, as on Home (app/kit/money.ts). While the quote
    * is being read the dollars alone, then the dollars and the coin, would be two figures; and when it did not answer,
    * a zero would stand over money. It is asked again until it answers, and nothing is said of it (the founder, 4 Oct 2026).
    */
-  const figureUnknown = arrivedCoin > 0n && (coinWorth.state === "reading" || (coinWorth.state === "unread" && dollarsHeld === 0n));
+  const figureUnknown = coinHeld > 0n && (coinWorth.state === "reading" || (coinWorth.state === "unread" && dollarsHeld === 0n));
   /**
    * What the account holds, led by the reader's currency. When it counts the chain's coin at a quote, no line under it
    * calls the dollars exact. Nothing more is said of the estimate: no "about" of its own (the founder, 4 Oct 2026).
@@ -700,7 +704,9 @@ export function CashOut() {
 
   if (stage === "base") {
     const led = holdings === null || figureUnknown ? undefined : heldLed();
-    const cardBranch = holdings !== null && dollarsHeld === 0n && firstReady !== undefined;
+    // Only when the coin's quote did not answer: while it is being read the figure's place is held, and once it has
+    // answered the coin is in "Yours", with the line under it saying what is ready.
+    const cardBranch = holdings !== null && dollarsHeld === 0n && firstReady !== undefined && coinWorth.state !== "reading";
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
         {/* The balance, on the page ground and not in a box, as Home sets it: the person's currency leads with "about"

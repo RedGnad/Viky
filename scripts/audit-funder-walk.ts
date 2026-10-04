@@ -493,7 +493,7 @@ async function sceneFirstPayment(w: Walk): Promise<void> {
     await create.click();
     const landedOn = await Promise.race([
       w.page.waitForURL(/\/fund\?step=paying/, { timeout: 40_000 }).then(() => "the wait"),
-      w.page.getByText("In your account").first().waitFor({ state: "visible", timeout: 40_000 }).then(() => "Home, signed in"),
+      w.page.locator(".money-display-box h1").first().waitFor({ state: "visible", timeout: 40_000 }).then(() => "Home, signed in"),
     ]).catch(() => "neither the wait nor Home in 40 seconds");
     const madeMs = Date.now() - made;
     await w.page.waitForTimeout(1_200);

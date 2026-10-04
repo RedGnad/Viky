@@ -354,7 +354,9 @@ export function OfferCard({
         onChoose={readIn}
         onClose={() => setReading(false)}
       />
-      <PaySheet open={paying} draft={draft} onChange={change} onClose={() => setPaying(false)} onMaking={onMaking} />
+      {/* The sheet says the gift as the card does: a figure the card started on, which nobody typed, is given to it
+          as the figure typed, or a round 20,000 francs came back from its dollars as 19,997 (the founder, 4 Oct 2026). */}
+      <PaySheet open={paying} draft={starting ? { ...draft, typedAmount: starting.typed, typedIn: money.currency } : draft} onChange={change} onClose={() => setPaying(false)} onMaking={onMaking} />
     </>
   );
 }

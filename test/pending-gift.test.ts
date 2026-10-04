@@ -21,6 +21,15 @@ test("the gift set up before paying comes back for the account that set it up", 
   assert.deepEqual(pendingGiftFor(stored, A.toLowerCase(), NOW + 1), back, "whatever the letter case of the identifier");
 });
 
+test("the figure typed comes back with it, so the gift is said as it was typed wherever it is picked up again", () => {
+  // 45 euros typed: written down with the payment started, and never read back, so Home said "$50.51 for Boo".
+  const typed = { ...terms, dollars: "50.51", typedAmount: "45", typedIn: "EUR" };
+  assert.deepEqual(pendingGiftFor(pendingGiftToStore(typed, NOW), A, NOW + 1), { ...typed, account: A.toLowerCase(), savedAtMs: NOW });
+  // A gift kept before the figure was written down with it has none, and is said in dollars.
+  const back = pendingGiftFor(pendingGiftToStore(terms, NOW), A, NOW + 1);
+  assert.equal(back && "typedAmount" in back, false);
+});
+
 test("it never comes back for another account, or once it is old", () => {
   const stored = pendingGiftToStore(terms, NOW);
   assert.equal(pendingGiftFor(stored, B, NOW + 1), undefined);
