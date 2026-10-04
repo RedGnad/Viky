@@ -774,7 +774,7 @@ export function PayGift() {
     const start = address.slice(0, 4);
     const end = address.slice(-4);
     return (
-      <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.waiting.title(toBuy)}>
+      <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.waiting.title(toBuy ? moneyIn(toBuy, "EUR") : undefined)}>
         <section className="flex flex-col gap-[var(--space-xs)]">
           <p className={HELP}>{W.waiting.inAccountNow(balance === null ? "…" : formatAusd(held))}</p>
           <p className={BODY}>{milestone ? M.account.yourGift(gift, recipient) : W.account.yourGift(gift, recipient, days)}</p>

@@ -256,8 +256,11 @@ export const PAY = {
   },
   /** Said before the action, because it is what pressing it does: nothing was asked of this person until now. */
   passkeyMakesTheAccount: "Your face or your fingerprint creates your account when you press pay. Nothing was asked of you until now.",
-  /** For a passkey made on another device, which this one does not know of: pay would make a second account. */
-  alreadyHaveAccount: "I already have an account",
+  /**
+   * For a passkey made on another device, which this one does not know of: pay would make a second account. It said
+   * "I already have an account", which declares a state: a button says what its press does (the founder, 4 Oct 2026).
+   */
+  alreadyHaveAccount: "Sign in",
   /**
    * Before the partner's page opens (D289, the founder's words of 27 Sep 2026), shown only when that page arrives filled
    * in with the account and the amount, which needs Ramp's partner key.
@@ -761,7 +764,8 @@ export const FUND = {
   },
 
   waiting: {
-    title: (euros: number | undefined) => (euros ? `Waiting for your ${euros} EUR payment` : "Waiting for your payment"),
+    /** The amount as the screen's own button writes it, "€30.00": one writing on one screen (the founder, 4 Oct 2026). */
+    title: (amount: string | undefined) => (amount ? `Waiting for your ${amount} payment` : "Waiting for your payment"),
     inAccountNow: (held: string) => `In your account now: ${held}`,
     setThese: (name: string) => `On ${name}'s page, set these yourself:`,
     settings: (euros: number | undefined, delivers: { coin: string; network: string }) => [
@@ -972,7 +976,8 @@ export const GIFT_PAGE = {
   validUntil: (moment: string) => `Valid until ${moment} your time. After that, ask for a new one here.`,
   expired: "This code has expired.",
   newCode: "Get a new code",
-  iAddedIt: "I added it",
+  /** What the press does: it reads the profile, to find the code there. It said "I added it" until 4 Oct 2026. */
+  iAddedIt: "Check my profile",
   reading: "Reading your profile",
   removeAfter: "You can take the code out of your name as soon as this screen says it is done.",
   keepMyName: "Keep the name I had",
@@ -1348,7 +1353,7 @@ export const MILESTONE_ACTIONS = {
   firstReadingThen: "So connect before you play.",
   getCode: "Get my code",
   proveTitle: (username: string) => `Prove ${username} is yours`,
-  added: "I added it",
+  added: "Check my profile",
   removeAfter: "You can take the code out right after. It works for an hour.",
   newCode: "Get a new code",
   /**
