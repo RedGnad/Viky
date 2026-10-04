@@ -6,7 +6,8 @@ import { databaseUrl } from "../src/database-guard";
 import { giftPublicClient, readGift, theirsSoFar } from "../src/gift-reader";
 import { readMilestoneGift } from "../src/milestone-reader";
 import { AUSD_ADDRESS, USDC_ADDRESS } from "../src/monad/chain";
-import { buildReport, fundingOf, heldBy, kindOfAccount, reportInWords, shortAccount, type Arrival, type Outcome, type Outflow, type PilotGift } from "../src/pilot-report";
+import { operatorInWords } from "../src/mobile-money";
+import { buildReport, fundingOf, heldBy, kindOfAccount, precedesAMobilePayout, reportInWords, shortAccount, type Arrival, type Outcome, type Outflow, type PilotGift } from "../src/pilot-report";
 import { giftEscrowV2Address, giftEscrowV3Address, milestoneGiftV2Address } from "../src/v2";
 import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT, USDC_ROUTER } from "../src/viky-contracts";
 
@@ -61,8 +62,25 @@ async function main() {
   // A conversion of a card's dollars into what a gift holds is written in the same table as a way out (src/exit-store.ts),
   // and it takes nothing out: what it gives back is what a gift holds, which no way out ever does. Left out here, where
   // it was counted as money taken out by card.
-  const exits = (await optional(`SELECT account, amount, token_out, sent_at FROM viky_exits WHERE state = 'sent'`)).filter((row) => String(row.token_out).toLowerCase() !== AUSD_ADDRESS.toLowerCase());
-  const sends = await optional(`SELECT account, amount, sent_at FROM viky_sends`);
+  // A payout to mobile money (the advisor, 4 Oct 2026): read from its own table, with its country and its operator and
+  // never the number. The exchange that precedes it is in the exits' table too, named by the payout as its own
+  // transaction: it is left out there, so the payout is counted once and not as a bank exit beside it.
+  const mobilePayouts = await optional(`SELECT account, country, network, units, exit_tx, completed_at FROM viky_mobile_payouts WHERE status = 'COMPLETED'`);
+  const payoutExitTxs = new Set(mobilePayouts.map((row) => String(row.exit_tx).toLowerCase()));
+  const exits = (await optional(`SELECT account, amount, token_out, sent_at, tx_hash FROM viky_exits WHERE state = 'sent'`)).filter(
+    (row) => String(row.token_out).toLowerCase() !== AUSD_ADDRESS.toLowerCase() && !precedesAMobilePayout(row.tx_hash as string | null, payoutExitTxs),
+  );
+  const sends = await optional(`SELECT account, destination, amount, sent_at FROM viky_sends`);
+  /**
+   * The founder's account that sent money to an account before a moment, at any time: Viky's own record of sends has
+   * no limit of hours, so a tester's gift paid with his money a day later is still counted as paid with his money.
+   */
+  const founderSentBefore = (account: string, before: string): string | null => {
+    const sent = sends
+      .filter((row) => String(row.destination).toLowerCase() === account.toLowerCase() && founders.has(String(row.account).toLowerCase()) && Date.parse(String(iso(row.sent_at))) <= Date.parse(before))
+      .sort((left, right) => String(iso(right.sent_at)).localeCompare(String(iso(left.sent_at))));
+    return sent[0] ? String(sent[0].account) : null;
+  };
   const orders = await optional(`SELECT account, kind, ausd_units, updated_at FROM viky_phone_orders WHERE state IN ('paid', 'delivered')`);
   const known = new Set([...gifts.flatMap((row) => [row.funder, row.recipient]), ...(await optional(`SELECT account FROM viky_accounts`)).map((row) => row.account)].filter(Boolean).map((one) => String(one).toLowerCase()));
   // The contracts that hold gifts, each list in the order of its versions: the first daily contract has two addresses.
@@ -94,9 +112,10 @@ async function main() {
   };
 
   const outOf = (account: string, since: string | null): Outflow[] => {
-    const mine = (row: Row) => String(row.account).toLowerCase() === account && (!since || Date.parse(String(iso(row.sent_at ?? row.updated_at))) >= Date.parse(since));
+    const mine = (row: Row) => String(row.account).toLowerCase() === account && (!since || Date.parse(String(iso(row.sent_at ?? row.completed_at ?? row.updated_at))) >= Date.parse(since));
     return [
       ...exits.filter(mine).map((row) => ({ route: String(row.token_out).toLowerCase() === USDC_ADDRESS.toLowerCase() ? ("bank exit" as const) : ("card exit" as const), dollars: dollars(BigInt(String(row.amount))), at: iso(row.sent_at)! })),
+      ...mobilePayouts.filter((row) => row.completed_at && mine(row)).map((row) => ({ route: "mobile money" as const, dollars: dollars(BigInt(String(row.units))), at: iso(row.completed_at)!, where: `${String(row.country).toUpperCase()}, ${operatorInWords(String(row.network))}` })),
       ...sends.filter(mine).map((row) => ({ route: "send" as const, dollars: dollars(BigInt(String(row.amount))), at: iso(row.sent_at)! })),
       ...orders.filter(mine).map((row) => ({ route: row.kind === "gift_card" ? ("gift card" as const) : ("top-up" as const), dollars: dollars(BigInt(String(row.ausd_units))), at: iso(row.updated_at)! })),
     ].sort((left, right) => left.at.localeCompare(right.at));
@@ -132,7 +151,7 @@ async function main() {
       earned: dollars(earned),
       returned: dollars(state.refundedToFunder),
       createdAt,
-      funding: fundingOf({ funder, arrivals: await arrivalsBefore(funder, block), judgeCreditBefore, giftContracts, vikyAccounts: known, hours, converter: USDC_ROUTER }),
+      funding: fundingOf({ funder, arrivals: await arrivalsBefore(funder, block), judgeCreditBefore, giftContracts, vikyAccounts: known, hours, converter: USDC_ROUTER, founders, founderSentFrom: founders.has(funder.toLowerCase()) ? null : founderSentBefore(funder, createdAt) }),
       openedAt,
       connectedAt: iso(connections.get(id)?.connected_at ?? row.bound_at),
       firstCountedAt: firstCounted,

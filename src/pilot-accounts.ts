@@ -53,8 +53,9 @@ export type Usage = Readonly<{
   funders: Readonly<{ all: number; founders: number }>;
   recipients: Readonly<{ all: number; founders: number }>;
   between: Readonly<Record<GiftBetween, number>>;
-  /** How many of the gifts are on the second version of the contracts. */
+  /** How many of the gifts are on the second version of the contracts, and on the third daily contract. */
   onSecondVersion: number;
+  onThirdVersion: number;
 }>;
 
 /** Who has used Viky, counted from the index's gifts: nothing here is typed in, and the founder's accounts are told apart. */
@@ -74,5 +75,6 @@ export function usageOf(gifts: readonly IndexedGift[], founders: ReadonlySet<str
     recipients: { all: recipients.size, founders: [...recipients].filter((account) => founders.has(account)).length },
     between: counted,
     onSecondVersion: gifts.filter((gift) => gift.version === 2).length,
+    onThirdVersion: gifts.filter((gift) => gift.version === 3).length,
   };
 }

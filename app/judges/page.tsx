@@ -141,7 +141,14 @@ export default async function JudgesPage() {
       {/* For a judge in a hurry (the audit of 1 Oct 2026, D-11): the page in one minute, then its contents. */}
       <JudgesMinute
         index={index}
-        contracts={secondVersionSet ? { daily: escrowV2, milestone: milestoneV2, anchor, version: 2 } : { daily: escrow ?? null, milestone: process.env.NEXT_PUBLIC_MILESTONE_GIFT_ADDRESS?.trim() ?? null, anchor: null, version: 1 }}
+        // Where a gift is made today: the third daily contract once it is set, with the second version's two others.
+        contracts={
+          secondVersionSet
+            ? thirdVersionSet
+              ? { daily: giftEscrowV3Address(), milestone: milestoneV2, anchor, version: 3 }
+              : { daily: escrowV2, milestone: milestoneV2, anchor, version: 2 }
+            : { daily: escrow ?? null, milestone: process.env.NEXT_PUBLIC_MILESTONE_GIFT_ADDRESS?.trim() ?? null, anchor: null, version: 1 }
+        }
       />
 
       <JudgesContents />

@@ -13,8 +13,8 @@ export type IndexedGift = Readonly<{
   contract: string;
   giftId: string;
   kind: "daily" | "milestone";
-  /** 1 or 2: which version of its contract holds it. */
-  version: 1 | 2;
+  /** 1, 2 or 3: which version of its contract holds it (3 is the daily contract alone). */
+  version: 1 | 2 | 3;
   status: string;
   /** The account that funded it, and the account that opened it, or nothing while nobody has. */
   funder: string;
@@ -84,6 +84,16 @@ const count = (value: unknown): number => {
   if (!Number.isSafeInteger(number) || number < 0) throw new Error("not a count");
   return number;
 };
+/**
+ * The version the index gives a gift: 1, 2 or 3, as its schema writes it. Anything else refuses the whole reading.
+ * Every version that was not 2 used to be read as 1 (the advisor, 4 Oct 2026): the day the index reads the third
+ * daily contract, its gifts would have been counted with the first version's.
+ */
+export const versionOf = (value: unknown): 1 | 2 | 3 => {
+  const version = count(value);
+  if (version !== 1 && version !== 2 && version !== 3) throw new Error("not a version");
+  return version;
+};
 const text = (value: unknown, pattern: RegExp): string => {
   if (typeof value !== "string" || !pattern.test(value)) throw new Error("not what was expected");
   return value;
@@ -129,7 +139,7 @@ export async function readIndex(fetchImpl: typeof fetch = fetch, url: string | n
           contract: text(gift.contract, /^0x[0-9a-fA-F]{40}$/).toLowerCase(),
           giftId: text(String(gift.giftId), /^\d{1,78}$/),
           kind: gift.kind === "milestone" ? "milestone" : "daily",
-          version: count(gift.version) === 2 ? 2 : 1,
+          version: versionOf(gift.version),
           status: text(gift.status, /^[a-z]{1,20}$/),
           // An account is printed and linked on the page: anything that is not one refuses the whole reading.
           funder: text(gift.funder, /^0x[0-9a-fA-F]{40}$/).toLowerCase(),

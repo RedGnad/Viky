@@ -22,7 +22,7 @@ test.describe("the path of the person a gift is for", () => {
   test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each test opens its own windows");
 
   for (const size of SIZES) {
-    test(`Show it, reached, Take: the moment closes and the review is on the page (${size.name})`, async ({ browser, baseURL }) => {
+    test(`Show it, reached: the moment's one action closes it, and the page takes nothing out (${size.name})`, async ({ browser, baseURL }) => {
       test.setTimeout(120_000);
       const GIFT = "1999997";
       const device = await profile(browser, baseURL, size.viewport);
@@ -94,15 +94,19 @@ test.describe("the path of the person a gift is for", () => {
       // Reached: the moment plays over the gift's own page, and its one action is a button, not a link to this page.
       const moment = page.locator("dialog.reached-moment");
       await expect(moment).toBeVisible();
-      const take = moment.getByRole("button", { name: /^Take \$25\.00$/ });
-      await expect(take).toBeVisible();
+      // "Take $25.00" was that action until 4 Oct 2026: Home counts what a gift paid, and whatever it is used for takes
+      // it from the gift first, so the page of a gift takes nothing out any more (the advisor).
+      const see = moment.getByRole("button", { name: "See the gift", exact: true });
+      await expect(see).toBeVisible();
+      await expect(moment.getByRole("button", { name: /^Take/ })).toHaveCount(0);
       await expect(moment.getByRole("link")).toHaveCount(0);
       await shot(page, size.name, "1a-the-moment");
-      await take.click();
+      await see.click();
       await expect(moment).toHaveCount(0);
-      await expect(page.getByText("It goes into your account, and it stays yours: from there you can send it to your bank. Nothing to pay.")).toBeVisible();
       await expect(page).toHaveURL(new RegExp(`/g/${GIFT}$`));
-      await shot(page, size.name, "1b-take-opens-the-review");
+      await expect(page.getByRole("button", { name: /^Take/ })).toHaveCount(0);
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await shot(page, size.name, "1b-the-page-after-the-moment");
       await device.context.close();
     });
 
