@@ -1,9 +1,11 @@
 "use client";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { Hex } from "viem";
+import { postJson } from "@/src/client/api";
 import { readCoinBalance } from "@/src/client/onchain";
-import { AUSD, coinAt, COINS, isNative, USDC } from "@/src/coins";
-import { dollarsToTheCent, readyFor, type Ready } from "@/src/exit-steps";
+import { AUSD, coinAt, COINS, isNative, MON, USDC } from "@/src/coins";
+import { dollarsToTheCent, readyFor, toTheCent, type Ready } from "@/src/exit-steps";
+import { chainCoinToChange } from "@/src/funding-step";
 import { WAYS_OUT, type WayOut } from "@/src/rails";
 
 /**
@@ -58,6 +60,41 @@ export function useHoldings(address: string | undefined, start?: Holdings | null
 /** The dollars an account holds, of both dollar coins, each cut to the cent before they are added (D124). */
 export function dollarsHeld(holdings: Holdings): bigint {
   return dollarsToTheCent(holdings[AUSD.symbol] ?? 0n, holdings[USDC.symbol] ?? 0n);
+}
+
+/**
+ * What the chain's own coin in the account is worth, for the amount a screen says the account holds (the founder,
+ * 4 Oct 2026). A card payment can deliver that coin, and an account holding nothing else read zero.
+ *
+ * It is counted at the exchange's own quote for exactly what the account holds above what it keeps: what choosing a
+ * way would give for it now, the same quote the waiting screen changes a payment with, and never a price read
+ * elsewhere. So it is an estimate, and a screen that counts it says "about". Asked again only when the amount changes.
+ *
+ * - "none": nothing of it to count. "reading": the quote has not answered yet, and no figure is shown without it.
+ * - "worth": the dollars it would give, cut to the cent.
+ * - "unread": the quote did not answer. The screen then says that more is in the account, and never a bare zero.
+ */
+export type ChainCoinWorth = Readonly<{ state: "none" | "reading" | "unread" } | { state: "worth"; units: bigint }>;
+
+export function useChainCoinWorth(holdings: Holdings | null): ChainCoinWorth {
+  const amount = holdings ? chainCoinToChange(holdings[MON.symbol] ?? 0n) : 0n;
+  const [answer, setAnswer] = useState<Readonly<{ amount: bigint; units: bigint | null }> | null>(null);
+  useEffect(() => {
+    if (amount === 0n) return;
+    let live = true;
+    postJson<{ output: string }>("/api/fund/quote", { amount: amount.toString() }).then(
+      (quote) => live && setAnswer({ amount, units: toTheCent(BigInt(quote.output), AUSD.decimals) }),
+      () => live && setAnswer({ amount, units: null }),
+    );
+    return () => {
+      live = false;
+    };
+  }, [amount]);
+  return useMemo<ChainCoinWorth>(() => {
+    if (holdings === null || amount === 0n) return { state: "none" };
+    if (!answer || answer.amount !== amount) return { state: "reading" };
+    return answer.units === null ? { state: "unread" } : { state: "worth", units: answer.units };
+  }, [holdings, amount, answer]);
 }
 
 /** What is ready to send to a payout service, if anything, with the service it is ready for. */

@@ -1,10 +1,10 @@
 "use client";
 import type { CSSProperties } from "react";
 import { useDisplayCurrency } from "@/src/client/display-currency";
-import { HOME as W } from "@/src/sentences";
+import { HOME as W, LED_AMOUNT } from "@/src/sentences";
 import { AMOUNT_IN_TITLE, HELP } from "../components/ui";
 import { ArrivalAmount, useLastSeen } from "./Motion";
-import { dollarsHeld, type Holdings } from "./money";
+import { dollarsHeld, useChainCoinWorth, type Holdings } from "./money";
 
 /**
  * The money of the account, first on Home, and its title (structure, section 4: "Home has no display title, the money
@@ -23,6 +23,11 @@ import { dollarsHeld, type Holdings } from "./money";
  * (src/open-withdrawal.ts). The same goes for the headline that named the card service when the account held nothing
  * but the chain's own coin, which a card payment delivers too.
  *
+ * That coin is counted in the one amount (the founder, 4 Oct 2026), at the exchange's own quote for what the account
+ * holds above what it keeps (`useChainCoinWorth`): somebody whose card delivered it, and whose gift was not made, read
+ * zero. A quote is an estimate, so "about" stands before the figure while it is counted. When the quote does not
+ * answer, the dollars alone are shown and a quiet line under them says more is there: never a bare zero over money.
+ *
  * At the display size the amount is the symbol and the number, on one line, and the size gives way before the line
  * does (the art direction brief of 17 Sep 2026, section 8). When it has changed since this device last saw it, it
  * counts to its value once, last in the screen's arrival.
@@ -36,7 +41,9 @@ const AMOUNT = `money-display ${AMOUNT_IN_TITLE} tracking-[-0.02em]`;
 
 export function MoneyHero({ address, holdings }: Readonly<{ address: string | undefined; holdings: Holdings | null }>) {
   const money = useDisplayCurrency(address);
-  const dollars = holdings === null ? undefined : dollarsHeld(holdings);
+  const coin = useChainCoinWorth(holdings);
+  // No figure before the quote has answered: the dollars alone, then the dollars and the coin, would be two figures.
+  const dollars = holdings === null || coin.state === "reading" ? undefined : dollarsHeld(holdings) + (coin.state === "worth" ? coin.units : 0n);
   const figure = dollars === undefined ? undefined : money.figure(dollars);
   // What this device last saw of this account's money, so a change counts to its value once (brief, section 6).
   const seen = useLastSeen(`viky.seen.money.${address}.${money.currency}`, figure?.value);
@@ -58,8 +65,15 @@ export function MoneyHero({ address, holdings }: Readonly<{ address: string | un
     <section className="money-display-box flex flex-col gap-[var(--space-xs)]">
       <h1 className={HELP}>{W.inAccount}</h1>
       <p data-amount className={AMOUNT} style={chars(figure.text.length)}>
+        {/* "about", small before the figure as wherever an amount is an estimate (app/kit/LedAmount.tsx). */}
+        {coin.state === "worth" ? <span data-about className="mr-[0.3em] align-baseline text-[length:var(--type-help)] font-medium tracking-normal text-[var(--muted)]">{LED_AMOUNT.about}</span> : null}
         <ArrivalAmount from={seen ?? figure.value} to={figure.value} symbol={figure.symbol} decimals={figure.decimals} after={figure.after} />
       </p>
+      {coin.state === "unread" ? (
+        <p className={HELP} data-more-unread="">
+          {W.moreUnread}
+        </p>
+      ) : null}
       {!figure.rateDate && money.unavailable ? <p className={HELP}>{money.unavailable}</p> : null}
     </section>
   );
