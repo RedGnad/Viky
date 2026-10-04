@@ -6,15 +6,18 @@ import { useMoneySession } from "@/src/account/money-session";
 import { useAccount } from "@/src/account/provider";
 import { ApiError, getJson, postJson } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
+import { changeArrivedUsdc } from "@/src/client/convert";
 import { quoteWayOut, takeTheWayOut, type WayOutQuote } from "@/src/client/exit";
 import { sendOwnMoney, withdrawEarned } from "@/src/client/gift";
 import { totalEarned, type EarnedInGift } from "@/src/earned-shape";
 import { readCoinBalance, sendMon } from "@/src/client/onchain";
 import { isVikyContract } from "@/src/viky-contracts";
 import { AUSD, coinAt, COINS, isNative, USDC, type Coin } from "@/src/coins";
-import { rateDateInWords, whenInWords } from "@/src/display-currency";
+import { rateDateInWords, spokenAmount, whenInWords } from "@/src/display-currency";
 import { exitAmount, type ExitAmount } from "@/src/exit-amount";
-import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, netOfEverything, readyFor, toTheCent, twoDecimalsDown, type Ready } from "@/src/exit-steps";
+import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, heldForWithdrawal, netOfEverything, readyFor, toTheCent, twoDecimalsDown, type Ready } from "@/src/exit-steps";
+import { USDC_ARRIVAL_FLOOR } from "@/src/funding-step";
+import { usdcRouterAddress } from "@/src/usdc-router";
 import { formatAusd } from "@/src/gift-reader";
 import { ExactLine, LedFigure } from "../kit/LedAmount";
 import { whereTheRailsServe, type RailsWhere } from "@/src/client/rails";
@@ -119,6 +122,12 @@ export function CashOut() {
   const [holdings, setHoldings] = useState<Record<string, bigint> | null>(null);
   /** What the gifts made out to this account hold for it, which the way out takes first (D208). */
   const [inGifts, setInGifts] = useState<readonly EarnedInGift[]>([]);
+  /**
+   * The withdrawal this account has open, as the server reads it from what was written down (src/open-withdrawal.ts):
+   * none, one, or not known yet. Nothing is said to be ready for the bank service without one, and nothing is changed
+   * while it is not known.
+   */
+  const [openWithdrawal, setOpenWithdrawal] = useState<Readonly<{ coin: string; atLeast: bigint }> | null | undefined>(undefined);
   const [stage, setStage] = useState<Stage>("base");
   const [chosen, setChosen] = useState<WayOut | null>(null);
   const [dollars, setDollars] = useState("");
@@ -191,14 +200,20 @@ export function CashOut() {
 
   const refresh = useCallback(async (): Promise<Record<string, bigint> | undefined> => {
     if (!address) return undefined;
-    const [read, gifts] = await Promise.all([
+    const [read, gifts, open] = await Promise.all([
       Promise.all(COINS.map((coin) => readCoinBalance(coin, address))),
       // A read that fails is a way out without the gifts' part, which is what it was before (D208).
       getJson<{ gifts: EarnedInGift[] }>("/api/gifts/earned").then((answer) => answer.gifts, () => [] as EarnedInGift[]),
+      // A read that fails leaves it unknown: nothing is said to be ready, and nothing is changed either.
+      getJson<{ open: { coin: string; atLeast: string } | null }>("/api/exit/open").then(
+        (answer) => (answer.open ? { coin: answer.open.coin, atLeast: BigInt(answer.open.atLeast) } : null),
+        () => undefined,
+      ),
     ]);
     const next = Object.fromEntries(COINS.map((coin, index) => [coin.symbol, read[index]]));
     setHoldings(next);
     setInGifts(gifts);
+    setOpenWithdrawal(open);
     // An account is back, so a session that had closed is closed no longer.
     setClosed(false);
     // Nothing opens by itself any more (the audit of 1 Oct 2026). A way out holding something ready used to open on its
@@ -219,16 +234,31 @@ export function CashOut() {
   const giftsHold = totalEarned(inGifts);
   // Each coin cut to the cent before they are added, so the figure at the head and the figures on the cards are one
   // number (D124): dust under a cent left by a payout used to tip the sum and print $10.14 over cards on $10.13.
-  const changeable = toTheCent(ausd + giftsHold, AUSD.decimals);
+  /**
+   * Dollars a card payment delivered and no gift took: the other dollar coin, held with no withdrawal open on it. They
+   * are money in the account like the rest, and they are turned into what a gift holds the moment a way is chosen, as
+   * the gifts' part is taken first (`gather`). Nothing while the withdrawal is not known, under what the step that
+   * changes them takes, or where that step does not exist.
+   */
+  const arrived = openWithdrawal !== undefined && !heldForWithdrawal(openWithdrawal, USDC.address, held(USDC)) && held(USDC) >= USDC_ARRIVAL_FLOOR && usdcRouterAddress() ? held(USDC) : 0n;
+  const changeable = toTheCent(ausd + giftsHold + arrived, AUSD.decimals);
   const dollarsHeld = dollarsToTheCent(ausd + giftsHold, held(USDC));
   const readyOf = (way: WayOut): Ready | undefined => (holdings ? readyFor(way, coinOf(way), held(coinOf(way))) : undefined);
-  const firstReady = WAYS_OUT.find((way) => readyOf(way) !== undefined);
+  /**
+   * What the first screen says is ready for a service (the founder, 3 Oct 2026). For the bank service, only the money
+   * of a withdrawal that is open: any USDC used to be read as one, and a card payment delivers USDC. The chain's own
+   * coin is read as before.
+   */
+  const saidReady = (way: WayOut): Ready | undefined => (isNative(coinOf(way)) || heldForWithdrawal(openWithdrawal, coinOf(way).address, held(coinOf(way))) ? readyOf(way) : undefined);
+  const firstReady = WAYS_OUT.find((way) => saidReady(way) !== undefined);
 
   /** The dollars a card rail's ready amount is worth, once the price has answered, and nothing until then. */
   const worthUnits = worth === undefined || worth === "unavailable" ? undefined : worth.units;
   /** What a person reads (dollars) and what the service asks for (the exact quantity), for one way out (D104). */
   const amountOf = (way: WayOut, ready: Ready): ExitAmount =>
     exitAmount({ number: ready.number, native: isNative(coinOf(way)), worth: worthUnits });
+  /** What is ready, as the person reads it: the bank service's dollars in the account's own currency, the card service's as before (D104). */
+  const readyInWords = (way: WayOut): string => (isNative(coinOf(way)) ? amountOf(way, readyOf(way)!).lead : spokenAmount(money.led(readyOf(way)!.units)));
 
   /** How the bank service pays in this country, and the card service's smallest sale, as each publishes it today. */
   const bankPays = where?.out?.bank ?? null;
@@ -287,19 +317,26 @@ export function CashOut() {
    * leaves the rest where it was: whatever came out is in the account, whatever did not is still in its gift.
    */
   const gather = async (): Promise<Record<string, bigint> | undefined> => {
-    if (inGifts.length === 0) return holdings ?? undefined;
+    if (inGifts.length === 0 && arrived === 0n) return holdings ?? undefined;
     setBusy(true);
     setProblem(null);
     setStage("gathering");
+    // Which of the two was under way when something failed, so the sentence is about that one.
+    let readying = false;
     try {
       const account = await ensureSigner();
       for (const gift of inGifts) {
         await withdrawEarned({ account, giftId: gift.giftId, escrow: gift.escrow, amount: BigInt(gift.earned), nonce: BigInt(gift.nonce) });
       }
+      // Then the dollars a card delivered, all of them, by the same step the gift's own screen takes (src/usdc-router.ts).
+      if (arrived > 0n) {
+        readying = true;
+        await changeArrivedUsdc({ account, amount: arrived });
+      }
       return await refresh();
     } catch (error) {
       if (sessionClosed(error)) closeSession();
-      else setProblem({ where: "gather", text: W.gatherFailed, code: error instanceof ApiError ? error.code : undefined });
+      else setProblem({ where: "gather", text: readying ? W.notReadied : W.gatherFailed, code: error instanceof ApiError ? error.code : undefined });
       await refresh().catch(() => undefined);
       setStage("base");
       return undefined;
@@ -594,7 +631,7 @@ export function CashOut() {
         </>
       )}
       {firstReady && dollarsHeld > 0n && !isNative(coinOf(firstReady)) && stage !== "sent" ? (
-        <p className={BODY}>{W.readyLine(firstReady.name, amountOf(firstReady, readyOf(firstReady)!).lead)}</p>
+        <p className={BODY}>{W.readyLine(firstReady.name, readyInWords(firstReady))}</p>
       ) : null}
       {/* On the first screen the ready amount is the headline, and this is the way back to its second step. */}
       {stage === "base" && firstReady ? (
@@ -610,7 +647,7 @@ export function CashOut() {
       <div className="flex flex-col gap-[var(--space-xl)]">
         {heading}
         {moneyCard}
-        <Working says={W.gathering} />
+        <Working says={inGifts.length > 0 ? W.gathering : W.readying} />
       </div>
     );
   }
@@ -639,7 +676,7 @@ export function CashOut() {
             {led && !led.converted && money.unavailable ? <p className={HELP}>{money.unavailable}</p> : null}
             {firstReady && dollarsHeld > 0n ? (
               <>
-                <p className={HELP}>{W.readyLine(firstReady.name, amountOf(firstReady, readyOf(firstReady)!).lead)}</p>
+                <p className={HELP}>{W.readyLine(firstReady.name, readyInWords(firstReady))}</p>
                 <button type="button" onClick={() => continueWith(firstReady)} className={`${SMALL_BUTTON} self-start`}>
                   {W.continueReady(firstReady.name)}
                 </button>

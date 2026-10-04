@@ -24,7 +24,10 @@ const said = (page: Page) => card(page).locator("[data-limit-said]");
 const fold = (page: Page) => card(page).locator("[data-limit-can]");
 const lines = (page: Page) => fold(page).locator(".gift-fold-body p");
 const sentence = (source: string, reserve: "readings" | "proofs") => `Viky can't check ${source} right now: this month's ${reserve} are used up. It starts again on ${AGAIN}.`;
-const UNTIL = "(today|tomorrow), \\d{1,2} [A-Z][a-z]{2}, at \\d{1,2}:\\d{2}\\.";
+// "today, 4 Oct, at 2:00." and "tomorrow, 5 Oct, at 2:00.", or, when the hour is further than tomorrow on the device's
+// clock, "Mon 5 Oct at 2:00.": the reader's zone here is behind UTC, so from midnight UTC until its own midnight the
+// hour a day closes at is two of its days away. The first pattern alone failed every night in those hours (4 Oct 2026).
+const UNTIL = "((today|tomorrow), \\d{1,2} [A-Z][a-z]{2}, at|[A-Z][a-z]{2} \\d{1,2} [A-Z][a-z]{2} at) \\d{1,2}:\\d{2}\\.";
 /** The line that names where to write is there when the build has an address to name, and absent otherwise. */
 const WRITE = /^Write to \S+@\S+: we can reopen it sooner\.$/;
 /** The one red (src/design-tokens.ts, LIMIT_RED): Material's error role at tone 40 by day, at tone 80 after dark. */

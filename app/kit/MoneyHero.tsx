@@ -1,11 +1,10 @@
 "use client";
 import type { CSSProperties } from "react";
 import { useDisplayCurrency } from "@/src/client/display-currency";
-import { exitAmount } from "@/src/exit-amount";
 import { HOME as W } from "@/src/sentences";
 import { AMOUNT_IN_TITLE, HELP } from "../components/ui";
 import { ArrivalAmount, useLastSeen } from "./Motion";
-import { dollarsHeld, firstReady, type Holdings } from "./money";
+import { dollarsHeld, type Holdings } from "./money";
 
 /**
  * The money of the account, first on Home, and its title (structure, section 4: "Home has no display title, the money
@@ -16,8 +15,13 @@ import { dollarsHeld, firstReady, type Holdings } from "./money";
  * The account's own currency is what it says, and nothing else (D147). The dollar the contract holds used to stand
  * under it with the rate's day, which is the contract speaking: a person who is not in crypto has no use for it, it
  * is the same decision D144 took on the card, and it arrived a beat after the figure and pushed the page down for it.
- * What is really held is said where money leaves, on the way out. When the account holds nothing but what the card
- * service buys, that figure leads and no zero dollar is printed.
+ * What is really held is said where money leaves, on the way out.
+ *
+ * One amount, and no service named (the founder, 3 Oct 2026). A line under it used to say "$5.60 of it is ready to send
+ * to Ramp" for any USDC the account held, and a card payment delivers USDC: a moment after paying, Home announced a
+ * withdrawal nobody had asked for. A withdrawal's state is said where a withdrawal is made, and only when one is open
+ * (src/open-withdrawal.ts). The same goes for the headline that named the card service when the account held nothing
+ * but the chain's own coin, which a card payment delivers too.
  *
  * At the display size the amount is the symbol and the number, on one line, and the size gives way before the line
  * does (the art direction brief of 17 Sep 2026, section 8). When it has changed since this device last saw it, it
@@ -50,18 +54,6 @@ export function MoneyHero({ address, holdings }: Readonly<{ address: string | un
     );
   }
 
-  const ready = firstReady(holdings);
-  if (dollars === 0n && ready) {
-    return (
-      <section className="money-display-box flex flex-col gap-[var(--space-xs)]">
-        <h1 className={HELP}>{W.readyLabel(ready.way.name)}</h1>
-        <p className={AMOUNT} style={chars(ready.ready.number.length)}>
-          {ready.ready.number}
-        </p>
-      </section>
-    );
-  }
-
   return (
     <section className="money-display-box flex flex-col gap-[var(--space-xs)]">
       <h1 className={HELP}>{W.inAccount}</h1>
@@ -69,10 +61,6 @@ export function MoneyHero({ address, holdings }: Readonly<{ address: string | un
         <ArrivalAmount from={seen ?? figure.value} to={figure.value} symbol={figure.symbol} decimals={figure.decimals} after={figure.after} />
       </p>
       {!figure.rateDate && money.unavailable ? <p className={HELP}>{money.unavailable}</p> : null}
-      {/* The same rule as on the way out: what is ready is said as the money it is, never as a bare number (D104). */}
-      {ready && !ready.native && dollars > 0n ? (
-        <p className={HELP}>{W.readyLine(ready.way.name, exitAmount({ number: ready.ready.number, native: false }).lead)}</p>
-      ) : null}
     </section>
   );
 }
