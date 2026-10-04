@@ -25,7 +25,7 @@ import { Lines } from "../kit/Lines";
 import { whereTheRailsServe, type RailsWhere } from "@/src/client/rails";
 import { countryInWords } from "@/src/rail-country";
 import { feeUnderItsName, RATE_SOURCE, WAY_OUT_CARD, WAY_OUT_EURO, wayOutFillsIn, wayOutPage, WAYS_OUT, type WayOut } from "@/src/rails";
-import { CASH_OUT as W, USE_MONEY as U, WHERE_YOU_LIVE as L } from "@/src/sentences";
+import { CASH_OUT as W, KIT, USE_MONEY as U, WHERE_YOU_LIVE as L } from "@/src/sentences";
 import { useChainCoinWorth } from "../kit/money";
 import { inTheSun, orderUses, usesFor, usesSentence } from "@/src/use-money";
 import { useAccountCountry } from "@/src/client/account-country";
@@ -774,8 +774,24 @@ export function CashOut() {
           // reaches the phone is priced once the number and the amount are known (D238).
           const figure = way ? (net ? figureIn(net.net, net.currency) : undefined) : holdings === null ? undefined : (money.figure(dollarsHeld)?.text ?? formatAusd(dollarsHeld));
           const act = () => (way ? start(way) : use === "giftcard" ? void startGiftCard() : use === "mobile" ? void startMobile() : void startPhone());
-          // Mobile money's line names the operators Switch pays in the country and the time it publishes for them.
-          const body = use === "mobile" ? (mobileOffered ? U.mobileBody(operatorsInWords(mobileOffered.operators.map((operator) => operator.name)), delayInWords(mobileOffered.settlement)) : "") : use === "bank" && bankPays ? U.bankBy(bankPays.method, bankPays.currency) : U[use].body;
+          // What stays in the open, one sentence, and the four lines folded under "How it works" (the founder, 4 Oct
+          // 2026): what the person gets, in how long, what it costs, what it takes. Mobile money's name the operators
+          // Switch pays in the country and the time it publishes for them; the bank's follow the method its service
+          // publishes for this country; a time nobody published is not a line.
+          const operators = use === "mobile" && mobileOffered ? operatorsInWords(mobileOffered.operators.map((operator) => operator.name)) : "";
+          const delay = use === "mobile" && mobileOffered ? delayInWords(mobileOffered.settlement) : "";
+          const bank = use === "bank" ? U.bankBy(bankPays?.method ?? "SEPA", bankPays?.currency ?? "EUR") : null;
+          const line = use === "mobile" ? (mobileOffered ? U.mobileLine(operators, delay) : "") : use === "bank" ? (bank?.line ?? "") : U[use].line;
+          const how: ReadonlyArray<readonly [string, string]> =
+            use === "mobile"
+              ? mobileOffered
+                ? [[U.how.get, U.mobileGet(operators)], [U.how.time, U.mobileTime(delay)], [U.how.cost, U.mobile.cost], [U.how.need, U.mobile.need]]
+                : []
+              : use === "bank"
+                ? [[U.how.get, bank?.get ?? ""], [U.how.time, bank?.time ?? ""], [U.how.cost, feeUnderItsName(WAY_OUT_EURO)], [U.how.need, U.bank.need]]
+                : use === "card"
+                  ? [[U.how.get, U.card.get], [U.how.cost, feeUnderItsName(WAY_OUT_CARD)], [U.how.need, U.card.need]]
+                  : [[U.how.get, U[use].get], [U.how.time, U[use].time], [U.how.cost, U[use].cost], [U.how.need, U[use].need]];
           return (
             <section key={use} className={CARD}>
               <div className="flex items-baseline justify-between gap-[var(--space-md)]">
@@ -785,8 +801,20 @@ export function CashOut() {
               <p className={CARD_LABEL}>{words.nature}</p>
               {/* The bank's sentence follows the method its service publishes for this country, and the card says its
                   smallest payout before anything is changed for it (the audit of 1 Oct 2026). */}
-              {/* One sentence in the open, the rest folded under "How it works" (the founder's rule 4 of 1 Oct 2026). */}
-              <Said text={body} />
+              {/* One sentence in the open, and four lines folded under "How it works": a fold holds lines, never
+                  paragraphs (the founder, 4 Oct 2026). */}
+              {line ? <p className={BODY}>{line}</p> : null}
+              {how.length > 0 ? (
+                <details className="said-fold" data-how-it-works={use}>
+                  <summary className="said-fold-name">
+                    {KIT.how}
+                    <FoldChevron />
+                  </summary>
+                  <div className="said-fold-body">
+                    <Lines quiet rows={how} />
+                  </div>
+                </details>
+              ) : null}
               {use === "card" && cardSmallest ? <p className={HELP}>{U.cardFrom(figureIn(cardSmallest.amount, cardSmallest.currency))}</p> : null}
               <button type="button" onClick={act} disabled={holdings === null || changeable === 0n} className={inTheSun(use, index, eurosHeld) ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
                 {words.action}

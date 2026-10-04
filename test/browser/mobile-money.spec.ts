@@ -100,7 +100,16 @@ test.describe("your mobile money", () => {
       const card = page.locator("section", { has: page.getByRole("heading", { name: "Your mobile money" }) }).first();
       await expect(card).toBeVisible();
       await expect(card.getByText("To your Orange or Wave number, within 5 to 10 minutes.", { exact: true })).toBeVisible();
-      await expect(card.locator(".said-fold").getByText("Our partner Switch pays it, at its own rate.", { exact: true })).toHaveCount(1);
+      // How it works, folded: what the person gets, in how long, what it costs, what it takes (4 Oct 2026).
+      await card.locator(".said-fold summary").click();
+      await expect(card.locator(".said-fold dl.said-lines > div")).toHaveText([
+        "You getmoney on your Orange or Wave number",
+        "Timewithin 5 to 10 minutes",
+        "CostSwitch's rate, shown before you send",
+        "You needthe number and its holder's name",
+      ]);
+      await shot(page, size.name, "1a-how-it-works");
+      await card.locator(".said-fold summary").click();
       await expect(page.getByText(/USDC|wallet|address|token|chain/i)).toHaveCount(0);
       await shot(page, size.name, "1-the-card");
 

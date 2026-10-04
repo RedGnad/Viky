@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useAccount } from "@/src/account/provider";
-import { CHOICE_GROUPS, chooserSections, conditionById, groupMembers, liveConditions, type Condition, type ConditionFamily } from "@/src/conditions";
+import { CHOICE_GROUPS, chooserSections, conditionById, groupMembers, liveConditions, readWhen, type Condition, type ConditionFamily } from "@/src/conditions";
 import { conditionAnswered, durationBounds, unanswered, type GiftDraft, type Unanswered } from "@/src/gift-draft";
 import { certificateById, cadenceOf, milestoneById } from "@/src/milestone-conditions";
+import { newDailyGiftsPayTheSameDay } from "@/src/v2";
 import { loadOfferedConditions, readStanding } from "@/src/client/milestone";
 import { checkSourceName } from "@/src/client/gift";
 import { searchCertifications, type CertificationFound } from "@/src/client/certificate-gift";
@@ -18,6 +19,7 @@ import { FamilyArt } from "../FamilyArt";
 import { Nature } from "../Nature";
 import { Field } from "../Field";
 import { FoldChevron } from "../GiftLive";
+import { Lines } from "../Lines";
 import { Sheet } from "../Sheet";
 import { GradeTarget } from "./GradeTarget";
 import { UniversityChooser } from "./UniversityChooser";
@@ -339,21 +341,11 @@ export function WillSheet({
   }, [open, readingFor]);
 
   /**
-   * What goes down into "How this is checked", at the foot of a condition's questions (the founder's rule 4 of 1 Oct
-   * 2026): what the condition proves, and the rest of every help longer than the one line a field keeps under it.
-   * Filled as the questions are drawn, in their order, and read by the fold drawn after them. Nothing is cut: a
-   * sentence that leaves a field is read here.
+   * What a field keeps under it: one line, the first sentence of its help when it is short enough. The rest went down
+   * into "How this is checked" (the founder's rule 4 of 1 Oct 2026); since 4 Oct 2026 that fold holds four lines of
+   * its own and no sentence, so a help says what the field needs in its one line, and nothing else is printed.
    */
-  const folded: string[] = [];
-  const under = (help: string | undefined): string | undefined => {
-    const { line, rest } = helpLine(help);
-    if (rest) folded.push(rest);
-    return line ?? undefined;
-  };
-  const down = (text: string | undefined): null => {
-    if (text) folded.push(text);
-    return null;
-  };
+  const under = (help: string | undefined): string | undefined => helpLine(help).line ?? undefined;
 
   return (
     <Sheet
@@ -479,11 +471,7 @@ export function WillSheet({
               onChange={switchMode}
               options={groupMembers(condition.group.id, offered).map((member) => ({ value: member.id, label: member.group?.mode ?? member.name, help: member.help }))}
             />
-          ) : (
-            /* What it proves is read in "How this is checked", the first line of it (rule 4): it stood here, a
-               paragraph over the questions. */
-            down(condition.help)
-          )}
+          ) : null}
           {/* Its reserve is used up: said over its questions, before anything is answered and long before the payment. */}
           {emptyReserveOf(condition.nature, reserves) && reserves ? (
             <p className="limit-said" role="status" data-limit-said>
@@ -615,8 +603,8 @@ export function WillSheet({
                   {certificate.portal?.scaled && draft.course ? (
                     <>
                       <GradeTarget draft={draft} label={certificate.target.label} help={under(certificate.target.help)} refusal={certificate.words.refusals.targetShape} onChange={onChange} />
-                      {/* How a scale the funder chose is confirmed: read with the rest of how it is checked. */}
-                      {draft.scaleFixed ? null : down(GRADE_SCALE.help)}
+                      {/* What a wrong scale costs, in one line under the question: it was folded, where nobody read it. */}
+                      {draft.scaleFixed ? null : <p className={HELP}>{GRADE_SCALE.help}</p>}
                     </>
                   ) : null}
                 </>
@@ -692,7 +680,6 @@ export function WillSheet({
               {/* A proof the recipient shows themselves: what Viky keeps of it, in the register's words, so the face
                   says what there is to say when there is little to fill in (D233). */}
               {/* The university's chooser folds this under "How this is checked" instead (D247). */}
-              {condition.nature === "shown" && !certificate.course?.search?.listed ? down(certificate.words.whatIsRead) : null}
             </>
           ) : null}
 
@@ -719,8 +706,6 @@ export function WillSheet({
                     autoComplete="off"
                     spellCheck={false}
                   />
-                  {nameLink.line ? down(nameLink.help) : null}
-                  {down(nameLink.why)}
                   {nameCheck.busy ? <WaitLine>{FUND.detail.checking}</WaitLine> : null}
                 </>
               ) : null}
@@ -761,23 +746,26 @@ export function WillSheet({
               ) : null}
             </>
           ) : null}
-          {/* Drawn last, so every sentence the questions sent down is in it (rule 4): folded under the name a gift's
-              own page gives it. */}
-          {folded.length > 0 ? (
-            <details className="gift-fold" data-how-checked="">
-              <summary className="gift-fold-name">
-                {GIFT_LIVE.checked}
-                <FoldChevron />
-              </summary>
-              <div className="gift-fold-body">
-                {folded.map((text, index) => (
-                  <p key={text} className={HELP} {...(index === 0 && text === condition.help ? { "data-condition-help": "" } : {})}>
-                    {text}
-                  </p>
-                ))}
-              </div>
-            </details>
-          ) : null}
+          {/* How this is checked, folded under the name a gift's own page gives it: four lines, a label and its value
+              (the founder, 4 Oct 2026). Where it is read from, when, what counts, what the person has to do. "Read"
+              is the value the gift's page prints for the same condition. */}
+          <details className="gift-fold" data-how-checked="">
+            <summary className="gift-fold-name">
+              {GIFT_LIVE.checked}
+              <FoldChevron />
+            </summary>
+            <div className="gift-fold-body">
+              <Lines
+                quiet
+                rows={[
+                  [W.checked.from, condition.checked.from],
+                  [W.checked.when, readWhen(condition, newDailyGiftsPayTheSameDay())],
+                  [W.checked.counts, condition.checked.counts],
+                  [W.checked.they, condition.checked.they],
+                ]}
+              />
+            </div>
+          </details>
         </>
       )}
     </Sheet>

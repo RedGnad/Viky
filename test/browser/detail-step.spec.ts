@@ -70,8 +70,8 @@ test.describe("the line that opens what they will do", () => {
         await expect(sheet(page).locator("[data-family-art]")).toHaveCount(4);
       } else {
         // Half answered: its own questions, where the person left them, with the way back to its list.
-        // What it proves is at the foot of its questions, folded under "How this is checked" (rule 4).
-        await expect(sheet(page).locator("[data-how-checked] [data-condition-help]")).toHaveCount(1);
+        // How it is checked is at the foot of its questions, folded: four lines, a label and its value (4 Oct 2026).
+        await expect(sheet(page).locator("[data-how-checked] dl.said-lines > div")).toHaveCount(4);
         await expect(sheet(page).getByRole("button", { name: /^Change/i })).toHaveCount(1);
       }
       await sheet(page).getByRole("button", { name: "Close" }).click();
