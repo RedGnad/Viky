@@ -201,11 +201,13 @@ test.describe("the screens a person meets", () => {
     const body = sheet.locator(".sheet-body");
     // A sheet opens at the top of what it says, never in the middle of it.
     expect(await body.evaluate((element) => element.scrollTop)).toBe(0);
-    // The sheet takes the screen's own width up to its cap: a dialog's own max-width inset it by 38 pixels on a
-    // phone, and on a phone it is flush with both edges, as the image draws it.
+    // The sheet takes the screen's own width up to the column of the page it covers, here the card's with its margins
+    // (the founder, 4 Oct 2026; it was 560 on every page): a dialog's own max-width inset it by 38 pixels on a phone,
+    // and on a phone it is flush with both edges, as the image draws it.
     const [box, width] = [(await sheet.boundingBox())!, page.viewportSize()!.width];
-    expect(box.width).toBeGreaterThanOrEqual(Math.min(width, 560) - 1);
-    if (width <= 560) expect(box.x).toBeLessThanOrEqual(1);
+    const column = 440 + 2 * (width >= 600 ? 24 : 20);
+    expect(Math.abs(box.width - Math.min(width, column))).toBeLessThanOrEqual(1);
+    if (width <= column) expect(box.x).toBeLessThanOrEqual(1);
 
     // No row explains itself, chosen or not, so every row keeps its height (the founder, 28 Sep 2026).
     const conditions = sheet.locator('div[role="group"] > button');
