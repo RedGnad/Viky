@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
 import { GIFT_PAGE as W } from "@/src/sentences";
-import { BODY, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
+import { BODY, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../components/ui";
 import { FieldRefusal } from "./FieldRefusal";
+import { FoldChevron } from "./GiftLive";
 import { ButtonWords, StepInProgress } from "./Waiting";
 
 /**
@@ -26,9 +27,11 @@ export type ConnectWords = Readonly<{
   /** The line above whatever is asked, from the register: what the gift still needs before it can count. */
   stillNeeds: string;
   /** The field, when the account is not known yet. Absent on a shape whose account is always named at the start. */
-  nameField?: Readonly<{ label: string; help: string; typeToContinue: string; noPassword: string; notYet: string }>;
-  /** The way out for somebody who is not that account. */
-  notMine?: string;
+  nameField?: Readonly<{ label: string; help: string; typeToContinue: string; noPassword: string; notYet: string; notYetHow: Readonly<{ before: string; link: string; after: string; href: string }> }>;
+  /** Under the code, where the person typed the name themselves: the button that opens the name's field again. */
+  anotherUsername?: string;
+  /** The name of the fold that says what to do when the account the funder named is not theirs. */
+  notYours?: string;
   proveTitle: string;
   proveSteps: string;
   slowToShow?: string;
@@ -85,8 +88,6 @@ export function ConnectTheSource({
 }>) {
   const [typed, setTyped] = useState("");
   const [renaming, setRenaming] = useState(false);
-  const [notMineOpen, setNotMineOpen] = useState(false);
-  const [notYetOpen, setNotYetOpen] = useState(false);
   const [copied, setCopied] = useState<"yes" | "refused" | null>(null);
   const refusalAt = (where: "name" | "start") =>
     refusal && refusal.where === where ? <FieldRefusal id={`gift-${where}-refused`}>{refusal.text}</FieldRefusal> : null;
@@ -107,14 +108,18 @@ export function ConnectTheSource({
         </button>
         <StepInProgress busy={busy === "starting"} step={step} />
         {refusalAt("start")}
-        {words.notMine ? (
-          <>
-            {/* A second pill under the one action, never a link in the text (the founder's rule 1 of 1 Oct 2026). */}
-            <button type="button" onClick={() => setNotMineOpen((isOpen) => !isOpen)} aria-expanded={notMineOpen} className={SECONDARY_BUTTON}>
-              {words.notMine}
-            </button>
-            {notMineOpen ? <p className={HELP}>{W.namedWrong(funderName)}</p> : null}
-          </>
+        {words.notYours ? (
+          // A fold, not a button (the founder, 4 Oct 2026): pressing it does nothing but open a sentence, so it is named
+          // by a question and drawn as the fold of "Have a code?" is. It was a second pill, "Not my name".
+          <details className="said-fold" data-not-your-name="">
+            <summary className="said-fold-name">
+              {words.notYours}
+              <FoldChevron />
+            </summary>
+            <div className="said-fold-body">
+              <p className={HELP}>{W.namedWrong(funderName)}</p>
+            </div>
+          </details>
         ) : null}
       </div>
     );
@@ -174,9 +179,9 @@ export function ConnectTheSource({
             <p className={HELP}>{W.removeAfter}</p>
           </>
         )}
-        {onName && words.notMine ? (
+        {onName && words.anotherUsername ? (
           <button type="button" onClick={() => setRenaming(true)} className={SECONDARY_BUTTON}>
-            {words.notMine}
+            {words.anotherUsername}
           </button>
         ) : null}
         {/* Whose account it is, said under the code rather than above it: the code is what they came here to use. */}
@@ -232,12 +237,24 @@ export function ConnectTheSource({
               {W.keepMyName}
             </button>
           ) : (
-            <>
-              <button type="button" onClick={() => setNotYetOpen((isOpen) => !isOpen)} aria-expanded={notYetOpen} className={`${SMALL_BUTTON} self-start`}>
+            // A fold, not a button: pressing it opens a sentence and does nothing else (the founder, 4 Oct 2026).
+            <details className="said-fold" data-no-source-yet="">
+              <summary className="said-fold-name">
                 {field.notYet}
-              </button>
-              {notYetOpen ? <p className={HELP}>{W.notYetBody(funderName)}</p> : null}
-            </>
+                <FoldChevron />
+              </summary>
+              <div className="said-fold-body flex flex-col gap-[var(--space-xs)]">
+                {/* What to do first, with the source's own site; then what becomes of the money meanwhile. */}
+                <p className={HELP} data-how-to-get-it="">
+                  {field.notYetHow.before}
+                  <a href={field.notYetHow.href} target="_blank" rel="noopener noreferrer" className="underline">
+                    {field.notYetHow.link}
+                  </a>
+                  {field.notYetHow.after}
+                </p>
+                <p className={HELP}>{W.notYetBody(funderName)}</p>
+              </div>
+            </details>
           )}
         </>
       ) : null}
