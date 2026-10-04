@@ -34,10 +34,10 @@ const OFFER = {
   mostUnits: "200000000",
 };
 
-async function inSenegal(device: Profile, ending: "arrived" | "failed", priced = true, mostUnits = "200000000"): Promise<{ started: () => unknown; sent: () => unknown; priced: () => unknown }> {
+async function inSenegal(device: Profile, ending: "arrived" | "failed", priced = true, mostUnits = "200000000", held = 15_000_000n): Promise<{ started: () => unknown; sent: () => unknown; priced: () => unknown }> {
   const { page, context } = device;
   // What the account holds, changed as the money leaves, so every screen after the send shows what is left.
-  const holdings = { ausd: 15_000_000n, usdc: 0n, mon: 0n };
+  const holdings = { ausd: held, usdc: 0n, mon: 0n };
   await answerTheChain(context, holdings);
   await page.route("**/api/gifts/earned", (route) => route.fulfill(json({ gifts: [] })));
   await page.route("**/api/rates", (route) => route.fulfill(json({ rates: { ...RATES, readAtMs: Date.now() }, currencies: ["USD", "EUR", "XOF"] })));
@@ -111,6 +111,8 @@ test.describe("your mobile money", () => {
       await shot(page, size.name, "1a-how-it-works");
       await card.locator(".said-fold summary").click();
       await expect(page.getByText(/USDC|wallet|address|token|chain/i)).toHaveCount(0);
+      // The smallest payout is said on the card, in the country's money, before the form is opened (4 Oct 2026).
+      await expect(card.locator("[data-mobile-from]")).toHaveText("From 5 872 F at a time.");
       await shot(page, size.name, "1-the-card");
 
       await card.getByRole("button", { name: "Send to my mobile money" }).click();
@@ -180,9 +182,79 @@ test.describe("your mobile money", () => {
       await other.page.getByLabel("Name on the account").fill("Awa Ndiaye");
       await other.page.clock.fastForward(1_000);
       await expect(other.page.getByText("It cannot be priced right now. Nothing was changed.", { exact: true })).toBeVisible();
-      await expect(other.page.getByRole("button", { name: "Send to my Orange" })).toBeDisabled();
+      // The button answers a press and starts nothing: the sentence above it says why (4 Oct 2026: never only grey).
+      const unpricedSend = other.page.getByRole("button", { name: "Send to my Orange" });
+      await expect(unpricedSend).toBeEnabled();
+      await unpricedSend.click();
+      await expect(other.page.getByText("It cannot be priced right now. Nothing was changed.", { exact: true })).toBeVisible();
       await shot(other.page, size.name, "6-cannot-be-priced");
       await other.context.close();
+    });
+
+    test(`a press says what is missing under each field, and the button is never only grey (${size.name})`, async ({ browser, baseURL }) => {
+      // The founder, 4 Oct 2026: operator not chosen, a number or a name off the rule, an amount out of bounds all left
+      // a disabled button and no sentence.
+      const device = await profile(browser, baseURL, size.viewport);
+      const { page } = device;
+      const asked = await inSenegal(device, "arrived");
+      await page.goto("/cash-out");
+      await page.locator("section", { has: page.getByRole("heading", { name: "Your mobile money" }) }).first().getByRole("button", { name: "Send to my mobile money" }).click();
+      const send = page.getByRole("button", { name: /^Send to my/ });
+      await expect(send).toBeEnabled();
+      await expect(page.locator('main [role="alert"]')).toHaveCount(0);
+      await send.click();
+      // Nothing filled in: each field says what it is missing, in the sentences the route itself refuses with.
+      await expect(page.locator("#mobile-operator-refusal")).toHaveText("Choose your operator from the list.");
+      await expect(page.locator("#mobile-number-refusal")).toHaveText("That number is not one this operator takes. Digits only, as your operator gives it.");
+      await expect(page.locator("#mobile-holder-refusal")).toHaveText("Write the name on the account, as your operator has it.");
+      await expect(page.locator("#mobile-amount-refusal")).toHaveCount(0);
+      await expect(send).toBeEnabled();
+      expect(asked.started(), "nothing started").toBeNull();
+      // No red: the mark and the page's own ink, as every refusal but the month's limit.
+      const ink = await page.evaluate("getComputedStyle(document.querySelector('#mobile-number-refusal')).color");
+      const text = await page.evaluate("getComputedStyle(document.querySelector('main h2')).color");
+      expect(ink).toBe(text);
+      await send.scrollIntoViewIfNeeded();
+      await shot(page, size.name, "8a-a-press-with-nothing-filled");
+      await page.locator("#mobile-operator-refusal").scrollIntoViewIfNeeded();
+      await shot(page, size.name, "8b-what-each-field-is-missing");
+      // An amount past a bound says the bound, in the country's money.
+      await page.getByLabel("How much").fill("100");
+      await expect(page.locator("#mobile-amount-refusal")).toHaveText("At least 5 872 F at a time.");
+      await page.getByLabel("How much").fill("900000");
+      await expect(page.locator("#mobile-amount-refusal")).toHaveText("At most 8 806 F at a time.");
+      await page.getByLabel("How much").fill("");
+      await expect(page.locator("#mobile-amount-refusal")).toHaveText("Write how much, in figures.");
+      await page.getByLabel("How much").fill("900000");
+      await page.getByLabel("How much").scrollIntoViewIfNeeded();
+      await shot(page, size.name, "8c-an-amount-past-its-bound");
+      // Each refusal leaves as its field is put right, and a number typed with the country's prefix passes Switch's
+      // rule, 9 to 40 digits, once the plus and the spaces are taken off.
+      await page.getByRole("radio", { name: "Wave" }).check();
+      await expect(page.locator("#mobile-operator-refusal")).toHaveCount(0);
+      await page.getByLabel("Number").fill("+221 77 123 45 67");
+      await expect(page.locator("#mobile-number-refusal")).toHaveCount(0);
+      await page.getByLabel("Name on the account").fill("Awa Ndiaye");
+      await expect(page.locator("#mobile-holder-refusal")).toHaveCount(0);
+      await page.getByLabel("How much").fill("8800");
+      await expect(page.locator('main [role="alert"]')).toHaveCount(0);
+      await device.context.close();
+    });
+
+    test(`a balance under the country's smallest payout: said in place of the form, with what the person has (${size.name})`, async ({ browser, baseURL }) => {
+      // The field used to open empty between two bounds the wrong way round, over a button that did nothing.
+      const device = await profile(browser, baseURL, size.viewport);
+      const { page } = device;
+      await inSenegal(device, "arrived", true, "200000000", 500_000n);
+      await page.goto("/cash-out");
+      await page.locator("section", { has: page.getByRole("heading", { name: "Your mobile money" }) }).first().getByRole("button", { name: "Send to my mobile money" }).click();
+      await expect(page.locator("[data-mobile-under-minimum]")).toHaveText("Mobile money pays from 5 872 F at a time here, and you have 293 F.");
+      await expect(page.getByLabel("How much")).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /^Send to my/ })).toHaveCount(0);
+      await expect(page.getByText(/From .* to .* at a time/)).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Back", exact: true })).toBeVisible();
+      await shot(page, size.name, "9-a-balance-under-the-minimum");
+      await device.context.close();
     });
 
     test(`the day's ceiling met: said in place of the form, nothing to fill in (${size.name})`, async ({ browser, baseURL }) => {
