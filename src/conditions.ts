@@ -270,7 +270,11 @@ export type Condition = Readonly<{
    * here only where the table said more than the register already did.
    */
   help: string;
-  /** What the line covers, in a few words under its name in its family's list: "A marathon, a half or a 10 km". */
+  /**
+   * What the line is, in a few words under its name in its family's list, when the name alone does not say it to
+   * everybody: "A marathon, a half or a 10 km" under a race, "English test" under the TOEFL (the founder, 4 and 5 Oct
+   * 2026).
+   */
   under?: string;
   /**
    * "How this is checked", on the sheet where a condition is chosen (the founder, 4 Oct 2026): four lines, a label
@@ -691,7 +695,7 @@ export const MITX_ONLINE_CERTIFICATE_LINE: Condition = {
   source: "MITx Online",
   family: "exam",
   name: "An MIT course certificate",
-  help: "The certificate's public page on MITx Online, shared when they have it: the course and the day are read from it. It proves a course taken, not a place at MIT.",
+  help: "The certificate's public page, shared when they have it: the course and the day are read from it. It proves an online course passed on MITx Online.",
   checked: { from: "the certificate's page on MITx Online", when: "when they share its link", counts: "the course, the name and the day", they: "share their certificate's link" },
   link: { kind: "link", label: "The link to your certificate", help: "In MITx Online, open the certificate from your dashboard and copy the whole link from your browser, mitxonline.mit.edu/certificate/ followed by its id, then paste it here." },
   reading: "mitx-online-certificate",
@@ -725,6 +729,7 @@ export const CREDLY_BADGE: Condition = {
   source: "Credly",
   family: "learn",
   name: "A certification on Credly",
+  under: "Professional badges",
   help: "The badge its issuer published, read from Credly's own record of it: the issuer awards the badge, and nobody can award one to themselves.",
   checked: { from: "Credly's own record of the badge", when: "when they share its link", counts: "the certification, in their name", they: "share their badge's link" },
   link: { kind: "link", label: "The link to your badge", help: "In Credly, open the badge and choose Share, then paste the link here." },
@@ -754,6 +759,7 @@ export const ACCREDIBLE_CREDENTIAL: Condition = {
   source: "Accredible",
   family: "learn",
   name: "A credential on Accredible",
+  under: "Digital certificates",
   help: "The credential its issuer published on Accredible, read from its public record: the title, the issuer and the day, and nobody can issue one to themselves.",
   checked: { from: "Accredible's public record of it", when: "when they share its link", counts: "the credential, in their name", they: "share their credential's link" },
   link: { kind: "link", label: "The link to your credential", help: "Open your credential on credential.net and copy the whole link from your browser, then paste it here." },
@@ -783,7 +789,8 @@ export const TOEFL_MYBEST_SHOWN: Condition = {
   source: "ETS",
   family: "exam",
   name: "A TOEFL score, shown",
-  help: "A score they hold, shown from their own ETS account: it proves the account that signed in holds it, and when it was earned is not read.",
+  under: "English test",
+  help: "A score they hold, shown from their own ETS account: it proves the account that signed in holds it. A score they already hold counts.",
   checked: { from: "their own ETS account", when: "when they show it", counts: "the score the account holds", they: "sign in to ETS and show it" },
   link: { kind: "link", label: "Show it from your ETS account", help: "Press Show it on your gift's page and sign in to ETS in the tab that opens. Nothing to paste." },
   reading: "toefl-mybest-shown",
@@ -1029,6 +1036,7 @@ export const CODEFORCES_RATING: Condition = {
   source: "Codeforces",
   family: "learn",
   name: "Reach a Codeforces rating",
+  under: "Competitive programming",
   help: "Their public Codeforces rating, read every day: Codeforces polices cheating itself and makes rounds unrated when it must. It proves the rating.",
   checked: { from: "their public Codeforces profile", when: "every day", counts: "the rating the account reaches", they: "connect their account once" },
   link: {
@@ -1079,7 +1087,10 @@ export const WCA_TIME_LINE: Condition = {
   source: "the WCA",
   family: "play",
   // The founder's "Set a time at a WCA competition" is thirty-one characters; the card holds thirty (21 Sep 2026).
-  name: "A time at a WCA competition",
+  // Seventeen events, of which fifteen are timed: Fewest Moves counts moves and Multi-Blind a score (src/wca.ts), so
+  // the name says a result. What the WCA is, for whoever does not know it, is said under the name.
+  name: "A cube result in competition",
+  under: "Rubik's Cube and others, WCA",
   help: "Their result in one event at one competition, read from the WCA's public results: the name, the event, the best single. It proves the result.",
   checked: { from: "the WCA's public results", when: "after the competition", counts: "the result under their name", they: "register for the event, then compete" },
   link: { kind: "link", label: "Your WCA ID or your name", help: "Before the competition, check on your gift's page that you are on its competitors list. After it, Viky reads your result." },
@@ -1089,7 +1100,7 @@ export const WCA_TIME_LINE: Condition = {
     connect: "Opened. Check that you are on the competitors list before the competition; after it, Viky reads your result from the WCA.",
     doIt: "Check that you are on the competitors list before the competition, then compete. After it, Viky reads your result from the WCA's public results.",
     eachDay: "the day the result is read",
-    preview: "Set a time at a WCA competition: the gift is yours when the WCA's results say you did.",
+    preview: "Get a result at a WCA competition: the gift is yours when the WCA's results say you did.",
   },
 };
 

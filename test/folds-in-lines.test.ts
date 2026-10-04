@@ -6,6 +6,7 @@ import { BUILDING, conditionById, CONDITIONS, PRONOTE_GRADE_SHOWN, readWhen } fr
 import { helpLine } from "../src/help-line";
 import { certificateById } from "../src/milestone-conditions";
 import { feeUnderItsName, WAY_OUT_CARD, WAY_OUT_EURO } from "../src/rails";
+import { WCA_EVENTS, wcaEventIsTimed } from "../src/wca";
 import { CASH_OUT, CONSENT, FUND, GIFT_PAGE, GRADE_SCALE, MILESTONE_PAGE, OFFER, PAY, USE_MONEY } from "../src/sentences";
 
 /**
@@ -84,13 +85,14 @@ test("how a condition is checked, on the sheet where it is chosen: where it is r
     // The subject stays exact: the account did it. Never "they did it", and nothing says it cannot be cheated.
     assert.doesNotMatch(`${counts} ${condition.help}`, /\bthey did\b|cannot cheat|can't cheat|cannot be cheated/i, condition.id);
     // And the help says no more what a reading does not prove.
-    assert.doesNotMatch(condition.help, /, not who|not the wearer|not each piece of work/, `${condition.id}: the help`);
+    assert.doesNotMatch(condition.help, /, not who|not the wearer|not each piece of work|not a place at|is not read/, `${condition.id}: the help`);
   }
   assert.equal(conditionById("duolingo-daily")?.help, "Read each morning from their public Duolingo profile, with nothing to install: it proves the account did the lesson.");
-  // Two statements about the thing itself, not about who did it, are kept: what an MITx Online certificate is, and
-  // that the day a TOEFL score was earned is not read.
-  assert.match(String(conditionById("mitx-online-certificate")?.help), /It proves a course taken, not a place at MIT\.$/);
-  assert.match(String(conditionById("toefl-mybest-shown")?.help), /when it was earned is not read\.$/);
+  // Two statements about the thing itself stay, said without a negation (the founder, 5 Oct 2026): they say what
+  // the giver buys. An MITx Online certificate is an online course, and a TOEFL score held before the gift counts.
+  assert.match(String(conditionById("mitx-online-certificate")?.help), /It proves an online course passed on MITx Online\.$/);
+  assert.match(String(conditionById("toefl-mybest-shown")?.help), /it proves the account that signed in holds it\. A score they already hold counts\.$/);
+  for (const id of ["mitx-online-certificate", "toefl-mybest-shown"]) assert.doesNotMatch(String(conditionById(id)?.help), /\bnot\b/, id);
   assert.equal(conditionById("duolingo-daily")?.checked.counts, "a lesson the account did that day");
   // "Read" is the value the gift's page prints for the same condition: one function says it to both.
   const duolingo = conditionById("duolingo-daily")!;
@@ -140,4 +142,23 @@ test("how each way out works is four lines: what the person gets, in how long, w
   // The times said are the ones the screens of each way already say once it is under way.
   assert.match(read("src/sentences.ts"), /onItsWay: "The phone company usually takes a minute\./);
   assert.match(read("src/sentences.ts"), /onItsWay: "The code usually comes within a minute\./);
+});
+
+test("a name not everybody knows says what it is in the grey line under it", () => {
+  // The founder, 5 Oct 2026, each checked against what its reading accepts.
+  const under = (id: string) => conditionById(id)?.under;
+  assert.equal(under("toefl-mybest-shown"), "English test");
+  assert.equal(under("codeforces-rating"), "Competitive programming");
+  assert.equal(under("credly-badge"), "Professional badges");
+  assert.equal(under("accredible-credential"), "Digital certificates");
+  assert.equal(under("marathon-finish"), "A marathon, a half or a 10 km");
+  // The WCA's line: two of its seventeen events are not timed (Fewest Moves counts moves, Multi-Blind a score), so
+  // its name says a result where "a time" was proposed.
+  const wca = conditionById("wca-time");
+  assert.equal(wca?.name, "A cube result in competition");
+  assert.equal(wca?.under, "Rubik's Cube and others, WCA");
+  assert.equal(Object.keys(WCA_EVENTS).length, 17);
+  assert.deepEqual(Object.keys(WCA_EVENTS).filter((id) => !wcaEventIsTimed(id)), ["333fm", "333mbf"]);
+  for (const condition of [...CONDITIONS, ...BUILDING]) if (condition.under) assert.ok(condition.under.length <= 32 && !/\.$/.test(condition.under), `${condition.id}: a few words, no full stop`);
+  assert.match(read("app/kit/offer/WillSheet.tsx"), /\{option\.under \? <span className=\{HELP\}>\{option\.under\}<\/span> : null\}/);
 });

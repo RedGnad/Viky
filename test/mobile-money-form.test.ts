@@ -21,6 +21,12 @@ test("a press says under each field what it is missing, in the sentences the rou
     assert.ok(server.includes(`MOBILE_REFUSALS.${name}, 400)`), `the route refuses with ${name}`);
     assert.ok(form.includes(`MOBILE_REFUSALS.${name}`), `the form says ${name}`);
   }
+  // A field left empty is asked for (the founder, 5 Oct 2026): "That number is not one this operator takes" spoke of
+  // a number nobody had written. The route's sentences stay for a field filled in and refused.
+  assert.equal(MOBILE_REFUSALS.enterNumber, "Enter your number.");
+  assert.equal(MOBILE_REFUSALS.enterName, "Enter the name on the account.");
+  assert.match(form, /number: pressed && !numberFits \? \(number\.trim\(\) === "" \? MOBILE_REFUSALS\.enterNumber : MOBILE_REFUSALS\.numberNotTaken\) : null,/);
+  assert.match(form, /holder: pressed && !holderFits \? \(holder\.trim\(\) === "" \? MOBILE_REFUSALS\.enterName : MOBILE_REFUSALS\.writeTheName\) : null,/);
   // The amount, in the country's money: missing, under the least, over the most.
   assert.equal(MOBILE_OUT.amountMissing, "Write how much, in figures.");
   assert.equal(MOBILE_OUT.amountUnder("5 872 F"), "At least 5 872 F at a time.");
