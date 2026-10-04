@@ -78,9 +78,10 @@ test.describe("the row of days on a gift's page", () => {
         await shot(page, `${who}-${days}-days`, false);
         await row.evaluate((element) => element.scrollTo({ left: element.scrollWidth }));
         await expect(row).toHaveAttribute("data-more", "left");
-        const [left, right] = await fade();
-        expect(left, "the left edge fades at the end").toBeGreaterThan(0);
-        expect(right, "and the right one is flat").toBe(0);
+        // Read once the browser has followed the scroll: on a busy machine the row said "left" a frame before its
+        // fade had moved (4 Oct 2026, the suite run whole).
+        await expect.poll(async () => (await fade())[0], { message: "the left edge fades at the end" }).toBeGreaterThan(0);
+        await expect.poll(async () => (await fade())[1], { message: "and the right one is flat" }).toBe(0);
         await shot(page, `${who}-${days}-days-at-the-end`, false);
       }
       await device.context.close();
