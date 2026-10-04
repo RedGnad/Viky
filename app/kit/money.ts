@@ -57,9 +57,13 @@ export function useHoldings(address: string | undefined, start?: Holdings | null
   return address ? holdings : null;
 }
 
-/** The dollars an account holds, of both dollar coins, each cut to the cent before they are added (D124). */
-export function dollarsHeld(holdings: Holdings): bigint {
-  return dollarsToTheCent(holdings[AUSD.symbol] ?? 0n, holdings[USDC.symbol] ?? 0n);
+/**
+ * The dollars an account holds, of both dollar coins, each cut to the cent before they are added (D124). What the
+ * person's gifts have already paid them is in the coin a gift holds: given, it is added to that coin before the cut,
+ * exactly as the way out counts it.
+ */
+export function dollarsHeld(holdings: Holdings, inGifts = 0n): bigint {
+  return dollarsToTheCent((holdings[AUSD.symbol] ?? 0n) + inGifts, holdings[USDC.symbol] ?? 0n);
 }
 
 /**
@@ -68,28 +72,43 @@ export function dollarsHeld(holdings: Holdings): bigint {
  *
  * It is counted at the exchange's own quote for exactly what the account holds above what it keeps: what choosing a
  * way would give for it now, the same quote the waiting screen changes a payment with, and never a price read
- * elsewhere. So it is an estimate, and a screen that counts it says "about". Asked again only when the amount changes.
+ * elsewhere. Asked again only when the amount changes.
+ *
+ * The account itself is always read, from the chain. The quote is the one part asked of an outside service, and it
+ * can go unanswered: the exchange is slow or down, it has no route for the amount, or too many were asked at once.
+ * Nothing is said of that on a screen (the founder, 4 Oct 2026): it is asked again, quietly, until it answers.
  *
  * - "none": nothing of it to count. "reading": the quote has not answered yet, and no figure is shown without it.
  * - "worth": the dollars it would give, cut to the cent.
- * - "unread": the quote did not answer. The screen then says that more is in the account, and never a bare zero.
+ * - "unread": the quote did not answer, and is being asked again.
  */
 export type ChainCoinWorth = Readonly<{ state: "none" | "reading" | "unread" } | { state: "worth"; units: bigint }>;
+
+/** How long after a quote that did not answer it is asked again. */
+export const QUOTE_AGAIN_AFTER_MS = 30_000;
 
 export function useChainCoinWorth(holdings: Holdings | null): ChainCoinWorth {
   const amount = holdings ? chainCoinToChange(holdings[MON.symbol] ?? 0n) : 0n;
   const [answer, setAnswer] = useState<Readonly<{ amount: bigint; units: bigint | null }> | null>(null);
+  /** Counts the times a quote went unanswered: each one asks again, after a while. */
+  const [again, setAgain] = useState(0);
   useEffect(() => {
     if (amount === 0n) return;
     let live = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     postJson<{ output: string }>("/api/fund/quote", { amount: amount.toString() }).then(
       (quote) => live && setAnswer({ amount, units: toTheCent(BigInt(quote.output), AUSD.decimals) }),
-      () => live && setAnswer({ amount, units: null }),
+      () => {
+        if (!live) return;
+        setAnswer({ amount, units: null });
+        timer = setTimeout(() => setAgain((times) => times + 1), QUOTE_AGAIN_AFTER_MS);
+      },
     );
     return () => {
       live = false;
+      clearTimeout(timer);
     };
-  }, [amount]);
+  }, [amount, again]);
   return useMemo<ChainCoinWorth>(() => {
     if (holdings === null || amount === 0n) return { state: "none" };
     if (!answer || answer.amount !== amount) return { state: "reading" };
@@ -110,6 +129,25 @@ export function firstReady(holdings: Holdings): { way: WayOut; ready: Ready; nat
 /** What the gifts made out to this account still hold for it, in the coin's units (D208). */
 export function heldInGifts(gifts: ReadonlyArray<Readonly<{ takeable?: string }>> | null | undefined): bigint {
   return (gifts ?? []).reduce((sum, gift) => sum + BigInt(gift.takeable ?? "0"), 0n);
+}
+
+/**
+ * Everything that is the person's and that they can take out now, as one amount (the founder, 4 Oct 2026): the
+ * account's dollars of both coins, what their gifts have already paid them, and the chain's own coin at the
+ * exchange's quote. It is the figure "Yours" heads the way out with (app/components/CashOut.tsx). Home used to count
+ * the account alone: it said €0.00 over "Spend or withdraw" while the gift's own page said "$0.18 yours so far".
+ *
+ * Unknown, and no figure shown, until each part has been read: the account alone, then the account and a gift, would
+ * be two figures. A list of gifts that could not be read leaves its part out, and the list says so itself. A quote
+ * that did not answer leaves the coin out, unless nothing else is held: a zero would then stand over money, so the
+ * figure stays unknown until the quote answers.
+ */
+export function useMoneyHeld(holdings: Holdings | null, gifts: ReadonlyArray<Readonly<{ takeable?: string }>> | null, giftsUnread = false): bigint | undefined {
+  const coin = useChainCoinWorth(holdings);
+  if (holdings === null || coin.state === "reading" || (gifts === null && !giftsUnread)) return undefined;
+  const dollars = dollarsHeld(holdings, heldInGifts(gifts));
+  if (coin.state === "worth") return dollars + coin.units;
+  return coin.state === "unread" && dollars === 0n ? undefined : dollars;
 }
 
 /**

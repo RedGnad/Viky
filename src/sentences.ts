@@ -471,11 +471,6 @@ export const HOME = {
    * a gift". Both verbs, since the ways out lead with gift cards and phone credit, which are spent, not withdrawn.
    */
   takeItOut: "Spend or withdraw",
-  /**
-   * Under the amount, when the account holds the chain's own coin and its worth could not be read (the founder, 4 Oct
-   * 2026): the amount above it is then the dollars alone, and nobody whose account holds money is shown a bare zero.
-   */
-  moreUnread: "More is in your account; its amount can't be read right now.",
   moving: "What's moving",
   seeAll: "See all gifts",
   empty: "No gift yet. Offer one, or open a link someone sent you.",

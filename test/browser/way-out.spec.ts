@@ -191,7 +191,7 @@ test.describe("money a card just delivered is money in the account, not a withdr
     await device.context.close();
   });
 
-  test("the chain's own coin, which a card delivers too, is counted in the one amount at the exchange's quote, with 'about', and changed first", async ({ browser, baseURL }) => {
+  test("the chain's own coin, which a card delivers too, is counted in the one amount at the exchange's quote, and changed first", async ({ browser, baseURL }) => {
     const device = await profile(browser, baseURL, { width: 390, height: 844 });
     const { page } = device;
     // 138.43 of the chain's coin above what the account keeps, nothing else, and no withdrawal open. The price route
@@ -201,18 +201,17 @@ test.describe("money a card just delivered is money in the account, not a withdr
     const money = page.locator(".money-display-box");
     await expect(money.getByRole("heading", { name: "In your account" })).toBeVisible();
     await expect(money.locator("[data-amount]")).toContainText("$3.73");
-    await expect(money.locator("[data-about]")).toHaveText("about");
-    await expect(money).not.toContainText(/ready|Ramp|Mercuryo|138/i);
-    await expect(money.locator("[data-more-unread]")).toHaveCount(0);
+    // The heading and the figure, and nothing else: no "about", no line under it.
+    await expect(money).not.toContainText(/about|ready|Ramp|Mercuryo|138/i);
+    await expect(money.locator("p")).toHaveCount(1);
     await expect(page.getByRole("link", { name: "Spend or withdraw" })).toBeVisible();
     await page.waitForTimeout(1_500);
     await shot(page, "390", "6a-home-counts-the-chain-s-coin");
-    // The withdrawal screen: the same money, said as an estimate, never as exact dollars, and nothing said to be ready.
+    // The withdrawal screen: the same figure, never said as exact dollars, and nothing said to be ready.
     await page.goto("/cash-out");
     const yours = page.locator(".money-display-box");
-    await expect(yours).toContainText("about");
     await expect(yours).toContainText("$3.73");
-    await expect(yours).not.toContainText("Exactly");
+    await expect(yours).not.toContainText(/about|Exactly/i);
     await expect(page.getByRole("heading", { name: /^Ready to send to/ })).toHaveCount(0);
     await expect(page.getByText(/ready to send to/)).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Continue with/ })).toHaveCount(0);
@@ -224,22 +223,108 @@ test.describe("money a card just delivered is money in the account, not a withdr
     await device.context.close();
   });
 
-  test("when the price does not answer, Home shows no bare zero over money: a quiet line says more is there", async ({ browser, baseURL }) => {
+  test("when the price does not answer, nothing is said of it: no zero over money, and it is asked again until it answers", async ({ browser, baseURL }) => {
     const device = await profile(browser, baseURL, { width: 390, height: 844 });
     const { page } = device;
     await person(device, { ausd: 0n, usdc: 0n, mon: 11n * ONE + (13_843n * ONE) / 100n }, FRANCE);
-    // Registered last, so asked first: the price route fails.
-    await page.route("**/api/fund/quote", (route) => route.fulfill(json({ error: "The price could not be read. Try again in a moment.", code: "QUOTE_UNAVAILABLE" }, 503)));
+    // Registered last, so asked first: the price route fails, until the test lets it answer.
+    let answers = false;
+    let asked = 0;
+    await page.route("**/api/fund/quote", (route) => {
+      asked += 1;
+      return answers ? route.fallback() : route.fulfill(json({ error: "The exchange is not answering. Try again shortly.", code: "QUOTE_UNAVAILABLE" }, 503));
+    });
+    await page.clock.install();
     await page.goto("/");
     const money = page.locator(".money-display-box");
-    await expect(money.locator("[data-more-unread]")).toHaveText("More is in your account; its amount can't be read right now.");
-    await expect(money.locator("[data-amount]")).toContainText("$0.00");
-    await expect(money.locator("[data-about]")).toHaveCount(0);
+    await expect.poll(() => asked).toBeGreaterThan(0);
+    // Nothing but the coin is held, and its worth is not known: the figure's place, and no figure. No sentence either.
+    await expect(money.locator("[data-amount]")).toHaveCount(0);
+    await expect(money).not.toContainText(/0\.00|about|can't be read/i);
+    await expect(money.locator("p")).toHaveCount(1);
+    await expect(page.getByRole("link", { name: "Spend or withdraw" })).toBeVisible();
+    await shot(page, "390", "6c-home-when-the-price-does-not-answer");
+    // Half a minute on it is asked again, and the figure arrives.
+    const before = asked;
+    answers = true;
+    await page.clock.fastForward(31_000);
+    await expect.poll(() => asked).toBeGreaterThan(before);
+    await page.clock.runFor(3_000);
+    await expect(money.locator("[data-amount]")).toContainText("$3.73");
+    await device.context.close();
+  });
+
+  test("an account with dollars and a coin whose price does not answer shows its dollars, and nothing under them", async ({ browser, baseURL }) => {
+    const device = await profile(browser, baseURL, { width: 390, height: 844 });
+    const { page } = device;
+    await person(device, { ausd: 2_000_000n, usdc: 0n, mon: 11n * ONE + (13_843n * ONE) / 100n }, FRANCE);
+    await page.route("**/api/fund/quote", (route) => route.fulfill(json({ error: "The exchange is not answering. Try again shortly.", code: "QUOTE_UNAVAILABLE" }, 503)));
+    await page.goto("/");
+    const money = page.locator(".money-display-box");
+    await expect(money.locator("[data-amount]")).toContainText("$2.00");
+    await expect(money.locator("p")).toHaveCount(1);
+    await page.goto("/cash-out");
+    const yours = page.locator(".money-display-box");
+    await expect(yours).toContainText("$2.00");
+    await expect(yours).not.toContainText(/about|can't be read/i);
+    await device.context.close();
+  });
+
+  test("Home counts what the person's gifts have already paid them: the figure 'Yours' heads the way out with", async ({ browser, baseURL }) => {
+    const device = await profile(browser, baseURL, { width: 390, height: 844 });
+    const { page } = device;
+    // The first gift of the third contract on 4 Oct 2026, read on the recipient's account: nothing in the account, the
+    // first day paid, 0.187 held by the gift for them. Home said 0.00 over "Spend or withdraw".
+    await person(device, { ausd: 0n, usdc: 0n, mon: 0n }, FRANCE);
+    const today = Math.floor(Date.now() / 86_400_000);
+    const gift = {
+      giftId: "1000",
+      role: "recipient",
+      goalType: 1,
+      goalUsername: "boo_learns",
+      usernameSource: "recipient",
+      recipientName: "Boo",
+      funderName: "Maman",
+      catchUpSeconds: 108_000,
+      days: [{ day: today, outcome: "earned" }],
+      fundedAt: Math.floor(Date.now() / 1000) - 7_200,
+      startDay: today,
+      endDay: today + 6,
+      amountDisplay: "$1.31",
+      perDayDisplay: "$0.18",
+      durationDays: 7,
+      creditedDays: 1,
+      missedDays: 0,
+      opened: true,
+      counting: true,
+      finished: false,
+      cancelled: false,
+      earnedDisplay: "$0.18",
+      theirsDisplay: "$0.18",
+      returnedDisplay: "$0.00",
+      takeable: "187000",
+    };
+    await page.unroute("**/api/gifts/mine");
+    await page.route("**/api/gifts/mine", (route) => route.fulfill(json({ account: "", gifts: [gift] })));
+    await page.unroute("**/api/gifts/earned");
+    await page.route("**/api/gifts/earned", (route) => route.fulfill(json({ gifts: [{ giftId: "1000", escrow: "0x591d76863177E70FfcA2C793212d4715A367Ec70", earned: "187000", nonce: "0" }] })));
+    await page.goto("/");
+    const money = page.locator(".money-display-box");
+    await expect(money.locator("[data-amount]")).toContainText("$0.18");
+    await expect(money.locator("p")).toHaveCount(1);
     await expect(page.getByRole("link", { name: "Spend or withdraw" })).toBeVisible();
     await page.waitForTimeout(1_500);
-    await shot(page, "390", "6c-home-when-the-price-does-not-answer");
+    await shot(page, "390", "7a-home-counts-what-a-gift-has-paid");
+    // You: the same figure.
+    await page.goto("/me");
+    await expect(page.getByText("$0.18", { exact: true }).first()).toBeVisible();
+    // The way out: the same figure under "Yours", and where it still is.
     await page.goto("/cash-out");
-    await expect(page.locator(".money-display-box [data-more-unread]")).toHaveText("More is in your account; its amount can't be read right now.");
+    const yours = page.locator(".money-display-box");
+    await expect(yours).toContainText("Yours");
+    await expect(yours).toContainText("$0.18");
+    await expect(yours).toContainText("$0.18 of it is still in your gifts.");
+    await shot(page, "390", "7b-the-way-out-heads-with-the-same-figure");
     await device.context.close();
   });
 
@@ -255,8 +340,6 @@ test.describe("money a card just delivered is money in the account, not a withdr
     await page.goto("/");
     const money = page.locator(".money-display-box");
     await expect(money.locator("[data-amount]")).toContainText("$2.00");
-    await expect(money.locator("[data-about]")).toHaveCount(0);
-    await expect(money.locator("[data-more-unread]")).toHaveCount(0);
     await page.waitForTimeout(800);
     expect(asked).toBe(0);
     await device.context.close();

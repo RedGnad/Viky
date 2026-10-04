@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { heldInGifts, holdsAnything } from "../app/kit/money";
+import { dollarsHeld, heldInGifts, holdsAnything } from "../app/kit/money";
+import { dollarsToTheCent } from "../src/exit-steps";
 import { totalEarned } from "../src/earned-shape";
 import { readAs } from "../src/gift-moment";
 
@@ -19,6 +20,23 @@ test("what the gifts hold is added in the coin's units, and an account with only
   assert.equal(holdsAnything(empty), false);
   assert.equal(holdsAnything(empty, [{ takeable: "0" }]), false);
   assert.equal(holdsAnything(empty, [{ takeable: "3000000" }]), true, "the gift's page says to take it from Home, so Home offers it");
+});
+
+test("Home's amount is everything the person can take out now: the account and what their gifts have already paid them", () => {
+  // The first gift of the third contract, on 4 Oct 2026: an empty account, and 0.187 already paid by the gift. Its
+  // page said "$0.18 yours so far", and Home said 0.00 over "Spend or withdraw".
+  const empty = { AUSD: 0n, USDC: 0n, MON: 0n };
+  assert.equal(dollarsHeld(empty), 0n);
+  assert.equal(dollarsHeld(empty, heldInGifts([{ takeable: "187000" }])), 180_000n, "cut to the cent, as the way out cuts it");
+  // Added to the coin a gift holds before the cut, so the figure is the way out's to the cent.
+  assert.equal(dollarsHeld({ AUSD: 5_000n, USDC: 0n, MON: 0n }, 187_000n), 190_000n);
+  assert.equal(dollarsHeld({ AUSD: 5_000n, USDC: 9_600n, MON: 0n }, 187_000n), dollarsToTheCent(5_000n + 187_000n, 9_600n));
+  // One amount, read by Home and by You, and each hands it the gifts it already reads.
+  const money = readFileSync("app/kit/money.ts", "utf8");
+  assert.match(money, /const dollars = dollarsHeld\(holdings, heldInGifts\(gifts\)\);/);
+  assert.match(readFileSync("app/kit/Home.tsx", "utf8"), /<MoneyHero address=\{address\} holdings=\{holdings\} gifts=\{gifts\} giftsUnread=\{problem !== null\} \/>/);
+  assert.match(readFileSync("app/kit/MoneyHero.tsx", "utf8"), /const dollars = useMoneyHeld\(holdings, gifts, giftsUnread\);/);
+  assert.match(readFileSync("app/kit/Me.tsx", "utf8"), /const held = useMoneyHeld\(holdings, gifts, giftsUnread !== null\);/);
 });
 
 test("a daily gift that counts offers no gesture to its recipient: the way out is on Home", () => {

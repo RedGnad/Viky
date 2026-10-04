@@ -19,7 +19,7 @@ import { FoldChevron } from "./GiftLive";
 import { InstallAct } from "./Install";
 import { MoneyKey } from "./MoneyKey";
 import { Act, RoundControls } from "./RoundControls";
-import { dollarsHeld, holdsAnything, useHoldings } from "./money";
+import { holdsAnything, useHoldings, useMoneyHeld } from "./money";
 import { useMyGifts } from "./my-gifts";
 import { SignInDoor } from "./SignInDoor";
 import { SpendOrWithdraw } from "./SpendOrWithdraw";
@@ -46,8 +46,10 @@ export function Me() {
   /** What every screen reads in, and the list it may be changed from, both from one place (D152). */
   const money = useDisplayCurrency(address);
   const holdings = useHoldings(address);
-  const { gifts } = useMyGifts(address);
-  const figure = holdings === null ? undefined : money.figure(dollarsHeld(holdings));
+  const { gifts, problem: giftsUnread } = useMyGifts(address);
+  /** Home's own figure (app/kit/money.ts): everything that is the person's and that they can take out now. */
+  const held = useMoneyHeld(holdings, gifts, giftsUnread !== null);
+  const figure = held === undefined ? undefined : money.figure(held);
   const [reading, setReading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [until, setUntil] = useState<string | null>(null);

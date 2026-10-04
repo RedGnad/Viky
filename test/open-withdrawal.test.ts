@@ -8,7 +8,8 @@ import { chainCoinToChange, CONVERSION_RESERVE } from "../src/funding-step";
 import { openWithdrawalOf } from "../src/open-withdrawal";
 import type { SqlExecutor } from "../src/proof-session-store";
 import { configureSendStore, ensureSendsSchema, recordSend } from "../src/send-store";
-import { CASH_OUT, HOME, LED_AMOUNT, YOUR_MONEY } from "../src/sentences";
+import { QUOTE_AGAIN_AFTER_MS } from "../app/kit/money";
+import { CASH_OUT, HOME, YOUR_MONEY } from "../src/sentences";
 
 /**
  * A withdrawal is open when what was written down says so, and never because of a balance (the founder, 3 Oct 2026).
@@ -156,7 +157,7 @@ test("Home says one amount and names no service; the withdrawal screen says read
   assert.match(route, /const open = await openWithdrawalOf\(auth\.account\);/);
 });
 
-test("the chain's own coin a card delivered is money in the account: counted at the exchange's quote, said with 'about', changed first", () => {
+test("the chain's own coin a card delivered is money in the account: counted at the exchange's quote, changed first, and nothing said of the estimate", () => {
   const ONE = 10n ** 18n;
   // What can be changed: everything above what the account keeps, when that is a payment worth changing.
   assert.equal(chainCoinToChange(0n), 0n);
@@ -169,28 +170,35 @@ test("the chain's own coin a card delivered is money in the account: counted at 
   assert.equal(heldForWithdrawal({ coin: ZERO, atLeast: 138n * ONE }, ZERO, 100n * ONE), false);
   assert.equal(heldForWithdrawal(null, ZERO, 149n * ONE), false, "a balance alone says no withdrawal");
 
-  // The worth is the exchange's own quote for exactly that amount, asked again only when the amount changes.
+  // The worth is the exchange's own quote for exactly that amount, asked again when the amount changes, and after a
+  // while when it did not answer: the one part asked of an outside service.
   const money = readFileSync("app/kit/money.ts", "utf8");
   assert.match(money, /const amount = holdings \? chainCoinToChange\(holdings\[MON\.symbol\] \?\? 0n\) : 0n;/);
-  assert.match(money, /postJson<\{ output: string \}>\("\/api\/fund\/quote", \{ amount: amount\.toString\(\) \}\)\.then\(\n\s*\(quote\) => live && setAnswer\(\{ amount, units: toTheCent\(BigInt\(quote\.output\), AUSD\.decimals\) \}\),\n\s*\(\) => live && setAnswer\(\{ amount, units: null \}\),/);
-  assert.match(money, /\}, \[amount\]\);/);
+  assert.match(money, /postJson<\{ output: string \}>\("\/api\/fund\/quote", \{ amount: amount\.toString\(\) \}\)\.then\(\n\s*\(quote\) => live && setAnswer\(\{ amount, units: toTheCent\(BigInt\(quote\.output\), AUSD\.decimals\) \}\),/);
+  assert.match(money, /setAnswer\(\{ amount, units: null \}\);\n\s*timer = setTimeout\(\(\) => setAgain\(\(times\) => times \+ 1\), QUOTE_AGAIN_AFTER_MS\);/);
+  assert.match(money, /\}, \[amount, again\]\);/);
+  assert.equal(QUOTE_AGAIN_AFTER_MS, 30_000);
   assert.doesNotMatch(money, /setInterval\([^)]*quote/, "no quote on a clock");
 
-  // Home: one amount, the coin in it, "about" before it; no figure before the quote answers; and never a bare zero.
+  // The one amount: no figure before the quote answers, the coin in it once it has, and never a bare zero over money.
+  assert.match(money, /if \(holdings === null \|\| coin\.state === "reading" \|\| \(gifts === null && !giftsUnread\)\) return undefined;/);
+  assert.match(money, /if \(coin\.state === "worth"\) return dollars \+ coin\.units;\n\s*return coin\.state === "unread" && dollars === 0n \? undefined : dollars;/);
+
+  // Home: that amount alone. Nothing before it and nothing under it (the founder, 4 Oct 2026): no "about", no line.
   const hero = readFileSync("app/kit/MoneyHero.tsx", "utf8");
-  assert.match(hero, /const dollars = holdings === null \|\| coin\.state === "reading" \? undefined : dollarsHeld\(holdings\) \+ \(coin\.state === "worth" \? coin\.units : 0n\);/);
-  assert.match(hero, /\{coin\.state === "worth" \? <span data-about [^>]*>\{LED_AMOUNT\.about\}<\/span> : null\}/);
-  assert.match(hero, /\{coin\.state === "unread" \? \(\n\s*<p className=\{HELP\} data-more-unread="">\n\s*\{W\.moreUnread\}/);
-  assert.equal(HOME.moreUnread, "More is in your account; its amount can't be read right now.");
-  assert.equal(LED_AMOUNT.about, "about");
+  assert.match(hero, /const dollars = useMoneyHeld\(holdings, gifts, giftsUnread\);/);
+  assert.doesNotMatch(hero, /LED_AMOUNT|data-about|data-more-unread|moreUnread/);
+  assert.equal("moreUnread" in HOME, false, "the line under the amount is gone, and its sentence with it");
   assert.doesNotMatch(hero, /firstReady|readyLine|readyLabel|\.way\.name/, "and still no service named");
 
-  // The withdrawal screen: the coin with no withdrawal open on it is counted, said as an estimate, and changed first.
+  // The withdrawal screen: the coin with no withdrawal open on it is counted and changed first. Its figure takes no
+  // "about" of its own, and no line under it calls dollars that hold a quote exact.
   const screen = readFileSync("app/components/CashOut.tsx", "utf8");
   assert.match(screen, /const arrivedCoin = openWithdrawal !== undefined && !heldForWithdrawal\(openWithdrawal, MON\.address, held\(MON\)\) \? chainCoinToChange\(held\(MON\)\) : 0n;/);
   assert.match(screen, /const arrivedCoinWorth = arrivedCoin > 0n && coinWorth\.state === "worth" \? coinWorth\.units : 0n;/);
   assert.match(screen, /const dollarsHeld = dollarsToTheCent\(ausd \+ giftsHold, held\(USDC\)\) \+ arrivedCoinWorth;/);
-  assert.match(screen, /return estimated \? \{ \.\.\.led, converted: true, rateDate: undefined \} : led;/, "'about', and no line calling the dollars exact");
+  assert.match(screen, /return estimated \? \{ \.\.\.led, rateDate: undefined \} : led;/, "no line calling the dollars exact");
+  assert.match(screen, /const figureUnknown = arrivedCoin > 0n && \(coinWorth\.state === "reading" \|\| \(coinWorth\.state === "unread" && dollarsHeld === 0n\)\);/);
   assert.match(screen, /if \(arrivedCoin > 0n\) \{\n\s*readying = true;\n\s*const conversion = await fundingQuote\(arrivedCoin\);\n\s*await sendWithExplicitGas\(account, \{ to: conversion\.to, data: conversion\.data, value: BigInt\(conversion\.value\) \}\);/);
-  assert.match(screen, /\{moreUnread \? \(\n\s*<p className=\{HELP\} data-more-unread="">\n\s*\{HOME\.moreUnread\}/);
+  assert.doesNotMatch(screen, /moreUnread|data-more-unread/);
 });

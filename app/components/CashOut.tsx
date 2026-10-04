@@ -24,7 +24,7 @@ import { ExactLine, LedFigure } from "../kit/LedAmount";
 import { whereTheRailsServe, type RailsWhere } from "@/src/client/rails";
 import { countryInWords } from "@/src/rail-country";
 import { feeSentence, RATE_SOURCE, WAY_OUT_CARD, WAY_OUT_EURO, wayOutFillsIn, wayOutPage, WAYS_OUT, type WayOut } from "@/src/rails";
-import { CASH_OUT as W, HOME, USE_MONEY as U, WHERE_YOU_LIVE as L } from "@/src/sentences";
+import { CASH_OUT as W, USE_MONEY as U, WHERE_YOU_LIVE as L } from "@/src/sentences";
 import { useChainCoinWorth } from "../kit/money";
 import { inTheSun, orderUses, usesFor, usesSentence } from "@/src/use-money";
 import { useAccountCountry } from "@/src/client/account-country";
@@ -253,19 +253,23 @@ export function CashOut() {
    */
   const arrivedCoin = openWithdrawal !== undefined && !heldForWithdrawal(openWithdrawal, MON.address, held(MON)) ? chainCoinToChange(held(MON)) : 0n;
   const arrivedCoinWorth = arrivedCoin > 0n && coinWorth.state === "worth" ? coinWorth.units : 0n;
-  /** The figures hold a quote: said with "about", and never as exact dollars. */
+  /** The figures hold a quote: never said as exact dollars. */
   const estimated = arrivedCoinWorth > 0n;
-  /** The coin is there and its worth could not be read: the figures are the dollars alone, and a line says more is there. */
-  const moreUnread = arrivedCoin > 0n && coinWorth.state === "unread";
   const changeable = toTheCent(ausd + giftsHold + arrived, AUSD.decimals) + arrivedCoinWorth;
   const dollarsHeld = dollarsToTheCent(ausd + giftsHold, held(USDC)) + arrivedCoinWorth;
   /**
-   * What the account holds, led by the reader's currency. When it counts the chain's coin at a quote it is an estimate:
-   * "about" stands before it whatever the currency, and no line under it calls the dollars exact.
+   * The coin's worth is not known and nothing else is held: no figure, as on Home (app/kit/money.ts). While the quote
+   * is being read the dollars alone, then the dollars and the coin, would be two figures; and when it did not answer,
+   * a zero would stand over money. It is asked again until it answers, and nothing is said of it (the founder, 4 Oct 2026).
+   */
+  const figureUnknown = arrivedCoin > 0n && (coinWorth.state === "reading" || (coinWorth.state === "unread" && dollarsHeld === 0n));
+  /**
+   * What the account holds, led by the reader's currency. When it counts the chain's coin at a quote, no line under it
+   * calls the dollars exact. Nothing more is said of the estimate: no "about" of its own (the founder, 4 Oct 2026).
    */
   const heldLed = (): LedAmount => {
     const led = money.led(dollarsHeld);
-    return estimated ? { ...led, converted: true, rateDate: undefined } : led;
+    return estimated ? { ...led, rateDate: undefined } : led;
   };
   const readyOf = (way: WayOut): Ready | undefined => (holdings ? readyFor(way, coinOf(way), held(coinOf(way))) : undefined);
   /**
@@ -683,8 +687,7 @@ export function CashOut() {
   }
 
   if (stage === "base") {
-    // No figure while the coin's quote is being read: the dollars alone, then the dollars and the coin, would be two.
-    const led = holdings === null || (arrivedCoin > 0n && coinWorth.state === "reading") ? undefined : heldLed();
+    const led = holdings === null || figureUnknown ? undefined : heldLed();
     const cardBranch = holdings !== null && dollarsHeld === 0n && firstReady !== undefined;
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
@@ -705,12 +708,6 @@ export function CashOut() {
             )}
             {led ? <ExactLine amount={led} /> : null}
             {led && !led.converted && money.unavailable ? <p className={HELP}>{money.unavailable}</p> : null}
-            {/* The chain's coin is there and its worth could not be read: said, rather than a figure that leaves it out in silence. */}
-            {moreUnread ? (
-              <p className={HELP} data-more-unread="">
-                {HOME.moreUnread}
-              </p>
-            ) : null}
             {firstReady && dollarsHeld > 0n ? (
               <>
                 <p className={HELP}>{W.readyLine(firstReady.name, readyInWords(firstReady))}</p>
