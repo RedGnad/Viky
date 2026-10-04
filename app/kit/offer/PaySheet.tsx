@@ -320,6 +320,12 @@ export function PaySheet({
       {/* What the press does where it makes something: an account, the first time. Signed in, the phone's own prompt
           says it, and the sheet says nothing more. */}
       {address || hasCredential ? null : <p className={HELP}>{madeHere ? W.passkeyMakesTheAccount : ACCOUNT_DOOR.madeOnTheMainSite}</p>}
+      {/* The press makes an account: 18 or older, as wherever one is made. The card's own line says it when a card pays. */}
+      {address || hasCredential || !madeHere || byCard ? null : (
+        <p className={HELP} data-adult="">
+          {ACCOUNT_DOOR.adult}
+        </p>
+      )}
       {/* A passkey kept by another device is not known to this one, and pay would make a second account (1 Oct 2026). */}
       {!address && !hasCredential ? (
         <button type="button" className={`${SMALL_BUTTON} self-start`} disabled={busy || status === "busy"} onClick={() => void signInFirst()}>

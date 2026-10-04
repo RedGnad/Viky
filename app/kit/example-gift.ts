@@ -22,7 +22,7 @@ export function exampleGift(nowMs: number): GiftSummary {
     goalUsername: null,
     usernameSource: "recipient",
     recipientName: null,
-    funderName: "Mum",
+    funderName: "Sam",
     catchUpSeconds: 86_400,
     days: [],
     fundedAt: 0,

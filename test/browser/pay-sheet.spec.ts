@@ -119,7 +119,7 @@ test.describe("the pay sheet of 3 Oct 2026", () => {
     const { page } = funder;
     const name = sheet(page).getByLabel("Your name, as Boo knows you");
     await expect(name).toHaveValue("");
-    await expect(name).toHaveAttribute("placeholder", "Mum");
+    await expect(name).toHaveAttribute("placeholder", "Sam");
     await shot(page, "3-name-empty");
     await sheet(page).locator("summary", { hasText: "What happens to my money" }).click();
     await expect(sheet(page).locator("[data-what-happens] dt")).toHaveText(["A missed day", "Not opened in 14 days", "Card fee"]);

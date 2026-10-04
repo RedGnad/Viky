@@ -1403,8 +1403,9 @@ export const FRONTIERS: readonly Frontier[] = [
     name: "School marks",
     state: "no-public-page",
     why: "They live in a school's own portal, which opens for the family and for nobody else. No source publishes a page about a pupil.",
-    // One portal is on its way (D179); PRONOTE is parked, its answers and its bulletins being encrypted (D207).
-    building: "an average shown by the pupil or the family from their own EcoleDirecte account, with the two words SHOWN BY THEM on it; not PRONOTE, whose pages and bulletins are encrypted, so nothing in them can be proved.",
+    // Viky is for adults, on both sides, and the lines for pupils stay closed (the founder, 4 Oct 2026): this page
+    // names neither school portal any more and says nothing is on its way. The code of both lines is kept.
+    building: null,
   },
 ];
 
@@ -1454,6 +1455,12 @@ export function chooserSections(offered: readonly Condition[]): readonly Conditi
 export type CatalogueSection = ConditionSection & Readonly<{ building: readonly Condition[] }>;
 
 /**
+ * The lines built for pupils, whose accounts are a school's portal (the founder, 4 Oct 2026): Viky is for adults, on
+ * both sides, so they stay closed and the public page does not print them. Their code and their conditions are kept.
+ */
+export const FOR_PUPILS: readonly string[] = ["ecoledirecte-grade-shown", "pronote-grade-shown"];
+
+/**
  * What "What Viky can check" lists: every family with a line in the register or a line being built. A condition
  * being built is printed under its family with the word "Being built" and what has to happen first, unless a frontier
  * line already says it is being built (the TOEFL score and enrolment, shown from an account nobody can read without
@@ -1461,6 +1468,8 @@ export type CatalogueSection = ConditionSection & Readonly<{ building: readonly 
  */
 export function catalogueSections(): readonly CatalogueSection[] {
   const onFrontier = new Set(FRONTIERS.map((frontier) => frontier.conditionId).filter((id): id is string => Boolean(id)));
+  // And never a line for pupils (the founder, 4 Oct 2026): Viky is for adults, and those lines stay closed.
+  for (const id of FOR_PUPILS) onFrontier.add(id);
   return FAMILIES.map(({ id, title }) => ({
     family: id,
     title,

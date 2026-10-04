@@ -288,7 +288,7 @@ test("the example gift says it is an example, and reads as a gift under way", ()
   // gift is for, and the card said "yours" to them until the relecture of 18 Sep (D99).
   assert.equal(example.role, "reader");
   assert.equal(amountsInWords(example, true), "$4.00 of $14.00 theirs, $2.00 gone back");
-  assert.equal(whoInWords(example), "From Mum");
+  assert.equal(whoInWords(example), "From Sam");
 });
 
 /**

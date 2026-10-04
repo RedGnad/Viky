@@ -54,6 +54,16 @@ export default function LegalPage() {
         <p>The database is provided by Neon and runs in Frankfurt, Germany.</p>
       </section>
 
+      {/* Viky is for adults, on both sides (the founder, 4 Oct 2026): said here as it is said where an account is made. */}
+      <section className="space-y-[var(--space-sm)] text-[length:var(--type-help)]" data-adults="">
+        <h2 className={TITLE}>Who Viky is for</h2>
+        <p>
+          Viky is for adults. The person who offers a gift and the person it is for each confirm they are 18 or older
+          when they make their account. Viky does not check an age itself; the card service checks an identity
+          document the first time a card pays.
+        </p>
+      </section>
+
       <section className="space-y-[var(--space-sm)] text-[length:var(--type-help)]">
         <h2 className={TITLE}>What Viky is not</h2>
         <p>
