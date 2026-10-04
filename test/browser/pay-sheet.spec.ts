@@ -14,12 +14,12 @@ const SHOTS = process.env.VIKY_PAY_SHEET_CAPTURES;
 const card = (page: Page) => page.locator('section[aria-labelledby="offer-card"]');
 const sheet = (page: Page) => page.locator("dialog.sheet[open]").last();
 
-type Setup = Readonly<{ ausd: bigint; signedIn: boolean; gifts?: unknown[]; offered?: boolean; country?: string }>;
+type Setup = Readonly<{ ausd: bigint; signedIn: boolean; gifts?: unknown[]; offered?: boolean; country?: string; /** The account as the chain answers it, when the test changes it as it goes. */ holdings?: Holdings }>;
 
 async function toTheSheet(browser: Parameters<typeof profile>[0], baseURL: string | undefined, setup: Setup): Promise<Profile> {
   const funder = await profile(browser, baseURL, { width: 390, height: 844 });
   const { page, context } = funder;
-  const holdings: Holdings = { ausd: setup.ausd, mon: 0n, usdc: 0n };
+  const holdings: Holdings = setup.holdings ?? { ausd: setup.ausd, mon: 0n, usdc: 0n };
   await answerTheChain(context, holdings);
   // The profile's own address, which may be another name for the server than the one the run was given.
   const host = new URL(funder.baseURL).hostname;
@@ -116,6 +116,40 @@ test.describe("the pay sheet of 3 Oct 2026", () => {
     await expect(sheet(page).getByRole("button", { name: "Put €19.00 in Boo's name" })).toBeVisible();
     await expect(sheet(page).getByText(/takes your card/)).toHaveCount(0);
     await shot(page, "5-from-the-account");
+    await funder.context.close();
+  });
+
+  test("what the person's gifts have paid them pays a gift: counted in 'From your Viky money', and taken first by the press", async ({ browser, baseURL }) => {
+    // Nothing in the account, and thirty dollars a gift has already paid this person and still holds: Home says
+    // $30.00, and this sheet said "Pay by card" for a gift of nineteen euros (the founder, 4 Oct 2026).
+    const holdings: Holdings = { ausd: 0n, mon: 0n, usdc: 0n };
+    const mine = { giftId: "1000", role: "recipient", funderName: "Maman", recipientName: "Boo", fundedAt: 1, takeable: "30000000" };
+    const funder = await toTheSheet(browser, baseURL, { ausd: 0n, signedIn: true, gifts: [mine], holdings });
+    const { page } = funder;
+    await expect(sheet(page).locator("[data-pay-total]")).toHaveText("€19.00");
+    await expect(sheet(page).getByText("From your Viky money", { exact: true })).toBeVisible();
+    await expect(sheet(page).getByText(/takes your card/)).toHaveCount(0);
+    await expect(sheet(page).getByRole("button", { name: /by card$/ })).toHaveCount(0);
+    await shot(page, "7-from-what-a-gift-has-paid");
+
+    // The press: the gifts' part is taken into the account first, by the way out's own gesture, then the gift is made.
+    const calls: string[] = [];
+    await page.route("**/api/gifts/earned", (route) => route.fulfill(json({ gifts: [{ giftId: "1000", escrow: "0x591d76863177E70FfcA2C793212d4715A367Ec70", earned: "30000000", nonce: "0" }] })));
+    await page.route("**/api/gift/withdraw", (route) => {
+      const asked = JSON.parse(route.request().postData() ?? "{}") as { giftId?: string; amount?: string };
+      calls.push(`withdraw ${asked.giftId} ${asked.amount}`);
+      holdings.ausd += 30_000_000n;
+      return route.fulfill(json({ sent: true }));
+    });
+    await page.route("**/api/gift/create", (route) => {
+      calls.push("create");
+      return route.fulfill(json({ error: "Not made in this test.", code: "TEST" }, 409));
+    });
+    await sheet(page).getByRole("button", { name: "Put €19.00 in Boo's name" }).click();
+    await page.waitForURL(/\/fund\?step=paying/, { timeout: 60_000 });
+    await expect.poll(() => calls.join(", "), { timeout: 30_000 }).toBe("withdraw 1000 30000000, create");
+    // No card was asked for at any moment: the wait never offered one.
+    await expect(page.getByRole("link", { name: /by card/ })).toHaveCount(0);
     await funder.context.close();
   });
 
