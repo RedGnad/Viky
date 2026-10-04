@@ -4,7 +4,7 @@ import { PROOF_EVERY_SECONDS } from "@/src/milestone-reading";
 import { formatAusd } from "@/src/gift-reader";
 import { judgeCreditConfig, judgeCreditsStanding, standingInWords } from "@/src/judge-credit";
 import { rampHostApiKey, rampnowWayIn } from "@/src/rails";
-import { RAMPNOW_FRAME_PAID_THROUGH, rampnowFrameOn } from "@/src/rampnow-frame";
+import { rampnowFrameOn } from "@/src/rampnow-frame";
 import { usdcRouterAddress } from "@/src/usdc-router";
 import { USDC_ROUTER } from "@/src/viky-contracts";
 import { conversionsSent } from "@/src/exit-store";
@@ -393,9 +393,7 @@ export default async function JudgesPage() {
           . A conversion promises at least ninety-nine for a hundred, or nothing moves.{" "}
           {rampnowOn
             ? rampnowFrameOn()
-              ? RAMPNOW_FRAME_PAID_THROUGH
-                ? "Rampnow's page opens in a frame inside Viky. "
-                : "Rampnow's page is being tried in a frame inside Viky, without a partner's key: no payment has gone through the frame end to end yet, and its own tab stays the way when the frame does not show. "
+              ? "Rampnow's page opens in a frame inside Viky. Its limit: Rampnow finishes a payment from its own page (the card buys USDC on Base, and its page then sends it on to Monad), so the frame has to stay open until the money arrives. The frame has no cross: one way out under it while no payment is known, \"Go back without paying\", and one after five minutes without the money. Left before the end, the payment waits at Rampnow: the screen that waits leads back to it, and opens another only when the person answers that they did not pay. Seen on the first payment through the frame, on 3 Oct 2026: 6 EUR paid at 21:23 UTC, the frame closed, the money held on Base for 14 minutes, then 5.60 USDC on the account at 21:38 UTC, once Rampnow's page was opened in a tab. "
               : "Rampnow's page opens in a tab of its own. "
             : null}
           <UseLine use={conversion} name="rampnow" />
