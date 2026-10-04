@@ -188,6 +188,9 @@ export function DayStrip({
 /**
  * A day's state as a character. A day whose window has closed and which nothing has drained yet is drawn as one still
  * to be judged, leaning, because it has not come back yet and saying otherwise would be inventing it.
+ *
+ * A day sleeps until it is done (the founder, 4 Oct 2026), today too: it keeps its triangle, which is what says
+ * "today", with its eyes closed. Done, it is the day earned, which wakes in its jump (app/kit/Motion.tsx).
  */
 export function characterOf(day: StripDay): CharacterState {
   switch (day) {
@@ -196,7 +199,7 @@ export function characterOf(day: StripDay): CharacterState {
     case "returned":
       return "returned";
     case "today":
-      return "today";
+      return "todayAsleep";
     case "catchable":
     case "aboutToReturn":
       return "catchable";

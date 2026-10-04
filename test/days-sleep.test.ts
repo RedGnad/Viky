@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { Character, type CharacterState } from "../app/kit/Character";
+import { characterOf } from "../app/kit/DayStrip";
 import { MOTION } from "../src/design-tokens";
 
 // A day sleeps until it is done (the founder, 4 Oct 2026, in the place of "the days wake at the opening"). At the
@@ -63,4 +67,30 @@ test("a day done since the last visit is there from the first image, asleep, and
   assert.match(motion, /earned\.forEach\(\(id, index\) => days\.set\(id, \{ moment: "earned", delay: schedule\.earnedAt\[index\] \}\)\);/);
   assert.match(motion, /if \(!fromExample\) list\.forEach\(\(gift, index\) => writeSeen\(`\$\{storageKey\}\.\$\{gift\.id\}`, settledNow\[index\]\)\);/);
   assert.match(motion, /if \(reduced\(\) \|\| \(earned\.length \+ returned\.length === 0 && !amount\)\) \{/, "nothing plays under reduced motion");
+});
+
+test("the day of today sleeps too until it is done: it keeps its triangle, with its eyes closed, in a row of days alone", () => {
+  // In a row of days, today is drawn asleep; the other states are what they were.
+  assert.equal(characterOf("today"), "todayAsleep");
+  assert.deepEqual((["earned", "returned", "catchable", "aboutToReturn", "toCome"] as const).map(characterOf), ["earned", "returned", "catchable", "catchable", "toCome"]);
+  const draw = (state: CharacterState, variant = 0) => renderToStaticMarkup(createElement(Character, { state, variant, standing: false, drawn: "inline" }));
+  const body = (markup: string) => /<g data-part="body">(.*?)<\/g>/.exec(markup)?.[1];
+  const awake = draw("today");
+  const asleep = draw("todayAsleep");
+  // The same triangle, in the same colour: the shape is what says "today".
+  assert.ok(body(asleep));
+  assert.equal(body(asleep), body(awake));
+  // Its eyes: two closed pills, as a day to come's, where the triangle awake has two round eyes.
+  assert.equal(asleep.match(/<rect data-part="eye"/g)?.length, 2);
+  assert.equal(asleep.match(/<circle data-part="eye"/g), null);
+  assert.equal(awake.match(/<circle data-part="eye"/g)?.length, 2);
+  assert.equal(draw("toCome").match(/<rect data-part="eye"/g)?.length, 2);
+  // Three faces, as the triangle awake has, so a row never repeats one face twice in a row.
+  assert.notEqual(draw("todayAsleep", 0), draw("todayAsleep", 1));
+  // The triangle awake is still drawn wherever it is not a day: a goal waited for, a choice, the landing's crowd.
+  assert.match(readFileSync("app/kit/HadOrNot.tsx", "utf8"), /asleep \? "toCome" : "today"/);
+  assert.match(readFileSync("app/kit/MilestoneMeter.tsx", "utf8"), /return "today";/);
+  assert.match(readFileSync("app/kit/YouDecide.tsx", "utf8"), /<Option character="today"/);
+  // Named from the characters' file like every drawing that does not move.
+  assert.match(readFileSync("public/characters.svg", "utf8"), /<symbol id="todayAsleep-0"/);
 });
