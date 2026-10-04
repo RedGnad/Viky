@@ -2,7 +2,7 @@
 import type { CSSProperties } from "react";
 import { useDisplayCurrency } from "@/src/client/display-currency";
 import { HOME as W } from "@/src/sentences";
-import { AMOUNT_IN_TITLE, HELP } from "../components/ui";
+import { AMOUNT_IN_TITLE, CARD_LABEL, HELP } from "../components/ui";
 import { ArrivalAmount, useLastSeen } from "./Motion";
 import { useMoneyHeld, type Holdings } from "./money";
 
@@ -10,7 +10,8 @@ import { useMoneyHeld, type Holdings } from "./money";
  * The money of the account, first on Home, and its title (structure, section 4: "Home has no display title, the money
  * is its title"). So it is set at the display size, in the text face, because the title face is never on an amount (item 7),
  * and on the page ground rather than in a box: a card groups things, and the money is not one thing among others.
- * "In your account" above it is the page's heading for a machine, at the help size.
+ * "Yours" above it is the page's heading for a machine, and the amount's name: the same word, written the same way, as
+ * over the same figure on the screen that takes money out (the founder, 4 Oct 2026).
  *
  * The account's own currency is what it says, and nothing else (D147). The dollar the contract holds used to stand
  * under it with the rate's day, which is the contract speaking: a person who is not in crypto has no use for it, it
@@ -61,7 +62,7 @@ export function MoneyHero({
   if (figure === undefined) {
     return (
       <section className="money-display-box flex flex-col gap-[var(--space-xs)]">
-        <h1 className={HELP}>{W.inAccount}</h1>
+        <h1 className={CARD_LABEL}>{W.yours}</h1>
         {/* The room the figure will take, at the size it will take, so nothing moves when it lands: five characters
             is what an amount takes here, and the line is the figure's own line whatever stands in it. */}
         <p aria-hidden className={`${AMOUNT} text-[var(--on-surface-faint)]`} style={chars(5)}>
@@ -73,7 +74,7 @@ export function MoneyHero({
 
   return (
     <section className="money-display-box flex flex-col gap-[var(--space-xs)]">
-      <h1 className={HELP}>{W.inAccount}</h1>
+      <h1 className={CARD_LABEL}>{W.yours}</h1>
       <p data-amount className={AMOUNT} style={chars(figure.text.length)}>
         <ArrivalAmount from={seen ?? figure.value} to={figure.value} symbol={figure.symbol} decimals={figure.decimals} after={figure.after} />
       </p>

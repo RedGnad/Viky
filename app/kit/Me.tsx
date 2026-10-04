@@ -7,7 +7,7 @@ import { useDisplayCurrency } from "@/src/client/display-currency";
 import { currencyOf } from "@/src/currencies";
 import { PRODUCT_LOCALE } from "@/src/moments";
 import { CATALOGUE, HOME as H, ME as W } from "@/src/sentences";
-import { AMOUNT_IN_TITLE, CARD, HELP, SECONDARY_BUTTON } from "../components/ui";
+import { AMOUNT_IN_TITLE, CARD, CARD_LABEL, HELP, SECONDARY_BUTTON } from "../components/ui";
 import { useReaderZone } from "@/src/client/reader-zone";
 import { conditionOfGoal } from "@/src/conditions";
 import { CONSENT } from "@/src/sentences";
@@ -104,7 +104,7 @@ export function Me() {
       {/* The money at the top, with the same action as under Home's balance (the founder, 29 Sep 2026; Venmo's Me tab
           sets its wallet and "Transfer" there). The figure is Home's, in the account's own currency (D147). */}
       <section className={CARD}>
-        <p className={HELP}>{H.inAccount}</p>
+        <p className={CARD_LABEL}>{H.yours}</p>
         <div className="flex flex-wrap items-center justify-between gap-[var(--space-md)]">
           <p className={`${AMOUNT_IN_TITLE} text-[length:var(--type-card-amount)] leading-[1] tracking-[-0.02em]`}>{figure ? figure.text : "…"}</p>
           {holdings !== null && holdsAnything(holdings, gifts) ? <SpendOrWithdraw /> : null}

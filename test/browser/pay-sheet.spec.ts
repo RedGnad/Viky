@@ -14,7 +14,19 @@ const SHOTS = process.env.VIKY_PAY_SHEET_CAPTURES;
 const card = (page: Page) => page.locator('section[aria-labelledby="offer-card"]');
 const sheet = (page: Page) => page.locator("dialog.sheet[open]").last();
 
-type Setup = Readonly<{ ausd: bigint; signedIn: boolean; gifts?: unknown[]; offered?: boolean; country?: string; /** The account as the chain answers it, when the test changes it as it goes. */ holdings?: Holdings }>;
+type Setup = Readonly<{
+  ausd: bigint;
+  signedIn: boolean;
+  gifts?: unknown[];
+  offered?: boolean;
+  country?: string;
+  /** The account as the chain answers it, when the test changes it as it goes. */
+  holdings?: Holdings;
+  /** The money the reader counts in: the euro unless said. */
+  currency?: string;
+  /** What is typed in "how much": 19 unless said; null leaves the figure the card started on. */
+  amount?: string | null;
+}>;
 
 async function toTheSheet(browser: Parameters<typeof profile>[0], baseURL: string | undefined, setup: Setup): Promise<Profile> {
   const funder = await profile(browser, baseURL, { width: 390, height: 844 });
@@ -23,7 +35,7 @@ async function toTheSheet(browser: Parameters<typeof profile>[0], baseURL: strin
   await answerTheChain(context, holdings);
   // The profile's own address, which may be another name for the server than the one the run was given.
   const host = new URL(funder.baseURL).hostname;
-  await context.addCookies([{ name: "viky.currency", value: "EUR", domain: host, path: "/" }]);
+  await context.addCookies([{ name: "viky.currency", value: setup.currency ?? "EUR", domain: host, path: "/" }]);
   const country = setup.country ?? "fr";
   await page.route("**/api/rails/where**", (route) =>
     route.fulfill(json({ country, ask: false, fromConnection: country, fromDevice: country, waysOut: {}, waysIn: {}, card: { offered: setup.offered ?? true, country }, out: { bank: null, cardSmallest: null } })),
@@ -33,7 +45,7 @@ async function toTheSheet(browser: Parameters<typeof profile>[0], baseURL: strin
   await page.goto("/");
   if (!setup.signedIn) await page.getByRole("link", { name: "Offer a gift" }).first().click();
   await card(page).getByLabel("Their first name").fill("Boo");
-  await card(page).getByLabel("how much").fill("19");
+  if (setup.amount !== null) await card(page).getByLabel("how much").fill(setup.amount ?? "19");
   await card(page).locator("[data-card-action]").click();
   await expect(sheet(page)).toBeVisible();
   await page.waitForTimeout(900);
@@ -155,6 +167,41 @@ test.describe("the pay sheet of 3 Oct 2026", () => {
     expect(calls.indexOf("create"), "and never made before it was taken").not.toBe(0);
     // No card was asked for at any moment: the wait never offered one.
     await expect(page.getByRole("link", { name: /by card/ })).toHaveCount(0);
+    await funder.context.close();
+  });
+
+  test("one writing of money: what was typed is what is read, on the sheet, on the wait and on the card that says it is not made yet", async ({ browser, baseURL }) => {
+    // Nineteen euros typed, ten dollars in the account: from the wait on, the gift was said in dollars (the founder,
+    // 4 Oct 2026: "Your gift: $50.51 for Boo" after 45 euros typed).
+    const funder = await toTheSheet(browser, baseURL, { ausd: 10_000_000n, signedIn: true, gifts: [] });
+    const { page } = funder;
+    await expect(sheet(page).locator("[data-pay-lines] > div > span:last-child").first()).toHaveText("€19.00");
+    await sheet(page).getByRole("button", { name: /^Pay \S+ by card$/ }).click();
+    await page.waitForURL(/\/fund\?step=paying/, { timeout: 60_000 });
+    // The wait: the gift as it was typed, and the account in the same money. No dollar on the screen.
+    await expect(page.getByText("Your gift: €19.00 for Boo, 30 days.")).toBeVisible();
+    await expect(page.getByText(/^In your account now: €\d+\.\d{2}$/)).toBeVisible();
+    await expect(page.locator("main")).not.toContainText("$");
+    await shot(page, "8-the-wait-in-the-money-typed");
+    // Home and Gifts: the card that says the gift is not made yet says it as typed too.
+    await page.goto("/");
+    await expect(page.locator("[data-finish-gift]")).toContainText("€19.00 for Boo");
+    await expect(page.locator("[data-finish-gift]")).not.toContainText("$");
+    await page.goto("/gifts");
+    await expect(page.locator("[data-finish-gift]")).toContainText("€19.00 for Boo");
+    await funder.context.close();
+  });
+
+  test("a figure the card started on is the figure the sheet says: round francs are not read back from their dollars", async ({ browser, baseURL }) => {
+    // A reader who counts in CFA francs and types nothing: the card starts on a round figure, and the sheet said
+    // "F CFA 19,997" for 20,000 (the founder, 4 Oct 2026).
+    const funder = await toTheSheet(browser, baseURL, { ausd: 0n, signedIn: true, gifts: [], currency: "XOF", amount: null });
+    const { page } = funder;
+    const started = (await card(page).getByLabel("how much").inputValue()).replace(/\D/g, "");
+    expect(Number(started) % 1_000, `the card starts on a round figure (${started})`).toBe(0);
+    const gift = (await sheet(page).locator("[data-pay-lines] > div > span:last-child").first().innerText()).replace(/\D/g, "");
+    expect(gift, "and the sheet says that figure").toBe(started);
+    await shot(page, "9-the-sheet-says-the-round-francs");
     await funder.context.close();
   });
 

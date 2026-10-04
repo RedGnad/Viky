@@ -3,9 +3,9 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { chainMarginEur, eurosNeededOn, roughlyInDollars, serviceChargeDollars, serviceChargeEur, serviceChargeIsCeiling, wayInFor } from "../src/gift-amount";
 import { lastNameGiven } from "../src/gift-names";
-import { cardSum, giftTyped, heldIn, moneyIn } from "../src/pay-sum";
+import { cardSum, dollarsSaidIn, giftAsTyped, giftTyped, heldIn, moneyIn, moneyTypedIn } from "../src/pay-sum";
 import type { Rates } from "../src/rates";
-import { PAY } from "../src/sentences";
+import { FUND, PAY } from "../src/sentences";
 import { feeInWords, sourceOfIts, WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAY_IN_USDC, WAYS_IN, type WayIn } from "../src/rails";
 
 /**
@@ -297,4 +297,62 @@ test("a card that buys the chain's coin says what stays in the account, and why 
   );
   assert.match(sheet, /\{sum && sum\.stays > 0 && way\.arrives === "chain" \? <p className=\{BODY\}>\{W\.chainMargin\}<\/p> : null\}/);
   assert.match(sheet, /\{sum\.stays > 0 \? line\(W\.rows\.stays, say\(sum\.stays\)\) : null\}/);
+});
+
+test("one writing of money: what the person typed is what they read, on the sheet and on every screen after it", () => {
+  const rates = { date: "2026-10-02", usdPerEur: 1.1225, eurPerUsd: 1 / 1.1225, xofPerUsd: 655.957 / 1.1225, eurPer: { EUR: 1, USD: 1.1225, XOF: 655.957 }, readAtMs: 0 } as Rates;
+  // 45 euros typed: the wait, the gift being made and the card that says it is not made yet said "$50.51".
+  assert.equal(giftAsTyped({ typedAmount: "45", typedIn: "EUR" }, "$50.51"), "€45.00");
+  assert.equal(giftAsTyped({ typedAmount: "45,5", typedIn: "EUR" }, "$51.07"), "€45.50");
+  // A money without cents is written without them.
+  assert.match(giftAsTyped({ typedAmount: "20000", typedIn: "XOF" }, "$34.22"), /^F\sCFA\s20,000$/);
+  // A gift kept without the figure typed, or with one that cannot be read, is said in dollars: what it holds.
+  assert.equal(giftAsTyped({}, "$30.00"), "$30.00");
+  assert.equal(giftAsTyped({ typedAmount: "abc", typedIn: "EUR" }, "$30.00"), "$30.00");
+  assert.equal(giftAsTyped({ typedAmount: "30", typedIn: "USD" }, "$30.00"), "$30.00");
+
+  // Everything else on those screens is dollars said in the money typed, when the day's rate for it was read.
+  assert.equal(moneyTypedIn({ typedAmount: "45", typedIn: "EUR" }, rates), "EUR");
+  assert.equal(moneyTypedIn({ typedAmount: "45", typedIn: "EUR" }, undefined), "USD", "no rate, no conversion: the dollars");
+  assert.equal(moneyTypedIn({ typedAmount: "30", typedIn: "USD" }, rates), "USD");
+  assert.equal(moneyTypedIn({}, rates), "USD");
+  assert.equal(dollarsSaidIn(0n, "EUR", rates, "$0.00"), "€0.00");
+  assert.equal(dollarsSaidIn(10_000_000n, "EUR", rates, "$10.00"), "€8.91");
+  assert.equal(dollarsSaidIn(10_000_000n, "USD", rates, "$10.00"), "$10.00");
+  assert.equal(dollarsSaidIn(10_000_000n, "EUR", undefined, "$10.00"), "$10.00");
+
+  // The sheet: the figure the card started on, which nobody typed, is given to it as the figure typed, so a round
+  // 20,000 francs is not read back from its dollars as 19,997.
+  const xofUnits = 34_220_000n;
+  assert.notEqual(giftTyped({ units: xofUnits, code: "XOF", rates }), 20_000, "read back from the dollars, the round figure is lost");
+  assert.equal(giftTyped({ typedAmount: "20000", typedIn: "XOF", units: xofUnits, code: "XOF", rates }), 20_000);
+  const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
+  assert.match(card, /<PaySheet open=\{paying\} draft=\{starting \? \{ \.\.\.draft, typedAmount: starting\.typed, typedIn: money\.currency \} : draft\}/);
+  // The press keeps what the sheet said, on the card and with the payment started.
+  const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
+  assert.match(sheet, /const said: GiftDraft = gift === undefined \? draft : \{ \.\.\.draft, typedAmount: String\(gift\), typedIn: code \};\n\s*onChange\(said\);\n\s*savePendingGift\(\{ \.\.\.draftToTerms\(said, account\), wayIn: way\.name \}\);/);
+
+  // The wait, the gift being made, a payment that fell short: the gift as typed, the account in the same money.
+  const wait = readFileSync("app/components/PayGift.tsx", "utf8");
+  assert.match(wait, /const gift = giftAsTyped\(typed, formatAusd\(units\)\);/);
+  assert.match(wait, /const said = \(amount: bigint\) => dollarsSaidIn\(amount, typedMoney, money\.rates, formatAusd\(amount\)\);/);
+  assert.match(wait, /\{W\.waiting\.inAccountNow\(balance === null \? "…" : said\(held\)\)\}/);
+  assert.match(wait, /P\.putting\(gift, recipient\)/);
+  assert.match(wait, /W\.arrived\.short\(said\(arrived\), gift, moneyIn\(more, "EUR"\), makeItSaid\)/);
+  assert.doesNotMatch(wait.slice(wait.indexOf("const gift = giftAsTyped")), /\{W\.arrived\.makeIt\(`\$\$\{makeIt\}`\)\}/);
+  assert.equal(FUND.account.yourGift("€45.00", "Boo", 30), "Your gift: €45.00 for Boo, 30 days.");
+  assert.equal(PAY.putting("€45.00", "Boo"), "Putting €45.00 in Boo's name.");
+  // The card on Home and Gifts that says a gift is not made yet.
+  const finish = readFileSync("app/kit/FinishTheGift.tsx", "utf8");
+  assert.match(finish, /amount: giftAsTyped\(kept, formatAusd\(dollarsToUnits\(kept\.dollars\)\)\)/);
+});
+
+test("the judge credit line says how a funder really pays by card here, with the frame's limit", () => {
+  assert.equal(PAY.fromJudgeCredit("frame", "Rampnow"), "Paid from your judge credit. A funder pays by card through Rampnow, in a frame inside Viky that has to stay open until the money arrives.");
+  assert.equal(PAY.fromJudgeCredit("tab", "Rampnow"), "Paid from your judge credit. A funder pays by card on Rampnow's page, in a tab of its own.");
+  assert.equal(PAY.fromJudgeCredit("sheet", "Swapper"), "Paid from your judge credit. A funder pays by card through Swapper, in a sheet inside Viky.");
+  assert.doesNotMatch(readFileSync("src/sentences.ts", "utf8"), /once our payment partner is embedded/, "it said so after the frame was switched on");
+  // The same test the pay press makes: the frame where it is on and this browser can keep a sign-in in it.
+  const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
+  assert.match(sheet, /const cardPaidHow = \(\): "frame" \| "sheet" \| "tab" => \(way\.embedded \? "sheet" : way === WAY_IN_USDC && rampnowFrameOn\(\) && frameKeepsSignIn\(navigator\.userAgent\) \? "frame" : "tab"\);/);
 });
