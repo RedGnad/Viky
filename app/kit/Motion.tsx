@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
 import type { CharacterState } from "./Character";
 import { EASING, MOTION } from "@/src/design-tokens";
 import { arrivalSchedule, bezierProgress, springEasing, springSettleMs, type ArrivalSchedule } from "@/src/motion";
@@ -62,13 +62,19 @@ export function useReducedMotion(): boolean {
 
 const part = (root: Element, name: string) => root.querySelector<SVGElement>(`[data-part="${name}"]`);
 
-/** A day earned: it gathers, jumps once, lands with a squash that springs back, and its face opens on the landing. */
-function playEarned(root: Element, delay: number): Animation[] {
+/**
+ * A day earned: it gathers, jumps once, lands with a squash that springs back, and its face opens on the landing.
+ *
+ * `wakes` is the day itself, in an arrival (the founder, 4 Oct 2026): a day sleeps until it is done, so it stands with
+ * its eyes shut until its turn, makes one small turn in the air, and opens its eyes and its smile as it lands. Without
+ * it, the same jump as the head of a screen makes it, eyes open: its face squeezes shut in the air and nothing turns.
+ */
+function playEarned(root: Element, delay: number, wakes = false): Animation[] {
   const figure = part(root, "figure");
   if (!figure) return [];
   const face = part(root, "face");
   const shadow = part(root, "shadow");
-  const { gatherMs, riseMs, fallMs, riseBy, landing } = MOTION.earned;
+  const { gatherMs, riseMs, fallMs, riseBy, landing, turns, eyesShut, mouthShut } = MOTION.earned;
   const jumpMs = gatherMs + riseMs + fallMs;
   const land = springEasing(landing);
   const total = jumpMs + land.durationMs;
@@ -84,7 +90,32 @@ function playEarned(root: Element, delay: number): Animation[] {
       { duration: total, delay },
     ),
   ];
-  if (face) {
+  if (wakes) {
+    // Asleep until its turn (the keyframes hold through the delay), asleep in the air, awake on the landing spring.
+    const opens = (shut: string): Keyframe[] => [
+      { offset: 0, transform: shut },
+      { offset: jumpMs / total, transform: shut, easing: land.easing },
+      { offset: 1, transform: "none" },
+    ];
+    for (const eye of root.querySelectorAll<SVGElement>('[data-part="eye"]')) animations.push(eye.animate(opens(`scaleY(${eyesShut})`), { duration: total, delay, fill: "backwards" }));
+    const mouth = part(root, "mouth");
+    if (mouth) animations.push(mouth.animate(opens(`scale(${mouthShut})`), { duration: total, delay, fill: "backwards" }));
+    // The small turn: in the air only, slowing down so the day is upright as it touches the floor.
+    const whirl = part(root, "whirl");
+    if (whirl) {
+      animations.push(
+        whirl.animate(
+          [
+            { offset: 0, transform: `rotate(${-360 * turns}deg)` },
+            { offset: gatherMs / total, transform: `rotate(${-360 * turns}deg)`, easing: EASING.emphasizedDecelerate },
+            { offset: jumpMs / total, transform: "rotate(0deg)" },
+            { offset: 1, transform: "rotate(0deg)" },
+          ],
+          { duration: total, delay },
+        ),
+      );
+    }
+  } else if (face) {
     // The face squeezes shut as it gathers, stays shut in the air, and springs open on the landing.
     animations.push(
       face.animate(
@@ -126,8 +157,12 @@ function playReturned(root: Element, delay: number): Animation[] {
   });
 }
 
-/** The gift arrives on the expressive spring, grown from a little way below, and its bow springs open a beat later. */
-function playGift(root: Element): Animation[] {
+/**
+ * The gift arrives on the expressive spring, grown from a little way below, and its bow springs open a beat later.
+ * `appears` false is the same movement of a character that is already there: the spring alone, with nothing fading
+ * in, since a character on the screen that went out and came back would be a blink.
+ */
+function playGift(root: Element, appears = true): Animation[] {
   const { spatial, effects, fromScale, bowDelayMs } = MOTION.gift;
   const spring = springEasing(spatial);
   const fade = springEasing(effects);
@@ -137,14 +172,14 @@ function playGift(root: Element): Animation[] {
   const shadow = part(root, "shadow");
   if (figure) {
     animations.push(figure.animate([{ transform: `translateY(12%) scale(${fromScale})` }, { transform: "translateY(0) scale(1)" }], { duration: spring.durationMs, easing: spring.easing }));
-    animations.push(figure.animate([{ opacity: 0 }, { opacity: 1 }], { duration: fade.durationMs, easing: fade.easing }));
+    if (appears) animations.push(figure.animate([{ opacity: 0 }, { opacity: 1 }], { duration: fade.durationMs, easing: fade.easing }));
   }
   if (bow) {
     animations.push(bow.animate([{ transform: "rotate(-16deg) scale(0.6)" }, { transform: "rotate(0deg) scale(1)" }], { duration: spring.durationMs, easing: spring.easing, delay: bowDelayMs, fill: "backwards" }));
   }
   if (shadow) {
     animations.push(shadow.animate([{ transform: `scaleX(${fromScale})` }, { transform: "scaleX(1)" }], { duration: spring.durationMs, easing: spring.easing }));
-    animations.push(shadow.animate([{ opacity: 0 }, { opacity: 1 }], { duration: fade.durationMs, easing: fade.easing }));
+    if (appears) animations.push(shadow.animate([{ opacity: 0 }, { opacity: 1 }], { duration: fade.durationMs, easing: fade.easing }));
   }
   return animations;
 }
@@ -163,6 +198,30 @@ export function Success({ gesture = 0, children }: Readonly<{ gesture?: number; 
   }, [gesture]);
   return (
     <span ref={root} data-success className="contents">
+      {children}
+    </span>
+  );
+}
+
+/**
+ * A character already on the screen answering a gesture made on that screen (the founder, 4 Oct 2026: a gift opened,
+ * and the gift's own character at the head of its page reacts, once): the gift's movement on its spring, each time
+ * `gesture` changes, and never when it is first drawn. It starts before the browser paints the screen the gesture
+ * made, so the character is never seen at rest and then small (D243).
+ */
+export function Reacts({ gesture, children }: Readonly<{ gesture: number; children: ReactNode }>) {
+  const root = useRef<HTMLSpanElement>(null);
+  const answered = useRef(gesture);
+  useLayoutEffect(() => {
+    if (answered.current === gesture) return;
+    answered.current = gesture;
+    const element = root.current;
+    if (!element || reduced()) return;
+    const running = playGift(element, false);
+    return () => running.forEach((animation) => animation.cancel());
+  }, [gesture]);
+  return (
+    <span ref={root} data-reacts className="contents">
       {children}
     </span>
   );
@@ -297,12 +356,13 @@ export function ArrivalDay({ gift, index, children }: Readonly<{ gift: string; i
   useEffect(() => {
     const element = root.current;
     if (!element || !step) return;
-    // Invisible until its own turn, then there: a one-step animation that holds the first frame until the delay, so
-    // the class can go in the same task without the day ever being seen before it moves.
+    // A day gone back is invisible until its own turn, then there: a one-step animation that holds the first frame
+    // until the delay, so the class can go in the same task without the day ever being seen before it moves. A day
+    // earned is there from the first image, asleep (app/globals.css), and its own animation holds it asleep until then.
     const drawing = element.querySelector("svg");
-    const held = drawing ? [drawing.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1, delay: step.delay, fill: "backwards" })] : [];
+    const held = drawing && step.moment === "returned" ? [drawing.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1, delay: step.delay, fill: "backwards" })] : [];
     element.classList.remove("arrival-pending");
-    const running = [...held, ...(step.moment === "earned" ? playEarned(element, step.delay) : playReturned(element, step.delay))];
+    const running = [...held, ...(step.moment === "earned" ? playEarned(element, step.delay, true) : playReturned(element, step.delay))];
     // The character at the head of the screen answers each day as it happens on screen: the moment is the day's own
     // animation reaching its landing, or, for a day going back, the end of its slide (its start is the very frame the
     // last day earned lands, and the second answer would erase the first), measured by an animation that moves
