@@ -305,11 +305,42 @@ export const PAY = {
     `${recipient.trim() ? `${recipient}'s name` : "Their name"}${withYours ? " and yours show" : " shows"} on the gift, to whoever opens its link.`,
   /** The sheet the card is paid in, and what its frame is called when read aloud. */
   card: { title: "Pay by card", frame: "Card payment" },
-  /** Rampnow in a frame of our own (the founder, 3 Oct 2026), and its page beside as the fallback. */
+  /**
+   * Rampnow in a frame of our own, one payment for one gift (the founder, 3 Oct 2026, src/rampnow-frame.ts). Its page
+   * beside stays the fallback.
+   *
+   * A button says what the press does and never declares a state (the founder, 4 Oct 2026). When only the person knows
+   * a fact, the screen asks it as a question, and the answers are actions: "Did you pay by card?", "Yes, finish my
+   * payment", "No, pay now".
+   */
   rampnow: {
-    failed: "The card payment did not go through. Nothing was taken.",
+    /** The frame said the payment failed, and nothing left: said on the screen that waits, where paying starts again. */
+    failed: "The payment did not go through. Nothing was taken.",
+    /** The frame's address could not be had: its page beside is the way. */
     notShowing: "If the payment does not show, open its page instead.",
     openPage: "Open the card page",
+    /** Under the frame while no payment is known: the one way out, and the page beside for a sign-in the frame refuses. */
+    goBackWithoutPaying: "Go back without paying",
+    /** The same place, when the frame was opened on a payment already started: back to the screen that waits, which keeps it. */
+    goBack: "Go back",
+    cantSignIn: "Can't sign in here?",
+    /** Under the frame once a payment is known: no way out, and why. */
+    keepOpen: "Keep this window open: Rampnow is finishing your payment.",
+    /** Five minutes without the money: a way out, to the screen that waits. */
+    late: "This is taking longer than usual.",
+    lateOut: "Close this window",
+    /** On the screen that waits, a payment known: where it is, since when, and the one way back to it. */
+    atRampnow: "Your payment is at Rampnow.",
+    needsItsPage: "It finishes on Rampnow's page, which has to be open for it.",
+    since: (minutes: number) => `Started ${ago(minutes)}.`,
+    finish: "Finish my payment",
+    /** On the screen that waits, nothing known of a payment: the question, what makes it asked, and its two answers. */
+    didYouPay: "Did you pay by card?",
+    started: (minutes: number) => `A card payment was started ${ago(minutes)}.`,
+    yesFinish: "Yes, finish my payment",
+    noPayNow: "No, pay now",
+    /** On Home and on Gifts, where "not made yet" stood: one sentence, and one button that leads to the screen that waits. */
+    giftStarted: (amount: string, recipient: string, minutes: number) => `${amount}${forThem(recipient)}: a card payment was started ${ago(minutes)}.`,
   },
   yourCode: "Your code",
   /**
@@ -607,6 +638,13 @@ export const GIFT_CARD = {
  */
 const their = (name: string) => (name.trim() ? `${name}'s` : "their");
 const forThem = (name: string) => (name.trim() ? ` for ${name}` : "");
+/** How long ago, in whole minutes, then in whole hours: "less than a minute ago", "4 minutes ago", "3 hours ago". */
+const ago = (minutes: number) => {
+  if (minutes < 1) return "less than a minute ago";
+  if (minutes < 60) return `${minutes} ${minutes === 1 ? "minute" : "minutes"} ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+};
 const onlyTo = (name: string) => (name.trim() ? name : "the person it is for");
 
 /**
