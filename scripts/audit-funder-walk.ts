@@ -519,8 +519,16 @@ async function sceneFirstPayment(w: Walk): Promise<void> {
   await shot(w, "34 waiting for the payment", "Pay, once the account exists");
   const partner = w.page.getByRole("link", { name: /^Open / }).first();
   await note(w, "34 the partner link", `"${(await partner.innerText()).trim()}" opens ${await partner.getAttribute("href")}`);
-  await press(w, w.page.getByRole("button", { name: "Copy the code" }));
-  await shot(w, "35 waiting, the code copied", "On the waiting screen: Copy the code", w.page.getByRole("button", { name: "Copied" }));
+  // Where the card is paid in a frame of our own (the build with Rampnow's frame on), the wait is under a sheet that
+  // only its own way out closes, and there is no code to copy: the frame's page is told everything already.
+  const framed = (await w.page.locator("iframe[data-rampnow-frame]").count()) > 0;
+  if (framed) {
+    await press(w, sheet(w).getByRole("button", { name: "Go back without paying" }));
+    await shot(w, "34b the wait, back from the frame without paying", "On the frame's sheet: Go back without paying");
+  } else {
+    await press(w, w.page.getByRole("button", { name: "Copy the code" }));
+    await shot(w, "35 waiting, the code copied", "On the waiting screen: Copy the code", w.page.getByRole("button", { name: "Copied" }));
+  }
 
   // Closing the tab in the middle: a new visit keeps the device's storage and the cookie, not the tab's own storage.
   await w.page.evaluate(`window.sessionStorage.clear()`);
@@ -562,12 +570,17 @@ async function sceneFirstPayment(w: Walk): Promise<void> {
   await w.s.text(/Waiting for your/, 40_000);
   await shot(w, "37c picked up after signing in again", "On that screen: Sign in to pick it up");
 
-  // A payment that lands a little short of the gift, on the rail that delivers what a gift holds.
-  w.s.holdings = { AUSD: 50_800_000n, USDC: 0n, MON: 0n };
-  await w.s.text("In your account now: $50.80", 40_000);
+  // A payment that lands a little short of the gift, on the rail that delivers what a gift holds. The gift's dollars
+  // are read off the screen: it was typed in euros, and the day's rate decides them (a figure written here went stale,
+  // and on 4 Oct 2026 the "short" payment was more than the gift, which was made instead).
+  const giftSaid = (await w.page.getByText(/Your gift: \$\d+\.\d{2}/).first().innerText()).match(/\$(\d+)\.(\d{2})/)!;
+  const short = (BigInt(giftSaid[1]) * 100n + BigInt(giftSaid[2]) - 29n) * 10_000n;
+  const shortSaid = `$${short / 1_000_000n}.${String((short % 1_000_000n) / 10_000n).padStart(2, "0")}`;
+  w.s.holdings = { AUSD: short, USDC: 0n, MON: 0n };
+  await w.s.text(`In your account now: ${shortSaid}`, 40_000);
   await w.page.waitForTimeout(9_000);
   await settle(w);
-  await w.s.shot(w.journey, "37d a payment landed 29 cents short", "On the waiting screen, $50.80 landing for a gift of $51.09 (balance read replaced), two looks later", { real: "replaced: balance reads" });
+  await w.s.shot(w.journey, "37d a payment landed 29 cents short", `On the waiting screen, ${shortSaid} landing for a gift of $${giftSaid[1]}.${giftSaid[2]} (balance read replaced), two looks later`, { real: "replaced: balance reads" });
   await note(w, "37d a payment landed 29 cents short");
 
   // The payment lands: the account now holds what the gift needs, and the creation's answer is replaced.
@@ -838,7 +851,8 @@ async function sceneJudge(w: Walk): Promise<void> {
   await openPaySheet(w);
   await sheetTo(w, "bottom");
   await shot(w, "90 pay sheet, have a code", "Signed in, nothing in the account, credits open: Send, the sheet scrolled to its end");
-  const have = sheet(w).getByRole("button", { name: "Have a code?" });
+  // A fold since the mockup of 3 Oct 2026, not a button: its name is what is pressed.
+  const have = sheet(w).locator("details[data-have-a-code] summary");
   await have.scrollIntoViewIfNeeded();
   await press(w, have);
   await sheet(w).getByLabel("Code").fill("JUDGE-CODE");

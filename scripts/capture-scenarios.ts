@@ -60,6 +60,9 @@ const TODAY = Math.floor(Date.now() / 86_400_000);
 const GIFT_ID = "999903";
 const CLAIM_TOKEN = "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6";
 const ESCROW = "0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233";
+/** The coin the bank service takes, and the chain's own coin as a way out that gives it back is written down. */
+const USDC_COIN = "0x754704Bc059F8C67012fEd69BC8A327a5aafb603";
+const CHAIN_COIN = "0x0000000000000000000000000000000000000000";
 const DEPOSIT = "0x000000000000000000000000000000000000dEaD";
 const HASH = `0x${"7599b203".repeat(8)}`;
 /** The gift's read, with or without the link's key: since 17 Sep the page sends the key so the two names come back. */
@@ -325,9 +328,9 @@ export const SCENARIOS: Scenario[] = [
       await s.text("Prove ama_learns is yours");
       await s.shot("recipient", "code to add", "After opening it: type the Duolingo username, Continue");
 
-      await s.click("I added it");
+      await s.click("Check my profile");
       await s.text("Nothing has been counted yet.", 30_000);
-      await s.shot("recipient", "counting started", "On the code screen: I added it");
+      await s.shot("recipient", "counting started", "On the code screen: Check my profile");
     },
   },
   {
@@ -351,7 +354,9 @@ export const SCENARIOS: Scenario[] = [
       await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
       await s.settle();
       await s.text(/Named by Maman/, 30_000);
-      await s.click("Not your Duolingo name?");
+      // A fold, not a button (the founder, 4 Oct 2026): its name is pressed where it stands.
+      await s.page.locator("details[data-not-your-name] summary").click();
+      await s.settle();
       await s.shot("recipient", "named by the funder", `${HOME}: the gift under "What's moving", named by the funder: Not your Duolingo name?`);
     },
   },
@@ -652,14 +657,14 @@ function milestone(): Scenario[] {
         await s.click("Get my code");
         await s.text("Prove lea_plays is yours");
         await s.shot("milestone", "the code for the name given", "On that page: Get my code", { real: "replaced: POST /api/gift/[id]/account" });
-        await s.click("I added it");
+        await s.click("Check my profile");
         // What the screen says once the climb has started, which is not what the gesture answered: "Done. You start at
         // 1455. Reach 1500 and all of it is yours. You can take the code out of your name now." is written by
         // `outcomeMessage` and then lost, because the section holding it is drawn only while the gift is "opened" and
         // the reading that starts the climb ends that phase. So the one sentence telling them to take the code back
         // out of their name is never read. Recorded for V4, which rebuilds this page: not repaired here.
         await s.text("45 to go.");
-        await s.shot("milestone", "started", "On that page: I added it", { real: "replaced: POST /api/gift/[id]/bind, the attested reading" });
+        await s.shot("milestone", "started", "On that page: Check my profile", { real: "replaced: POST /api/gift/[id]/bind, the attested reading" });
       },
     },
     {
@@ -888,8 +893,12 @@ function withdrawal(): Scenario[] {
         await rates(s);
         await rails(s);
         await currency(s, null);
+        // A withdrawal is open when what was written down says so, and never because of a balance (the founder, 3 Oct
+        // 2026): the route that reads it answers one, made ready for the bank service a minute ago.
+        await s.api("GET", "/api/exit/open", () => ({ status: 200, body: { open: { coin: USDC_COIN, atLeast: "9990000", sinceMs: Date.now() - 60_000 } } }), "GET /api/exit/open");
         await s.signIn();
-        await s.text("$9.99 of it is ready to send to Ramp.");
+        // Home says one amount and names no service: the withdrawal's state is said where a withdrawal is made.
+        await s.text("Spend or withdraw");
         await s.shot("withdrawal", "home with 9.99 ready", `${HOME}, after a change left 9.99 ready for Ramp`);
         // The steps no longer open by themselves on money already made ready (the audit of 1 Oct 2026): the first
         // screen says it is ready and offers the way back to it, and everything else stays within reach.
@@ -912,6 +921,9 @@ function withdrawal(): Scenario[] {
         await currency(s, "XOF");
         // What 138.43 is worth, as the price answers it: about $3.24 at the rate measured on 14 Sep 2026.
         await s.api("POST", "/api/fund/quote", () => ({ status: 200, body: { output: "3240000", minOut: "3230000", to: ESCROW, data: "0x", value: "0" } }), "POST /api/fund/quote");
+        // A withdrawal by card is open on that coin, written as the zero address: without it the coin is money in the
+        // account, counted on Home and changed back first.
+        await s.api("GET", "/api/exit/open", () => ({ status: 200, body: { open: { coin: CHAIN_COIN, atLeast: "138436143573911778147", sinceMs: Date.now() - 60_000 } } }), "GET /api/exit/open");
         await s.signIn();
         await s.click("Spend or withdraw");
         await s.text("Continue with Mercuryo");
