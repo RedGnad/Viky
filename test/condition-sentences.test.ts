@@ -48,9 +48,12 @@ test("the three the audit did not improve keep what the register already said, a
   assert.ok(daily && chess && coursera);
   // Each of these carries something the audit's table left out, so replacing them would have lost it.
   assert.match(daily.help, /nothing to install/, "what it costs the person");
-  assert.match(daily.help, /not who held the phone/, "and what the reading is not worth");
+  // What a reading does not prove left these lines on 4 Oct 2026 (the founder): it is said on the judges page. The
+  // subject stays exact, the account, and nothing says more than the reading is worth.
+  assert.match(daily.help, /it proves the account did the lesson\.$/, "what the reading is worth, of the account and of nobody");
+  assert.doesNotMatch(daily.help, /not who/);
   assert.match(chess.help, /never pays an account it has closed/, "what we do about the source's own verdict");
-  assert.match(coursera.help, /not each piece of work/, "the limit of an identity checked once");
+  assert.match(coursera.help, /Coursera checks identity once\.$/, "an identity checked once, and no more is claimed");
 });
 
 test("no verification sentence uses a word the product never says", () => {

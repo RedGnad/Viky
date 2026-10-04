@@ -151,12 +151,20 @@ test("the way out shows one accent surface at a time, on the action it is waitin
   // The card in Viky's words (D270): its name, its nature, its two lines, and no source on it; the sources are behind
   // the fold. The partner is named in the card's own sentence before the person goes to it, and never "crypto".
   assert.match(screen, /<h3 className=\{CARD_TITLE\}>\{words\.name\}<\/h3>/);
-  assert.match(screen, /const body = use === "mobile" \? \(mobileOffered \? U\.mobileBody\(operatorsInWords\(mobileOffered\.operators\.map\(\(operator\) => operator\.name\)\), delayInWords\(mobileOffered\.settlement\)\) : ""\) : use === "bank" && bankPays \? U\.bankBy\(bankPays\.method, bankPays\.currency\) : U\[use\]\.body;/);
-  assert.match(screen, /<Said text=\{body\} \/>/);
-  const cards = screen.slice(screen.indexOf("{uses.map((use, index) => {"), screen.indexOf('<details className="said-fold">'));
-  assert.doesNotMatch(cards, /sourceLine|feeSentence|way\.conditions|way\.line/, "the card that decides carries no source, no fee sentence, no list, no partner's line");
-  assert.match(USE_MONEY.bank.body, /Our partner Ramp asks for your ID, once\./);
-  assert.match(USE_MONEY.card.body, /Our partner Mercuryo asks for your ID and your card, once\./);
+  // One sentence in the open, and four lines folded under "How it works": what the person gets, in how long, what it
+  // costs, what it takes (the founder, 4 Oct 2026). The cost is the service's published figure, the same the fold of
+  // sources prints with its day.
+  assert.match(screen, /\{line \? <p className=\{BODY\}>\{line\}<\/p> : null\}/);
+  assert.match(screen, /<details className="said-fold" data-how-it-works=\{use\}>\n\s*<summary className="said-fold-name">\n\s*\{KIT\.how\}/);
+  assert.match(screen, /<Lines quiet rows=\{how\} \/>/);
+  assert.match(screen, /\[\[U\.how\.get, bank\?\.get \?\? ""\], \[U\.how\.time, bank\?\.time \?\? ""\], \[U\.how\.cost, feeUnderItsName\(WAY_OUT_EURO\)\], \[U\.how\.need, U\.bank\.need\]\]/);
+  assert.match(screen, /\[\[U\.how\.get, U\.card\.get\], \[U\.how\.cost, feeUnderItsName\(WAY_OUT_CARD\)\], \[U\.how\.need, U\.card\.need\]\]/, "no time for a card payout: nobody published one");
+  assert.deepEqual(USE_MONEY.how, { get: "You get", time: "Time", cost: "Cost", need: "You need" });
+  const cards = screen.slice(screen.indexOf("{uses.map((use, index) => {"), screen.indexOf("{U.keepHere}"));
+  assert.doesNotMatch(cards, /sourceLine|feeSentence|way\.conditions|way\.line|<Said /, "the card that decides carries no source, no fee sentence, no list, no partner's line, and no paragraph in its fold");
+  // What each service asks of the person is a line of "How it works": "You need" (the founder, 4 Oct 2026).
+  assert.equal(USE_MONEY.bank.need, "your ID, once, and your own account");
+  assert.equal(USE_MONEY.card.need, "your ID, once, and your own card");
   assert.doesNotMatch(JSON.stringify(USE_MONEY), /crypto/i, "the word is the partner's page's alone");
   for (const way of WAYS_OUT) {
     assert.doesNotMatch(way.title, /Ramp|Mercuryo/, "the title is where the money goes, not who carries it");

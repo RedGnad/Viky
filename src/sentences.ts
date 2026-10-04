@@ -106,6 +106,12 @@ export const NAV = {
  * asked, in `FUND` and in the register, so nothing a funder reads was invented for the new shape.
  */
 export const OFFER = {
+  /**
+   * The four lines of "How this is checked", on the sheet where a condition is chosen (the founder, 4 Oct 2026):
+   * where it is read from, when, what counts, what the person has to do. The values are each condition's own
+   * (src/conditions.ts, `checked`), and "Read" is the value the gift's page prints for the same condition.
+   */
+  checked: { from: "Read from", when: "Read", counts: "What counts", they: "They must" },
   /** What the card is, for a reader who is read to: the card itself says it by being one. */
   title: "Offer a gift",
   /** The label at the head of the card, in the third voice: whose gift this is, or that it is yours to fill in. */
@@ -1680,7 +1686,8 @@ export const CONDITION_NATURE = { read: "READ FOR YOU", shown: "SHOWN BY THEM", 
 export const GRADE_SCALE = {
   question: "How does their university grade?",
   choices: { "20": "Out of 20", "4": "Out of 4", "100": "Out of 100", letters: "In letters" } as Record<string, string>,
-  help: "Their first results page confirms it. If their university grades another way, the gift cannot pay, and what you put in comes back to you at the end.",
+  /** One line, under the question: their first results page confirms the scale, and a wrong one pays nothing. */
+  help: "Their university must grade this way, or it cannot pay.",
   fixed: (words: string) => `Their university grades ${words}.`,
   letter: "The grade they reach",
   letterHelp: "That letter or a better one.",
@@ -1892,49 +1899,70 @@ export const USE_MONEY = {
   forWhereYouLive: (country: string) => `You live in ${country}`,
   forYourNumber: "Where do you live?",
   change: "Change",
+  /**
+   * "How it works", on each card: four lines, a label and its value (the founder, 4 Oct 2026). What the person gets,
+   * in how long, what it costs, what it takes. A line whose value nobody published is not drawn (the time a card
+   * payout takes). One sentence stays in the open on the card: `line`.
+   */
+  how: { get: "You get", time: "Time", cost: "Cost", need: "You need" },
   phone: {
     name: "Your phone",
     nature: "From your balance",
-    body: "Credit or mobile data on your number, from your own phone company. Nothing to sign up for, no ID.",
+    line: "Credit or mobile data on your number, from your own phone company.",
+    get: "credit or data on your number",
+    time: "usually a minute",
+    cost: "the price shown before you pay",
+    need: "your number, no ID",
     action: "Top up my phone",
   },
   bank: {
     name: "Your bank",
     nature: "You would get about",
-    body: "A transfer in euros to your IBAN, within two working days. Our partner Ramp asks for your ID, once.",
+    need: "your ID, once, and your own account",
     action: "Send to my bank",
   },
   card: {
     name: "Your card",
     nature: "You would get about",
-    body: "Onto your Visa or Mastercard. Our partner Mercuryo asks for your ID and your card, once.",
+    line: "Onto your Visa or Mastercard.",
+    get: "money on your Visa or Mastercard",
+    need: "your ID, once, and your own card",
     action: "Send to my card",
   },
   mobile: {
     name: "Your mobile money",
     nature: "From your balance",
+    cost: "Switch's rate, shown before you send",
+    need: "the number and its holder's name",
     action: "Send to my mobile money",
   },
   /**
-   * The mobile money card's line (the founder, 2 Oct 2026): the operators and the time are Switch's own, read for the
-   * country while the person looks. The second sentence is folded under "How it works".
+   * The mobile money card (the founder, 2 Oct 2026): the operators and the time are Switch's own, read for the
+   * country while the person looks.
    */
-  mobileBody: (operators: string, delay: string) => `To your ${operators} number, within ${delay}. Our partner Switch pays it, at its own rate.`,
+  mobileLine: (operators: string, delay: string) => `To your ${operators} number, within ${delay}.`,
+  mobileGet: (operators: string) => `money on your ${operators} number`,
+  mobileTime: (delay: string) => `within ${delay}`,
   giftcard: {
     name: "A gift card",
     nature: "A code, sent here",
-    body: "Shops, games and more, from Bitrefill. Some are for online shops abroad, and each card says where it works.",
+    line: "Shops, games and more, from Bitrefill.",
+    get: "a code for the shop you choose",
+    time: "usually within a minute",
+    cost: "the price shown before you pay",
+    need: "nothing: no sign-up, no ID",
     action: "Choose a card",
   },
   /**
    * How the bank service pays in the person's country, by its own published method (the audit of 1 Oct 2026): a
-   * transfer in euros to an IBAN was said to an account in the United States, which it pays in dollars.
+   * transfer in euros to an IBAN was said to an account in the United States, which it pays in dollars. The time is
+   * the one it publishes for a transfer in euros, and is said of no other method.
    */
-  bankBy: (method: string, currency: string) => {
-    if (method === "SEPA") return "A transfer in euros to your IBAN, within two working days. Our partner Ramp asks for your ID, once.";
-    if (method === "CARD") return "Onto your card. Our partner Ramp asks for your ID, once.";
+  bankBy: (method: string, currency: string): Readonly<{ line: string; get: string; time: string | null }> => {
+    if (method === "SEPA") return { line: "A transfer in euros to your IBAN, within two working days.", get: "euros on your IBAN", time: "within two working days" };
+    if (method === "CARD") return { line: "Onto your card.", get: "money on your card", time: null };
     const named: Readonly<Record<string, string>> = { USD: "dollars", BRL: "reais", MXN: "pesos" };
-    return `A transfer in ${named[currency] ?? currency} to your bank account. Our partner Ramp asks for your ID, once.`;
+    return { line: `A transfer in ${named[currency] ?? currency} to your bank account.`, get: `${named[currency] ?? currency} on your bank account`, time: null };
   },
   /** The card service's smallest payout, as it publishes it today, said on its card before anything is changed. */
   cardFrom: (figure: string) => `From ${figure} at a time.`,

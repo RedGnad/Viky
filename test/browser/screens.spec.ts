@@ -237,7 +237,15 @@ test.describe("the screens a person meets", () => {
     await openTheFamily(page, /School & studies/);
     const other = sheet.getByRole("button", { name: /A Duolingo English Test score/i });
     await other.click();
-    await expect(sheet.locator("[data-how-checked] [data-condition-help]")).toHaveCount(1);
+    // How it is checked, folded at the foot of its questions: where it is read from, when, what counts, what they do.
+    await sheet.locator("[data-how-checked] summary").click();
+    await expect(sheet.locator("[data-how-checked] dl.said-lines > div")).toHaveText([
+      "Read fromthe certificate page they share",
+      "Readwhen they share its link",
+      "What countsthe score printed on it",
+      "They mustshare their certificate's link",
+    ]);
+    await expect(sheet.locator("[data-how-checked] p")).toHaveCount(0);
     await sheet.getByRole("button", { name: /change/i }).click();
     await expect(sheet.locator("[data-family-art]")).toHaveCount(0);
     await expect(sheet.getByRole("button", { name: /A Duolingo English Test score/i })).toHaveAttribute("aria-current", "true");

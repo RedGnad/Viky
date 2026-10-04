@@ -259,6 +259,8 @@ async function sceneCard(w: Walk): Promise<void> {
   await duolingo.blur();
   await w.s.text("Which course counts?");
   await shot(w, "07b daily, the name read and its courses", "On the daily questions: ama_learns typed, then out of the field");
+  // "How this is checked" is opened first, so its four lines are in the picture (4 Oct 2026).
+  await sheet(w).locator("[data-how-checked] summary").click();
   await sheetTo(w, "bottom");
   await shot(w, "07c daily, the foot of the questions", "The same sheet, scrolled to its end");
   await press(w, sheet(w).getByRole("button", { name: "Done", exact: true }));
@@ -281,6 +283,8 @@ async function sceneCard(w: Walk): Promise<void> {
   await sheet(w).getByText(/Today they are at 1450/).first().waitFor({ state: "attached", timeout: 30_000 });
   await settle(w);
   await shot(w, "10d chess, Rapid chosen, the sheet as it stands", "On the chess questions: Rapid (the sheet is left where it is)");
+  // "How this is checked" is opened first, so its four lines are in the picture (4 Oct 2026).
+  await sheet(w).locator("[data-how-checked] summary").click();
   await sheetTo(w, "bottom");
   await shot(w, "10d2 chess, the reading and the target, at the sheet's end", "The same sheet, scrolled to its end");
   const target = sheet(w).getByLabel("The rating they reach");
@@ -355,6 +359,7 @@ async function sceneCard(w: Walk): Promise<void> {
   const outOf20 = sheet(w).getByRole("button", { name: /20/ }).first();
   if ((await outOf20.count()) > 0) {
     await press(w, outOf20);
+    await sheet(w).locator("[data-how-checked] summary").click();
     await sheetTo(w, "bottom");
     await shot(w, "14i university, the grade on a scale of 20", "On the university questions: the scale out of 20");
   }

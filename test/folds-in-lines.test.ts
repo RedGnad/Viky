@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { MOST_LINES_IN_A_FOLD } from "../app/kit/Lines";
-import { feeUnderItsName, WAY_OUT_EURO } from "../src/rails";
-import { CASH_OUT, CONSENT, FUND, GIFT_PAGE, MILESTONE_PAGE, PAY } from "../src/sentences";
+import { BUILDING, conditionById, CONDITIONS, PRONOTE_GRADE_SHOWN, readWhen } from "../src/conditions";
+import { helpLine } from "../src/help-line";
+import { certificateById } from "../src/milestone-conditions";
+import { feeUnderItsName, WAY_OUT_CARD, WAY_OUT_EURO } from "../src/rails";
+import { CASH_OUT, CONSENT, FUND, GIFT_PAGE, GRADE_SCALE, MILESTONE_PAGE, OFFER, PAY, USE_MONEY } from "../src/sentences";
 
 /**
  * A fold holds lines, a label and its value, four at most, never a paragraph (the founder, 4 Oct 2026). His list named
@@ -65,4 +68,76 @@ test("where the way out's figures come from is a line a service, with the day it
 test("the exact dollars under a converted figure are on no screen any more", () => {
   for (const file of ["app/kit/ReachedMoment.tsx", "app/components/PayGift.tsx", "app/components/CashOut.tsx", "app/kit/LedAmount.tsx"]) assert.doesNotMatch(read(file), /ExactLine/, file);
   assert.doesNotMatch(read("src/sentences.ts"), /Exactly \$\{/);
+});
+
+test("how a condition is checked, on the sheet where it is chosen: where it is read from, when, what counts, what the person has to do", () => {
+  // The founder, 4 Oct 2026. No line says what a reading does not prove on this sheet: that is the judges page's.
+  assert.deepEqual(OFFER.checked, { from: "Read from", when: "Read", counts: "What counts", they: "They must" });
+  const all = [...CONDITIONS, ...BUILDING, PRONOTE_GRADE_SHOWN];
+  for (const condition of all) {
+    const { from, when, counts, they } = condition.checked;
+    for (const [name, value] of Object.entries({ from, when, counts, they })) {
+      assert.ok(value.length >= 6, `${condition.id}: ${name} says something`);
+      assert.ok(value.length <= 40, `${condition.id}: ${name} is a line, not a sentence (${value.length}: "${value}")`);
+      assert.doesNotMatch(value, /\.$/, `${condition.id}: ${name} is a value, with no full stop`);
+    }
+    // The subject stays exact: the account did it. Never "they did it", and nothing says it cannot be cheated.
+    assert.doesNotMatch(`${counts} ${condition.help}`, /\bthey did\b|cannot cheat|can't cheat|cannot be cheated/i, condition.id);
+    // And the help says no more what a reading does not prove.
+    assert.doesNotMatch(condition.help, /, not who|not the wearer|not each piece of work/, `${condition.id}: the help`);
+  }
+  assert.equal(conditionById("duolingo-daily")?.help, "Read each morning from their public Duolingo profile, with nothing to install: it proves the account did the lesson.");
+  // Two statements about the thing itself, not about who did it, are kept: what an MITx Online certificate is, and
+  // that the day a TOEFL score was earned is not read.
+  assert.match(String(conditionById("mitx-online-certificate")?.help), /It proves a course taken, not a place at MIT\.$/);
+  assert.match(String(conditionById("toefl-mybest-shown")?.help), /when it was earned is not read\.$/);
+  assert.equal(conditionById("duolingo-daily")?.checked.counts, "a lesson the account did that day");
+  // "Read" is the value the gift's page prints for the same condition: one function says it to both.
+  const duolingo = conditionById("duolingo-daily")!;
+  assert.equal(readWhen(duolingo, false), duolingo.recipient?.reads);
+  assert.equal(readWhen(duolingo, false), "every day, for the day before");
+  assert.equal(readWhen(duolingo, false), duolingo.checked.when);
+  assert.equal(readWhen(duolingo, true), duolingo.recipient?.asItGoes?.reads);
+  assert.equal(readWhen(duolingo, true), "when this page opens, and through the day");
+  assert.equal(readWhen(conditionById("chess-rating")!, true), "every day");
+  assert.equal(readWhen(conditionById("marathon-finish")!, false), "after the finish");
+  const page = read("app/components/GiftPage.tsx");
+  assert.match(page, /asItGoes && !readingsStopped \? \(\[W\.lines\.read, asItGoes\.reads\] as const\) : nextReading && !gift\.finished && words\?\.reads \? \(\[W\.lines\.read, words\.reads\] as const\) : null,/, "the gift's page reads the same words");
+  assert.equal(OFFER.checked.when, GIFT_PAGE.lines.read, "under the same label");
+  // The sheet draws the four from the condition.
+  const sheet = read("app/kit/offer/WillSheet.tsx");
+  const fold = sheet.slice(sheet.indexOf('<details className="gift-fold" data-how-checked="">'), sheet.indexOf("</details>", sheet.indexOf('data-how-checked=""')));
+  assert.match(fold, /\[W\.checked\.from, condition\.checked\.from\],\n\s*\[W\.checked\.when, readWhen\(condition, newDailyGiftsPayTheSameDay\(\)\)\],\n\s*\[W\.checked\.counts, condition\.checked\.counts\],\n\s*\[W\.checked\.they, condition\.checked\.they\],/);
+  assert.doesNotMatch(fold, /<p |Does not prove|\.not\b/, "no paragraph, and no line about what it does not prove");
+  assert.doesNotMatch(sheet, /folded\.push|const down = /, "no sentence is sent down into the fold any more");
+  // The judges page and the fold "Check this day" are not touched: what a reading does not prove is said there.
+  assert.match(read("src/condition-proof.ts"), /never who did it/);
+});
+
+test("a field of that sheet keeps its instruction in the one line under it", () => {
+  // The rest of a long help went into the fold, which holds no sentence now: what a field needs is said in one line.
+  for (const condition of CONDITIONS.filter((one) => one.live)) {
+    const certificate = certificateById(condition.id);
+    if (!certificate) continue;
+    for (const [name, help] of Object.entries({ nameHelp: certificate.words.nameHelp, target: certificate.target.help, course: certificate.course?.help })) {
+      if (!help) continue;
+      assert.ok(helpLine(help).line, `${condition.id}: ${name} has a line under its field ("${help}")`);
+    }
+  }
+  // What a wrong name or a wrong scale costs is in that line: it was folded, where nobody read it.
+  assert.equal(certificateById("coursera-certificate")?.words.nameHelp, "The name on their Coursera account, or it cannot pay.");
+  assert.equal(GRADE_SCALE.help, "Their university must grade this way, or it cannot pay.");
+  assert.match(read("app/kit/offer/WillSheet.tsx"), /\{draft\.scaleFixed \? null : <p className=\{HELP\}>\{GRADE_SCALE\.help\}<\/p>\}/);
+});
+
+test("how each way out works is four lines: what the person gets, in how long, what it costs, what it takes", () => {
+  assert.deepEqual([USE_MONEY.phone.get, USE_MONEY.phone.time, USE_MONEY.phone.cost, USE_MONEY.phone.need], ["credit or data on your number", "usually a minute", "the price shown before you pay", "your number, no ID"]);
+  assert.deepEqual([USE_MONEY.giftcard.get, USE_MONEY.giftcard.time, USE_MONEY.giftcard.cost, USE_MONEY.giftcard.need], ["a code for the shop you choose", "usually within a minute", "the price shown before you pay", "nothing: no sign-up, no ID"]);
+  assert.deepEqual([USE_MONEY.mobileGet("Wave or Orange Money"), USE_MONEY.mobileTime("15 minutes"), USE_MONEY.mobile.cost, USE_MONEY.mobile.need], ["money on your Wave or Orange Money number", "within 15 minutes", "Switch's rate, shown before you send", "the number and its holder's name"]);
+  // The cost of the bank and of the card is the service's published figure, the one the fold of sources dates.
+  assert.equal(feeUnderItsName(WAY_OUT_EURO), "0.99 %, at least €1.99");
+  assert.equal(feeUnderItsName(WAY_OUT_CARD), "up to 3.95 %, at least €4.00");
+  // The times said are the ones the screens of each way already say once it is under way.
+  assert.match(read("src/sentences.ts"), /onItsWay: "The phone company usually takes a minute\./);
+  assert.match(read("src/sentences.ts"), /onItsWay: "The code usually comes within a minute\./);
 });

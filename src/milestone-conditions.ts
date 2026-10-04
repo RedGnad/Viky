@@ -518,7 +518,7 @@ export const DET_MILESTONE: CertificateCondition = {
   words: {
     detailQuestion: "Their name, and the score to reach",
     nameLabel: "Their full name, as on their identity document",
-    nameHelp: "The certificate prints the name they sat the test under. If it does not match, the gift cannot pay.",
+    nameHelp: "The name they sit the test under, or the gift cannot pay.",
     linkLabel: "The link to your certificate",
     linkHelp: 'In your Duolingo English Test account, open your certificate and press "Get Shareable Link". That is what makes the page public, and it is the link to paste here.',
     whatIsRead:
@@ -571,14 +571,14 @@ export const COURSERA_MILESTONE: CertificateCondition = {
   subject: ({ name, course }) => courseraSubject(name, String(course ?? "")),
   course: {
     label: "The course, by its link",
-    help: "Open the course on Coursera and paste the whole link from your browser, like https://www.coursera.org/learn/introduction-git-github. The short form works too.",
+    help: "Paste the course's link from Coursera.",
     slugOf: courseraSlugOf,
     row: "Which course",
     named: (course) => `This gift will be for ${course}. That is the word Coursera puts on the certificate.`,
   },
   target: {
     label: "What the certificate has to be",
-    help: "A Coursera certificate is granted or it is not, so there is nothing to choose here.",
+    help: "Granted or not: there is nothing to choose here.",
     min: COURSERA_HAS_IT,
     max: COURSERA_HAS_IT,
     step: 1,
@@ -589,7 +589,7 @@ export const COURSERA_MILESTONE: CertificateCondition = {
   words: {
     detailQuestion: "Their name, and the course",
     nameLabel: "Their name, as Coursera prints it on a certificate",
-    nameHelp: "The name on their Coursera account. If it does not match, the gift cannot pay.",
+    nameHelp: "The name on their Coursera account, or it cannot pay.",
     linkLabel: "The link to your certificate",
     linkHelp: 'In Coursera, open the certificate and choose Share, then paste the link here. It looks like coursera.org/verify/ followed by a code.',
     whatIsRead:
@@ -631,17 +631,17 @@ export const EDX_MILESTONE: CertificateCondition = {
   subject: ({ name, course }) => edxSubject(name, String(course ?? "")),
   course: {
     label: "The course, by its code",
-    help: "The code edX prints for the course, like HarvardX CS50x, or a course link carrying course-v1:, like https://courses.edx.org/courses/course-v1:HarvardX+CS50+X/.",
+    help: "The course's code, like HarvardX CS50x, or its link.",
     slugOf: edxCourseOf,
     row: "Which course",
     named: (course) => `This gift will be for ${course.replace("+", " ")}. That is the code edX puts on the certificate.`,
   },
-  target: { ...COURSERA_MILESTONE.target, help: "An edX verified certificate is issued or it is not, so there is nothing to choose here.", min: EDX_HAS_IT, max: EDX_HAS_IT, suggested: EDX_HAS_IT },
+  target: { ...COURSERA_MILESTONE.target, help: "Issued or not: there is nothing to choose here.", min: EDX_HAS_IT, max: EDX_HAS_IT, suggested: EDX_HAS_IT },
   duration: EDX_DURATION_DAYS,
   words: {
     ...COURSERA_MILESTONE.words,
     nameLabel: "Their name, as edX prints it on a certificate",
-    nameHelp: "The name on their edX account. If it does not match, the gift cannot pay.",
+    nameHelp: "The name on their edX account, or the gift cannot pay.",
     linkHelp: "In edX, open the certificate and copy the whole link from your browser. It looks like courses.edx.org/certificates/ followed by an id.",
     whatIsRead: "Viky reads five things from that page: the name on it, the course's code and name, that it is a verified certificate, and the day it was issued. It keeps those with the gift and nothing else.",
     mustShow: (name) => `A verified edX certificate in the name ${name}, for that course, issued inside these days. Nothing else is read from it.`,
@@ -666,17 +666,17 @@ export const MITX_ONLINE_MILESTONE: CertificateCondition = {
   subject: ({ name, course }) => mitxOnlineSubject(name, String(course ?? "")),
   course: {
     label: "The course, by its title",
-    help: "Its title as MITx Online prints it on the course page and the certificate, like Introduction to Mechanics. A program's title works the same way.",
+    help: "Its title on MITx Online, like Introduction to Mechanics.",
     slugOf: mitxOnlineCourseOf,
     row: "Which course",
     named: (course) => `This gift will be for the MIT course ${course}. That is the title MITx Online prints on the certificate.`,
   },
-  target: { ...EDX_MILESTONE.target, help: "A MITx Online certificate is issued or it is not, so there is nothing to choose here.", min: MITX_ONLINE_HAS_IT, max: MITX_ONLINE_HAS_IT, suggested: MITX_ONLINE_HAS_IT },
+  target: { ...EDX_MILESTONE.target, help: "Issued or not: there is nothing to choose here.", min: MITX_ONLINE_HAS_IT, max: MITX_ONLINE_HAS_IT, suggested: MITX_ONLINE_HAS_IT },
   duration: MITX_ONLINE_DURATION_DAYS,
   words: {
     ...EDX_MILESTONE.words,
     nameLabel: "Their name, as MITx Online prints it on a certificate",
-    nameHelp: "The name on their MITx Online account. If it does not match, the gift cannot pay.",
+    nameHelp: "The name on their MITx Online account, or it cannot pay.",
     linkHelp: "In MITx Online, open the certificate from your dashboard and copy the whole link from your browser. It looks like mitxonline.mit.edu/certificate/ followed by an id.",
     whatIsRead: "Viky reads three things from that page: the name on it, the course's title, and the day it was issued. It keeps those with the gift and nothing else.",
     mustShow: (name) => `A MITx Online certificate in the name ${name}, for that course, issued inside these days. Nothing else is read from it.`,
@@ -740,7 +740,7 @@ export const MARATHON_MILESTONE: CertificateCondition = {
   },
   target: {
     label: "Finish, or under how many hours?",
-    help: "0 for finishing whatever the time. Otherwise the hours to finish under, with a decimal for the half hours, like 4.5.",
+    help: "0 to finish in any time, or the hours to be under, like 4.5.",
     min: 0,
     max: 23.9,
     step: 0.1,
@@ -795,7 +795,7 @@ export const WCA_MILESTONE: CertificateCondition = {
   subject: ({ name, course }) => wcaSubject(name, String(course ?? "")),
   course: {
     label: "The competition",
-    help: "Choose the competition and the event from the WCA's list of coming competitions.",
+    help: "Choose the competition and the event in the WCA's list.",
     slugOf: (pasted) => (wcaCourseOf(pasted.trim()) ? pasted.trim() : undefined),
     search: { path: "/api/wca/competitions", placeholder: "Choose the competition", nothing: "The WCA lists no competition by that name.", listed: true, competitions: true },
     row: "Which competition",
@@ -806,7 +806,7 @@ export const WCA_MILESTONE: CertificateCondition = {
   },
   target: {
     label: "A result, or a single under how many seconds?",
-    help: "0 for any result. Otherwise the seconds the best single has to be under, with hundredths, like 15.5.",
+    help: "0 for any result, or the seconds to be under, like 15.5.",
     min: 0,
     max: 3_599,
     step: 0.01,
@@ -850,7 +850,7 @@ export const CREDLY_MILESTONE: CertificateCondition = {
   subject: ({ name, course }) => credlySubject(name, String(course ?? "")),
   course: {
     label: "Which certification?",
-    help: "Type a word or two of its name, like comptia, and choose it with the name of who awards it: the same name is awarded by several.",
+    help: "Type a word of its name, like comptia, then choose it.",
     slugOf: (pasted) => credlyPairOf(pasted),
     search: {
       path: "/api/credly/search",
@@ -862,7 +862,7 @@ export const CREDLY_MILESTONE: CertificateCondition = {
   },
   target: {
     label: "What the badge has to be",
-    help: "A certification is issued or it is not, so there is nothing to choose here.",
+    help: "Issued or not: there is nothing to choose here.",
     min: CREDLY_HAS_IT,
     max: CREDLY_HAS_IT,
     step: 1,
@@ -873,7 +873,7 @@ export const CREDLY_MILESTONE: CertificateCondition = {
   words: {
     detailQuestion: "Their name, and the certification",
     nameLabel: "Their name, as Credly prints it on a badge",
-    nameHelp: "The name on their Credly account. If it does not match, the gift cannot pay.",
+    nameHelp: "The name on their Credly account, or it cannot pay.",
     linkLabel: "The link to your badge",
     linkHelp: "In Credly, open the badge and choose Share, then paste the link here. It looks like credly.com/badges/ followed by a code.",
     whatIsRead:
@@ -915,18 +915,18 @@ export const ACCREDIBLE_MILESTONE: CertificateCondition = {
   subject: ({ name, course }) => accredibleSubject(name, String(course ?? "")),
   course: {
     label: "The credential, and who issues it",
-    help: "Its title as the issuer prints it, a comma, then the issuer's website, like: Rearchitecting the Financial System, cfte.education",
+    help: "Its title, a comma, then the issuer's website.",
     slugOf: accredibleCourseOf,
     row: "Which credential",
     named: (course) => `This gift will be for ${course.replace("|", ", from ")}.`,
   },
-  target: { ...CREDLY_MILESTONE.target, help: "A credential is issued or it is not, so there is nothing to choose here.", min: ACCREDIBLE_HAS_IT, max: ACCREDIBLE_HAS_IT, suggested: ACCREDIBLE_HAS_IT, inWords: () => "that credential" },
+  target: { ...CREDLY_MILESTONE.target, help: "Issued or not: there is nothing to choose here.", min: ACCREDIBLE_HAS_IT, max: ACCREDIBLE_HAS_IT, suggested: ACCREDIBLE_HAS_IT, inWords: () => "that credential" },
   duration: ACCREDIBLE_DURATION_DAYS,
   words: {
     ...CREDLY_MILESTONE.words,
     detailQuestion: "Their name, and the credential",
     nameLabel: "Their name, as Accredible prints it on the credential",
-    nameHelp: "The name the issuer put on their credential. If it does not match, the gift cannot pay.",
+    nameHelp: "The name the issuer put on it, or the gift cannot pay.",
     linkLabel: "The link to your credential",
     linkHelp: "Open your credential on credential.net and copy the whole link from your browser. It looks like credential.net/ followed by a long code.",
     whatIsRead: "Viky reads five things from the credential's public record: its title, its issuer's website, the day it was issued, whether it is still valid, and the name on it. It keeps those with the gift and nothing else.",
@@ -1202,7 +1202,7 @@ export const UNIVERSITY_GRADE_MILESTONE: CertificateCondition = {
   course: { ...UNIVERSITY_COURSE, named: (course) => universityNamed("a grade at ", course) },
   target: {
     label: "The grade they reach",
-    help: "On that scale, with a dot for decimals: 14.5 out of 20, or 3.5 out of 4. A grade off the scale is refused when the gift is made.",
+    help: "With a dot for decimals: 14.5 out of 20, 3.5 out of 4.",
     min: 0.01,
     max: 1_000,
     step: 0.01,

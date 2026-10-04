@@ -46,7 +46,6 @@ const FOLDED: Readonly<Record<string, string>> = {
 
   // The sheets where a goal is chosen.
   "FUND.detail.courseAfterName": FIRST(GOAL_SHEET),
-  "GRADE_SCALE.help": GOAL_SHEET,
 
   // The steps where the person a gift is for proves.
   "SHOW_PROOF.whatHappens": FIRST("above Show it"),
@@ -56,10 +55,6 @@ const FOLDED: Readonly<Record<string, string>> = {
   "MARATHON_PROOF.bibClosed": FIRST("where the bib's field stood"),
 
   // Spend and withdraw.
-  "USE_MONEY.phone.body": FIRST('a card of "Spend or withdraw"'),
-  "USE_MONEY.bank.body": FIRST('a card of "Spend or withdraw"'),
-  "USE_MONEY.giftcard.body": FIRST('a card of "Spend or withdraw"'),
-  "USE_MONEY.bankBy": FIRST('a card of "Spend or withdraw"'),
   "CASH_OUT.exactQuantity": FIRST("under the amount ready to send"),
   "CASH_OUT.closedBody": FIRST("the way out, once the session closed"),
   "PHONE_OUT.numberHelp": FIRST("under the number's field"),

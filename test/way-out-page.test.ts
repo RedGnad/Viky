@@ -86,9 +86,10 @@ test("a person taking their money out reads 'amount', never 'price', and the cos
 });
 
 test("the bank's card says how its service pays in the person's country, by that service's own method", () => {
-  assert.equal(USE_MONEY.bankBy("SEPA", "EUR"), USE_MONEY.bank.body);
-  assert.equal(USE_MONEY.bankBy("AMERICAN_BANK_TRANSFER", "USD"), "A transfer in dollars to your bank account. Our partner Ramp asks for your ID, once.");
-  assert.equal(USE_MONEY.bankBy("PIX", "BRL"), "A transfer in reais to your bank account. Our partner Ramp asks for your ID, once.");
-  assert.equal(USE_MONEY.bankBy("CARD", "EUR"), "Onto your card. Our partner Ramp asks for your ID, once.");
-  assert.doesNotMatch(USE_MONEY.bankBy("AMERICAN_BANK_TRANSFER", "USD"), /IBAN|euros|two working days/, "nothing of the euro transfer is said to an account in the United States");
+  // One sentence in the open, and what the person gets and in how long as lines of "How it works" (4 Oct 2026).
+  assert.deepEqual(USE_MONEY.bankBy("SEPA", "EUR"), { line: "A transfer in euros to your IBAN, within two working days.", get: "euros on your IBAN", time: "within two working days" });
+  assert.deepEqual(USE_MONEY.bankBy("AMERICAN_BANK_TRANSFER", "USD"), { line: "A transfer in dollars to your bank account.", get: "dollars on your bank account", time: null });
+  assert.deepEqual(USE_MONEY.bankBy("PIX", "BRL"), { line: "A transfer in reais to your bank account.", get: "reais on your bank account", time: null });
+  assert.deepEqual(USE_MONEY.bankBy("CARD", "EUR"), { line: "Onto your card.", get: "money on your card", time: null });
+  assert.doesNotMatch(JSON.stringify(USE_MONEY.bankBy("AMERICAN_BANK_TRANSFER", "USD")), /IBAN|euros|two working days/, "nothing of the euro transfer is said to an account in the United States");
 });
