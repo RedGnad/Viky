@@ -55,7 +55,7 @@ test("the screen of a payment that fell short writes what is left as its button 
   assert.equal(FUND.arrived.payMore("€5.00"), "Pay €5.00 more");
   assert.equal(FUND.arrived.short("$24.90", "$30.00", "€5.00", "$24.90"), "$24.90 arrived, less than the $30.00 for this gift. Pay €5.00 more, or make the gift $24.90.");
   const paying = readFileSync("app/components/PayGift.tsx", "utf8");
-  assert.match(paying, /W\.arrived\.short\(arrivedFigure, gift, moneyIn\(more, "EUR"\), `\$\$\{makeIt\}`\)/);
+  assert.match(paying, /W\.arrived\.short\(said\(arrived\), gift, moneyIn\(more, "EUR"\), makeItSaid\)/);
   assert.match(paying, /\{W\.arrived\.payMore\(moneyIn\(more, "EUR"\)\)\}/);
   assert.doesNotMatch(readFileSync("src/sentences.ts", "utf8"), /EUR more/);
 });

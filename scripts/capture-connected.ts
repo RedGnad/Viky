@@ -388,7 +388,7 @@ export class Session {
       // forty seconds out on a screen that was perfectly fine.
       await Promise.race([
         signedIn.waitFor({ state: "visible", timeout: 40_000 }),
-        this.page.getByText("In your account").first().waitFor({ state: "visible", timeout: 40_000 }),
+        this.page.locator(".money-display-box h1").first().waitFor({ state: "visible", timeout: 40_000 }),
       ]);
     }
     await this.page.getByRole("link", { name: "Home", exact: true }).first().click();

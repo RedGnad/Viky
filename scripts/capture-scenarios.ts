@@ -805,7 +805,7 @@ function withdrawal(): Scenario[] {
         await s.text("Spend or withdraw");
         await s.shot("spend", "home with a balance", `${WAY}, the balance's own action and the gift under its title`);
         await s.page.getByRole("link", { name: "Me", exact: true }).first().click();
-        await s.text("In your account");
+        await s.page.locator(".money-display-box h1").first().waitFor({ state: "visible", timeout: 20_000 });
         await s.settle();
         await s.shot("spend", "me with a balance", "Me, the money at the top with the same action");
         await s.click("Spend or withdraw");
