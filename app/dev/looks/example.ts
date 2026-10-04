@@ -1,6 +1,5 @@
 import type { GiftSummary } from "@/src/client/gift";
 import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
-import { contractDayInWords } from "@/src/moments";
 
 /**
  * The example data the screens are drawn with. Nobody's gift and no real amount: a person called Sam holds $10.00, gave
@@ -29,9 +28,6 @@ export const labHref = (screen: ScreenId | "motion") => `/dev/looks/${screen}`;
 
 /** The account: $10.00, shown in euros, which it was €6.54 the last time Home was opened. */
 export const ACCOUNT = { dollars: "$10.00", euros: 9.54, eurosBefore: 6.54, symbol: "€" } as const;
-
-/** The day the caption under the amount names as the rate's, which is the reader's today rather than a date we chose. */
-export const rateDate = (nowMs: number) => contractDayInWords(Math.floor(nowMs / 86_400_000));
 
 const DAY_MS = 86_400_000;
 
