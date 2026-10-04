@@ -56,6 +56,8 @@ export const CARD_SENDERS: Readonly<Record<string, string>> = {};
  * - A judge credit, when the account was credited by the judge code before the gift.
  * - A card through Mercuryo, when what a gift holds came out of the exchange in a transaction the account sent itself:
  *   that is the chain's own coin, bought by card, being changed, and Mercuryo's way in is the only one that sells it.
+ * - A card through Rampnow, when what a gift holds came out of Viky's own converter: that is USDC, the other dollar
+ *   coin, being changed for the account, and Rampnow's way in is the only one that delivers it.
  * - A card through a service whose paying address is known (`CARD_SENDERS`).
  * - Money back from an earlier gift, when a gift contract sent it: the account's own balance.
  * - Received from another account, of Viky's or not, abbreviated.
@@ -68,6 +70,8 @@ export function fundingOf(input: Readonly<{
   giftContracts: ReadonlySet<string>;
   vikyAccounts: ReadonlySet<string>;
   hours: number;
+  /** Viky's converter of USDC into what a gift holds (src/usdc-router.ts), when this run knows it. */
+  converter?: string;
 }>): Funding {
   const funder = input.funder.toLowerCase();
   const latest = input.arrivals[0];
@@ -75,6 +79,9 @@ export function fundingOf(input: Readonly<{
     const from = latest.from.toLowerCase();
     if (from === KURU_ROUTER && latest.txFrom.toLowerCase() === funder) {
       return { how: "card", service: "Mercuryo", basis: "the chain's own coin, changed by the account itself through the exchange just before the gift" };
+    }
+    if (input.converter && from === input.converter.toLowerCase()) {
+      return { how: "card", service: "Rampnow", basis: "USDC, which only its card payment delivers here, changed by Viky's converter just before the gift" };
     }
     if (CARD_SENDERS[from]) return { how: "card", service: CARD_SENDERS[from], basis: `${latest.coin} sent by that service's own paying address` };
     if (input.giftContracts.has(from)) return { how: "balance", basis: "money back from an earlier gift" };
@@ -93,10 +100,40 @@ export type Outflow = Readonly<{ route: OutRoute; dollars: string; at: string }>
 /** What a gift came to. */
 export type Outcome = "reached" | "returned" | "partly earned" | "running" | "never opened";
 
+/**
+ * The contract that holds a gift: a daily gift or a milestone, and which version of its contract (the founder, 4 Oct
+ * 2026). The first is the one a gift was opened on by a contact; the second is opened by its link's key and can be
+ * ended by the person it is for; the third, the daily contract alone, pays a day the day it is read.
+ */
+export type GiftVersion = 1 | 2 | 3;
+export type HeldBy = Readonly<{ kind: "daily" | "milestone"; version: GiftVersion }>;
+export const VERSIONS: readonly GiftVersion[] = [1, 2, 3];
+const ORDINAL: Readonly<Record<GiftVersion, string>> = { 1: "first", 2: "second", 3: "third" };
+
+/**
+ * Which contract holds a gift, from the address it was made on, or nothing for an address this run does not know. The
+ * later versions' addresses are settings: a run that lacks one would read their gifts as the first version's, with the
+ * wrong shape, so the command refuses such a gift rather than report it wrong.
+ */
+export function heldBy(
+  escrow: string,
+  known: Readonly<{ daily: readonly (string | null)[]; milestone: readonly (string | null)[] }>,
+): HeldBy | null {
+  const at = (list: readonly (string | null)[]) => list.findIndex((address) => address !== null && address.toLowerCase() === escrow.toLowerCase());
+  // Each list is in the order of the versions, and the first daily contract has two addresses, the earlier and the current.
+  const daily = at(known.daily);
+  if (daily >= 0) return { kind: "daily", version: Math.max(1, daily) as GiftVersion };
+  const milestone = at(known.milestone);
+  if (milestone >= 0) return { kind: "milestone", version: (milestone + 1) as GiftVersion };
+  return null;
+}
+
 export type PilotGift = Readonly<{
   gift: string;
   /** What it asks, as the register names it. */
   condition: string;
+  /** Which contract holds it. */
+  heldBy: HeldBy;
   funder: Readonly<{ account: string; kind: AccountKind }>;
   recipient: Readonly<{ account: string; kind: AccountKind }> | null;
   /** In dollars, as the chain holds them. */
@@ -147,6 +184,8 @@ export type Totals = Readonly<{
   hoursToOpen: number | null;
   hoursToFirstCount: number | null;
   out: Readonly<Record<OutRoute, number>>;
+  /** How many of these gifts each version of the contracts holds. Within one group, like every other figure here. */
+  byVersion: Readonly<Record<GiftVersion, number>>;
 }>;
 
 const cents = (dollars: string) => BigInt(Math.round(Number(dollars) * 1_000_000));
@@ -176,6 +215,7 @@ export function totalsOf(gifts: readonly PilotGift[]): Totals {
     hoursToOpen: mean(gifts.flatMap((gift) => (gift.openedAt ? [hoursBetween(gift.createdAt, gift.openedAt)] : []))),
     hoursToFirstCount: mean(gifts.flatMap((gift) => (gift.firstCountedAt ? [hoursBetween(gift.createdAt, gift.firstCountedAt)] : []))),
     out,
+    byVersion: Object.fromEntries(VERSIONS.map((version) => [version, gifts.filter((gift) => gift.heldBy.version === version).length])) as Record<GiftVersion, number>,
   };
 }
 
@@ -223,12 +263,14 @@ export function reportInWords(report: PilotReport): string {
     lines.push(`  From a gift made to its link opened, on average: ${hours(totals.hoursToOpen)}. To its first counted reading: ${hours(totals.hoursToFirstCount)}.`);
     const routes = (Object.keys(totals.out) as OutRoute[]).filter((route) => totals.out[route] > 0).map((route) => `${totals.out[route]} ${route}`);
     lines.push(`  Money taken out by recipients: ${routes.join(", ") || "none yet"}.`);
+    lines.push(`  By version of the contracts: ${VERSIONS.map((version) => `${totals.byVersion[version]} on the ${ORDINAL[version]}`).join(", ")}.`);
   }
   lines.push("");
   lines.push("Gift by gift.");
   for (const gift of report.gifts) {
     lines.push("");
     lines.push(`Gift ${gift.gift}, ${gift.condition}: $${gift.put}, ${gift.outcome}. Group: ${gift.group}.`);
+    lines.push(`  Held by the ${ORDINAL[gift.heldBy.version]} version of the ${gift.heldBy.kind} contract.`);
     lines.push(`  From ${gift.funder.account} (${gift.funder.kind}) to ${gift.recipient ? `${gift.recipient.account} (${gift.recipient.kind})` : "nobody yet"}.`);
     lines.push(`  Made ${day(gift.createdAt)}. Paid by: ${fundingInWords(gift.funding)}.`);
     lines.push(`  Opened ${day(gift.openedAt)}. Source connected ${day(gift.connectedAt)}. First counted reading ${day(gift.firstCountedAt)}.`);

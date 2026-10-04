@@ -69,7 +69,7 @@ import type { ToldAbout } from "../kit/MorningMessage";
 import { LiveLine, useLiveReading } from "../kit/LiveReading";
 import { openDayInWords } from "@/src/client/limit";
 import { contactEmail } from "@/src/contact";
-import { Arrival, ArrivalAmount, useLastSeen } from "../kit/Motion";
+import { Arrival, ArrivalAmount, Reacts, useLastSeen } from "../kit/Motion";
 import { Sheet } from "../kit/Sheet";
 import { Shell } from "../kit/Shell";
 import { ButtonWords, StepInProgress, WaitLine } from "../kit/Waiting";
@@ -208,6 +208,16 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
   // rather than a page opened again with nobody signed in (D74, D80).
   const [hadAccount, setHadAccount] = useState(false);
   if (address && !hadAccount) setHadAccount(true);
+  /**
+   * How many times the gift was opened while this page stood: once at most. A page drawn on a gift already opened
+   * counts none, so the character at its head answers the opening itself and nothing else (the founder, 4 Oct 2026).
+   */
+  const [sawOpened, setSawOpened] = useState(status.opened);
+  const [openings, setOpenings] = useState(0);
+  if (status.opened !== sawOpened) {
+    setSawOpened(status.opened);
+    if (status.opened) setOpenings(openings + 1);
+  }
 
   const milestone = status.kind === "milestone" ? status : null;
   const daily = status.kind === "milestone" ? null : status;
@@ -736,7 +746,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       <Climb giftId={giftId} status={milestone} />
     )
   ) : daily ? (
-    <DayRow id={giftId} gift={daily} catchUpSeconds={daily.catchUpSeconds} records={daily.days} voice={voice} silent={Boolean(live.when)} each={daily.perDayDisplay} awake={daily.opened} leadOnToday={Boolean(asItGoes)} />
+    <DayRow id={giftId} gift={daily} catchUpSeconds={daily.catchUpSeconds} records={daily.days} voice={voice} silent={Boolean(live.when)} each={daily.perDayDisplay} leadOnToday={Boolean(asItGoes)} />
   ) : null;
 
   /** What was agreed: the amount, what it counts, how long, and what happens to what is not earned. Read once. */
@@ -894,7 +904,14 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       <Shell
         kind="task"
         /* No hero on a gift in progress (the founder, 29 Sep 2026): its one character is the drawing's, the climb or the days. */
-        character={moment === "counting" || moment === "climbing" || moment === "awaitingProof" ? null : <HeadCharacter />}
+        character={
+          moment === "counting" || moment === "climbing" || moment === "awaitingProof" ? null : (
+            // The opening, made on this page: the gift's own character answers it, once. The days do not move.
+            <Reacts gesture={openings}>
+              <HeadCharacter />
+            </Reacts>
+          )
+        }
         {...(address || hadAccount ? { back: "/gifts", backLabel: W.backToGifts } : { back: "/", backLabel: W.aboutViky, backFollows: true })}
       >
         <GiftLive

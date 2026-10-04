@@ -444,8 +444,9 @@ export function Character({
         />
       ) : null}
       <g data-part="figure" style={{ ...FROM_FLOOR, ...(leaving ? { transform: "translateX(-6px)", opacity: 0.6 } : null) }}>
-        {/* With limbs, one more group turning from its own middle: the whirl of the hero moment (D219). */}
-        <g transform={parts.lean} {...(withLimbs ? { "data-part": "whirl", style: FROM_MIDDLE } : {})}>
+        {/* With limbs, one more group turning from its own middle: the whirl of the hero moment (D219). A day earned
+            turns from its middle too, once, as it jumps awake (the founder, 4 Oct 2026). */}
+        <g transform={parts.lean} {...(withLimbs || state === "earned" ? { "data-part": "whirl", style: FROM_MIDDLE } : {})}>
           {withLimbs ? <Limbs pose={pose} /> : null}
           <g data-part="body">{parts.body}</g>
           {/* The shade lies in the body, the highlight sits on it, and the face stays on top of both (D132). */}
