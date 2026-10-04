@@ -76,7 +76,9 @@ test("the line: read for them, School & studies, goal 29, open, the fact rule, i
   assert.equal(LINE.live, true);
   assert.ok(CONDITIONS.includes(LINE));
   assert.ok(LINE.name.length <= 30);
-  assert.match(LINE.help, /not a place at MIT/, "a course taken, never enrolled at MIT");
+  // What the giver buys, said without a negation (the founder, 5 Oct 2026): an online course, on MITx Online.
+  assert.match(LINE.help, /It proves an online course passed on MITx Online\.$/, "an online course, never enrolled at MIT");
+  assert.doesNotMatch(LINE.help, /\bnot\b/);
   assert.equal(conditionById("mitx-online-certificate"), LINE);
   assert.equal(certificateById("mitx-online-certificate"), MITX_ONLINE_MILESTONE);
   assert.ok(proofOfCondition("mitx-online-certificate"));

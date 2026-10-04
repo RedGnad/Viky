@@ -485,7 +485,7 @@ test("the distance is seen and chosen: a filter, the distances on each race's li
   const line = conditionById("marathon-finish");
   assert.equal(line?.name, "Finish a race");
   assert.equal(line?.under, "A marathon, a half or a 10 km");
-  assert.match(readFileSync("app/kit/offer/WillSheet.tsx", "utf8"), /\{option\.under \? <span className=\{HELP\}>\{option\.under\}<\/span> : null\}/);
+  assert.match(readFileSync("app/kit/offer/WillSheet.tsx", "utf8"), /\{option\.under \? \(\n\s*<span className=\{HELP\} data-what-it-is="">\n\s*\{option\.under\}\n\s*<\/span>\n\s*\) : null\}/);
   assert.match(readFileSync("app/kit/ChoiceList.tsx", "utf8"), /\{chosen && option\.under \? <div className="pl-\[var\(--space-lg\)\]">\{option\.under\}<\/div> : null\}/);
 });
 
