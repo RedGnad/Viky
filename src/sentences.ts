@@ -1953,6 +1953,8 @@ export const USE_MONEY = {
   },
   /** The card service's smallest payout, as it publishes it today, said on its card before anything is changed. */
   cardFrom: (figure: string) => `From ${figure} at a time.`,
+  /** Mobile money's smallest payout in the country, in its own money, said on its card before the form is opened. */
+  mobileFrom: (figure: string) => `From ${figure} at a time.`,
   /** No bank and no card reaches the person's country: said, rather than left to be found out (the audit of 1 Oct 2026). */
   noWayOutThere: (country: string) => `No way to take money out reaches ${country} yet. It stays yours here.`,
   keepHere: "Or keep it here: it stays yours from one gift to the next.",
@@ -2214,6 +2216,12 @@ export const MOBILE_OUT = {
   holderHelp: "As your operator has it.",
   amount: "How much",
   amountHelp: (least: string, most: string) => `From ${least} to ${most} at a time.`,
+  /** Under the amount after a press, in the country's money: what is missing, or the bound it is past. */
+  amountMissing: "Write how much, in figures.",
+  amountUnder: (least: string) => `At least ${least} at a time.`,
+  amountOver: (most: string) => `At most ${most} at a time.`,
+  /** In place of the form when the balance is under the country's smallest payout: the minimum, and what the person has. */
+  underMinimum: (least: string, have: string) => `Mobile money pays from ${least} at a time here, and you have ${have}.`,
   about: (figure: string) => `about ${figure}`,
   /** The dollars second (the founder, 3 Oct 2026): what leaves the balance for it, and when it was priced. */
   fromBalance: (dollars: string, when: string) => `${dollars} from your balance, at the rate of ${when}.`,

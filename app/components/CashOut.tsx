@@ -36,7 +36,7 @@ import { AccountPanel } from "./AccountPanel";
 import { PhoneTopUp } from "./PhoneTopUp";
 import { MobileMoneyOut } from "./MobileMoneyOut";
 import { mobileMoneyOffer, type AccountOffer } from "@/src/client/mobile-money";
-import { delayInWords, operatorsInWords } from "@/src/mobile-money";
+import { delayInWords, localInWords, localOfUnits, operatorsInWords } from "@/src/mobile-money";
 import { GiftCardOut } from "./GiftCardOut";
 import { AMOUNT_IN_TITLE, BODY, CARD, CARD_LABEL, CARD_TITLE, FIELD, HELP, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE, TITLE_IN_FACE } from "./ui";
 import { ButtonWords, StepInProgress, WaitLine } from "../kit/Waiting";
@@ -816,6 +816,8 @@ export function CashOut() {
                 </details>
               ) : null}
               {use === "card" && cardSmallest ? <p className={HELP}>{U.cardFrom(figureIn(cardSmallest.amount, cardSmallest.currency))}</p> : null}
+              {/* Mobile money says its smallest payout too, in the country's money, before the form is opened. */}
+              {use === "mobile" && mobileOffered ? <p className={HELP} data-mobile-from>{U.mobileFrom(localInWords(localOfUnits(BigInt(mobileOffered.minimumUnits), mobileOffered.rate, "up"), mobileOffered.currency))}</p> : null}
               <button type="button" onClick={act} disabled={holdings === null || changeable === 0n} className={inTheSun(use, index, eurosHeld) ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
                 {words.action}
               </button>
