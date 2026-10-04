@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import * as mera from "@/src/account/mera";
 import { useMadeHere } from "@/src/account/door";
+import { doorWasAskedFor } from "@/src/account/door-asked";
 import { useAccount } from "@/src/account/provider";
 import { ACCOUNT_DOOR, DOOR as W } from "@/src/sentences";
 import { CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
@@ -24,6 +25,8 @@ export function SignInDoor() {
   const { address, status, error, signIn, createAccount, clearError } = useAccount();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  /** Whether the passkey was tried and did not sign anybody in: the panel's second key then says "Try again". */
+  const [tried, setTried] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
   const door = useRef<HTMLButtonElement>(null);
   const busy = status === "busy";
@@ -51,8 +54,23 @@ export function SignInDoor() {
 
   const arrive = () => {
     if (mera.currentAddress()) router.push("/");
-    else setOpen(true);
+    else {
+      setTried(true);
+      setOpen(true);
+    }
   };
+
+  // The page just left asked for the door, by signing out or by asking for another account (src/account/door-asked.ts):
+  // it stands open on arrival, with nothing tried yet. Past the body of the effect, as the screen's other readings are.
+  useEffect(() => {
+    let live = true;
+    void Promise.resolve().then(() => {
+      if (live && doorWasAskedFor()) setOpen(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const tryPasskey = async () => {
     clearError();
@@ -114,7 +132,7 @@ export function SignInDoor() {
             <MadeOnTheMainSite />
           )}
           <button type="button" onClick={() => void tryPasskey()} disabled={busy} className={SECONDARY_BUTTON}>
-            {W.again}
+            {tried ? W.again : W.open}
           </button>
           {error ? (
             <p role="alert" className={HELP}>
