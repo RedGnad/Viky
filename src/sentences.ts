@@ -764,7 +764,8 @@ export const FUND = {
   },
 
   waiting: {
-    title: (euros: number | undefined) => (euros ? `Waiting for your ${euros} EUR payment` : "Waiting for your payment"),
+    /** The amount as the screen's own button writes it, "€30.00": one writing on one screen (the founder, 4 Oct 2026). */
+    title: (amount: string | undefined) => (amount ? `Waiting for your ${amount} payment` : "Waiting for your payment"),
     inAccountNow: (held: string) => `In your account now: ${held}`,
     setThese: (name: string) => `On ${name}'s page, set these yourself:`,
     settings: (euros: number | undefined, delivers: { coin: string; network: string }) => [
