@@ -31,13 +31,16 @@ test("what only opens a sentence is a fold named by a question, drawn as the fol
     assert.ok(fold.includes(`<div className="said-fold-body`) && fold.includes(`{${sentence}}`), `${mark}: the sentence inside`);
     assert.doesNotMatch(fold, /<button/, "no button in it");
   }
-  // "No Duolingo yet?" says what to do before it says what becomes of the money, with one link to Duolingo's own site.
+  // "No Duolingo yet?" says what to do before it says what becomes of the money, and a button opens Duolingo's own
+  // site and says so.
   const how = words.notYetHow;
-  assert.equal(`${how.before}${how.link}${how.after}`, "Duolingo is free. Install it, make your account, then come back here with your username.");
+  assert.equal(how.says, "Duolingo is free. Install it, make your account, then come back here with your username.");
+  assert.equal(how.open, "Open Duolingo");
   assert.equal(how.href, "https://www.duolingo.com");
   const noSource = connect.slice(connect.indexOf(`data-no-source-yet=""`));
-  assert.ok(noSource.indexOf("{field.notYetHow.before}") > 0 && noSource.indexOf("{field.notYetHow.before}") < noSource.indexOf("{W.notYetBody(funderName)}"), "what to do first, the money after");
-  assert.match(noSource, /<a href=\{field\.notYetHow\.href\} target="_blank" rel="noopener noreferrer" className="underline">\n\s*\{field\.notYetHow\.link\}/);
+  assert.ok(noSource.indexOf("{field.notYetHow.says}") > 0 && noSource.indexOf("{field.notYetHow.says}") < noSource.indexOf("{field.notYetHow.open}"), "what to do, then the button");
+  assert.ok(noSource.indexOf("{field.notYetHow.open}") < noSource.indexOf("{W.notYetBody(funderName)}"), "the money after");
+  assert.match(noSource, /<a href=\{field\.notYetHow\.href\} target="_blank" rel="noopener noreferrer" className=\{`\$\{SMALL_BUTTON\} self-start`\} data-open-the-source="">\n\s*\{field\.notYetHow\.open\}/);
   // The same component as the pay sheet's "Have a code?".
   assert.match(readFileSync("app/kit/offer/JudgeCode.tsx", "utf8"), /<details className="said-fold" data-have-a-code="">\n\s*<summary className="said-fold-name">/);
   assert.doesNotMatch(connect, /notMineOpen|notYetOpen/, "nothing of the page's own opens them");
