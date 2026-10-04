@@ -183,27 +183,26 @@ export function ConsentLine({
   );
 }
 
-/** The recipient's one sentence, in "How this is checked": what Viky reads for this gift, and the day they agreed. */
-export function RecipientConsent({ answer, zone }: Readonly<{ answer: GiftConsentAnswer | null; zone: string }>) {
-  if (!answer || answer.finished || answer.state?.kind !== "yes") return null;
-  return <p className={HELP}>{C.line(answer.terms.what, dateInWords(Date.parse(answer.state.signedAt), zone))}</p>;
+/**
+ * The person's own line in "How this is checked": what Viky reads for this gift, and the day they agreed to it. A
+ * line, a label and its value (the founder, 4 Oct 2026: a fold holds lines, never paragraphs).
+ */
+export function recipientConsentRows(answer: GiftConsentAnswer | null, zone: string): ReadonlyArray<readonly [string, string]> {
+  if (!answer || answer.finished || answer.state?.kind !== "yes") return [];
+  return [[C.lines.reads(answer.terms.what), C.lines.youAgreed(dateInWords(Date.parse(answer.state.signedAt), zone))]];
 }
 
-/** The funder's one sentence, in "How this is checked" (the mockup, screen 2): agreed on, stopped on, or not yet. */
-export function FunderConsent({ answer, recipientName, rest, zone }: Readonly<{ answer: GiftConsentAnswer | null; recipientName: string | null; rest: string; zone: string }>) {
-  if (!answer || !answer.opened || answer.finished) return null;
+/** The funder's lines there: agreed on, stopped on, or not yet; and that what is not read comes back. */
+export function funderConsentRows(answer: GiftConsentAnswer | null, recipientName: string | null, zone: string): ReadonlyArray<readonly [string, string]> {
+  if (!answer || !answer.opened || answer.finished) return [];
   const name = recipientName?.trim() || C.someone;
   const state = answer.state;
-  const what = answer.terms.what;
-  const said =
-    state?.kind === "yes"
-      ? `${C.funderAgreed(name, dateInWords(Date.parse(state.signedAt), zone), what)} ${rest}`
-      : state?.kind === "stop"
-        ? `${C.funderStopped(name, dateInWords(Date.parse(state.signedAt), zone))} ${rest}`
-        : answer.reading === "before_agreements"
-          ? `${C.funderBefore(name, what)} ${rest}`
-          : C.funderWaiting(name);
-  return <p className={HELP}>{said}</p>;
+  const reads = C.lines.reads(answer.terms.what);
+  const stop = [C.lines.theyCanStop, C.lines.notReadComesBack] as const;
+  if (state?.kind === "yes") return [[reads, C.lines.theyAgreed(name, dateInWords(Date.parse(state.signedAt), zone))], stop];
+  if (state?.kind === "stop") return [[reads, C.lines.theyStopped(name, dateInWords(Date.parse(state.signedAt), zone))]];
+  if (answer.reading === "before_agreements") return [[reads, C.lines.notYet(name)], stop];
+  return [[C.lines.nothingRead, C.lines.untilTheyAgree(name)]];
 }
 
 /** One gift of the account's, as Me lists it: what Viky reads for it, and the stop (the founder, 29 Sep 2026). */

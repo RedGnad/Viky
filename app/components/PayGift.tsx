@@ -29,7 +29,6 @@ import { tidyGiftName } from "@/src/gift-names";
 import { rememberGiftLink } from "@/src/gift-link-memory";
 import { formatAusd } from "@/src/gift-reader";
 import { dollarsToUnits } from "@/src/money";
-import { settlingTimeInWords } from "@/src/pass-schedule";
 import { newDailyGiftsPayTheSameDay } from "@/src/v2";
 import { forgetPendingGift, peekPendingGift, savePendingGift, type PendingGift } from "@/src/pending-gift";
 import { wayInAsksNothing, wayInPage, waysIn, WAY_IN_USDC, type WayIn } from "@/src/rails";
@@ -659,22 +658,15 @@ export function PayGift() {
             </button>
           ) : null}
           <p className={HELP}>{W.made.onlyThem(made.recipientName)}</p>
-          {/* What happens next, folded under its name: three steps and the way back to a lost link (rule 4). */}
+          {/* What happens next, folded under its name, as lines (the founder, 4 Oct 2026): what the pay sheet said
+              of a missed day and of a link nobody opens, and the way back to a lost link. */}
           <details className="gift-fold" data-made-next>
             <summary className="gift-fold-name">
               {W.made.nextTitle}
               <FoldChevron />
             </summary>
             <div className="gift-fold-body">
-              <ol className="flex list-decimal flex-col gap-[var(--space-sm)] pl-[var(--space-lg)]">
-                {(madeMilestone
-                  ? M.made.next(made.recipientName, madeCondition?.source ?? "", made.target ?? 0, made.days, settlingTimeInWords(made.atMs), made.namedByFunder === true)
-                  : W.made.next(made.recipientName, madeCondition?.words.theyConnect ?? W.made.theyConnectAny, madeCondition?.words.eachDay ?? "", spokenAmount(perDay), settlingTimeInWords(made.atMs), newDailyGiftsPayTheSameDay())
-                ).map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ol>
-              <p className={HELP}>{W.made.findItAgain}</p>
+              <Lines quiet rows={[!madeMilestone ? P.fold.missedDay : certificateById(made.conditionId) ? P.fold.notShown : P.fold.notReached, P.fold.notOpened, W.made.lostLink]} />
             </div>
           </details>
         </section>

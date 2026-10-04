@@ -133,14 +133,10 @@ export function MarathonProof({ giftId, status, yours, onChanged }: Readonly<{ g
 }
 
 /**
- * Where the marathon stands, for whoever reads the page outside the recipient's own moment (the funder, the person
- * after the finish, a reader with the link): the race and the bib once entered, and the line read once it is.
+ * Where a marathon gift stands, as one line of "What was agreed" (the founder, 4 Oct 2026: a fold holds lines, never
+ * paragraphs): the line read on the timing company's page once it is, the bib before it.
  */
-export function MarathonStanding({ marathon }: Readonly<{ marathon: NonNullable<MilestoneStatus["marathon"]> }>) {
-  return (
-    <>
-      <p className={BODY}>{marathon.bib ? W.bibSet(marathon.bib, marathon.raceName, marathon.distance) : W.noBibYet(marathon.raceName)}</p>
-      {marathon.result ? <p className={BODY}>{W.line(marathon.result.runner, marathon.result.bib, finishInWords(marathon.result.finishSeconds))}</p> : null}
-    </>
-  );
+export function marathonLine(marathon: NonNullable<MilestoneStatus["marathon"]>): readonly [string, string] {
+  if (marathon.result) return [W.lines.read, W.lines.result(marathon.result.runner, finishInWords(marathon.result.finishSeconds))];
+  return [W.lines.bib, marathon.bib ? W.lines.bibOf(marathon.bib, marathon.raceName) : W.lines.noBib];
 }

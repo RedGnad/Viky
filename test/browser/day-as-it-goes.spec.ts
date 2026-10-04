@@ -114,7 +114,8 @@ for (const who of ["recipient", "funder"] as const) {
       await shot(page, `${prefix}1-lesson-not-in-yet`);
       await page.getByText("How this is checked").click();
       await expect(page.getByRole("button", { name: "Count now" })).toHaveCount(0);
-      await expect(card(page)).toContainText(mine ? "Viky looks at your Duolingo when this page opens" : "Viky looks at their Duolingo when this page opens");
+      // When it is read is a line, the same to both people (the founder, 4 Oct 2026: a fold holds lines, never paragraphs).
+      await expect(card(page).locator("dl.said-lines > div").filter({ hasText: /^Read/ })).toHaveText("Readwhen this page opens, and through the day");
     });
 
     test("2 and 3. the lesson is seen, the reading runs in the open, and the day counts: it jumps, and the amount counts up", async ({ browser, baseURL }) => {

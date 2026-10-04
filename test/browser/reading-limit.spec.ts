@@ -22,14 +22,15 @@ const AGAIN = "1 Nov";
 const card = (page: Page) => page.locator("section.gift-card-placed");
 const said = (page: Page) => card(page).locator("[data-limit-said]");
 const fold = (page: Page) => card(page).locator("[data-limit-can]");
-const lines = (page: Page) => fold(page).locator(".gift-fold-body p");
+/** The fold's lines, a label and its value each (the founder, 4 Oct 2026: a fold holds lines, never paragraphs). */
+const lines = (page: Page) => fold(page).locator(".gift-fold-body dl.said-lines > div");
 const sentence = (source: string, reserve: "readings" | "proofs") => `Viky can't check ${source} right now: this month's ${reserve} are used up. It starts again on ${AGAIN}.`;
 // "today, 4 Oct, at 2:00." and "tomorrow, 5 Oct, at 2:00.", or, when the hour is further than tomorrow on the device's
 // clock, "Mon 5 Oct at 2:00.": the reader's zone here is behind UTC, so from midnight UTC until its own midnight the
 // hour a day closes at is two of its days away. The first pattern alone failed every night in those hours (4 Oct 2026).
 const UNTIL = "((today|tomorrow), \\d{1,2} [A-Z][a-z]{2}, at|[A-Z][a-z]{2} \\d{1,2} [A-Z][a-z]{2} at) \\d{1,2}:\\d{2}\\.";
 /** The line that names where to write is there when the build has an address to name, and absent otherwise. */
-const WRITE = /^Write to \S+@\S+: we can reopen it sooner\.$/;
+const WRITE = /^To reopen it sooner\S+@\S+$/;
 /** The one red (src/design-tokens.ts, LIMIT_RED): Material's error role at tone 40 by day, at tone 80 after dark. */
 const RED = process.env.VIKY_DECIDE_NIGHT === "1" ? "rgb(242, 184, 181)" : "rgb(179, 38, 30)";
 /** The colour of the card's own labels, as the page paints the small line above the name. An expression: a function sent to the page loses its name on the way. */
@@ -81,7 +82,7 @@ test.describe("a month's reserve used up, said in place", () => {
     await expect(card(page).locator(".gift-back")).toHaveCount(0);
     await shot(page, "01-recipient");
     // What they can do, folded: the open day's real deadline, what is theirs, what is not touched, where to write.
-    await folded(page, [new RegExp(`^Your day can still be counted until ${UNTIL}$`), "What is already yours can be taken out as usual.", "Gifts proved by a document someone shows are not touched."]);
+    await folded(page, [new RegExp(`^Your day counts until${UNTIL.replace(/\\\.$/, "")}$`), "What is already yourstaken out as usual", "Gifts proved by a documentnot touched"]);
     await shot(page, "02-recipient-what-you-can-do");
     // And no count is offered: it is gone from how the gift is checked.
     await page.getByText("How this is checked").click();
@@ -101,7 +102,7 @@ test.describe("a month's reserve used up, said in place", () => {
     await expect(said(page)).toHaveText(sentence("Duolingo", "readings"));
     await expect(said(page)).toHaveCSS("color", await labelColour(page));
     await shot(page, "03-funder");
-    await folded(page, [new RegExp(`^Boo's day can still be counted until ${UNTIL}$`), "What is already theirs can be taken out as usual.", "Gifts proved by a document someone shows are not touched."]);
+    await folded(page, [new RegExp(`^Boo's day counts until${UNTIL.replace(/\\\.$/, "")}$`), "What is already theirstaken out as usual", "Gifts proved by a documentnot touched"]);
     await shot(page, "04-funder-what-you-can-do");
   });
 
@@ -123,7 +124,7 @@ test.describe("a month's reserve used up, said in place", () => {
     await expect(card(page).locator(".gift-updated")).toHaveCount(0);
     await page.waitForTimeout(1_500);
     expect(counts, "no reading is asked while the reserve is empty").toBe(0);
-    await folded(page, ["What is already yours can be taken out as usual.", "Gifts proved by a document someone shows are not touched."]);
+    await folded(page, ["What is already yourstaken out as usual", "Gifts proved by a documentnot touched"]);
     await shot(page, "05-climb");
   });
 
@@ -182,7 +183,7 @@ test.describe("a month's reserve used up, said in place", () => {
     await expect(page.getByRole("button", { name: "Show it" })).toHaveCount(0);
     await expect(page.getByText(/^A verification page opens/).filter({ visible: true })).toHaveCount(0);
     // The other reserve is the one not touched.
-    await folded(page, ["What is already yours can be taken out as usual.", "Gifts that Viky reads by itself are not touched."]);
+    await folded(page, ["What is already yourstaken out as usual", "Gifts Viky reads by itselfnot touched"]);
     expect(sessions).toBe(0);
     await shot(page, "07-proof-shown");
   });

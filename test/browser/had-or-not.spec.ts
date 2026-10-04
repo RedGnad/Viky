@@ -57,10 +57,14 @@ test.describe("a gift had or not, as its two people read it", () => {
       await shot(page, size.name, "3a0-yours-told-under-the-card");
       await messages.getByRole("button", { name: "Close" }).click();
       await page.getByText("What was agreed").click();
-      await expect(page.getByText("This gift is for: enrolled at that university.")).toBeVisible();
-      await expect(page.getByText(/^Prove it by .+ and it is yours\. If not, it goes back to Mom two weeks later\.$/)).toBeVisible();
+      // What was agreed is lines (the founder, 4 Oct 2026): what it is for, when, and where it goes if not.
+      const agreed = page.locator("details.gift-fold").filter({ hasText: "What was agreed" }).locator("dl.said-lines > div");
+      await expect(agreed.nth(0)).toHaveText("Forenrolled at that university");
+      await expect(agreed.nth(1)).toHaveText(/^Whenby .+/);
+      await expect(agreed.nth(2)).toHaveText("If notback to Mom, two weeks later");
       await page.getByText("How this is checked").click();
-      await expect(page.getByText(/^It is yours when it is proved, by .+\.$/)).toBeVisible();
+      // The rule it pays by is said once, in what was agreed: how it is checked does not repeat it.
+      await expect(page.getByText(/It is yours when it is proved/)).toHaveCount(0);
       await expect(page.getByText(/Reach 1 on|reach 1,|Target 1/)).toHaveCount(0);
       await shot(page, size.name, "3a-yours-what-was-agreed");
 
@@ -133,8 +137,10 @@ test.describe("a gift had or not, as its two people read it", () => {
       await expect(page.getByRole("dialog", { name: "Notifications" }).getByText("Get a message when it is theirs, or when the time is up.")).toBeVisible();
       await page.getByRole("dialog", { name: "Notifications" }).getByRole("button", { name: "Close" }).click();
       await page.getByText("What was agreed").click();
-      await expect(page.getByText("This gift is for: enrolled at that university.")).toBeVisible();
-      await expect(page.getByText(/^If they prove it by .+ it is theirs\. If not, it comes back to you two weeks later\.$/)).toBeVisible();
+      const agreed = page.locator("details.gift-fold").filter({ hasText: "What was agreed" }).locator("dl.said-lines > div");
+      await expect(agreed.nth(0)).toHaveText("Forenrolled at that university");
+      await expect(agreed.nth(1)).toHaveText(/^Whenby .+/);
+      await expect(agreed.nth(2)).toHaveText("If notback to you, two weeks later");
       await expect(page.getByText(/Reach 1 on|reach 1,|Target 1/)).toHaveCount(0);
       await shot(page, size.name, "3g-theirs-what-was-agreed");
 

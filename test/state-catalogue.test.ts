@@ -62,11 +62,11 @@ test("the states nobody has built are visible as such", () => {
 
 test("the second half of the agreement points at the amount rather than printing it again", async () => {
   const { GIFT_PAGE } = await import("../src/sentences.js");
-  // The amount of a day is written once, by the sentence that says what a day earns. The one about a day missed
-  // says "the same", because the whole point of it is that the two are the same amount, and because a figure said
-  // twice on one screen is what document J measures (19 Sep 2026).
-  assert.equal(GIFT_PAGE.goesBackToThem("Mom"), "The same goes back to Mom for each day without it that is not caught up the next day. Nobody else ever profits from a missed day.");
-  assert.match(GIFT_PAGE.goesBackToThem(null), /^The same goes back to them/);
-  assert.match(GIFT_PAGE.comesBackToYou, /^The same comes back to you/);
-  for (const said of [GIFT_PAGE.goesBackToThem("Mom"), GIFT_PAGE.comesBackToYou]) assert.doesNotMatch(said, /\$/);
+  // The amount of a day is written once, by the line that says what a day earns. The one about a day missed says
+  // where it goes and prints no figure, because a figure said twice on one screen is what document J measures
+  // (19 Sep 2026). They are lines since 4 Oct 2026 (the founder: a fold holds lines, never paragraphs).
+  assert.deepEqual([GIFT_PAGE.lines.missedDay, GIFT_PAGE.lines.backTo("Mom")], ["A missed day", "back to Mom"]);
+  assert.equal(GIFT_PAGE.lines.backTo(null), "back to them");
+  assert.equal(GIFT_PAGE.lines.backToYou, "back to you");
+  for (const said of [GIFT_PAGE.lines.backTo("Mom"), GIFT_PAGE.lines.backToYou]) assert.doesNotMatch(said, /\$/);
 });
