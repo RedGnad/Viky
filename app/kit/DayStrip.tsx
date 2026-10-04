@@ -174,7 +174,8 @@ export function DayStrip({
             <Character
               state={characterOf(day)}
               standing={false}
-              drawn={characterOf(day) === "earned" || characterOf(day) === "returned" || (wake !== undefined && index === 0) ? "inline" : "referenced"}
+              drawn={characterOf(day) === "earned" || characterOf(day) === "returned" || characterOf(day) === "today" || (wake !== undefined && index === 0) ? "inline" : "referenced"}
+              wakes={characterOf(day) === "today"}
               className="h-auto w-full"
             />
           </ArrivalDay>
@@ -189,8 +190,10 @@ export function DayStrip({
  * A day's state as a character. A day whose window has closed and which nothing has drained yet is drawn as one still
  * to be judged, leaning, because it has not come back yet and saying otherwise would be inventing it.
  *
- * A day sleeps until it is done (the founder, 4 Oct 2026), today too: it keeps its triangle, which is what says
- * "today", with its eyes closed. Done, it is the day earned, which wakes in its jump (app/kit/Motion.tsx).
+ * What a person reads in a row (the founder, 4 Oct 2026): a sleeping capsule is a day not open yet; the triangle awake,
+ * eyes open, is the day that is open, to do now; the triangle that yawns is yesterday, which can still be caught up;
+ * the smiling circle is a day done. Opening a gift's page wakes nothing: only the open day is awake, and it wakes once,
+ * when it opens (app/kit/Motion.tsx).
  */
 export function characterOf(day: StripDay): CharacterState {
   switch (day) {
@@ -199,7 +202,7 @@ export function characterOf(day: StripDay): CharacterState {
     case "returned":
       return "returned";
     case "today":
-      return "todayAsleep";
+      return "today";
     case "catchable":
     case "aboutToReturn":
       return "catchable";
