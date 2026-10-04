@@ -421,7 +421,10 @@ test("MikaTiming: its own goal and provider, one line for both timing companies,
 });
 
 /** "Which race?" as the founder asks it on 27 Sep 2026: all countries by date, under one filter "Country · all". */
-import { byDate, countriesOf, inCountryOrAll } from "../src/marathon-choice";
+import { byDate, countriesOf, distancesInWords, distancesOf, inCountryOrAll, withDistanceOrAll } from "../src/marathon-choice";
+import { MARATHON_PROOF } from "../src/sentences";
+import { countryInWords } from "../src/rail-country";
+import { WCA_SEVERAL_COUNTRIES } from "../src/wca";
 
 test("the list of races: every coming race by date, all countries, and one country kept when its chip is pressed", () => {
   const list = [
@@ -439,6 +442,65 @@ test("the list of races: every coming race by date, all countries, and one count
   assert.match(chooser, /aria-pressed=\{country === null\} onClick=\{\(\) => setCountry\(null\)\}/, "the first chip is everything");
   assert.match(chooser, /setCountry\(country === one\.code \? null : one\.code\)/, "pressing a chosen country again gives everything back");
   assert.doesNotMatch(chooser, /country-first|Which country/, "no country step before the list");
+});
+
+test("the distance is seen and chosen: a filter, the distances on each race's line, and the question under the race picked", () => {
+  // The founder, 4 Oct 2026: he could not find how to choose or see the distance. The race and distance id and the
+  // terms are what they were.
+  const half = { distance: "half", label: "Half marathon" };
+  const ten = { distance: "10k", label: "10 km" };
+  const full = { distance: "marathon", label: "Marathon" };
+  const list = [
+    { raceId: "rennes", country: "FR", startsAt: "2026-10-04T00:00:00+02:00", events: [ten, half] },
+    { raceId: "carnac", country: "FR", startsAt: "2026-10-10T00:00:00+02:00", events: [ten] },
+    { raceId: "chicago", country: "US", startsAt: "2026-10-11T00:00:00-05:00", events: [full] },
+  ];
+  // The filter's chips: each distance once, the longest first.
+  assert.deepEqual(distancesOf(list), [full, half, ten]);
+  assert.deepEqual(withDistanceOrAll(list, null).map((one) => one.raceId), ["rennes", "carnac", "chicago"], "no distance: everything, untouched");
+  assert.deepEqual(withDistanceOrAll(list, "half").map((one) => one.raceId), ["rennes"]);
+  assert.deepEqual(withDistanceOrAll(list, "10k").map((one) => one.raceId), ["rennes", "carnac"]);
+  // A race's line starts with its distances, the longest first.
+  assert.equal(distancesInWords(list[0]), "Half marathon, 10 km");
+  assert.equal(MARATHON_PROOF.raceLine(distancesInWords(list[0]), "Rennes", "France", "4 October 2026"), "Half marathon, 10 km. Rennes, France. Starts 4 October 2026.");
+  assert.equal(MARATHON_PROOF.raceLine(distancesInWords(list[1]), "Carnac", "France", "10 October 2026"), "10 km. Carnac, France. Starts 10 October 2026.");
+  assert.equal(MARATHON_PROOF.distanceAll, "Distance · all");
+  const chooser = readFileSync("app/kit/offer/MarathonChooser.tsx", "utf8");
+  // The distance filter stands before the country's, with the same behaviour.
+  assert.ok(chooser.indexOf("{W.distanceAll}") < chooser.indexOf("{W.countryAll}"));
+  assert.match(chooser, /aria-pressed=\{distance === null\} onClick=\{\(\) => setDistance\(null\)\}/, "the first chip is everything");
+  assert.match(chooser, /const next = distance === one\.distance \? null : one\.distance;/, "pressing a chosen distance again gives everything back");
+  assert.match(chooser, /const shown = inCountryOrAll\(withDistanceOrAll\(races, distance\), country\);/);
+  // "Which distance?" opens under the race picked, in words, with the organiser's own name of the event under it.
+  assert.match(chooser, /under:\n\s*one\.events\.length > 1 && !settled\(one\) \? \(\n\s*<ChoiceList\n\s*name="distance"\n\s*legend=\{W\.whichDistance\}/);
+  assert.match(chooser, /options=\{one\.events\.map\(\(each\) => \(\{ value: each\.distance, label: each\.label, tag: <span className=\{HELP\}>\{each\.named\}<\/span> \}\)\)\}/);
+  // A distance already filtered is taken without asking, and so is a race's only one.
+  assert.match(chooser, /one\.events\.length === 1 \? one\.events\[0\]\.distance : distance && one\.events\.some\(\(each\) => each\.distance === distance\) \? distance : null/);
+  // The results site's key never leaves the server: the route sends the organiser's name of the event.
+  assert.match(readFileSync("app/api/marathon/races/route.ts", "utf8"), /\{ distance: one\.distance, label: DISTANCE_LABELS\[one\.distance\], named: one\.label \}/);
+  assert.doesNotMatch(chooser, /\.heat\b/);
+  // The gift's title says the distance in plain words, and the id is the race and the distance, as before.
+  assert.match(chooser, /onChoose\(`\$\{one\.raceId\}\/\$\{which\}`, `\$\{one\.name\}, \$\{event\.label\.toLowerCase\(\)\}`, one\.startsAt\)/);
+  // The line of the Move family: a race, and what it covers under its name. Its id did not change.
+  const line = conditionById("marathon-finish");
+  assert.equal(line?.name, "Finish a race");
+  assert.equal(line?.under, "A marathon, a half or a 10 km");
+  assert.match(readFileSync("app/kit/offer/WillSheet.tsx", "utf8"), /\{option\.under \? <span className=\{HELP\}>\{option\.under\}<\/span> : null\}/);
+  assert.match(readFileSync("app/kit/ChoiceList.tsx", "utf8"), /\{chosen && option\.under \? <div className="pl-\[var\(--space-lg\)\]">\{option\.under\}<\/div> : null\}/);
+});
+
+test("a cube competition asks its event under itself too, and a competition in several countries is named as the WCA names it", () => {
+  // The same two things the founder found on a race (4 Oct 2026), true of a competition: "Which event?" opened under
+  // the whole list, and the WCA's places that are no country printed their bare codes, "XE" and "XW".
+  const chooser = readFileSync("app/kit/offer/WcaChooser.tsx", "utf8");
+  assert.match(chooser, /under:\n\s*one\.events\.length > 1 \? \(\n\s*<ChoiceList\n\s*name="event"\n\s*legend=\{W\.whichEvent\}/);
+  assert.match(chooser, /const placeInWords = \(code: string\) => WCA_SEVERAL_COUNTRIES\[code\.toUpperCase\(\)\] \?\? countryInWords\(code\);/, "the WCA's name first: a browser answers the code itself for a region it does not know");
+  assert.equal(countryInWords("XE"), "XE");
+  assert.match(chooser, /countriesOf\(competitions, placeInWords\)/);
+  // The names are the WCA's own (GET /api/v0/countries, read 4 Oct 2026).
+  assert.equal(WCA_SEVERAL_COUNTRIES.XE, "Multiple Countries (Europe)");
+  assert.equal(WCA_SEVERAL_COUNTRIES.XW, "Multiple Countries (World)");
+  assert.deepEqual(countriesOf([{ country: "XE", startsAt: "2026-10-10" }, { country: "FR", startsAt: "2026-10-11" }], (code) => (code === "FR" ? "France" : (WCA_SEVERAL_COUNTRIES[code] ?? null))), [{ code: "FR", name: "France" }, { code: "XE", name: "Multiple Countries (Europe)" }]);
 });
 
 /**
