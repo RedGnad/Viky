@@ -42,7 +42,7 @@ export function daily(giftId: string, who: Who, over: Record<string, unknown> = 
     catchUpSeconds: 30 * 3_600,
     escrow: CONTRACT,
     goalAccount: { username: "boo_learns", source: "funder", bound: true, code: null, codeExpiresAt: null },
-    names: { recipientName: "Boo", funderName: "Maman" },
+    names: { recipientName: "Boo", funderName: "Mom" },
     goalType: 1,
     dailyTarget: 10,
     durationDays: 7,

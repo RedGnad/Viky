@@ -45,7 +45,7 @@ test("the gift's page never prints the contract's target for this shape, and dat
   // The sentences that name a target name a climb's number or a grade's words, and "it" for the rest.
   assert.match(page, /const targetToName = !milestone \? null : hadOrNot \? \(milestone\.targetWords \?\? null\)/);
   assert.equal(MILESTONE_PAGE.provedByTheirs("by 17 Oct 2026"), "If they prove it by 17 Oct 2026 it is theirs. If not, it comes back to you two weeks later.");
-  assert.equal(MILESTONE_PAGE.provedByYours("by 17 Oct 2026", "Maman"), "Prove it by 17 Oct 2026 and it is yours. If not, it goes back to Maman two weeks later.");
+  assert.equal(MILESTONE_PAGE.provedByYours("by 17 Oct 2026", "Mom"), "Prove it by 17 Oct 2026 and it is yours. If not, it goes back to Mom two weeks later.");
   assert.equal(MILESTONE_PAGE.ruleProvedYours("by 17 Oct 2026"), "It is yours when it is proved, by 17 Oct 2026.");
 });
 
@@ -67,7 +67,7 @@ test("the card draws no trail and no flag for it, and says where its proof stand
 const WAITING: LiveInput = {
   moment: "awaitingProof",
   voice: "recipient",
-  funderName: "Maman",
+  funderName: "Mom",
   recipientName: "Boo",
   source: "their university",
   amountDisplay: "$25.00",
@@ -109,7 +109,7 @@ test("the title says where the proof stands, to each of the two people", () => {
   assert.equal(under({ proof: "late", lateUntilInWords: "31 Oct 2026", voice: "reader" }), "What was had by then can still be proved until 31 Oct 2026.");
   // Past the last day, where the showing itself is what is dated: nothing shown now can pay, and the return is dated.
   assert.equal(title({ proof: "ended", lateUntilInWords: "31 Oct 2026" }), "The last day passed without it.");
-  assert.equal(under({ proof: "ended", lateUntilInWords: "31 Oct 2026" }), "It goes back to Maman after 31 Oct 2026.");
+  assert.equal(under({ proof: "ended", lateUntilInWords: "31 Oct 2026" }), "It goes back to Mom after 31 Oct 2026.");
   assert.equal(title({ proof: "ended", lateUntilInWords: "31 Oct 2026", voice: "funder" }), "The last day passed without it.");
   assert.equal(under({ proof: "ended", lateUntilInWords: "31 Oct 2026", voice: "funder" }), "It comes back to you after 31 Oct 2026.");
   assert.equal(title({ proof: "ended", lateUntilInWords: "31 Oct 2026", voice: "reader" }), "The last day passed without it.");

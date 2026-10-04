@@ -92,8 +92,9 @@ test("the TOEFL is beside them: one family, School & studies, beside Learn", () 
   assert.equal(TOEFL_MYBEST_SHOWN.live, true);
   assert.equal(TOEFL_MYBEST_SHOWN.state, "open");
   const diplomas = FRONTIERS.find((frontier) => frontier.id === "state-diplomas");
-  assert.match(String(diplomas?.building), /baccalauréat passed.*Morocco, Cameroon and France/);
-  assert.equal(diplomas?.conditionId, undefined, "the three bac lines print under their family, once");
+  // The baccalauréat's lines are pupils' and stay closed (the founder, 4 Oct 2026): nothing is on its way for a state diploma.
+  assert.equal(diplomas?.building, null);
+  assert.equal(diplomas?.conditionId, undefined);
 });
 
 test("no provider is registered tonight, and every line says so by name before anything is fetched", async () => {

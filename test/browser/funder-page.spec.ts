@@ -251,7 +251,7 @@ test.describe("the funder's page", () => {
     await page.route("**/api/gift/7/notify", (route) => route.fulfill(json({ on: false, possible: false })));
     await makeAnAccount(device);
     const made = (over: Record<string, unknown>) =>
-      page.evaluate((record) => window.sessionStorage.setItem("viky.giftMade", JSON.stringify(record)), { giftId: "7", claimUrl: `${device.baseURL}/g/7?t=AbCdEfGhIjKlMnOpQrStUv`, atMs: Date.now(), recipientName: "Boo", funderName: "Maman", conditionId: "duolingo-daily", amount: "7000000", days: 7, ...over });
+      page.evaluate((record) => window.sessionStorage.setItem("viky.giftMade", JSON.stringify(record)), { giftId: "7", claimUrl: `${device.baseURL}/g/7?t=AbCdEfGhIjKlMnOpQrStUv`, atMs: Date.now(), recipientName: "Boo", funderName: "Mom", conditionId: "duolingo-daily", amount: "7000000", days: 7, ...over });
     await made({});
     await page.goto("/fund?step=done");
     await expect(page.getByRole("button", { name: "Copy the link" })).toBeVisible();

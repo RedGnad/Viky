@@ -68,7 +68,7 @@ before(async () => {
     claimToken: newClaimToken(),
     createdTx: `0x${"10".repeat(32)}`,
     recipientName: "Léa",
-    funderName: "Maman",
+    funderName: "Mom",
   });
   await markClaimed("1", RECIPIENT.address, `0x${"c1".repeat(32)}`);
 });

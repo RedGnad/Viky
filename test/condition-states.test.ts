@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { BUILDING, catalogueSections, conditionById, CONDITIONS, FAMILIES, FRONTIERS, liveConditions, STATES, stateOf, stateWords, FOR_PUPILS } from "../src/conditions";
+import { BUILDING, catalogueSections, conditionById, CONDITIONS, FAMILIES, FRONTIERS, liveConditions, STATES, stateOf, stateWords, FOR_PUPILS, buildingForAdults } from "../src/conditions";
 import { CATALOGUE } from "../src/sentences";
 
 /**
@@ -66,12 +66,14 @@ test("what nobody can check is listed with what was read, and it is not pretende
     assert.match(frontier.why, /\.$/);
     assert.ok(frontier.why.length > 60, `${frontier.id} says why, not just that`);
   }
-  assert.deepEqual(FRONTIERS.map((frontier) => frontier.id), ["supervised-exams", "university-enrolment", "state-diplomas", "school-marks"]);
+  // No line about school marks any more (the founder, 4 Oct 2026): everything that concerns pupils is off the page.
+  assert.deepEqual(FRONTIERS.map((frontier) => frontier.id), ["supervised-exams", "university-enrolment", "state-diplomas"]);
   // Each line says whether the other reading is being built for it (D163): the exams and enrolment (D165), and only they, today.
   for (const frontier of FRONTIERS) assert.ok(frontier.building === null || /\.$/.test(frontier.building), `${frontier.id} says it in a sentence`);
-  // School marks are a pupil's: Viky is for adults, on both sides, so nothing is on its way there (the founder, 4 Oct 2026).
-  assert.deepEqual(FRONTIERS.filter((frontier) => frontier.building).map((frontier) => frontier.id), ["supervised-exams", "university-enrolment", "state-diplomas"]);
-  assert.equal(FRONTIERS.find((frontier) => frontier.id === "school-marks")?.building, null);
+  // What was on its way for a state diploma was the baccalauréat, a pupil's: Viky is for adults, on both sides, so
+  // nothing is on its way there (the founder, 4 Oct 2026).
+  assert.deepEqual(FRONTIERS.filter((frontier) => frontier.building).map((frontier) => frontier.id), ["supervised-exams", "university-enrolment"]);
+  assert.equal(FRONTIERS.find((frontier) => frontier.id === "state-diplomas")?.building, null);
   for (const frontier of FRONTIERS.filter((frontier) => frontier.building)) assert.match(String(frontier.building), /SHOWN BY THEM/, `${frontier.id} names the two words the condition will carry`);
   assert.match(stateWords("no-public-page").meaning, /^No public page shows it\. The person can show it from their own account, and Viky is building that\.$/);
   // Each line rests on a page read on a day, and the two read from a source's own site say which day.
@@ -97,8 +99,9 @@ test("the page lists every condition the register holds, offered or not, by fami
   // year passed and the grade are open since D313.
   assert.deepEqual(
     sections.flatMap((section) => section.building).map((condition) => condition.id),
-    // Without the line for pupils, which stays closed and off the public page (the founder, 4 Oct 2026).
-    ["chsi-enrolment-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown", "cambridge-english-shown", "ielts-shown"],
+    // Without the lines for pupils, which stay closed and off the public page (the founder, 4 Oct 2026): the school
+    // portals, the baccalauréat and the WASSCE.
+    ["chsi-enrolment-shown", "cambridge-english-shown", "ielts-shown"],
   );
   assert.deepEqual(sections.find((section) => section.family === "move")?.conditions.map((condition) => condition.id), ["fitbit-daily", "strava-daily", "marathon-finish"], "the family Move, its three lines open (D188, D191, D273)");
   assert.deepEqual(sections.find((section) => section.family === "move")?.building.map((condition) => condition.id), [], "nothing being built beside them since the marathon opened");
@@ -163,17 +166,19 @@ test("every condition says its nature, and every one of the pilot is read for th
   }
   for (const condition of CONDITIONS) assert.equal(stateOf(condition).id, condition.state, `${condition.id} is in the register and carries a state`);
   // A frontier line that says "Being built" either names the line it is about, so the catalogue never prints it
-  // twice, or names none because its lines print under their own family (the three bac lines, D176).
+  // twice, or names none because its lines print under their own family.
   assert.deepEqual(FRONTIERS.filter((frontier) => frontier.conditionId).map((frontier) => frontier.conditionId), ["university-enrollment-shown"]);
   for (const frontier of FRONTIERS) {
     if (frontier.conditionId) assert.ok(frontier.building, `${frontier.id} names a line and says nothing is being built`);
     if (!frontier.building) assert.equal(frontier.conditionId, undefined, `${frontier.id} names a line and says nothing is being built`);
   }
   const printed = new Set(catalogueSections().flatMap((section) => section.building).map((condition) => condition.id));
-  for (const id of ["bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown"]) assert.ok(printed.has(id), `${id} prints under its family, since no frontier line names it`);
-  // The lines for pupils are printed nowhere on the public page, and neither school portal is named on it.
-  assert.deepEqual(FOR_PUPILS, ["ecoledirecte-grade-shown", "pronote-grade-shown"]);
+  // The lines for pupils are printed nowhere, and no page names a school portal, the baccalauréat or the WASSCE.
+  assert.deepEqual(FOR_PUPILS, ["ecoledirecte-grade-shown", "pronote-grade-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown"]);
   for (const id of FOR_PUPILS) assert.ok(!printed.has(id), `${id} is not on the public page`);
+  assert.deepEqual(buildingForAdults().map((condition) => condition.id), BUILDING.map((condition) => condition.id).filter((id) => !FOR_PUPILS.includes(id)));
+  assert.match(readFileSync("app/privacy/page.tsx", "utf8"), /\[\.\.\.CONDITIONS, \.\.\.buildingForAdults\(\)\]\.map/, "the privacy page lists the same lines, and no pupil's");
+  assert.doesNotMatch(readFileSync("app/judges/page.tsx", "utf8"), /baccalaur|WAEC|WASSCE|PRONOTE|EcoleDirecte|pupil/i, "nor does the judges page");
   const said = [...catalogueSections().flatMap((section) => [...section.conditions, ...section.building].flatMap((condition) => [condition.name, condition.help, condition.beforeItOpens ?? ""])), ...FRONTIERS.flatMap((frontier) => [frontier.name, frontier.why, frontier.building ?? ""])].join(" ");
-  assert.doesNotMatch(said, /PRONOTE|EcoleDirecte/i);
+  assert.doesNotMatch(said, /PRONOTE|EcoleDirecte|baccalaur|WAEC|WASSCE|pupil|school marks/i);
 });

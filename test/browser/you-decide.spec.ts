@@ -53,7 +53,7 @@ test.describe("you decide", () => {
     await expect(decide(page).getByText("You decide", { exact: true })).toBeVisible();
     await expect(decide(page).getByRole("button")).toHaveCount(3);
     await expect(act(page, "messages")).toHaveText("NotificationsOff");
-    await expect(act(page, "sees")).toHaveText("Maman seesOne thing");
+    await expect(act(page, "sees")).toHaveText("Mom seesOne thing");
     await expect(act(page, "stop")).toHaveText("StopAnytime");
     for (const which of ["messages", "sees", "stop"] as const) {
       const disc = await act(page, which).locator(".you-decide-disc").boundingBox();
@@ -75,7 +75,7 @@ test.describe("you decide", () => {
     await expect(choices.nth(0)).toContainText("Take a break");
     await expect(choices.nth(0)).toContainText("Viky stops reading. Start again when you like.");
     await expect(choices.nth(1)).toContainText("End the gift");
-    await expect(choices.nth(1).locator(".decide-chip")).toHaveText(["$2.00 yours", "$5.00 back to Maman"]);
+    await expect(choices.nth(1).locator(".decide-chip")).toHaveText(["$2.00 yours", "$5.00 back to Mom"]);
     const [first, second] = await Promise.all([choices.nth(0).boundingBox(), choices.nth(1).boundingBox()]);
     expect(first?.width, "the two choices have the same width").toBe(second?.width);
     await shot(page, "02-habit-stop-sheet", false);
@@ -103,7 +103,7 @@ test.describe("you decide", () => {
     const end = page.getByRole("dialog", { name: "End the gift?" });
     await expect(end.locator(".decide-two > div")).toHaveCount(2);
     await expect(end.locator(".decide-two > div").nth(0)).toHaveText("$2.00Yours");
-    await expect(end.locator(".decide-two > div").nth(1)).toHaveText("$5.00Back to Maman");
+    await expect(end.locator(".decide-two > div").nth(1)).toHaveText("$5.00Back to Mom");
     await expect(end.getByText("This can't be undone")).toBeVisible();
     await expect(end.getByText(/You keep/)).toHaveCount(0);
     await shot(page, "04-habit-end-sheet", false);
@@ -128,7 +128,7 @@ test.describe("you decide", () => {
 
     // The gift once ended: the day as a label, a headline, two figures, one action, and nothing left to decide.
     await expect(page.locator(".gift-when")).toHaveText(/^Ended \d{1,2} \w{3} \d{4}$/);
-    await expect(page.locator(".gift-figures")).toHaveText(/\$2\.00Yours\$5\.00Back to Maman/);
+    await expect(page.locator(".gift-figures")).toHaveText(/\$2\.00Yours\$5\.00Back to Mom/);
     await expect(page.getByRole("button", { name: "Take $2.00" })).toBeVisible();
     await expect(decide(page)).toHaveCount(0);
     await expect(page.getByText(/gave up|quit|failed|lost/i)).toHaveCount(0);
@@ -166,7 +166,7 @@ test.describe("you decide", () => {
 
     // What it costs, in the three sentences of the first sheet, before anything is signed.
     const pause = page.getByRole("dialog", { name: "Take a break?" });
-    await expect(pause.getByText("Viky stops now, on all your devices. Each day that is not read goes back to Maman. You can agree again at any time.")).toBeVisible();
+    await expect(pause.getByText("Viky stops now, on all your devices. Each day that is not read goes back to Mom. You can agree again at any time.")).toBeVisible();
     expect(served.signed).toEqual([]);
     await shot(page, "02b-habit-break-sheet", false);
     await pause.getByRole("button", { name: "Take a break" }).click();
@@ -206,15 +206,15 @@ test.describe("you decide", () => {
     await page.goto(`/g/${GIFT}`);
 
     await act(page, "sees").click();
-    const sees = page.getByRole("dialog", { name: "Maman sees one thing." });
+    const sees = page.getByRole("dialog", { name: "Mom sees one thing." });
     const view = sees.locator("[data-their-view]");
-    await expect(view.getByText("Maman's page")).toBeVisible();
+    await expect(view.getByText("Mom's page")).toBeVisible();
     // Her page, in her voice: the same state, and the money said as theirs.
     await expect(view.getByText("Yesterday counted.")).toBeVisible();
     await expect(view.getByText("$2.00 Theirs so far")).toBeVisible();
     await expect(view.locator(".decide-view-days > span")).toHaveCount(3);
-    await expect(sees.getByText("Maman sees: for each day, whether it counted.")).toBeVisible();
-    await shot(page, "15-habit-maman-sees", false);
+    await expect(sees.getByText("Mom sees: for each day, whether it counted.")).toBeVisible();
+    await shot(page, "15-habit-mom-sees", false);
     await sees.getByRole("button", { name: "Got it" }).click();
     await expect(sees).toBeHidden();
     await device.context.close();
@@ -263,7 +263,7 @@ test.describe("you decide", () => {
     await page.goto(`/g/${GIFT}`);
 
     await expect(decide(page).getByRole("button")).toHaveCount(3);
-    await expect(act(page, "sees")).toHaveText("Maman seesTwo things");
+    await expect(act(page, "sees")).toHaveText("Mom seesTwo things");
     await expect(page.getByText(/^Get a message when you reach/)).toBeHidden();
     await expect(page.getByText(/^Viky reads your rapid rating for this gift/)).toBeHidden();
     await shot(page, "08-climb-under-way");
@@ -272,21 +272,21 @@ test.describe("you decide", () => {
     const stop = page.getByRole("dialog", { name: "Your gift, your call." });
     await expect(stop.locator('[data-option="break"]')).toContainText("Viky stops reading. Start again before the last day.");
     // Nothing is earned before the target: one figure on the ending's choice, and "$0.00 yours" is never said.
-    await expect(stop.locator('[data-option="end"] .decide-chip')).toHaveText(["$25.00 back to Maman"]);
+    await expect(stop.locator('[data-option="end"] .decide-chip')).toHaveText(["$25.00 back to Mom"]);
     await shot(page, "09-climb-stop-sheet", false);
     await stop.locator('[data-option="end"]').click();
     const end = page.getByRole("dialog", { name: "End the gift?" });
     await expect(end.locator(".decide-two > div")).toHaveCount(1);
-    await expect(end.locator(".decide-two > div")).toHaveText("$25.00Back to Maman");
+    await expect(end.locator(".decide-two > div")).toHaveText("$25.00Back to Mom");
     await expect(end.getByText(/\$0\.00/)).toHaveCount(0);
     await shot(page, "10-climb-end-sheet", false);
     await end.getByRole("button", { name: "Not now" }).click();
 
     await act(page, "sees").click();
-    const sees = page.getByRole("dialog", { name: "Maman sees two things." });
-    await expect(sees.getByText("Maman sees: the rating read, and whether it reaches the target.")).toBeVisible();
+    const sees = page.getByRole("dialog", { name: "Mom sees two things." });
+    await expect(sees.getByText("Mom sees: the rating read, and whether it reaches the target.")).toBeVisible();
     await expect(sees.locator("[data-their-view]").getByText("1462 Today")).toBeVisible();
-    await shot(page, "16-climb-maman-sees", false);
+    await shot(page, "16-climb-mom-sees", false);
     await sees.getByRole("button", { name: "Got it" }).click();
 
     await act(page, "messages").click();
@@ -324,7 +324,7 @@ test.describe("you decide", () => {
     await act(page, "stop").click();
     await page.locator('[data-option="end"]').click();
     const end = page.getByRole("dialog", { name: "End the gift?" });
-    await expect(end.locator(".decide-two > div")).toHaveText("$25.00Back to Maman");
+    await expect(end.locator(".decide-two > div")).toHaveText("$25.00Back to Mom");
     await shot(page, "12-one-thing-end-sheet", false);
     await end.getByRole("button", { name: "End the gift" }).click();
 
@@ -332,7 +332,7 @@ test.describe("you decide", () => {
     await expect(page.locator(".gift-when")).toHaveText(/^Ended \d{1,2} \w{3} \d{4}$/);
     // One figure, what went back, with its label (the amount counts up from what this device last saw of it).
     await expect(page.locator(".gift-figures > div")).toHaveCount(1);
-    await expect(page.locator(".gift-figures")).toHaveText(/\$25\.00Back to Maman$/);
+    await expect(page.locator(".gift-figures")).toHaveText(/\$25\.00Back to Mom$/);
     await expect(page.getByText(/\$0\.00/)).toHaveCount(0);
     await expect(decide(page)).toHaveCount(0);
     await shot(page, "13-one-thing-ended");
@@ -374,7 +374,7 @@ test.describe("you decide", () => {
     await expect(notYours.locator("summary")).toHaveText("Not your Duolingo name?");
     await expect(notYours.locator("p")).toBeHidden();
     await notYours.locator("summary").click();
-    await expect(notYours.locator("p")).toHaveText("Ask Maman to check the name. Nothing counts until it is right.");
+    await expect(notYours.locator("p")).toHaveText("Ask Mom to check the name. Nothing counts until it is right.");
     await notYours.locator("summary").click();
     await expect(page.getByRole("button", { name: "End this gift" })).toHaveCount(0);
     await expect(decide(page).getByRole("button")).toHaveCount(3);
@@ -384,7 +384,7 @@ test.describe("you decide", () => {
     await act(page, "stop").click();
     const stop = page.getByRole("dialog", { name: "Your gift, your call." });
     await expect(stop.locator(".decide-option")).toHaveCount(1);
-    await expect(stop.locator('[data-option="end"] .decide-chip')).toHaveText(["$7.00 back to Maman"]);
+    await expect(stop.locator('[data-option="end"] .decide-chip')).toHaveText(["$7.00 back to Mom"]);
     await shot(page, "14b-opened-stop-sheet", false);
     await device.context.close();
   });

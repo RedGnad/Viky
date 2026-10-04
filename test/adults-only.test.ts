@@ -28,9 +28,12 @@ test("'18 or older' is said wherever an account is made, to the person who offer
   assert.match(legal, /Viky does not check an age itself/);
 });
 
-test("no example in the app is a parent", () => {
+test("the app's own example is nobody's parent, and no French word stands where an English one belongs", () => {
   assert.equal(PAY.namePlaceholder, "Sam");
   assert.equal(exampleGift(Date.UTC(2026, 9, 4)).funderName, "Sam");
-  const sentences = readFileSync("src/sentences.ts", "utf8");
-  assert.doesNotMatch(sentences, /"[^"\n]*\b(Mum|Mom|Mama|Dad|Papa|Maman)\b[^"\n]*"/, "no sentence of the app names a parent as its example");
+  // The laboratory and the pictures of the gift's page said "Maman" (the founder, 4 Oct 2026): a French word in an
+  // English app, for no reason. The giver of those examples is "Mom".
+  for (const file of ["src/sentences.ts", "app/dev/looks/example.ts", "app/dev/looks/gift-moments/examples.ts", "app/dev/looks/reached/LabReached.tsx", "test/browser/gift-fixtures.ts", "test/browser/gift-kit.ts"]) {
+    assert.doesNotMatch(readFileSync(file, "utf8"), /\bMaman\b|\bPapa\b/, file);
+  }
 });

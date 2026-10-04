@@ -42,7 +42,7 @@ test("the show-it block says what Viky keeps, by condition, and never a score it
 });
 
 test("the two people are told how the review was decided, on the devices that asked", () => {
-  const names = { recipientName: "Boo", funderName: "Maman" };
+  const names = { recipientName: "Boo", funderName: "Mom" };
   assert.equal(morningSentence("recipient", { kind: "reviewed", verdict: "refused", amount: "" }, names), "Your page was checked: it does not show what this gift is for. Open the gift to see why.");
   assert.equal(morningSentence("recipient", { kind: "reviewed", verdict: "notYet", amount: "" }, names), "Your page was checked and it works. The result is not there yet: show it again once it is.");
   assert.equal(morningSentence("funder", { kind: "reviewed", verdict: "refused", amount: "" }, names), "Boo's page was checked: it does not show what the gift is for.");

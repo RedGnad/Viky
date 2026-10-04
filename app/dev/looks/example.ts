@@ -3,7 +3,7 @@ import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
 
 /**
  * The example data the screens are drawn with. Nobody's gift and no real amount: a person called Sam holds $10.00, gave
- * Ama a gift, received one from Maman, and is offering one to Noé. The figures agree with each other across the six
+ * Ama a gift, received one from Mom, and is offering one to Noé. The figures agree with each other across the six
  * screens.
  *
  * The two gifts are built around the reader's own today, as the product's one example is (app/kit/example-gift.ts), so
@@ -83,15 +83,15 @@ export function toAma(nowMs: number): GiftSummary {
   };
 }
 
-/** Received from Maman: $14.00 over 7 days, on its fifth day, two earned, one gone back, yesterday still catchable. */
-export function fromMaman(nowMs: number): GiftSummary {
+/** Received from Mom: $14.00 over 7 days, on its fifth day, two earned, one gone back, yesterday still catchable. */
+export function fromMom(nowMs: number): GiftSummary {
   const today = Math.floor(nowMs / DAY_MS);
   return {
     ...base,
     giftId: "37",
     role: "recipient",
     recipientName: "Sam",
-    funderName: "Maman",
+    funderName: "Mom",
     goalUsername: "sam_learns",
     startDay: today - 4,
     endDay: today + 2,
@@ -113,8 +113,8 @@ export function fromMaman(nowMs: number): GiftSummary {
 
 /**
  * What the last visit saw, for a device that keeps no record of one: one settled day of each gift. So arriving on Home
- * plays Maman's day gone back and her newest day earned, and Ama's second day earned, then the amount counts from what
- * the account held then; arriving on Maman's gift plays its two days, then what is yours counts from $2.00.
+ * plays Mom's day gone back and her newest day earned, and Ama's second day earned, then the amount counts from what
+ * the account held then; arriving on Mom's gift plays its two days, then what is yours counts from $2.00.
  */
 export const LAST_VISIT = { settledDays: 1, homeEuros: 6.54, yoursDollars: 2, yoursNow: 4 } as const;
 

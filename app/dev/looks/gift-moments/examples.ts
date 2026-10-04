@@ -22,7 +22,7 @@ export type Reader = (typeof READERS)[number];
 export type Example = Readonly<{ id: string; shape: Shape; moment: ExampleMoment; reader: Reader; status: GiftStatus | MilestoneStatus }>;
 
 const DAY = 86_400;
-const FUNDER = "Maman";
+const FUNDER = "Mom";
 const RECIPIENT = "Léa";
 
 /** Which moments each shape has: a daily gift has no start too high, and the "went back" day is a daily gift's alone. */

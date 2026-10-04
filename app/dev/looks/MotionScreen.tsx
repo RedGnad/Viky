@@ -6,7 +6,7 @@ import { charactersOf } from "@/app/kit/DayStrip";
 import { Arrival, ArrivalAmount, ArrivalDay, Reveal } from "@/app/kit/Motion";
 import { AMOUNT_IN_TITLE, CARD, HELP, SECONDARY_BUTTON, TITLE } from "@/app/components/ui";
 import { FUND, HOME } from "@/src/sentences";
-import { ACCOUNT, fromMaman, LAST_VISIT, TO_NOE } from "./example";
+import { ACCOUNT, fromMom, LAST_VISIT, TO_NOE } from "./example";
 import { ReplayArrival } from "./ReplayArrival";
 import { ReplayMoments } from "./ReplayMoments";
 import { SuccessDemo } from "./SuccessDemo";
@@ -20,7 +20,7 @@ import { LAB } from "./words";
  */
 export function MotionScreen() {
   const nowMs = useMinute();
-  const gift = fromMaman(nowMs);
+  const gift = fromMom(nowMs);
   const days = charactersOf(gift, gift.catchUpSeconds, nowMs, gift.days).slice(0, 5);
   const shown = `${ACCOUNT.symbol}${ACCOUNT.euros.toFixed(2)}`;
   return (
