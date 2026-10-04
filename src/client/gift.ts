@@ -10,6 +10,7 @@ import {
 } from "../ausd-authorization";
 import { AUSD, movesOnASignature, type Coin } from "../coins";
 import { NO_CONTACT_HASH } from "../contact-hash";
+import type { EarnedInGift } from "../earned-shape";
 import { fundingNonce, giftSalt, withdrawIntentTypedData, type GiftParams } from "../gift-terms";
 import { ApiError, getJson, postJson } from "./api";
 import { isMilestoneGiftId, milestoneWithdrawTypedData } from "../milestone-protocol";
@@ -483,6 +484,29 @@ export async function withdrawEarned(input: { account: LocalAccount; giftId: str
     deadline: message.deadline.toString(),
     signature,
   });
+}
+
+/**
+ * What the gifts made out to this account hold for it right now (D208). A read that fails is the account without the
+ * gifts' part, which is what every screen was before it counted them.
+ */
+export function loadEarnedInGifts(): Promise<EarnedInGift[]> {
+  return getJson<{ gifts: EarnedInGift[] }>("/api/gifts/earned").then(
+    (answer) => answer.gifts,
+    () => [] as EarnedInGift[],
+  );
+}
+
+/**
+ * Takes into the account everything its gifts hold for it: the whole of each gift's part, one signature per gift, each
+ * relayed, at the nonce the contract expects. One gesture, wherever money is used (the founder, 4 Oct 2026): the way
+ * out takes it before a way, and paying a gift takes it before the gift is made. A refusal stops there: whatever came
+ * out is in the account, whatever did not is still in its gift.
+ */
+export async function takeFromGifts(account: LocalAccount, gifts: readonly EarnedInGift[]): Promise<void> {
+  for (const gift of gifts) {
+    await withdrawEarned({ account, giftId: gift.giftId, escrow: gift.escrow, amount: BigInt(gift.earned), nonce: BigInt(gift.nonce) });
+  }
 }
 
 /**

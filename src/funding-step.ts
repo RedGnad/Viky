@@ -37,6 +37,8 @@ export function pausedAfterFailure(failedAtMs: number | null, nowMs: number): bo
 
 export type FundingStep =
   | { do: "give" }
+  /** The account alone is short and the person's gifts hold money for them: all of it is taken into the account first. */
+  | { do: "takeFromGifts" }
   | { do: "convert"; amount: bigint }
   /** USDC arrived, the other dollar coin a card can deliver: all of it is changed, by a signature the relayer carries. */
   | { do: "convertUsdc"; amount: bigint }
@@ -70,9 +72,15 @@ export function nextFundingStep(input: {
   nowMs?: number;
   /** The USDC in the account, read only where the step that changes it exists; nothing otherwise. */
   arrivingUsdc?: bigint;
+  /** What the person's gifts have already paid them and still hold (D208); nothing when unread or none. */
+  inGifts?: bigint;
 }): FundingStep {
-  // Enough already: the gift can be made, and nothing else should be converted.
+  // Enough already: the gift can be made, and nothing else should be converted or taken.
   if (input.held >= input.wanted) return { do: "give" };
+  // The person's own money first (the founder, 4 Oct 2026): what their gifts hold for them is what a gift holds
+  // already, so nothing of it is lost to a price. Taken before anything a card delivered is changed, and before the
+  // card is waited for. The screen tries it once: a taking that was refused is said, and no longer counted here.
+  if ((input.inGifts ?? 0n) > 0n) return { do: "takeFromGifts" };
   // USDC before the chain's coin: it is a dollar already, so nothing of it is lost to a price, and none is kept back.
   if ((input.arrivingUsdc ?? 0n) >= USDC_ARRIVAL_FLOOR) {
     if (pausedAfterFailure(input.failedAtMs ?? null, input.nowMs ?? 0)) return { do: "wait", sawSomething: true };

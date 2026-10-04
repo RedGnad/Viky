@@ -61,6 +61,9 @@ test.describe("what the design pass promised", () => {
   for (const path of PAGES) {
     test(`${path}: every piece of text clears its floor, 4.5:1 or 3:1 when it is large`, async ({ page }) => {
       await page.goto(path);
+      // One page, once it has replaced what stood for it while it loaded: for an instant both are in the document, and
+      // asking for "the" main then is refused at once rather than waited for (the run of 4 Oct 2026 on /fund).
+      await expect(page.locator("main")).toHaveCount(1);
       await expect(page.locator("main")).toBeVisible();
       const failures = (await page.evaluate(CONTRAST)) as string[];
       expect(failures, `${path} has text under the floor WCAG sets for its size`).toEqual([]);

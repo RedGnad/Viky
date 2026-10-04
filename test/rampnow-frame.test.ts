@@ -44,7 +44,7 @@ test("its address is the public locked page without its Buy and Sell tabs, with 
 test("nothing counts on the frame's messages: the money arriving closes it, and the judges page says the frame with its limit", () => {
   // The screen that waits under the sheet closes it as soon as the account holds something to act on, and forgets the payment it waited for.
   const paying = readFileSync("app/components/PayGift.tsx", "utf8");
-  assert.match(paying, /const next = nextFundingStep\(\{[^}]*arrivingUsdc: read\.usdc[^}]*\}\);\n(\s*\/\/[^\n]*\n)*\s*if \(next\.do !== "wait"\) \{\n\s*setFrame\(null\);\n(\s*\/\/[^\n]*\n)*\s*if \(readRampnowPending\(address\)\) noteInRampnowJournal\("Viky: the money arrived in the account"\);\n\s*clearRampnowPending\(address\);/);
+  assert.match(paying, /const next = nextFundingStep\(\{[^}]*arrivingUsdc: read\.usdc[^}]*\}\);\n\s*if \(next\.do === "takeFromGifts"\) \{[\s\S]*?\n          return;\n        \}\n(\s*\/\/[^\n]*\n)*\s*if \(next\.do !== "wait"\) \{\n\s*setFrame\(null\);\n(\s*\/\/[^\n]*\n)*\s*if \(readRampnowPending\(address\)\) noteInRampnowJournal\("Viky: the money arrived in the account"\);\n\s*clearRampnowPending\(address\);/);
   // No message of the frame closes the sheet: it has no handler that would, and the screen closes it on four things only.
   const sheet = readFileSync("app/kit/offer/RampnowSheet.tsx", "utf8");
   assert.doesNotMatch(sheet, /onArrived|onClose\b(?!=\{nothing\})/);

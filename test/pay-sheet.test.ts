@@ -101,7 +101,7 @@ test("the name comes first, as the recipient knows the giver, filled with the la
   assert.equal(PAY.namesSeen("Boo", true), "Boo's name and yours show on the gift, to whoever opens its link.");
   assert.equal(PAY.missedBy("Boo", "9:00"), "A day Boo misses can be caught up the next day. If not, it comes back to you the morning after, at about 9:00 your time.");
   assert.ok(sheet.indexOf('id="funder-name"') < sheet.indexOf("data-pay-lines"), "the field before the lines");
-  assert.match(sheet, /if \(live && last && now\.draft\.funderName\.trim\(\) === ""\) now\.onChange\(\{ \.\.\.now\.draft, funderName: last \}\);/, "only into an empty field");
+  assert.match(sheet, /if \(!live\) return;[\s\S]{0,300}?if \(last && now\.draft\.funderName\.trim\(\) === ""\) now\.onChange\(\{ \.\.\.now\.draft, funderName: last \}\);/, "only into an empty field");
 });
 
 test("the account is made at the press, and the sheet says so before it happens", () => {
@@ -264,7 +264,7 @@ test("the sheet stands where the mockup stands it, and the wait is the whole scr
   assert.match(sheet, /<Sheet [^>]*\btall>/, "and this is that sheet");
   // The wait: the ring at the size paying.html draws it, what is being done in the title face, and the gift under it.
   assert.match(css, /\.working-ring-large \{[\s\S]*?width: 54px;/);
-  assert.match(pay, /<Working says=\{phase === "converting" \? W\.arrived\.gettingReady : P\.putting\(gift, recipient\)\} and=\{P\.takesSeconds\} then=\{P\.mayClose\} large \/>/);
+  assert.match(pay, /<Working says=\{phase === "taking" \? C\.gathering : phase === "converting" \? W\.arrived\.gettingReady : P\.putting\(gift, recipient\)\} and=\{P\.takesSeconds\} then=\{P\.mayClose\} large \/>/);
   assert.match(pay, /<MiniGift recipient=\{recipient\}/);
   assert.equal(PAY.putting("$30.00", "Noah"), "Putting $30.00 in Noah's name.");
   assert.equal(PAY.takesSeconds, "It takes a few seconds.");

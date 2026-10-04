@@ -68,11 +68,55 @@ test("the pause holds a conversion only, only after a failure, and only for its 
 test("the screen keeps the time of the failure, and its watch still depends on the phase", () => {
   const screen = readFileSync("app/components/PayGift.tsx", "utf8");
   const watch = screen.slice(screen.indexOf("// While paying: watch the account"), screen.indexOf("const copy = "));
-  assert.match(watch, /nextFundingStep\(\{ held: read\.held, arriving: read\.arriving, arrivingUsdc: read\.usdc, wanted, failedAtMs: failedAtMs\.current, nowMs: Date\.now\(\) \}\)/);
+  assert.match(watch, /nextFundingStep\(\{ held: read\.held, arriving: read\.arriving, arrivingUsdc: read\.usdc, inGifts, wanted, failedAtMs: failedAtMs\.current, nowMs: Date\.now\(\) \}\)/);
   const failure = watch.slice(watch.indexOf("await fundingQuote(next.amount)"), watch.lastIndexOf("const after = await readAusdBalance"));
   assert.ok(watch.includes("await fundingQuote(next.amount)"), "the conversion is asked through the check that holds it to the amount and the exchange");
   assert.ok(failure.indexOf("failedAtMs.current = Date.now()") < failure.indexOf('setPhase("waiting")'), "the time is kept before the phase starts the watch again");
   assert.match(failure, /setProblem\(W\.arrived\.priceMoved\);\s+setPhase\("waiting"\)/, "the sentence is said with the phase it belongs to");
-  assert.match(watch, /\}, \[step, address, units, phase, refresh, give, ensureSigner\]\);/, "the phase stays among what the watch depends on");
+  assert.match(watch, /\}, \[step, address, units, phase, refresh, give, ensureSigner, earned\]\);/, "the phase stays among what the watch depends on");
   assert.match(watch, /setInterval\(\(\) => void look\(\), POLL_MS\)/);
+});
+
+test("the person's own money first: what their gifts hold is taken before a card is waited for, and before anything is changed", () => {
+  // The account alone is enough: the gift is made, and the gifts are left alone.
+  assert.deepEqual(nextFundingStep({ held: WANTED, arriving: 0n, wanted: WANTED, inGifts: 5_000_000n }), { do: "give" });
+  // Short, and the gifts hold something for the person: all of it is taken first, whether or not it is enough.
+  assert.deepEqual(nextFundingStep({ held: 0n, arriving: 0n, wanted: WANTED, inGifts: WANTED }), { do: "takeFromGifts" });
+  assert.deepEqual(nextFundingStep({ held: 0n, arriving: 0n, wanted: WANTED, inGifts: 1n }), { do: "takeFromGifts" });
+  // Before what a card delivered is changed: it is what a gift holds already, and nothing of it is lost to a price.
+  assert.deepEqual(nextFundingStep({ held: 0n, arriving: ARRIVED, arrivingUsdc: 9_000_000n, wanted: WANTED, inGifts: 5_000_000n }), { do: "takeFromGifts" });
+  // Nothing in the gifts, or not read: the decision is what it always was.
+  assert.deepEqual(nextFundingStep({ held: 0n, arriving: 0n, wanted: WANTED, inGifts: 0n }), { do: "wait", sawSomething: false });
+  assert.deepEqual(nextFundingStep({ held: 0n, arriving: ARRIVED, wanted: WANTED }), { do: "convert", amount: ARRIVED - CONVERSION_RESERVE });
+});
+
+test("paying a gift counts what the person's gifts hold for them, and takes it by the way out's own gesture", () => {
+  // One gesture, written once: the whole of each gift's part, one signature per gift.
+  const client = readFileSync("src/client/gift.ts", "utf8");
+  assert.match(client, /export async function takeFromGifts\(account: LocalAccount, gifts: readonly EarnedInGift\[\]\): Promise<void> \{\n\s*for \(const gift of gifts\) \{\n\s*await withdrawEarned\(\{ account, giftId: gift\.giftId, escrow: gift\.escrow, amount: BigInt\(gift\.earned\), nonce: BigInt\(gift\.nonce\) \}\);/);
+  assert.match(readFileSync("app/components/CashOut.tsx", "utf8"), /await takeFromGifts\(account, inGifts\);/);
+
+  // The pay sheet: "From your Viky money" is the account and the gifts' part, read with the list it already reads.
+  const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
+  assert.match(sheet, /setInGifts\(heldInGifts\(gifts\)\);/);
+  assert.match(sheet, /const inAccount = \(held \?\? 0n\) \+ inGifts;/);
+  assert.match(sheet, /judgeLineIsTrue\(\{ gift: units, held, untouchedCredit \}\)/, "the judge credit line is still about the account alone");
+
+  // The screen that makes the gift: read once, taken once, and a refusal is said and not tried again by itself.
+  const screen = readFileSync("app/components/PayGift.tsx", "utf8");
+  const watch = screen.slice(screen.indexOf("// While paying: watch the account"), screen.indexOf("const copy = "));
+  const taking = watch.slice(watch.indexOf('if (next.do === "takeFromGifts")'), watch.indexOf("// The money is in the account: the frame it was paid in closes"));
+  assert.ok(taking.length > 0 && watch.indexOf('if (next.do === "takeFromGifts")') < watch.indexOf('if (next.do !== "wait")'), "taken before the frame a card is paid in is closed: it is not a payment arriving");
+  assert.doesNotMatch(taking, /setFrame|clearRampnowPending/, "the frame and the payment waited for at Rampnow are left as they are");
+  assert.match(taking, /if \(read\.held \+ inGifts >= wanted\) setPhase\("taking"\);/, "the whole screen says it only when it is all the gift needs");
+  assert.match(taking, /await takeFromGifts\(account, earned \?\? \[\]\);/);
+  assert.match(taking, /\} catch \{[\s\S]*?setEarned\(\[\]\);\n\s*setProblem\(C\.gatherFailed\);/, "refused: said, and no longer counted on this visit");
+  assert.match(taking, /setPhase\(after >= wanted \? "giving" : "waiting"\);/);
+  assert.match(screen, /const toBuy = balance === null \|\| earned === null \? undefined : eurosToBuyOn\(units - held - totalEarned\(earned\), wayIn, money\.rates\?\.usdPerEur\);/, "the card is asked for the gift less everything the person pays with");
+  assert.match(screen, /<Working says=\{phase === "taking" \? C\.gathering : /);
+
+  // Sending to another account opens through the same taking as every other use.
+  const out = readFileSync("app/components/CashOut.tsx", "utf8");
+  assert.match(out, /const startOwn = async \(\) => \{\n\s*const now = await gather\(\);\n\s*if \(!now\) return;/);
+  assert.match(out, /onClick=\{\(\) => void startOwn\(\)\} disabled=\{holdings === null \|\| dollarsHeld === 0n \|\| busy\}/);
 });

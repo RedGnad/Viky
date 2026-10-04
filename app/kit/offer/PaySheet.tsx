@@ -26,6 +26,7 @@ import { ACCOUNT_DOOR, CASH_OUT, FUND, MILESTONE_FUND, PAY as W, WAITS } from "@
 import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, PRIMARY_BUTTON, SMALL_BUTTON } from "../../components/ui";
 import { AccountPanel } from "../../components/AccountPanel";
 import { Field } from "../Field";
+import { heldInGifts } from "../money";
 import { CardLine, CardNotOffered } from "./CardTerms";
 import { JudgeCode } from "./JudgeCode";
 import { FieldRefusal } from "../FieldRefusal";
@@ -88,6 +89,12 @@ export function PaySheet({
   const router = useRouter();
   const money = useDisplayCurrency(address);
   const [held, setHeld] = useState<bigint | null>(null);
+  /**
+   * What the person's gifts have already paid them and still hold (D208). It is theirs to pay with, as Home counts it
+   * (the founder, 4 Oct 2026): somebody who had earned $10 read $10 on Home and "Pay by card" here for a $5 gift. The
+   * screen that makes the gift takes it into the account first, by the way out's own gesture (src/client/gift.ts).
+   */
+  const [inGifts, setInGifts] = useState(0n);
   const [railIn, setRailIn] = useState<Readonly<Record<string, RailReach>>>({});
   /** Whether the card is offered to this payer (src/card-rail.ts); until the server has said, it is. */
   const [card, setCard] = useState<Readonly<{ offered: boolean; country: string | null }> | null>(null);
@@ -163,9 +170,12 @@ export function PaySheet({
     let live = true;
     loadMyGifts().then(
       ({ gifts }) => {
+        if (!live) return;
+        // The same reading says what those gifts hold for this account.
+        setInGifts(heldInGifts(gifts));
         const last = lastNameGiven(gifts);
         const now = latest.current;
-        if (live && last && now.draft.funderName.trim() === "") now.onChange({ ...now.draft, funderName: last });
+        if (last && now.draft.funderName.trim() === "") now.onChange({ ...now.draft, funderName: last });
       },
       () => undefined,
     );
@@ -182,7 +192,8 @@ export function PaySheet({
   const certificate = certificateById(draft.conditionId);
   const target = Number(draft.target);
   const ready = isComplete(draft) && units !== undefined && condition !== undefined;
-  const inAccount = held ?? 0n;
+  // "From your Viky money": the account and what the person's gifts hold for them, one figure.
+  const inAccount = (held ?? 0n) + inGifts;
   const enough = units !== undefined && inAccount >= units;
   const short = units === undefined ? 0n : units - inAccount;
   const offer = wayInFor(short, waysIn(), money.rates?.usdPerEur, railIn);
