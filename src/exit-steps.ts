@@ -66,6 +66,15 @@ export function readyFor(way: WayOut, coin: Coin, held: bigint): Ready | undefin
   return { number, units, dust: spendable - units };
 }
 
+/**
+ * Whether what the account holds of a coin is the money of the withdrawal it has open (src/open-withdrawal.ts): the
+ * same coin, and at least what that way out gave back. A balance alone never says a withdrawal: a card payment
+ * delivers the same coin, and it is money in the account, not money on its way out (the founder, 3 Oct 2026).
+ */
+export function heldForWithdrawal(open: Readonly<{ coin: string; atLeast: bigint }> | null | undefined, coin: string, held: bigint): boolean {
+  return !!open && open.coin.toLowerCase() === coin.toLowerCase() && open.atLeast > 0n && held >= open.atLeast;
+}
+
 export type ChangeAmount = Readonly<{ units: bigint; refusal?: undefined } | { units?: undefined; refusal: string }>;
 
 /** The two-decimal dollar amount to get ready, read from the text, against what a gift holds. */
