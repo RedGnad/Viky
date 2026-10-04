@@ -229,7 +229,6 @@
   --page-margin: 20px;
   --app-column-max: 480px;
   --prose-max: 66ch;
-  --destination-max: 680px;
 
   /* The bar of three destinations below 840, the rail from 840 (src/design-tokens.ts, NAV). */
   --nav-bar-height: 64px;
@@ -813,6 +812,16 @@ dialog.sheet {
 
 dialog.sheet-tall {
   max-height: 82dvh;
+}
+
+/*
+ * Under an open sheet the line that runs under the card does not show (the founder, 4 Oct 2026). On a phone the sheet
+ * covers it. On a wide screen the sheet is the card's column and the line is wider, so its two ends stood out on either
+ * side of the sheet ("a 10 l" on the left, "cepie." on the right). It keeps its room: nothing moves when the sheet
+ * closes.
+ */
+:root:has(dialog.sheet[open]) [data-goals-going-by] {
+  visibility: hidden;
 }
 
 /*
