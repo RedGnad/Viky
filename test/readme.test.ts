@@ -10,6 +10,9 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import test from "node:test";
 import { toFunctionSelector } from "viem";
+import { RECLAIM_ALLOWANCE, reclaimAllowance } from "../src/attested-calls";
+import { consentTermsFor } from "../src/consent-terms";
+import { WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAY_IN_USDC, waysIn } from "../src/rails";
 import { HOME } from "../src/sentences";
 import { EXIT_ROUTER, USDC_ROUTER } from "../src/viky-contracts";
 
@@ -140,7 +143,7 @@ test("what the rules ask of a README is all there (section 4.1), and the licence
   assert.match(readFileSync("LICENSE", "utf8"), /^MIT License/);
   assert.match(section("Security"), /\[SECURITY\.md\]\(SECURITY\.md\)/);
   // The order: the short sections, then how to run it, then the declarations folded at the foot.
-  const order = ["## Who it is for, and the problem", "## What is new", "## Why Monad", "## What has run with real money", "## Architecture", "## Stack", "## Run", "### Deploy", "## Test", "<summary><b>AI tools</b></summary>", "<summary><b>Pre-existing code</b></summary>", "<summary><b>Environment</b></summary>", "<summary><b>Third-party licences</b></summary>", "<summary><b>Security</b></summary>", "<summary><b>License</b></summary>"].map((mark) => README.indexOf(mark));
+  const order = ["## Who it is for, and the problem", "## What we know about the two people", "## What is new", "## Why Monad", "## What has run with real money", "## Path forward: how the next hundred find Viky", "## Architecture", "## Stack", "## Run", "### Deploy", "## Test", "<summary><b>AI tools</b></summary>", "<summary><b>Pre-existing code</b></summary>", "<summary><b>Environment</b></summary>", "<summary><b>Third-party licences</b></summary>", "<summary><b>Security</b></summary>", "<summary><b>License</b></summary>"].map((mark) => README.indexOf(mark));
   assert.ok(order.every((found) => found >= 0), "every section is there");
   assert.deepEqual(order, [...order].sort((left, right) => left - right));
   assert.equal(README.match(/<details>/g)?.length, 6);
@@ -170,6 +173,39 @@ test("what has run with real money is only what has a transaction, each with its
   assert.equal(5_423_000 + 187_000, 5_610_000);
   // The judges page is said for what it is.
   assert.match(ran, /\[viky\.cash\/judges\]\(https:\/\/viky\.cash\/judges\) is the one page for verifying Viky/);
+});
+
+test("the two people and the path forward say of the product what the code does", () => {
+  const people = section("What we know about the two people").replace(/\s+/g, " ");
+  const path = section("Path forward: how the next hundred find Viky").replace(/\s+/g, " ");
+  // What the funder sees is what the agreement says they see (src/consent-terms.ts): yes or no for a day, and the
+  // figure read for a goal that has one. "Never the detail" was said of both, and a rating is a detail.
+  assert.equal(consentTermsFor("duolingo-daily")?.things, 1);
+  for (const withAFigure of ["chess-rating", "toefl-mybest-shown", "university-grade-shown", "wca-time"]) assert.equal(consentTermsFor(withAFigure)?.things, 2, withAFigure);
+  assert.ok(people.includes("The funder sees yes or no for a day and, for a goal with a number (a rating, a score, a grade, a time), that number and whether it reaches the target."));
+  // A gift's page answers to its number, so what is kept to the two people and the link is the names, not the page.
+  assert.ok(people.includes("the names and the account read are shown only to its two people and to whoever holds its link"));
+  assert.doesNotMatch(people, /opens only from its link/);
+  // An age is confirmed, never checked.
+  assert.ok(people.includes("both people confirm they are 18 or older"));
+  // The button a tester's reading renamed.
+  assert.ok(people.includes(`The button became "${HOME.takeItOut}".`));
+  // What each card service keeps is the register's own figure, in the order the sheet tries them.
+  assert.equal(waysIn({ rampnow: true })[0], WAY_IN_USDC);
+  const euro = (amount: number) => `€${amount.toFixed(2)}`;
+  const first = WAY_IN_USDC.fee;
+  const onTwenty = Math.max(first.minimum, (20 * first.percent) / 100 + (first.plus ?? 0));
+  const card = `${WAY_IN_USDC.name}, tried first where it serves the payer, ${first.percent} % plus ${euro(first.plus ?? 0)} and never less than ${euro(first.minimum)}, which is ${euro(onTwenty)} of a €20 payment; ${WAY_IN_GIFT_COIN.name} up to ${WAY_IN_GIFT_COIN.fee.percent} %, never less than ${euro(WAY_IN_GIFT_COIN.fee.minimum)}; ${WAY_IN_CHAIN_COIN.name} ${WAY_IN_CHAIN_COIN.fee.percent} %, from €${WAY_IN_CHAIN_COIN.smallestEur}.`;
+  assert.ok(WAY_IN_GIFT_COIN.fee.upTo && !WAY_IN_CHAIN_COIN.fee.upTo && !first.upTo);
+  assert.ok(path.includes(card), card);
+  // The month's readings are the allowance the code stops at, with no setting moving it.
+  assert.deepEqual(reclaimAllowance({}), RECLAIM_ALLOWANCE);
+  assert.ok(path.includes(`the plan in force covers ${RECLAIM_ALLOWANCE.fetches} a month, with ${RECLAIM_ALLOWANCE.verifications} proofs a person shows from their own account`));
+  // The words check it names exists, in the source and on rendered screens.
+  assert.match(readFileSync("package.json", "utf8"), /"check:words":/);
+  assert.match(readFileSync("test/browser/screens.spec.ts", "utf8"), /FORBIDDEN_WORDS/);
+  // Nothing either section claims that Viky refuses to claim.
+  for (const never of [/cheaper than a bank/i, /no licen[cs]e (is )?required/i, /nobody (else )?does this/i]) assert.doesNotMatch(`${people} ${path}`, never);
 });
 
 test("every link of the README and of docs/ leads to a file of the tree, and to a heading that is there", () => {
