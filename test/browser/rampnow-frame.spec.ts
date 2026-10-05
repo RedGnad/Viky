@@ -123,6 +123,8 @@ test.describe("Rampnow in a frame: one gift, one payment", () => {
       await expect(under.getByText(/^By paying by card, you confirm you are 18 or older and accept/)).toBeVisible();
       await expect(under.locator("[data-rampnow-keep-open]")).toHaveCount(0);
       await expect(under.locator("[data-rampnow-late]")).toHaveCount(0);
+      // Nothing was started yet: nothing is said of a payment to find again.
+      await expect(under.locator("[data-rampnow-found-again]")).toHaveCount(0);
       await shot(SHOTS, page, size.name, "1-frame-open-no-payment-known");
       // "Go back without paying": the frame goes, nothing is waited for, and paying is the screen's action again.
       await out.click();
@@ -144,10 +146,16 @@ test.describe("Rampnow in a frame: one gift, one payment", () => {
       const under = sheet(page).locator("[data-rampnow-under]");
       await expect(under).toHaveAttribute("data-rampnow-under", "none");
       await expect(under.getByRole("button", { name: "Go back without paying" })).toBeVisible();
+      // From the moment an order is known, what stands under the frame says where the payment is found again,
+      // whatever the frame shows: Rampnow's page has an error of its own for a step it does not know (5 Oct 2026).
+      const foundAgain = under.locator("[data-rampnow-found-again]");
+      await expect(foundAgain).toHaveText("If this window shows an error, your payment is found again from Home.");
+      await shot(SHOTS, page, size.name, "2b-an-order-known-the-payment-is-found-again");
       // The card pays: from here nothing under the frame leads out, and the page beside is gone with it.
       await inFrame(page).getByRole("button", { name: "The card pays" }).click();
       await expect(under).toHaveAttribute("data-rampnow-under", "known");
       await expect(under.locator("[data-rampnow-keep-open]")).toHaveText("Keep this window open: Rampnow is finishing your payment.");
+      await expect(foundAgain).toBeVisible();
       await expect(under.getByRole("button")).toHaveCount(0);
       await expect(under.getByRole("link")).toHaveCount(0);
       await expect(sheet(page).getByRole("button", { name: "Close", exact: true })).toHaveCount(0);

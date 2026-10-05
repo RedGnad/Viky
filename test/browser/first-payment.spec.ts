@@ -103,7 +103,14 @@ test.describe("the first payment, and the way back to it", () => {
       quotes = 0;
       holdings.mon = 60_000_000_000_000_000_000n;
       await expect.poll(() => quotes, { timeout: 30_000 }).toBeGreaterThan(0);
-      await expect(page.getByText("The price changed and nothing was changed. Viky will try again in a moment.")).toBeVisible();
+      // The screen stays on the change and says what is known (the founder, 5 Oct 2026): the payment arrived, so nothing
+      // here offers to pay again, and the sentence of a request that did nothing is never read after a payment.
+      await expect(page.locator("[data-asks-again]")).toHaveText("The check did not answer. Your payment is not lost, and the wait goes on.");
+      await expect(page.getByText("Getting it ready, a few seconds.")).toBeVisible();
+      await expect(page.getByRole("button", { name: /by card/ })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: /by card|^Open / })).toHaveCount(0);
+      await expect(page.getByText(/Something went wrong|Nothing was changed|nothing was changed/)).toHaveCount(0);
+      await shot(SHOTS, page, size.name, "3-the-change-did-not-answer");
       const startedAt = Date.now();
       const atStart = quotes;
       await page.waitForTimeout(12_000);

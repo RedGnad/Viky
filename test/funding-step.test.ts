@@ -71,8 +71,12 @@ test("the screen keeps the time of the failure, and its watch still depends on t
   assert.match(watch, /nextFundingStep\(\{ held: read\.held, arriving: read\.arriving, arrivingUsdc: read\.usdc, inGifts, wanted, failedAtMs: failedAtMs\.current, nowMs: Date\.now\(\) \}\)/);
   const failure = watch.slice(watch.indexOf("await fundingQuote(next.amount)"), watch.lastIndexOf("const after = await readAusdBalance"));
   assert.ok(watch.includes("await fundingQuote(next.amount)"), "the conversion is asked through the check that holds it to the amount and the exchange");
-  assert.ok(failure.indexOf("failedAtMs.current = Date.now()") < failure.indexOf('setPhase("waiting")'), "the time is kept before the phase starts the watch again");
-  assert.match(failure, /setProblem\(W\.arrived\.priceMoved\);\s+setPhase\("waiting"\)/, "the sentence is said with the phase it belongs to");
+  // Since 5 Oct 2026 the screen stays on the change after a failure: the payment arrived, and the screen that waits
+  // for one put its pay button back in front of somebody who had paid. The time is still what keeps the next look,
+  // and every look inside the pause, from converting again; the watch goes on by its interval.
+  assert.ok(failure.includes("failedAtMs.current = Date.now()"), "the time of the failure is kept");
+  assert.doesNotMatch(failure, /setPhase\("waiting"\)/, "the screen does not go back to the one that offers to pay");
+  assert.match(failure, /setAsksAgain\(after\.keep \? after\.says : W\.arrived\.priceMoved\);/, "what is known is said under the ring");
   assert.match(watch, /\}, \[step, address, units, phase, refresh, give, ensureSigner, earned\]\);/, "the phase stays among what the watch depends on");
   assert.match(watch, /setInterval\(\(\) => void look\(\), POLL_MS\)/);
 });
