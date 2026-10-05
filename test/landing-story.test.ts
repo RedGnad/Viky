@@ -132,7 +132,9 @@ test("gsap is loaded by the landing alone, and its licence is said for what it i
   assert.match(story, /Promise\.all\(\[import\("gsap"\), import\("gsap\/ScrollTrigger"\)\]\)/, "loaded when the posters are, never with the rest of the app");
   assert.ok((JSON.parse(readFileSync("package.json", "utf8")) as { dependencies: Record<string, string> }).dependencies.gsap);
   const readme = readFileSync("README.md", "utf8");
-  const licences = readme.slice(readme.indexOf("## Third-party licences"), readme.indexOf("## Security"));
+  const fold = readme.indexOf("<summary><b>Third-party licences</b></summary>");
+  assert.ok(fold >= 0, "the licences are a fold at the README's foot");
+  const licences = readme.slice(fold, readme.indexOf("</details>", fold));
   assert.match(licences, /`gsap` and its `ScrollTrigger` are not under a free licence/);
   assert.match(licences, /Standard 'No Charge' GSAP\s+License/);
   assert.match(licences, /forbids using GSAP in a tool\s+that lets its users build visual animations without code in competition with Webflow's own/);
