@@ -46,12 +46,18 @@ export const NO_BREAK = "\u00a0";
  * after the US dollar, and the founder took it for gone. The people who count in them read "5 000 FCFA", the letters
  * after the figure and its thousands a space apart: Orange Money's own price list in Côte d'Ivoire ("100 FCFA",
  * "5000 FCFA") and Wave's terms there ("(200 000) FCFA"), both read that day, and neither says XOF or XAF anywhere.
- * So both are written "FCFA" after the figure, and both are called "CFA franc", with the part of Africa that tells
- * them apart, which also puts them side by side in the list.
+ * So both are written "FCFA" after the figure, and both are called "CFA franc".
+ *
+ * One name for the two, and one line in the list (`asRead`; the founder, 5 Oct 2026, the same day: "since the two are
+ * at the same rate, is it really useful to have both?"). They are two currencies, West Africa's and Central
+ * Africa's, and a note of one is not taken in the other's countries; but here a currency is only what amounts are
+ * read in, and the two read alike to the franc: the same letters and the same figure, both fixed to the euro at the
+ * same parity. Where money is paid out, the currency is the country's own and never this choice (src/switch.ts,
+ * src/phone-order.ts). Named apart, "(West Africa)" and "(Central Africa)" also took a second line on a phone.
  */
 const WRITTEN_AFTER: Readonly<Record<string, Readonly<{ sign: string; name: string }>>> = {
-  XOF: { sign: "FCFA", name: "CFA franc (West Africa)" },
-  XAF: { sign: "FCFA", name: "CFA franc (Central Africa)" },
+  XOF: { sign: "FCFA", name: "CFA franc" },
+  XAF: { sign: "FCFA", name: "CFA franc" },
 };
 
 /**
@@ -138,6 +144,23 @@ export function lettersOf(code: string): string {
 export function amountByItsLetters(amount: number, code: string): string {
   if (WRITTEN_AFTER[code]) return amountIn(amount, code);
   return `${new Intl.NumberFormat("en-US").format(amount)} ${code}`;
+}
+
+/**
+ * The currencies of a list as a person reads them, one line each: currencies that read alike, by the same name, the
+ * same sign and the same figure, stand on one line. That is the two CFA francs and nothing else, since nothing else
+ * shares a name; and it holds only while their rates agree, which is asked of the day's rates rather than assumed.
+ * Within a line the codes keep the order they are written down in above, West Africa's first.
+ */
+export function asRead(offered: readonly string[], rates: Rates | undefined): readonly (readonly string[])[] {
+  const lines = new Map<string, string[]>();
+  for (const code of offered) {
+    const { name, sign } = currencyOf(code);
+    const reading = `${name}|${sign}|${rates ? (perDollar(code, rates) ?? code) : ""}`;
+    lines.set(reading, [...(lines.get(reading) ?? []), code]);
+  }
+  const written = Object.keys(WRITTEN_AFTER);
+  return [...lines.values()].map((codes) => (codes.length > 1 ? [...codes].sort((left, right) => written.indexOf(left) - written.indexOf(right)) : codes));
 }
 
 /** How many of a currency one dollar buys, through the euro, which is the unit the file is written in. */
