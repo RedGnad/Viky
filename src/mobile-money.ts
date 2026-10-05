@@ -13,6 +13,14 @@
  */
 export const MOBILE_CEILINGS = Object.freeze({ usdPerPayout: 200, usdPerAccountPerDay: 500 });
 
+/**
+ * How far inside what was read the bounds of the amount are said, in thousandths (the founder, 5 Oct 2026). The
+ * largest amount is priced a little under what the exchange guarantees for the balance, and the smallest a little over
+ * the corridor's minimum, so that a rate ticking between the bound being read and the amount being priced does not
+ * turn the amount the screen itself proposed into one that is refused. Two thousandths: three cents on fifteen dollars.
+ */
+export const BOUND_MARGIN_PER_MILLE = 2;
+
 const DOLLAR = 1_000_000n;
 const dollars = (units: bigint) => `$${(units / DOLLAR).toString()}.${((units % DOLLAR) / 10_000n).toString().padStart(2, "0")}`;
 
@@ -29,6 +37,15 @@ export const MOBILE_REFUSALS = {
   enterName: "Enter the name on the account.",
   numberNotTaken: "That number is not one this operator takes. Digits only, as your operator gives it.",
   writeTheName: "Write the name on the account, as your operator has it.",
+  /**
+   * Three refusals of the payout's own steps, said without naming what changes the money or where it is written (the
+   * founder, 5 Oct 2026): the person changed money and is sending it, and those are the words they are given.
+   */
+  stillChanging: "Your money is still being changed. Try again in a moment.",
+  notChangedHere: "That is not money this account changed. Nothing was sent.",
+  askedForMore: "The mobile money service asked for more than was changed for it. Nothing was sent.",
+  /** What the account can send could not be read: said where the card would have opened. */
+  notNow: "Mobile money cannot be reached just now. Nothing was taken: try again in a minute.",
   /** Said in place of the form once the day's ceiling leaves less than the smallest payout. */
   dayReached: () => `You have sent ${dollars(BigInt(MOBILE_CEILINGS.usdPerAccountPerDay) * DOLLAR)} to mobile money today, the most for a day. It opens again tomorrow.`,
 } as const;
@@ -103,6 +120,24 @@ export function localInWords(amount: number, currency: string): string {
  */
 export function delayInWords(settlement: string): string {
   return settlement.replace(/(\d+)\s*-\s*(\d+)/, "$1 to $2");
+}
+
+/**
+ * "3 Oct, 10:15": the moment a quote was made, on the person's own clock (the founder, 5 Oct 2026). It was said in
+ * UTC with the letters after it, which is nobody's clock in the countries this pays in. A zone the browser does not
+ * know falls back to UTC rather than to nothing.
+ */
+export function momentOf(iso: string, zone: string): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return "";
+  const said = (options: Intl.DateTimeFormatOptions) => {
+    try {
+      return new Intl.DateTimeFormat("en-GB", { ...options, timeZone: zone }).format(at);
+    } catch {
+      return new Intl.DateTimeFormat("en-GB", { ...options, timeZone: "UTC" }).format(at);
+    }
+  };
+  return `${said({ day: "numeric", month: "short" })}, ${said({ hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}`;
 }
 
 /** The last four digits of a number, which is all the screen shows of it once it is sent. */

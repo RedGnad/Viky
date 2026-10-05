@@ -1919,7 +1919,7 @@ export const USE_MONEY = {
   mobile: {
     name: "Your mobile money",
     nature: "From your balance",
-    cost: "Switch's rate, shown before you send",
+    cost: "the rate shown before you send",
     need: "the number and its holder's name",
     action: "Send to my mobile money",
   },
@@ -2220,17 +2220,26 @@ export const MOBILE_OUT = {
   amountMissing: "Write how much, in figures.",
   amountUnder: (least: string) => `At least ${least} at a time.`,
   amountOver: (most: string) => `At most ${most} at a time.`,
+  /** The same bound when it is the balance that holds it, the cost of changing it included (the founder, 5 Oct 2026). */
+  amountOverHeld: (most: string) => `At most ${most} with what you have.`,
   /** In place of the form when the balance is under the country's smallest payout: the minimum, and what the person has. */
   underMinimum: (least: string, have: string) => `Mobile money pays from ${least} at a time here, and you have ${have}.`,
   about: (figure: string) => `about ${figure}`,
   /** The dollars second (the founder, 3 Oct 2026): what leaves the balance for it, and when it was priced. */
   fromBalance: (dollars: string, when: string) => `${dollars} from your balance, at the rate of ${when}.`,
+  /**
+   * In place of the amount when dollars were already changed and have not been sent on, as after a payout cut before
+   * they left (the founder, 5 Oct 2026): the card sends those, and says that it changes nothing more. It does not say
+   * what they were changed for: a withdrawal to a bank left half way leaves the same dollars.
+   */
+  fromChanged: (dollars: string) => `From ${dollars} already changed. Nothing more is changed.`,
   pricing: "Pricing it",
-  unpriced: "It cannot be priced right now. Nothing was changed.",
   send: (operator: string) => `Send to my ${operator}`,
   steps: { changing: "Changing it", placing: "Placing it", sending: "Sending it" },
   waitingTitle: "On its way",
   waiting: (operator: string, end: string, delay: string) => `To your ${operator} number ending ${end}. It usually takes ${delay}.`,
+  /** The same payout found again where the country's time cannot be read: where it goes, and nothing about how long. */
+  waitingSent: (operator: string, end: string) => `To your ${operator} number ending ${end}.`,
   arrivedTitle: "Arrived",
   arrived: (operator: string, end: string) => `On your ${operator} number ending ${end}.`,
   failedTitle: "It did not go through",
