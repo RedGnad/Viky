@@ -379,23 +379,59 @@ export const PAY = {
 
 /** Home: the money, the one action, the way out, and what is moving. */
 /**
- * Under the card on the landing: four posters, then the phone and one last way to the card (the founder, 5 Oct 2026,
- * on a living mockup, over D282's four blocks with a drawing each). A poster is a title in the hero's own size with
- * one of the days' characters held in it, and one sentence. `characterAfter` is the word of the title the character
- * stands after: it is held to that word and never starts a line.
+ * Under the card on the landing: five posters, then the phone and one last way to the card (the founder, 5 Oct 2026,
+ * on a living mockup, over D282's four blocks with a drawing each; second pass the same day). A poster is a title in
+ * the hero's own size with a character held in it, and short lines under it: each line one fact, a sentence of eleven
+ * words at most, three lines at most. `characterAfter` is the word of the title the character stands after: it is held
+ * to that word and never starts a line.
  *
- * Every sentence is true of the code: the escrow allocates the money in the recipient's name when the gift is paid for,
- * releases a day's share on a verified day, sends every missed day back to the funder by itself and pays nobody else
- * (`contracts/GiftEscrowV3.sol`); progress is read from the service or the certificate's own page; the account is a
- * passkey; the app is the website, installable.
+ * Every sentence is true of the code. The escrow allocates the money in the recipient's name when the gift is paid
+ * for, releases a day's share on a verified day, which they can then take out, sends every missed day back to the
+ * funder by itself and pays nobody else (`contracts/GiftEscrowV3.sol`). Progress is read from the service or the
+ * certificate's own page, by Viky or from the person's own account: never from a picture somebody sends. No reading
+ * counts before the person it is for has signed their yes (`src/consent-guard.ts`); what the funder is shown is the
+ * result and never anything else of the account (`src/consent-terms.ts`); and they can stop the reading or end the
+ * gift and keep what they earned. The account is a passkey: the device's own check, a fingerprint, a face or its
+ * code, which never leaves the device. The app is the website, installable.
+ *
+ * "Nothing is counted until they agree" and not "nothing is read": the card reads a public profile's name, and where
+ * a rating stands, while the gift is being prepared (app/kit/offer/WillSheet.tsx), before anybody has agreed.
  */
 export const LANDING_STORY = {
   blocks: [
-    { key: "theirs", title: "Theirs from day one.", characterAfter: "day", body: "The money is in their name the moment you pay." },
-    { key: "checked", title: "Checked, not claimed.", characterAfter: "Checked,", body: "Viky reads it where it happens. Nobody's word to take." },
-    { key: "back", title: "A missed day comes back to you.", characterAfter: "day", body: "By itself. Viky keeps none of it." },
-    { key: "face", title: "Your face is the key.", characterAfter: "face", body: "No password to invent. Nothing to download." },
+    {
+      key: "theirs",
+      title: "Theirs from day one.",
+      characterAfter: "day",
+      lines: ["The money is in their name the moment you pay.", "It becomes theirs to spend as they make progress."],
+    },
+    {
+      key: "checked",
+      title: "Checked, not claimed.",
+      characterAfter: "Checked,",
+      lines: ["Viky reads the result where it happens.", "No screenshots. Nobody's word to take."],
+    },
+    {
+      key: "back",
+      title: "A missed day comes back to you.",
+      characterAfter: "day",
+      lines: ["By itself. You never have to ask.", "Nobody profits from a missed day, not even Viky."],
+    },
+    {
+      key: "yes",
+      title: "They say yes first.",
+      characterAfter: "yes",
+      lines: ["Nothing is counted until they agree.", "You see the result, never the rest of their account.", "They can stop anytime and keep what they earned."],
+    },
+    {
+      key: "key",
+      title: "You are the key.",
+      characterAfter: "You",
+      lines: ["Your fingerprint, your face or your phone's code opens your account.", "It stays on your phone. Viky never sees it.", "No password to invent. Nothing to download."],
+    },
   ],
+  /** The band of names under "Checked, not claimed.", for somebody who moves through the page by its regions. */
+  read: "What Viky reads",
   phone: {
     title: "On your phone, like an app.",
     body: "Viky opens in the browser. Add it to your home screen and it opens like your other apps.",

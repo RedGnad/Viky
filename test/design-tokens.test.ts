@@ -243,12 +243,13 @@ test("three colours per appearance and no fourth background: no joy, no sticker,
     assert.doesNotMatch(source, /var\(--joy\)|var\(--sticker-|var\(--day-/, `${file} paints a retired background`);
   }
   // Amended by the founder on 5 Oct 2026, on a living mockup: the posters under the landing's card lay two things over
-  // the three colours, and nothing else does. One band wears the other appearance's ground, and the pictograms go by
-  // in rounds of four tones, two of them a quarter of a character's colour. They are painted by the posters' own
-  // classes and by nothing else in the stylesheet or in a component.
+  // the three colours, and nothing else does. One band wears the other appearance's ground, and what Viky reads goes
+  // by in four tones, two of them a quarter of a character's colour: rounds at first, pills with their names since
+  // the second pass of the same day. They are painted by the posters' own classes and by nothing else in the
+  // stylesheet or in a component.
   const painted = (token: string) => [...css.matchAll(new RegExp(`^([^\\n{}]+) \\{[^}]*var\\(${token}[^}]*\\}`, "gm"))].map((match) => match[1].trim());
   assert.deepEqual(painted("--other-ground"), [".poster-under-other", ".poster-band-other"]);
-  assert.deepEqual(painted("--round-tone-"), [".sticker-1", ".sticker-2", ".sticker-3", ".sticker-4"]);
+  assert.deepEqual(painted("--round-tone-"), [".read-pill-1", ".read-pill-2", ".read-pill-3", ".read-pill-4"]);
   for (const file of globSync("app/**/*.{ts,tsx}")) assert.doesNotMatch(readFileSync(file, "utf8"), /var\(--other-|var\(--round-tone-/, `${file} paints a poster's ground outside the posters`);
   // The other appearance's ground is the one the look already has for it, and the two tones that are not a
   // character's are the look's own raised paper and tonal.

@@ -3,14 +3,17 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 import { CONDITION_ICONS } from "../src/condition-icons";
+import { CHOICE_GROUPS, liveConditions } from "../src/conditions";
 import { MOTION } from "../src/design-tokens";
+import { inRows, readByName } from "../src/landing-read";
 import { MOVES, MOVES_BOOT_SCRIPT, POSTERS, POSTERS_READY, POSTERS_STILL } from "../src/moves";
 import { HOME, LANDING_STORY, TRADEMARKS } from "../src/sentences";
 
 /**
- * Under the card on the landing: four posters, the phone, and one last way to the card (the founder, 5 Oct 2026,
- * validated on a living mockup, over D282's four blocks with a drawing each). Each promise must stay true of the code
- * that makes it, and the movement must leave everything there for whoever cannot or will not have it.
+ * Under the card on the landing: five posters, the phone, and one last way to the card (the founder, 5 Oct 2026,
+ * validated on a living mockup, over D282's four blocks with a drawing each; a second pass the same day, on a second
+ * mockup). Each promise must stay true of the code that makes it, and the movement must leave everything there for
+ * whoever cannot or will not have it.
  */
 const story = readFileSync("app/kit/LandingStory.tsx", "utf8");
 const css = readFileSync("app/globals.css", "utf8");
@@ -23,32 +26,51 @@ function sources(folder: string): string[] {
   });
 }
 
-test("the landing lays four posters under its column, then the phone, then the way back to the card", () => {
+test("the landing lays five posters under its column, then the phone, then the way back to the card", () => {
   const home = readFileSync("app/kit/Home.tsx", "utf8");
   // Under the column, from one edge of the window to the other: the shell's own place for it, outside what enters and
   // what is revealed block by block.
   assert.match(home, /under=\{\n\s*<>\n\s*<LandingStory \/>\n\s*<LandingFoot \/>\n\s*<\/>\n\s*\}/);
   assert.match(readFileSync("app/kit/Shell.tsx", "utf8"), /<\/main>\n\s*\{props\.kind === "destination" && props\.under \? <div data-under-the-column="">\{props\.under\}<\/div> : null\}/);
-  // The four, with the founder's sentences, one under each title.
+  // The five, with the founder's sentences of the second pass under each title.
   assert.deepEqual(
-    LANDING_STORY.blocks.map((block) => [block.key, block.title, block.body]),
+    LANDING_STORY.blocks.map((block) => [block.key, block.title, ...block.lines]),
     [
-      ["theirs", "Theirs from day one.", "The money is in their name the moment you pay."],
-      ["checked", "Checked, not claimed.", "Viky reads it where it happens. Nobody's word to take."],
-      ["back", "A missed day comes back to you.", "By itself. Viky keeps none of it."],
-      ["face", "Your face is the key.", "No password to invent. Nothing to download."],
+      ["theirs", "Theirs from day one.", "The money is in their name the moment you pay.", "It becomes theirs to spend as they make progress."],
+      ["checked", "Checked, not claimed.", "Viky reads the result where it happens.", "No screenshots. Nobody's word to take."],
+      ["back", "A missed day comes back to you.", "By itself. You never have to ask.", "Nobody profits from a missed day, not even Viky."],
+      // "Nothing is counted", where the mockup said "read": the card reads a public profile while a gift is prepared.
+      ["yes", "They say yes first.", "Nothing is counted until they agree.", "You see the result, never the rest of their account.", "They can stop anytime and keep what they earned."],
+      ["key", "You are the key.", "Your fingerprint, your face or your phone's code opens your account.", "It stays on your phone. Viky never sees it.", "No password to invent. Nothing to download."],
     ],
   );
-  // A character is held in each title, after a word of it that is not its first: it never starts a line.
-  assert.deepEqual(LANDING_STORY.blocks.map((block) => block.characterAfter), ["day", "Checked,", "day", "face"]);
+  // Each line is one fact: a sentence of eleven words at most, three lines at most under a title.
+  for (const block of LANDING_STORY.blocks) {
+    assert.ok(block.lines.length >= 2 && block.lines.length <= 3, block.key);
+    for (const line of block.lines) assert.ok(line.split(/\s+/).length <= 11, `${line}: ${line.split(/\s+/).length} words`);
+  }
+  // A character is held in each title, after a word of it: it never starts a line.
+  assert.deepEqual(LANDING_STORY.blocks.map((block) => block.characterAfter), ["day", "Checked,", "day", "yes", "You"]);
   for (const block of LANDING_STORY.blocks) assert.ok(block.title.split(" ").includes(block.characterAfter), `${block.key}: after a word of its own title`);
-  assert.match(story, /theirs: \{ state: "earned" \},\n\s*checked: \{ state: "today" \},\n\s*back: \{ state: "toCome", returns: true \},\n\s*face: \{ state: "diamond" \},/);
+  assert.match(
+    story,
+    /theirs: \{ state: "earned", act: "roll" \},\n\s*checked: \{ state: "today", act: "hop" \},\n\s*back: \{ state: "toCome", act: "back" \},\n\s*yes: \{ state: "catchable", act: "nod" \},\n\s*key: \{ state: "shades", act: "shades" \},/,
+  );
   assert.match(story, /<span className="whitespace-nowrap">\n\s*\{said\} \{character\}\n\s*<\/span>/, "tied to the word before it");
   assert.match(story, /<Character state=\{state\} standing=\{false\} className="block h-full w-full" \/>/, "the days' own character, with no floor under it");
-  // A title in the hero's own size, one sentence, and nothing drawn beside: the card appears once, at the top.
+  // The one in sunglasses is the head of Me's figure: the same eyes, the same mouth, the same material.
+  assert.match(story, /<Figure id="story-key" limbs=\{false\} eyes="shades" mouth="grin" halftone \/>/);
+  assert.match(readFileSync("app/kit/Figure.tsx", "utf8"), /return <Figure className=\{className\} id="me" eyes="shades" mouth="grin" arms="crossed" halftone \/>;/);
+  // Bigger in the second pass: 1.3em tall, 2.05em wide for the diamond, 0.16em of air on each side.
+  assert.match(css, /\.poster-character \{\n  display: inline-block;\n  width: 1\.3em;\n  height: 1\.3em;\n  margin: 0 0\.16em;\n  vertical-align: -0\.3em;\n\}\n\.poster-character-wide \{\n  width: 2\.05em;\n\}/);
+  // A title in the hero's own size, lines under it, and nothing of the card drawn again: it appears once, at the top.
   assert.match(story, /<h2 data-poster="" className=\{`\$\{HERO\} poster-title`\}/);
-  assert.doesNotMatch(story, /\bScene\b|GiftCard|OfferCard|DayStrip/, "nothing of the card is drawn again");
-  assert.deepEqual(story.match(/<Figure id="[a-z-]+"/g), ['<Figure id="story-phone"', '<Figure id="story-last"'], "the phone's figure and the runner, two different ones, and no other");
+  assert.doesNotMatch(story, /GiftCard|OfferCard|DayStrip/, "nothing of the card is drawn again");
+  // The figures: the phone's, the head in a title, and at the foot the two of Gifts, one with an arm on the other's
+  // shoulder, where a runner and its speed lines stood (the founder, 5 Oct 2026).
+  assert.deepEqual(story.match(/<Figure id="[a-z-]+"/g), ['<Figure id="story-key"', '<Figure id="story-phone"']);
+  assert.match(story, /<div data-figure=""[^>]*>\n\s*<Scene which="gifts" className="h-auto w-full" \/>/);
+  assert.doesNotMatch(story, /props=\{\["speed"\]\}|arms="run"/);
   // The phone keeps its card and its button, and the last block its way to the card.
   assert.match(story, /<Install \/>/);
   assert.match(story, /standalone \? null/);
@@ -57,12 +79,31 @@ test("the landing lays four posters under its column, then the phone, then the w
   assert.doesNotMatch(home, /<Install quiet \/>/);
 });
 
+test("the lines under a title: in ink, one fact each, in a block of its own", () => {
+  // In the text's own colour, not the grey one; on the band that wears the other appearance, that appearance's text.
+  const rule = css.slice(css.indexOf(".poster-line {"), css.indexOf("}", css.indexOf(".poster-line {")));
+  assert.match(rule, /color: var\(--text\);/);
+  assert.doesNotMatch(rule, /--muted/);
+  assert.match(css, /\.poster-band-other \{\n  background: var\(--other-ground\);\n  color: var\(--other-text\);\n  --text: var\(--other-text\);/);
+  // 18 px on 1.42 on a phone, 26 px on 1.36 from 600, weight 500, thirty em at most, balanced.
+  assert.match(css, /--poster-line: 18px;\n  --poster-line-leading: 1\.42;/);
+  assert.match(css, /--poster-line: 26px;\n    --poster-line-leading: 1\.36;/);
+  assert.match(rule, /max-width: 30em;/);
+  assert.match(rule, /font-size: var\(--poster-line\);\n  font-weight: 500;\n  line-height: var\(--poster-line-leading\);\n  text-wrap: balance;/);
+  // One paragraph a line, never one paragraph for all of them.
+  assert.match(story, /\{block\.lines\.map\(\(line, at\) => \(\n\s*<p key=\{line\} data-line="" className=\{`poster-line\$\{at === 0 \? " poster-line-first" : ""\}`\}>/);
+  assert.doesNotMatch(story, /\bLEAD\b/);
+});
+
 test("the grounds alternate, and a band that changes ground rises with round shoulders", () => {
-  assert.match(story, /theirs: \{ band: "poster-band-ground", under: "" \},\n\s*checked: \{ band: "on-paper poster-band-rises", under: "" \},\n\s*back: \{ band: "poster-band-other poster-band-rises", under: "poster-under-paper" \},\n\s*face: \{ band: "poster-band-ground poster-band-rises", under: "poster-under-other" \},/);
+  assert.match(
+    story,
+    /theirs: \{ band: "poster-band-ground", under: "" \},\n\s*checked: \{ band: "on-paper poster-band-rises", under: "" \},\n\s*back: \{ band: "poster-band-other poster-band-rises", under: "poster-under-paper" \},\n\s*yes: \{ band: "on-paper poster-band-rises", under: "poster-under-other" \},\n\s*key: \{ band: "poster-band-ground poster-band-rises", under: "poster-under-paper" \},/,
+  );
   assert.match(css, /\.poster-band-rises \{\n  border-radius: var\(--poster-round\) var\(--poster-round\) 0 0;\n\}/);
-  // 40 pixels on a phone, 72 from 600.
-  assert.match(css, /--poster-pad: 76px;\n  --poster-round: 40px;/);
-  assert.match(css, /--poster-pad: 150px;\n    --poster-round: 72px;/);
+  // The mockup's room and shoulders: 84 and 40 pixels on a phone, 132 and 72 from 600.
+  assert.match(css, /--poster-pad: 84px;\n  --poster-round: 40px;/);
+  assert.match(css, /--poster-pad: 132px;\n    --poster-round: 72px;/);
   // The third band wears the other appearance: the night's ground and its two voices by day, the day's by night, in
   // the two places night is written. Every value is one the look already has.
   assert.match(css, /--other-ground: #151026;\n  --other-text: #FFF6E2;\n  --other-muted: #C7C4DA;/);
@@ -71,23 +112,51 @@ test("the grounds alternate, and a band that changes ground rises with round sho
   assert.match(css, /--background: #DDD6EB;\n  --surface: #FFFFFF;\n  --text: #1E1633;\n  --muted: #5B5470;/, "the day's own");
 });
 
-test("what Viky reads goes by as stickers: the chooser's eleven pictograms, with a control's outline and relief, never the sun", () => {
-  const stickers = [...story.matchAll(/\{ icon: "([a-z]+)", tone: ([1-4]), tilt: (-?\d+) \}/g)].map((match) => match[1]);
-  assert.deepEqual([...stickers].sort(), Object.keys(CONDITION_ICONS).sort(), "each of the eleven, once");
-  assert.match(story, /<ConditionIcon icon=\{sticker\.icon\} \/>/, "the chooser's own drawings");
-  const rule = css.slice(css.indexOf(".sticker {"), css.indexOf("}", css.indexOf(".sticker {")));
+test("what Viky reads goes by, by name: the chooser's own lines from the register, as pills with a control's outline and relief", () => {
+  // The names are the register's, never a list written with the posters: one for each line of the chooser.
+  const live = liveConditions();
+  const lines = readByName();
+  const expected = live.flatMap((option) => {
+    if (!option.group) return [option.name];
+    return live.find((other) => other.group?.id === option.group!.id) === option ? [CHOICE_GROUPS[option.group.id].name] : [];
+  });
+  assert.deepEqual(lines.map((line) => line.name), expected);
+  assert.ok(lines.length >= 11, `${lines.length} names`);
+  assert.doesNotMatch(story, /"A (language lesson|chess rating|year at university|race finished|test score|puzzle record)"/, "no name is written with the posters");
+  assert.match(story, /const all = readByName\(\)\.map\(/);
+  // A pictogram has a name here only while an open condition carries it, and every pictogram of the chooser has one.
+  for (const line of lines) assert.ok(live.some((option) => option.icon === line.icon), line.name);
+  assert.deepEqual([...new Set(lines.map((line) => line.icon))].sort(), Object.keys(CONDITION_ICONS).sort(), "each of the eleven pictograms");
+  assert.deepEqual(readByName([]), [], "nothing open, nothing named");
+  assert.match(story, /<ConditionIcon icon=\{pill\.icon\} \/>\n\s*\{pill\.name\}/, "the chooser's own drawing, then the name");
+  // A pill: the outline and the relief of a control, the title's face, and a lean of three degrees at most.
+  const rule = css.slice(css.indexOf(".read-pill {"), css.indexOf("}", css.indexOf(".read-pill {")));
   assert.match(rule, /border: var\(--control-border-width\) solid var\(--control-border\);/);
-  assert.match(rule, /border-radius: 50%;/);
+  assert.match(rule, /border-radius: 999px;/);
   assert.match(rule, /box-shadow: var\(--control-relief\);/);
+  assert.match(rule, /font-family: var\(--font-title\);/);
   assert.match(css, /--control-border-width: 2px;/);
+  const tilts = [...story.matchAll(/export const PILL_TILTS: readonly number\[\] = \[([^\]]+)\];/g)][0][1].split(",").map(Number);
+  assert.ok(tilts.length > 0 && tilts.every((tilt) => Math.abs(tilt) <= 3), "three degrees at most");
   // Four tones, none of them the action's.
   const tones = [...css.matchAll(/--round-tone-[1-4]: (#[0-9A-Fa-f]{6});/g)].map((match) => match[1].toUpperCase());
   assert.equal(tones.length, 12, "four by day, and four in each of the two places night is written");
   assert.ok(!tones.includes("#FFC531"), "never the sun");
-  assert.doesNotMatch(css.slice(css.indexOf(".sticker-strip {"), css.indexOf("html[data-moves] [data-landing-story]")), /--accent|--sun/);
-  // A band with no first sticker and no last: the row is wider than any screen and centred on its own middle.
-  assert.match(css, /\.sticker-strip \{\n  display: flex;\n  justify-content: center;\n  overflow: hidden;/);
-  assert.match(story, /const SETS = \[0, 1, 2, 3, 4, 5\];/);
+  assert.doesNotMatch(css.slice(css.indexOf(".pill-strip {"), css.indexOf("html[data-moves] [data-landing-story]")), /--accent|--sun/);
+  // Two rows where the window is wide, three on a phone, and the stylesheet shows one of the two.
+  assert.match(story, /\{ window: "wide", rows: 2 \},\n\s*\{ window: "narrow", rows: 3 \},/);
+  assert.deepEqual(inRows(lines, 2).map((row) => row.length).reduce((sum, count) => sum + count, 0), lines.length);
+  assert.equal(inRows(lines, 3).length, 3);
+  assert.match(css, /\.pill-rows \{\n  display: none;/);
+  assert.match(css, /\.pill-rows-narrow \{\n  display: flex;\n\}\n@media \(min-width: 600px\) \{\n  \.pill-rows-narrow \{\n    display: none;\n  \}\n  \.pill-rows-wide \{\n    display: flex;\n  \}\n\}/);
+  // A row with no first name and no last: wider than any screen, and centred on its own middle.
+  assert.match(css, /\.pill-row \{\n  display: flex;\n  justify-content: center;\n\}\n\.pills \{\n  display: flex;\n  flex: none;/);
+  assert.match(css, /\.pill-strip \{\n  overflow: hidden;/);
+  assert.match(story, /const SETS = \[0, 1, 2, 3\];/);
+  // One set is read by a screen reader, as a list; the copies that make the row endless are hidden from it.
+  assert.match(story, /\{\.\.\.\(set === 0 \? \{ role: "listitem" \} : \{ "aria-hidden": true \}\)\}/);
+  assert.match(story, /role="list" aria-label=\{W\.read\}/);
+  assert.equal(LANDING_STORY.read, "What Viky reads");
 });
 
 test("the movement: the first image is the starting state, and without it everything is there", () => {
@@ -96,17 +165,17 @@ test("the movement: the first image is the starting state, and without it everyt
   assert.equal(P.startAt, 0.8);
   assert.deepEqual({ stagger: P.word.staggerMs, rise: P.word.riseMs, ease: P.word.ease, fade: P.word.fadeMs }, { stagger: 70, rise: 650, ease: "back.out(1.8)", fade: 200 });
   assert.deepEqual({ land: P.character.landMs, ease: P.character.ease }, { land: 800, ease: "elastic.out(1, 0.5)" });
-  assert.deepEqual({ ms: P.back.ms, ease: P.back.ease }, { ms: 900, ease: "back.out(1.3)" });
-  assert.equal(P.line.ms, 350);
-  assert.deepEqual({ drift: P.drift.px, lean: P.lean.deg }, { drift: 160, lean: 7 });
+  // The lines arrive one after the other, 160 ms apart, after the title.
+  assert.deepEqual({ ms: P.line.ms, stagger: P.line.staggerMs, rise: P.line.rise }, { ms: 400, stagger: 160, rise: 14 });
+  assert.deepEqual(P.drift, { px: 160, catchUpS: 0.5 });
   const moving = story.slice(story.indexOf("function usePosters("), story.indexOf("export function LandingStory()"));
-  assert.doesNotMatch(moving, /duration: \d|stagger: \d|scrub: \d|ease: "(?!none")/, "no value written in the component");
+  assert.doesNotMatch(moving, /duration: \d|stagger: \d|scrub: \d|ease: "(?!none")|transformOrigin: "/, "no value written in the component");
   assert.match(moving, /start: `clamp\(top \$\{P\.startAt \* 100\}%\)`, once: true/);
   assert.match(moving, /scale: 0, rotate: P\.character\.fromTurn \}, \{ scale: 1, rotate: 0, duration: seconds\(P\.character\.landMs\), ease: P\.character\.ease \}/);
-  assert.match(moving, /if \(one\.dataset\.ch === "back"\) \{\n[^\n]*\n\s*play\.fromTo\(one, \{ opacity: 0, x: P\.back\.from/, "the day that was missed comes back from the far side");
-  // Tied to the scroll, never to a clock, and the scroll itself is never touched.
-  assert.match(moving, /gsap\.fromTo\(stickers, \{ x: P\.drift\.px \}, \{ x: -P\.drift\.px, ease: "none", scrollTrigger: \{[^}]*scrub: P\.drift\.catchUpS \} \}\)/);
-  assert.match(moving, /gsap\.fromTo\(drawn, \{ rotate: -P\.lean\.deg \}, \{ rotate: P\.lean\.deg, ease: "none"/);
+  assert.match(moving, /play\.fromTo\(lines, \{ opacity: 0, y: P\.line\.rise \}, \{ opacity: 1, y: 0, duration: seconds\(P\.line\.ms\), stagger: seconds\(P\.line\.staggerMs\), ease: P\.line\.ease \}/);
+  // Tied to the scroll, never to a clock, and the scroll itself is never touched: the rows drift opposite ways.
+  assert.match(moving, /const from = pills\.dataset\.pills === "one-way" \? P\.drift\.px : -P\.drift\.px;\n\s*gsap\.fromTo\(pills, \{ x: from \}, \{ x: -from, ease: "none", scrollTrigger: \{[^}]*scrub: P\.drift\.catchUpS \} \}\)/);
+  assert.match(story, /data-pills=\{at % 2 === 0 \? "one-way" : "the-other"\}/);
   assert.doesNotMatch(story, /ScrollSmoother|normalizeScroll|snap:|pin:|scrollTo|setInterval|requestAnimationFrame/);
   // The library is never told to measure again at once: only the way that waits for a scroll under way to end.
   assert.doesNotMatch(story, /ScrollTrigger\.refresh\(\)/);
@@ -124,6 +193,34 @@ test("the movement: the first image is the starting state, and without it everyt
   assert.match(moving, /if \(!story \|\| reduced\(\) \|\| !document\.documentElement\.hasAttribute\(MOVES\) \|\| story\.hasAttribute\(POSTERS_STILL\)\) return;/);
   assert.match(moving, /\}, still\);/, "a library that does not load leaves the posters shown, still");
   assert.match(moving, /const giveUp = window\.setTimeout\(still, P\.giveUpMs\);/);
+});
+
+test("each character's act is tied to the scroll, with the mockup's values, and plays backwards when the page is scrolled back", () => {
+  const A = MOTION.poster.acts;
+  // The values of the living mockup, in the tokens.
+  assert.equal(A.catchUpS, 0.35);
+  assert.deepEqual({ turn: A.roll.turn, shift: A.roll.shift }, { turn: 270, shift: "0.3em" }, "the day earned rolls a turn and a half");
+  assert.deepEqual({ times: A.hop.times, height: A.hop.height, squash: A.hop.squash }, { times: 3, height: "-0.5em", squash: { x: 1.12, y: 0.82 } }, "today hops three times and squashes where it lands");
+  assert.deepEqual({ from: A.back.from, homeAt: A.back.homeAt }, { from: "4.4em", homeAt: 0.48 }, "the day missed comes back from the right, and is home by mid screen");
+  assert.deepEqual(A.nod.turns, [20, 18, 14], "the yes nods three times, twenty degrees each way at first");
+  assert.deepEqual({ drop: A.shades.drop, onAt: A.shades.onAt }, { drop: -15, onAt: 0.46 }, "the sunglasses come down as the title reaches mid screen");
+  const moving = story.slice(story.indexOf("function usePosters("), story.indexOf("export function LandingStory()"));
+  // Tied to the scroll: every act is scrubbed, none has a clock, and none is played once.
+  const acts = moving.slice(moving.indexOf("const A = P.acts;"), moving.indexOf("story.setAttribute(POSTERS_READY, \"playing\")"));
+  assert.match(acts, /const whole = \(held: Element\) => \(\{ trigger: held, start: "top bottom", end: "bottom top", scrub: A\.catchUpS \}\);/);
+  assert.equal(acts.match(/scrub: A\.catchUpS/g)?.length, 3, "the whole pass, the way back and the sunglasses");
+  assert.doesNotMatch(acts, /once: true|delay:/);
+  for (const act of ["roll", "hop", "back", "nod", "shades"]) assert.match(acts, new RegExp(`act === "${act}"`), act);
+  assert.match(acts, /gsap\.fromTo\(drawn, \{ rotate: -A\.roll\.turn, x: `-\$\{A\.roll\.shift\}` \}, \{ rotate: A\.roll\.turn, x: A\.roll\.shift, ease: "none"/);
+  assert.match(acts, /\{ x: A\.back\.from, rotate: A\.back\.fromTurn, opacity: 0 \},\n\s*\{ x: 0, rotate: 0, opacity: 1, ease: A\.back\.ease/);
+  assert.match(acts, /const shades = drawn\.querySelector\('\[data-prop="shades"\]'\);/);
+  assert.match(readFileSync("app/kit/Figure.tsx", "utf8"), /<g data-part="eyes" data-prop="shades"/);
+  // The day that was missed does not land with the others: the scroll brings it.
+  assert.match(moving, /if \(one\.dataset\.ch === "back"\) \{\n[^\n]*\n\s*play\.set\(one, \{ opacity: 1 \}, 0\);/);
+  // None of it where less movement is asked for: the posters' script does not run at all there.
+  assert.match(moving, /if \(!story \|\| reduced\(\)/);
+  // And on paper everything is at rest, what an act had moved included.
+  assert.match(css, /:is\(\[data-w\], \[data-ch\], \[data-ch\] svg, \[data-ch\] \[data-prop\], \[data-line\], \[data-strip\], \[data-pills\], \[data-figure\], \[data-offer\]\) \{\n    opacity: 1 !important;\n    transform: none !important;/);
 });
 
 test("gsap is loaded by the landing alone, and its licence is said for what it is", () => {
