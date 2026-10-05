@@ -215,6 +215,12 @@ test("each character's act is tied to the scroll, with the mockup's values, and 
   assert.match(acts, /\{ x: A\.back\.from, rotate: A\.back\.fromTurn, opacity: 0 \},\n\s*\{ x: 0, rotate: 0, opacity: 1, ease: A\.back\.ease/);
   assert.match(acts, /const shades = drawn\.querySelector\('\[data-prop="shades"\]'\);/);
   assert.match(readFileSync("app/kit/Figure.tsx", "utf8"), /<g data-part="eyes" data-prop="shades"/);
+  // The face has its eyes under the sunglasses: while they are not down yet it is not a face with none (the founder,
+  // 5 Oct 2026). Each eye is at the centre of its lens and smaller than it, so the sunglasses cover both whole.
+  const figure = readFileSync("app/kit/Figure.tsx", "utf8");
+  assert.match(figure, /if \(eyes === "shades"\) \{[\s\S]{0,700}<g data-part="under-shades">\n\s*\{at\.map\(\(\[x, y\]\) => \(\n\s*<circle key=\{x\} cx=\{x\} cy=\{y\} r=\{EYE_R\} style=\{\{ fill: INK \}\} \/>\n\s*\)\)\}\n\s*<\/g>\n\s*<Shades id=\{id\} \/>/);
+  assert.match(figure, /const EYES_AT: readonly \(readonly \[number, number\]\)\[\] = \[\n  \[26, 18\],\n  \[38, 18\],\n\];\nconst EYE_R = 2\.8;/);
+  assert.match(figure, /\{\[26, 38\]\.map\(\(x\) => \(\n\s*<rect key=\{x\} x=\{x - 5\.2\} y=\{14\.1\} width=\{10\.4\} height=\{7\.8\} rx=\{3\.2\}/, "a lens centred on each eye, wider and taller than it");
   // The day that was missed does not land with the others: the scroll brings it.
   assert.match(moving, /if \(one\.dataset\.ch === "back"\) \{\n[^\n]*\n\s*play\.set\(one, \{ opacity: 1 \}, 0\);/);
   // None of it where less movement is asked for: the posters' script does not run at all there.
