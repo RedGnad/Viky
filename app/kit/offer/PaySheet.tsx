@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMadeHere } from "@/src/account/door";
+import { useMadeHere, useOnAComputer } from "@/src/account/door";
 import { useAccount } from "@/src/account/provider";
 import { getJson } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
@@ -69,6 +69,7 @@ export function PaySheet({
 }: Readonly<{ open: boolean; draft: GiftDraft; onChange: (draft: GiftDraft) => void; onClose: () => void; /** A press on pay is making its account, or stopped making it. */ onMaking: (making: boolean) => void }>) {
   const { address, hasCredential, ensureAccount, status } = useAccount();
   const madeHere = useMadeHere();
+  const computer = useOnAComputer();
   const router = useRouter();
   const money = useDisplayCurrency(address);
   const [held, setHeld] = useState<bigint | null>(null);
@@ -320,6 +321,12 @@ export function PaySheet({
       {/* What the press does where it makes something: an account, the first time. Signed in, the phone's own prompt
           says it, and the sheet says nothing more. */}
       {address || hasCredential ? null : <p className={HELP}>{madeHere ? W.passkeyMakesTheAccount : ACCOUNT_DOOR.madeOnTheMainSite}</p>}
+      {/* On a computer, which choice of the system's sheet follows the person, before the press that makes the account. */}
+      {address || hasCredential || !madeHere || !computer ? null : (
+        <p className={HELP} data-on-a-computer="">
+          {ACCOUNT_DOOR.onAComputer}
+        </p>
+      )}
       {/* The press makes an account: 18 or older, as wherever one is made. The card's own line says it when a card pays. */}
       {address || hasCredential || !madeHere || byCard ? null : (
         <p className={HELP} data-adult="">

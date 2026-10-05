@@ -39,7 +39,8 @@ const GUIDANCE: Record<AccountErrorCode, string> = {
   PASSKEY_CANCELLED: "The passkey prompt was closed before it finished. Try again when you are ready.",
   NOT_SECURE_CONTEXT: "Viky needs a secure connection (https) to create your account.",
   SESSION_ENDED: "You were signed out. Sign in again to continue.",
-  NO_CREDENTIAL: "No account is saved on this device yet. Create one, or sign in with a passkey you already have.",
+  // A passkey prompt closed on a device that knows no account (the founder, 5 Oct 2026): what happened, and what to do.
+  NO_CREDENTIAL: "No account was found on this device. Create one, or sign in on the device where you made it.",
   NOT_IN_BROWSER: "Accounts can only be created in a browser.",
   UNSUPPORTED_BROWSER:
     "This browser cannot create a passkey for Viky. Copy the link and open it in Chrome (Android) or Safari (iPhone), then try again.",

@@ -40,7 +40,8 @@ test("signing out and asking for another account both lead straight to the accou
   // The landing's door opens as it arrives, once, with nothing tried yet: its second key says "Sign in".
   const door = readFileSync("app/kit/SignInDoor.tsx", "utf8");
   assert.match(door, /if \(live && doorWasAskedFor\(\)\) setOpen\(true\);/);
-  assert.match(door, /\{tried \? W\.again : W\.open\}/);
+  // "Try again" is said of a passkey this device remembers and that did not answer, and of nothing else (5 Oct 2026).
+  assert.match(door, /\{tried && hasCredential \? W\.again : W\.open\}/);
   const asked = readFileSync("src/account/door-asked.ts", "utf8");
   assert.match(asked, /if \(asked\) window\.sessionStorage\.removeItem\(KEY\);/, "read once");
   // And the page of an account is never drawn for nobody on the way: it keeps the account it was drawn for.

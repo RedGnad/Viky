@@ -65,7 +65,6 @@ const FOLDED: Readonly<Record<string, string>> = {
   // The pay sheet and the wait.
   // What the card service asks the first time, said in the one fold since the mockup of 3 Oct 2026.
   "PAY.cardNotOffered": `${PAY_SHEET}, whole; ${FIRST("the page of a payment that landed short")}`,
-  "PAY.cardLine.before": `${PAY_SHEET}, the one line under its button`,
   "PAY.passkeyMakesTheAccount": PAY_SHEET,
   "PAY.fromJudgeCredit": PAY_SHEET,
   "FUND.check.missed": WHAT_HAPPENS,
