@@ -14,7 +14,8 @@ const script = readFileSync("scripts/check-sources.ts", "utf8");
 test("the command exists, and is named where an operator looks", () => {
   const scripts = (JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> }).scripts;
   assert.equal(scripts["check:sources"], "tsx scripts/check-sources.ts");
-  assert.match(readFileSync("README.md", "utf8"), /`pnpm check:sources`/);
+  // Among the operator's commands, which moved from the README to docs/ with the pages and routes (5 Oct 2026).
+  assert.match(readFileSync("docs/PAGES-AND-ROUTES.md", "utf8"), /`pnpm check:sources`/);
 });
 
 test("it names no private person's certificate: those samples come from a file that is never committed", () => {
