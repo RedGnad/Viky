@@ -33,7 +33,8 @@ git clone https://github.com/RedGnad/Viky.git && cd Viky && pnpm install && pnpm
 
 # A refusal, on the contract in service, with Foundry's cast: it answers "execution reverted", data 0x586d3357,
 # which is NotRecipient().
-cast call 0x591d76863177E70FfcA2C793212d4715A367Ec70 "withdrawEarned(uint256,address,uint256)" 1000 0x000000000000000000000000000000000000dEaD 1 --rpc-url https://rpc.monad.xyz
+cast call 0x591d76863177E70FfcA2C793212d4715A367Ec70 "withdrawEarned(uint256,address,uint256)" \
+  1000 0x000000000000000000000000000000000000dEaD 1 --rpc-url https://rpc.monad.xyz
 ```
 
 `pnpm verify:day` proves that the source's own servers answered and that the contract settled that day against that

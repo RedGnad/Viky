@@ -91,7 +91,7 @@ test("the command that checks a credited day, and a refusal with the error the c
   const selector = toFunctionSelector("NotRecipient()");
   assert.equal(selector, "0x586d3357");
   assert.ok(FIRST_SCREEN.includes(`the error \`NotRecipient()\`, \`${selector}\``));
-  assert.ok(FIRST_SCREEN.includes(`cast call ${IN_SERVICE.GiftEscrowV3} "withdrawEarned(uint256,address,uint256)" 1000 0x000000000000000000000000000000000000dEaD 1 --rpc-url https://rpc.monad.xyz`));
+  assert.ok(FIRST_SCREEN.includes(`cast call ${IN_SERVICE.GiftEscrowV3} "withdrawEarned(uint256,address,uint256)" \\\n  1000 0x000000000000000000000000000000000000dEaD 1 --rpc-url https://rpc.monad.xyz\n`));
   const escrow = readFileSync("contracts/GiftEscrowV3.sol", "utf8");
   assert.match(escrow, /error NotRecipient\(\);/);
   assert.match(escrow, /function withdrawEarned\(uint256 giftId, address to, uint256 amount\) external nonReentrant \{\n\s*Gift storage g = _gift\(giftId\);\n\s*if \(msg\.sender != g\.recipient\) revert NotRecipient\(\);/);
