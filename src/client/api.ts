@@ -1,5 +1,6 @@
 /** Browser-side calls to Viky's own routes: same origin, cookie included, typed refusals surfaced. */
 
+import { GENERIC_FAILURE } from "../generic-failure";
 import { withTheLimitSaid } from "./limit";
 
 export type ApiFailure = Readonly<{ status: number; code: string; message: string; detail?: string }>;
@@ -61,7 +62,7 @@ async function unwrap<T>(response: Response): Promise<T> {
     throw new ApiError({
       status: response.status,
       code: failure.code ?? (response.status === 401 ? "SIGN_IN_REQUIRED" : "FAILED"),
-      message: failure.error ?? "Something went wrong. Nothing was changed.",
+      message: failure.error ?? GENERIC_FAILURE,
       detail: failure.detail,
     });
   }

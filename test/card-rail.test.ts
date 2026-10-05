@@ -133,7 +133,8 @@ test("each button or link that pays by card carries the line, and gives way to t
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   // The pay sheet's own line carries the terms with who takes the card (the mockup of 3 Oct 2026).
   assert.match(sheet, /\{byCard \? <CardLine way=\{way\} \/> : null\}/);
-  assert.match(sheet, /\{!enough && cardClosed \? \(\s*<CardNotOffered country=\{card\?\.country \?\? null\} whole \/>/);
+  // Only once the account is read and short: while it is not known, nothing says the card is not offered either.
+  assert.match(sheet, /\{pays === "card" && cardClosed \? \(\s*<CardNotOffered country=\{card\?\.country \?\? null\} whole \/>/);
   const wait = readFileSync("app/components/PayGift.tsx", "utf8");
   // The two places the waiting screen opens the partner: paying the rest, and the partner's page itself.
   // And a third, under the button that opens a card paid inside Viky (the founder, 1 Oct 2026), and a fourth under the

@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { handsetOf } from "./errors";
 import { installedOnTheHomeScreen } from "./mera";
 import { accountsAreMadeAt, doorOf, readDoor, type Door } from "./passkey-support";
 
@@ -10,7 +11,7 @@ import { accountsAreMadeAt, doorOf, readDoor, type Door } from "./passkey-suppor
  * gift opened from an Instagram message is drawn with "Open in Safari" as it arrives, and never with a button that
  * cannot work until the page has woken. What the device says of itself is asked in the browser, after.
  */
-const DoorContext = createContext<Readonly<{ door: Door; origin: string }>>({ door: { kind: "checking" }, origin: "" });
+const DoorContext = createContext<Readonly<{ door: Door; origin: string; computer: boolean }>>({ door: { kind: "checking" }, origin: "", computer: false });
 
 export function DoorProvider({ userAgent, origin, children }: Readonly<{ userAgent: string; origin: string; children: ReactNode }>) {
   const [door, setDoor] = useState<Door>(() => {
@@ -28,12 +29,22 @@ export function DoorProvider({ userAgent, origin, children }: Readonly<{ userAge
       live = false;
     };
   }, []);
-  const value = useMemo(() => ({ door, origin }), [door, origin]);
+  // A browser that names itself as no phone's: a computer, said from the first image. One that names nothing is not taken for one.
+  const computer = userAgent !== "" && handsetOf(userAgent) === "other";
+  const value = useMemo(() => ({ door, origin, computer }), [door, origin, computer]);
   return <DoorContext.Provider value={value}>{children}</DoorContext.Provider>;
 }
 
 export function useDoor(): Door {
   return useContext(DoorContext).door;
+}
+
+/**
+ * Whether the page is read on a computer. Where a passkey is kept matters there (src/account/key-kept.ts): a phone
+ * saves it with the account it is signed in to, and a computer may keep it for itself alone.
+ */
+export function useOnAComputer(): boolean {
+  return useContext(DoorContext).computer;
 }
 
 /** Whether an account may be made on the address this page is served from, known from its first image as the door is. */

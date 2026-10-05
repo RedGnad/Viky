@@ -277,6 +277,11 @@ export const PAY = {
     cantSignIn: "Can't sign in here?",
     /** Under the frame once a payment is known: no way out, and why. */
     keepOpen: "Keep this window open: Rampnow is finishing your payment.",
+    /**
+     * Under the frame from the moment a payment was started (the founder, 5 Oct 2026): Rampnow's own page shows an
+     * error of its own at a step it does not know, and the payment is not lost for it.
+     */
+    foundAgain: "If this window shows an error, your payment is found again from Home.",
     /** Five minutes without the money: a way out, to the screen that waits. */
     late: "This is taking longer than usual.",
     lateOut: "Close this window",
@@ -295,11 +300,13 @@ export const PAY = {
   },
   yourCode: "Your code",
   /**
-   * The one line under the pay sheet's button (the mockup of 3 Oct 2026): who takes the card, what it asks the first
-   * time, and the terms, with no box to tick. Elsewhere a button that pays by card keeps `cardTerms` under it.
+   * The one line under the pay sheet's button (the mockup of 3 Oct 2026): who takes the card, what it asks before
+   * taking it, and the terms, with no box to tick. What it asks is that service's own (`WayIn.asks`, the founder,
+   * 5 Oct 2026): "with your ID the first time" was said of every one of them, and one asks for more than that.
+   * Elsewhere a button that pays by card keeps `cardTerms` under it.
    */
   cardLine: {
-    before: (partner: string) => `${partner} takes your card, with your ID the first time. By paying you are 18 or older and accept `,
+    before: (partner: string, asks: string) => `${partner} takes your card and asks for ${asks}. By paying you are 18 or older and accept `,
     link: (partner: string) => `${partner}'s terms`,
     after: ".",
   },
@@ -315,7 +322,13 @@ export const PAY = {
   /** In the card's place, where no card partner serves the payer's country (the founder's words, 29 Sep 2026). */
   cardNotOffered: (country: string | null) =>
     `Card payment isn't available ${country ? `in ${country}` : "where you are"}. You can pay with money already in your Viky account, and anyone who uses Viky can send money to yours.`,
+  /** The button while nothing says yet what pays: the gift is not filled in, or what the account holds is not read. */
   pay: "Pay",
+  /** Under the button while the account is being read (the founder, 5 Oct 2026): the button names no way until then. */
+  readingAccount: "Reading what your account holds.",
+  /** The reading failed: what happened, and the small button under it reads again. Never the card in its place. */
+  accountUnread: "What your account holds could not be read.",
+  readAgain: "Read it again",
   payByCard: (amount: string) => `Pay ${amount} by card`,
   payFromAccount: (amount: string, recipient: string) => `Put ${amount} in ${their(recipient)} name`,
   /**
@@ -470,11 +483,12 @@ export const DOOR = {
   /**
    * Two words, because the header has room for two (the founder, 21 Sep 2026: "c'est trop long"). It used to name
    * both of the things it does, which is what the sheet it opens does instead: the sheet says how an account is
-   * made here, in one line, and its own action is "Create your account".
+   * made here, in one line, and its own action is "Create my account".
    */
   open: "Sign in",
   how: "Your face or your fingerprint, and nothing to remember.",
-  create: "Create your account",
+  /** The same words as the account's other door (app/components/AccountPanel.tsx): one action, one name (5 Oct 2026). */
+  create: "Create my account",
   again: "Try again",
   notNow: "Not now",
   busy: "One moment",
@@ -544,6 +558,27 @@ export const ACCOUNT_DOOR = {
   createThere: "Create my account on viky.cash",
   samePasskey: "The same passkey you made your account with.",
   another: "A second account would not hold what the first one does.",
+  /**
+   * On a computer, before the press (the founder, 5 Oct 2026; research D, P4 and P5). Where the key goes is chosen in
+   * the system's own sheet and the page is not told, so what can be said first is which choice follows the person:
+   * Google's own help says a key saved in Windows Hello or in a Chrome profile stays on that computer and cannot be
+   * recovered (support.google.com/chrome/answer/13168025, read 5 Oct 2026). "Passkey" is the system sheet's own word,
+   * and under ninety characters, as every sentence in the open is: what a key kept here cannot do is said after the
+   * press, by the notice, when it is the case.
+   */
+  onAComputer: "Save your passkey with Apple or Google. Kept on this computer alone, it stays on it.",
+  /**
+   * After it, on a computer: where the key is kept, when the browser said (src/account/key-kept.ts). A key bound to
+   * this computer is said with what follows from it; a key that may follow is named by its store and nothing is
+   * promised of it, since which phones a store reaches is not something the browser tells. Nothing where it said nothing.
+   */
+  keyKept: (kept: Readonly<{ follows: boolean; where: string | null; apart: boolean }>): string | null => {
+    if (kept.follows) return kept.where ? `Your passkey is kept in ${kept.where}.` : null;
+    if (kept.apart) return "Your passkey is kept on your security key. Your account opens with it alone.";
+    return `Your passkey is kept ${kept.where ? `in ${kept.where}, ` : ""}on this computer only. It does not follow you to your phone.`;
+  },
+  /** The notice that says so once, on Home: read, and not shown again on this device. */
+  gotIt: "Got it",
 } as const;
 
 /** Gifts: everything given and received. */
@@ -808,6 +843,13 @@ export const FUND = {
     payMore: (more: string) => `Pay ${more} more`,
     makeIt: (held: string) => `Make it ${held}`,
     priceMoved: "The price changed and nothing was changed. Viky will try again in a moment.",
+    /**
+     * Under the ring, when a call did not answer once the payment is in the account (the founder, 5 Oct 2026;
+     * src/after-paying.ts). What is known and nothing else: the check did not answer, the payment is not lost, and the
+     * wait goes on. It stands where the sentence of a request that did nothing could come out
+     * (src/generic-failure.ts), which after a payment may be false.
+     */
+    notAnswered: "The check did not answer. Your payment is not lost, and the wait goes on.",
   },
 
   closed: {
@@ -855,6 +897,8 @@ export const FUND = {
 
   failures: {
     other: "That did not go through, and nothing was taken. Try again.",
+    /** A gift that could not be made once the money is in the account: true of somebody whose card was charged. */
+    notMade: "The gift was not made. Your money is in your account.",
     signInFirst: "Sign in first.",
     tryAgain: "Try again",
   },
@@ -1867,7 +1911,12 @@ export const HELP = {
     },
     {
       q: "I lost my phone.",
-      a: "Your account lives in your passkey, kept by Apple, Google or your password manager rather than by Viky. Sign in on the new phone the same way you did on the old one, and everything is there. There is nothing to write down and nothing we could send you.",
+      // With its condition (the founder, 5 Oct 2026): the promise holds for a key a store copies, and not for a key
+      // one computer holds alone. Google's help for Chrome says of a passkey saved in Windows Hello that
+      // "synchronization or backup aren't supported", and of one saved in a Chrome profile that it cannot be recovered
+      // "if your computer is lost or the Chrome profile is deleted" (support.google.com/chrome/answer/13168025, read
+      // 5 Oct 2026).
+      a: "Your account lives in your passkey, not with Viky. If your passkey is kept by Apple, Google or a password manager, sign in on the new phone the same way you did on the old one, and everything is there. A passkey kept only in Windows Hello or in one Chrome profile stays on that computer and does not come back on another device. There is nothing to write down and nothing we could send you.",
     },
     {
       q: "A payout service asks for a code.",

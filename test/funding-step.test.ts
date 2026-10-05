@@ -71,8 +71,12 @@ test("the screen keeps the time of the failure, and its watch still depends on t
   assert.match(watch, /nextFundingStep\(\{ held: read\.held, arriving: read\.arriving, arrivingUsdc: read\.usdc, inGifts, wanted, failedAtMs: failedAtMs\.current, nowMs: Date\.now\(\) \}\)/);
   const failure = watch.slice(watch.indexOf("await fundingQuote(next.amount)"), watch.lastIndexOf("const after = await readAusdBalance"));
   assert.ok(watch.includes("await fundingQuote(next.amount)"), "the conversion is asked through the check that holds it to the amount and the exchange");
-  assert.ok(failure.indexOf("failedAtMs.current = Date.now()") < failure.indexOf('setPhase("waiting")'), "the time is kept before the phase starts the watch again");
-  assert.match(failure, /setProblem\(W\.arrived\.priceMoved\);\s+setPhase\("waiting"\)/, "the sentence is said with the phase it belongs to");
+  // Since 5 Oct 2026 the screen stays on the change after a failure: the payment arrived, and the screen that waits
+  // for one put its pay button back in front of somebody who had paid. The time is still what keeps the next look,
+  // and every look inside the pause, from converting again; the watch goes on by its interval.
+  assert.ok(failure.includes("failedAtMs.current = Date.now()"), "the time of the failure is kept");
+  assert.doesNotMatch(failure, /setPhase\("waiting"\)/, "the screen does not go back to the one that offers to pay");
+  assert.match(failure, /setAsksAgain\(after\.keep \? after\.says : W\.arrived\.priceMoved\);/, "what is known is said under the ring");
   assert.match(watch, /\}, \[step, address, units, phase, refresh, give, ensureSigner, earned\]\);/, "the phase stays among what the watch depends on");
   assert.match(watch, /setInterval\(\(\) => void look\(\), POLL_MS\)/);
 });
@@ -98,9 +102,12 @@ test("paying a gift counts what the person's gifts hold for them, and takes it b
 
   // The pay sheet: "From your Viky money" is the account and the gifts' part, read with the list it already reads.
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
-  assert.match(sheet, /setInGifts\(heldInGifts\(gifts\)\);/);
-  assert.match(sheet, /const inAccount = \(held \?\? 0n\) \+ inGifts;/);
-  assert.match(sheet, /judgeLineIsTrue\(\{ gift: units, held, untouchedCredit \}\)/, "the judge credit line is still about the account alone");
+  // Since 5 Oct 2026 the sheet reads all of it in one reading (src/client/pay-held.ts), and counts it as Home does
+  // (src/pay-held.ts): what the gifts hold is added to what a gift holds before the cut to the cent.
+  assert.match(readFileSync("src/client/pay-held.ts", "utf8"), /const inGifts = mine\.gifts\.reduce\(\(sum, gift\) => sum \+ BigInt\(gift\.takeable \?\? "0"\), 0n\);/);
+  assert.match(readFileSync("src/pay-held.ts", "utf8"), /dollarsToTheCent\(parts\.ausd \+ parts\.inGifts, parts\.usdc\)/);
+  assert.match(sheet, /const inAccount = heldForTheLines\(Boolean\(address\), held\);/);
+  assert.match(sheet, /judgeLineIsTrue\(\{ gift: units, held: held\.state === "read" \? held\.parts\.ausd : null, untouchedCredit \}\)/, "the judge credit line is still about the account alone");
 
   // The screen that makes the gift: read once, taken once, and a refusal is said and not tried again by itself.
   const screen = readFileSync("app/components/PayGift.tsx", "utf8");
