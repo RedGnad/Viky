@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
+import { readFileSync } from "node:fs";
 import test from "node:test";
-import { CURRENCIES_WHEN_SILENT, currencyOf, figureIn, isCurrencyCode, markOf, offeredCurrencies, perDollar } from "../src/currencies";
+import { amountByItsLetters, amountIn, CURRENCIES_WHEN_SILENT, currencyOf, figureIn, isCurrencyCode, lettersOf, markOf, offeredCurrencies, perDollar, written } from "../src/currencies";
 import { parseEcbRates } from "../src/rates";
 
 /**
@@ -57,16 +58,42 @@ test("a source that says nothing leaves the three the product was built on, neve
 });
 
 test("what a currency is called, its sign and its decimals come from the runtime, not from us", () => {
-  assert.deepEqual(currencyOf("EUR"), { code: "EUR", sign: "€", name: "Euro", decimals: 2 });
+  assert.deepEqual(currencyOf("EUR"), { code: "EUR", sign: "€", name: "Euro", decimals: 2, after: false });
   assert.equal(currencyOf("JPY").decimals, 0, "the yen counts in whole units");
   assert.equal(currencyOf("XOF").decimals, 0);
   assert.equal(currencyOf("INR").name, "Indian Rupee");
   assert.equal(currencyOf("INR").sign, "₹");
   // The sign stands against its figure or away from it, as that currency is written, never as we decide.
-  assert.deepEqual(markOf("EUR"), { sign: "€", gap: "" });
-  assert.deepEqual(markOf("CHF"), { sign: "CHF", gap: " " });
+  assert.deepEqual(markOf("EUR"), { sign: "€", gap: "", after: false });
+  assert.deepEqual(markOf("CHF"), { sign: "CHF", gap: "\u00a0", after: false });
   assert.equal(figureIn(1234.5, "EUR"), "1,234.50");
   assert.equal(figureIn(1234.5, "JPY"), "1,235", "a whole currency is a whole figure");
+});
+
+test("the two CFA francs are written and named as the people who count in them do, and stand side by side in the list", () => {
+  // The founder, 5 Oct 2026. Intl names them "West African CFA Franc" and "Central African CFA Franc": in a list sorted
+  // by name the first was the last line, after the US dollar, and he took it for gone. And it writes "F CFA 5,000" for
+  // one, "FCFA 5,000" for the other. Orange Money's price list in Côte d'Ivoire and Wave's terms there write "FCFA"
+  // after the figure, and neither says XOF.
+  assert.deepEqual(currencyOf("XOF"), { code: "XOF", sign: "FCFA", name: "CFA franc (West Africa)", decimals: 0, after: true });
+  assert.deepEqual(currencyOf("XAF"), { code: "XAF", sign: "FCFA", name: "CFA franc (Central Africa)", decimals: 0, after: true });
+  assert.equal(amountIn(5000, "XOF"), "5\u00a0000\u00a0FCFA");
+  assert.equal(amountIn(1234567.4, "XAF"), "1\u00a0234\u00a0567\u00a0FCFA");
+  assert.equal(written("26.18", "EUR"), "€26.18");
+  assert.equal(amountIn(26.18, "CHF"), "CHF\u00a026.18", "every other currency as Intl writes it");
+  assert.equal(figureIn(17172.4, "XOF"), "17\u00a0172", "the thousands a space apart, a space no line breaks at");
+  // By its letters where no sign is drawn: a payout service's own currency is named by its code, a franc by "FCFA".
+  assert.equal(lettersOf("XOF"), "FCFA");
+  assert.equal(lettersOf("EUR"), "EUR");
+  assert.equal(amountByItsLetters(5000, "XOF"), "5\u00a0000\u00a0FCFA");
+  assert.equal(amountByItsLetters(5000, "NGN"), "5,000 NGN");
+  // Side by side under C, where somebody looks for "CFA".
+  const rates = { date: "2026-10-02", usdPerEur: 1.1225, eurPerUsd: 1 / 1.1225, xofPerUsd: 655.957 / 1.1225, eurPer: { USD: 1.1225, EUR: 1, XOF: 655.957, XAF: 655.957, CAD: 1.5, CZK: 25, CHF: 0.93 }, readAtMs: 0 };
+  const listed = offeredCurrencies(["USD", "XOF", "CHF", "CZK", "XAF", "CAD", "EUR"], rates).map((code) => currencyOf(code).name);
+  assert.deepEqual(listed, ["Canadian Dollar", "CFA franc (Central Africa)", "CFA franc (West Africa)", "Czech Koruna", "Euro", "Swiss Franc", "US Dollar"]);
+  // Nothing else is written down: the exception is these two, and a test would have to be changed to add a third.
+  const source = readFileSync("src/currencies.ts", "utf8");
+  assert.deepEqual([...source.slice(source.indexOf("const WRITTEN_AFTER"), source.indexOf("};", source.indexOf("const WRITTEN_AFTER"))).matchAll(/^  ([A-Z]{3}): /gm)].map((match) => match[1]), ["XOF", "XAF"]);
 });
 
 test("a code names a currency or it does not, and three letters alone are not enough", () => {

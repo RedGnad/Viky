@@ -34,6 +34,7 @@ import { FoldChevron } from "../kit/GiftLive";
 import { Said } from "../kit/Said";
 import { AccountPanel } from "./AccountPanel";
 import { PhoneTopUp } from "./PhoneTopUp";
+import { amountIn, currencyOf } from "@/src/currencies";
 import { MobileMoneyOut, MobilePayoutCard } from "./MobileMoneyOut";
 import { latestMobilePayout, mobileMoneyOffer, payableFor, type AccountOffer, type FollowedPayout, type PayableNow } from "@/src/client/mobile-money";
 import { delayInWords, localInWords, MOBILE_REFUSALS, operatorsInWords } from "@/src/mobile-money";
@@ -68,8 +69,9 @@ type Where = "gather" | "amount" | "review" | "code" | "send" | "own";
 
 type Sent = Readonly<{ amount: string; exact?: string; name: string; when: string; reference: string; cost?: Readonly<{ dollars: string; underACent: boolean }> }>;
 
-/** A figure in the currency a payout service pays in: the euro and the dollar with their signs, anything else with its code. */
+/** A figure in the currency a payout service pays in: the euro and the dollar with their signs, a franc amount as francs are written, anything else with its code. */
 function figureIn(amount: number, currency: string): string {
+  if (currencyOf(currency).after) return amountIn(amount, currency);
   return currency === "EUR" ? `€${amount.toFixed(2)}` : currency === "USD" ? `$${amount.toFixed(2)}` : `${amount.toFixed(2)} ${currency}`;
 }
 

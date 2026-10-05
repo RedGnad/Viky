@@ -53,7 +53,7 @@ test("a gift keeps the currency its funder was reading in when they made it, onc
 test("the title names its amount in any currency, so the picture can set it in the text face", () => {
   const record = { amount: 25_000_000n, funderName: "Mom", goalType: 1 };
   assert.deepEqual(previewOf(record, true, {}, { currency: "EUR", rates: RATES }).amount, "€20.00");
-  assert.match(previewOf(record, true, {}, { currency: "XOF", rates: RATES }).amount!, /^F\sCFA\s13,119$/);
+  assert.match(previewOf(record, true, {}, { currency: "XOF", rates: RATES }).amount!, /^13\s119\sFCFA$/);
   assert.equal(previewOf(record, true, {}, { currency: "KRW", rates: RATES }).amount, "₩32,000");
   assert.equal(previewOf(record, true).amount, "$25.00");
   assert.equal(previewOf(record, false, {}, { currency: "EUR", rates: RATES }).amount, "$25.00", "a link without its key says dollars, and names nobody");

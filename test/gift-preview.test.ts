@@ -79,8 +79,8 @@ const RATES = { date: "2026-09-29", usdPerEur: 1.25, eurPerUsd: 0.8, xofPerUsd: 
 test("with the link's key, the amount is said about, in the funder's own currency, and in dollars without it", () => {
   const record = { amount: 25_000_000n, funderName: "Mom", goalType: 1 };
   assert.equal(previewOf(record, true, {}, { currency: "EUR", rates: RATES }).title, "Mom put about €20.00 in your name");
-  // The CFA franc has no subunit, and its sign stands apart from the figure as Intl writes it (spaces vary by runtime).
-  assert.match(previewOf(record, true, {}, { currency: "XOF", rates: RATES }).title, /^Mom put about F\sCFA\s13,119 in your name$/);
+  // The CFA franc has no subunit, and it is written as the people who count in it write it: its letters after the figure.
+  assert.match(previewOf(record, true, {}, { currency: "XOF", rates: RATES }).title, /^Mom put about 13\s119\sFCFA in your name$/);
   // A guessed number names nobody, so it does not say where the funder lives either.
   assert.equal(previewOf(record, false, {}, { currency: "EUR", rates: RATES }).title, "Someone put $25.00 in your name");
   // A currency the day's file does not carry is not guessed at.

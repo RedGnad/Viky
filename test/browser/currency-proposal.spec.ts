@@ -48,7 +48,7 @@ test.describe("the currency is proposed from where the connection comes from", (
     // A phone in English in Dakar.
     const dakar = await visitor(browser, baseURL, "SN", "en-GB");
     await dakar.page.goto("/");
-    await expect(key(dakar.page)).toHaveAttribute("aria-label", "Read in another currency, West African CFA Franc now");
+    await expect(key(dakar.page)).toHaveAttribute("aria-label", "Read in another currency, CFA franc (West Africa) now");
     await dakar.context.close();
     // Morocco: the dirham is not offered, so the dollar, whatever the phone's language says.
     const rabat = await visitor(browser, baseURL, "MA", "fr-FR");

@@ -76,7 +76,7 @@ export function MoneyHero({
     <section className="money-display-box flex flex-col gap-[var(--space-xs)]">
       <h1 className={CARD_LABEL}>{W.yours}</h1>
       <p data-amount className={AMOUNT} style={chars(figure.text.length)}>
-        <ArrivalAmount from={seen ?? figure.value} to={figure.value} symbol={figure.symbol} decimals={figure.decimals} after={figure.after} />
+        <ArrivalAmount from={seen ?? figure.value} to={figure.value} symbol={figure.symbol} decimals={figure.decimals} after={figure.after} thousands={figure.thousands} />
       </p>
       {!figure.rateDate && money.unavailable ? <p className={HELP}>{money.unavailable}</p> : null}
     </section>

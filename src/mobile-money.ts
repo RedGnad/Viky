@@ -5,6 +5,8 @@
  * It is off until a real payout has reached a real number in one of the countries Switch covers: the switch is the
  * server setting `MOBILE_MONEY_OUT=on`, unset at the merge, and nothing about the way is offered while it is off.
  */
+import { amountIn, currencyOf } from "./currencies";
+
 
 /**
  * How much mobile money can carry for now (the founder, 3 Oct 2026), the same rule as the phone and gift card way out:
@@ -97,21 +99,17 @@ export function operatorsInWords(names: readonly string[]): string {
   return `${words.slice(0, -1).join(", ")} or ${words[words.length - 1]}`;
 }
 
-/** The two currencies whose sign a person in their countries writes as F: the West and the Central African CFA francs. */
-const CFA = new Set(["XOF", "XAF"]);
-
 /**
- * A local amount as it is said where it is paid: "6 540 F" for a CFA franc, cut down to the franc, never rounded up,
- * grouped by thousands with a space; any other currency with its code after it and its two decimals cut down.
+ * A local amount as it is said where it is paid: "6 540 FCFA" for a CFA franc, cut down to the franc, never rounded
+ * up, as francs are written everywhere in the product (src/currencies.ts, the founder, 5 Oct 2026: it was "6 540 F"
+ * here and "F CFA 6,540" on Home); any other currency with its code after it and its two decimals cut down.
  */
 export function localInWords(amount: number, currency: string): string {
   if (!Number.isFinite(amount) || amount < 0) return "";
-  if (CFA.has(currency.toUpperCase())) {
-    const whole = Math.floor(amount);
-    return `${whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")} F`;
-  }
+  const code = currency.toUpperCase();
+  if (currencyOf(code).after) return amountIn(Math.floor(amount), code);
   const cents = Math.floor(amount * 100) / 100;
-  return `${cents.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency.toUpperCase()}`;
+  return `${cents.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${code}`;
 }
 
 /**

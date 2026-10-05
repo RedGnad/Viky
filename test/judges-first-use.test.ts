@@ -20,14 +20,14 @@ test("mobile money: switched off, unread, open and unused, then its first payout
   assert.deepEqual(mobileMoneyUse(true, { count: 0, first: null }, countryInWords), { words: "Open. Nobody has used it yet.", transactions: [] });
   const first = { at, localAmount: 5892.17, localCurrency: "XOF", units: 10_000_000n, country: "SN", network: "ORANGE", depositTx: DEPOSIT, exitTx: EXIT };
   const once = mobileMoneyUse(true, { count: 1, first }, countryInWords);
-  assert.equal(once.words, "Open. Used once. The first arrived on 3 Oct 2026, 14:05 UTC: 5 892 F ($10.00) to a number on Orange, in Senegal.");
+  assert.equal(once.words, "Open. Used once. The first arrived on 3 Oct 2026, 14:05 UTC: 5\u00a0892\u00a0FCFA ($10.00) to a number on Orange, in Senegal.");
   assert.deepEqual(once.transactions, [
     { label: "its dollars sent to Switch", hash: DEPOSIT },
     { label: "the exchange that made them", hash: EXIT },
   ]);
   // Before Switch has said which transaction brought it the dollars, only the exchange is shown.
   const more = mobileMoneyUse(true, { count: 3, first: { ...first, depositTx: null, network: "MTN", country: "CI" } }, countryInWords);
-  assert.equal(more.words, "Open. Used 3 times. The first arrived on 3 Oct 2026, 14:05 UTC: 5 892 F ($10.00) to a number on MTN, in Côte d’Ivoire.");
+  assert.equal(more.words, "Open. Used 3 times. The first arrived on 3 Oct 2026, 14:05 UTC: 5\u00a0892\u00a0FCFA ($10.00) to a number on MTN, in Côte d’Ivoire.");
   assert.deepEqual(more.transactions, [{ label: "the exchange that made them", hash: EXIT }]);
 });
 

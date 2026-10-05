@@ -195,18 +195,18 @@ test.describe("your mobile money", () => {
       await card.locator(".said-fold summary").click();
       await expect(page.getByText(NEVER_SAID)).toHaveCount(0);
       // The smallest payout is said on the card, in the country's money, and it is the one the form opens on.
-      await expect(card.locator("[data-mobile-from]")).toHaveText("From 5 904 F at a time.");
+      await expect(card.locator("[data-mobile-from]")).toHaveText("From 5 904 FCFA at a time.");
       await shot(page, size.name, "1-the-card");
 
       await openTheCard(page);
       // The amount is in francs, and it opens on what $15.00 really sends once changed, the cost included: 8 802 F,
-      // where the balance at the published rate said 8 806 F and could not be paid.
+      // where the balance at the published rate said 8 806 FCFA and could not be paid.
       await expect(page.getByLabel("How much")).toHaveValue("8802");
-      await expect(page.getByText("From 5 904 F to 8 802 F at a time.", { exact: true })).toBeVisible();
+      await expect(page.getByText("From 5 904 FCFA to 8 802 FCFA at a time.", { exact: true })).toBeVisible();
       await page.clock.fastForward(1_000);
       // Priced without the field being touched: Switch's quote for those francs, and the dollars they take second, at
       // the hour of the person's own clock (13:15 in Nairobi for 10:15 UTC).
-      await expect(page.getByText("about 8 802 F", { exact: true })).toBeVisible();
+      await expect(page.getByText("about 8 802 FCFA", { exact: true })).toBeVisible();
       expect(asked.priced()).toEqual({ country: "SN", local: 8802 });
       await expect(page.getByText("$14.96 from your balance, at the rate of 3 Oct, 13:15.", { exact: true })).toBeVisible();
       expect(asked.refusedForMore(), "the exchange was never asked for more than the account holds").toBe(0);
@@ -229,7 +229,7 @@ test.describe("your mobile money", () => {
 
       await page.clock.fastForward(6_000);
       await expect(page.getByRole("heading", { name: "Arrived" })).toBeVisible();
-      await expect(page.getByText("8 802 F", { exact: true })).toBeVisible();
+      await expect(page.getByText("8 802 FCFA", { exact: true })).toBeVisible();
       await expect(page.getByText("On your Orange number ending 4567.", { exact: true })).toBeVisible();
       // Its end was shown on a screen somebody is looking at: the server is told, once.
       await expect.poll(() => asked.seen()).toEqual([REFERENCE]);
@@ -246,7 +246,7 @@ test.describe("your mobile money", () => {
       await openTheCard(page);
       // An amount over what the balance sends: said as soon as it is typed, in the country's money, with no press.
       await page.getByLabel("How much").fill("9000");
-      await expect(page.locator("#mobile-amount-refusal")).toHaveText("At most 8 802 F with what you have.");
+      await expect(page.locator("#mobile-amount-refusal")).toHaveText("At most 8 802 FCFA with what you have.");
       await page.clock.fastForward(1_000);
       await expect(page.locator("[data-mobile-figure]")).toHaveText("");
       expect(asked.priced(), "an amount that cannot be sent is not priced").toBeNull();
@@ -258,13 +258,13 @@ test.describe("your mobile money", () => {
       asked.holdings.ausd = 13_950_000n;
       await page.getByLabel("How much").fill("8802");
       await page.clock.fastForward(1_000);
-      await expect(page.locator("#mobile-amount-refusal")).toHaveText("At most 8 186 F with what you have.");
+      await expect(page.locator("#mobile-amount-refusal")).toHaveText("At most 8 186 FCFA with what you have.");
       expect(asked.refusedForMore(), "the exchange refused once, and that was said as a bound, not as a failure").toBe(1);
       await expect(page.getByText(NEVER_SAID)).toHaveCount(0);
       await shot(page, size.name, "5b-the-balance-moved");
       // And the button still answers: the press says the same bound, and starts nothing.
       await page.getByRole("button", { name: "Send to my Orange" }).click();
-      await expect(page.locator("#mobile-amount-refusal")).toHaveText("At most 8 186 F with what you have.");
+      await expect(page.locator("#mobile-amount-refusal")).toHaveText("At most 8 186 FCFA with what you have.");
       expect(asked.changes(), "nothing was changed").toBe(0);
       await device.context.close();
     });
@@ -325,7 +325,7 @@ test.describe("your mobile money", () => {
       await expect(page.getByRole("heading", { name: "On its way" })).toBeVisible();
       await page.clock.fastForward(6_000);
       await expect(page.getByRole("heading", { name: "Arrived" })).toBeVisible();
-      await expect(page.getByText("8 802 F", { exact: true })).toBeVisible();
+      await expect(page.getByText("8 802 FCFA", { exact: true })).toBeVisible();
       await expect.poll(() => asked.seen()).toEqual([REFERENCE]);
       await shot(page, size.name, "8b-found-again-arrived");
       // "Back" leads to the rest of the way out, and it is not shown again on the next visit.
@@ -370,7 +370,7 @@ test.describe("your mobile money", () => {
       await page.getByRole("button", { name: "Send to my Orange" }).click();
       // What the person sees: the service's own sentence, and in place of the amount the dollars already changed.
       await expect(page.locator('main [role="alert"]')).toHaveText("The mobile money service did not answer just now. Nothing was taken: try again in a minute.");
-      await expect(page.locator("[data-mobile-changed]")).toContainText("about 8 802 F");
+      await expect(page.locator("[data-mobile-changed]")).toContainText("about 8 802 FCFA");
       await expect(page.locator("[data-mobile-changed]")).toContainText("From $14.93 already changed. Nothing more is changed.");
       await expect(page.getByLabel("How much")).toHaveCount(0);
       // What was filled in is still there.
@@ -448,9 +448,9 @@ test.describe("your mobile money", () => {
       await page.getByLabel("Name on the account").fill("");
       // An amount past a bound says the bound, in the country's money.
       await page.getByLabel("How much").fill("100");
-      await expect(page.locator("#mobile-amount-refusal")).toHaveText("At least 5 904 F at a time.");
+      await expect(page.locator("#mobile-amount-refusal")).toHaveText("At least 5 904 FCFA at a time.");
       await page.getByLabel("How much").fill("900000");
-      await expect(page.locator("#mobile-amount-refusal")).toHaveText("At most 8 802 F with what you have.");
+      await expect(page.locator("#mobile-amount-refusal")).toHaveText("At most 8 802 FCFA with what you have.");
       await page.getByLabel("How much").fill("");
       await expect(page.locator("#mobile-amount-refusal")).toHaveText("Write how much, in figures.");
       // Each refusal leaves as its field is put right, and a number typed with the country's prefix passes Switch's
@@ -473,7 +473,7 @@ test.describe("your mobile money", () => {
       await inSenegal(device, { held: 500_000n });
       await page.goto("/cash-out");
       await page.locator("section", { has: page.getByRole("heading", { name: "Your mobile money" }) }).first().getByRole("button", { name: "Send to my mobile money" }).click();
-      await expect(page.locator("[data-mobile-under-minimum]")).toHaveText("Mobile money pays from 5 904 F at a time here, and you have 292 F.");
+      await expect(page.locator("[data-mobile-under-minimum]")).toHaveText("Mobile money pays from 5 904 FCFA at a time here, and you have 292 FCFA.");
       await expect(page.getByLabel("How much")).toHaveCount(0);
       await expect(page.getByRole("button", { name: /^Send to my/ })).toHaveCount(0);
       await expect(page.getByText(/From .* to .* at a time/)).toHaveCount(0);
