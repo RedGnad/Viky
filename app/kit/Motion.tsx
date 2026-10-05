@@ -492,9 +492,9 @@ export function ArrivalDay({ gift, index, children }: Readonly<{ gift: string; i
  * changed. A screen reader reads the value itself, never a number on the way, and a device that asks for reduced motion
  * is only ever shown the value itself.
  */
-export function ArrivalAmount({ from, to, symbol, decimals = 2, after = "" }: Readonly<{ from: number; to: number; symbol: string; decimals?: number; after?: string }>) {
+export function ArrivalAmount({ from, to, symbol, decimals = 2, after = "", thousands = "," }: Readonly<{ from: number; to: number; symbol: string; decimals?: number; after?: string; /** What parts the thousands: a comma, or the space a franc figure is written with. */ thousands?: string }>) {
   const plan = useContext(ArrivalContext);
-  const format = (value: number) => `${symbol}${value.toLocaleString("en-GB", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${after}`;
+  const format = (value: number) => `${symbol}${value.toLocaleString("en-GB", { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).replace(/,/g, thousands)}${after}`;
   // The first image shows where the count starts, not where it ends (the fix to #154); reduced motion reads `to`.
   const [shown, setShown] = useState(from);
   /**

@@ -1,5 +1,5 @@
 import type { DisplayCurrency } from "./display-currency";
-import { currencyOf, markOf, perDollar } from "./currencies";
+import { currencyOf, figureIn, lettersOf, markOf, perDollar, written } from "./currencies";
 import { AmountError, dollarsToUnits, MAX_GIFT_UNITS, MIN_GIFT_UNITS } from "./money";
 import type { Rates } from "./rates";
 
@@ -24,7 +24,7 @@ export function unitsFromTyped(typed: string, currency: DisplayCurrency, rates: 
   const { decimals } = currencyOf(currency);
   const shape = decimals === 0 ? /^(\d{1,9})$/ : new RegExp(`^(\\d{1,9})(?:[.,](\\d{1,${decimals}}))?$`);
   const match = shape.exec(typed.trim());
-  if (!match) throw new AmountError(decimals === 0 ? `Whole ${currency}, like 20000.` : `${decimals} decimals at most, like 30.00.`);
+  if (!match) throw new AmountError(decimals === 0 ? `Whole ${lettersOf(currency)}, like 20000.` : `${decimals} decimals at most, like 30.00.`);
   const amount = Number(`${match[1]}.${match[2] ?? "0"}`);
   const dollars = amount / rate;
   // Cut to the cent the chain counts in, never rounded up: what is signed is never more than what was asked for.
@@ -53,24 +53,23 @@ export function typedFromUnits(units: bigint, currency: DisplayCurrency, rates: 
 export function readableFigure(typed: string, currency: DisplayCurrency): string {
   if (currencyOf(currency).decimals !== 0) return typed;
   const whole = Number(typed);
-  return Number.isFinite(whole) ? whole.toLocaleString("en-GB") : typed;
+  return Number.isFinite(whole) ? figureIn(whole, currency) : typed;
 }
 
 /**
- * The mark a figure is read with, and it stands in front of the figure in every currency (the founder, 21 Sep 2026).
- *
- * The CFA franc's name used to follow its figure, which is how it is written in prose, and on the card that put the
- * mark on the other side of the field: pressing it to change what everything is read in moved the box the amount is
- * typed in. A control keeps its place. The franc keeps a space after its letters, where a symbol needs none.
+ * The mark of the control that opens the list of currencies, which stands in front of the field in every currency (the
+ * founder, 21 Sep 2026). The CFA franc's letters used to follow the field there: pressing the control to change what
+ * everything is read in moved the box the amount is typed in. A control keeps its place. That is the control's rule,
+ * and the control's alone: an amount that is written, in a sentence or as a figure, is written as its currency is,
+ * the franc's letters after it (`figureWithMark`).
  */
-export function currencyMark(currency: DisplayCurrency): Readonly<{ sign: string; gap: string }> {
+export function currencyMark(currency: DisplayCurrency): Readonly<{ sign: string; gap: string; after: boolean }> {
   return markOf(currency);
 }
 
-/** A figure as it is read, its mark in front: "$30.00", "€26.18", "CFA 17,172". */
+/** A figure as it is read, with its mark on its own side: "$30.00", "€26.18", "17 172 FCFA". */
 export function figureWithMark(figure: string, currency: DisplayCurrency): string {
-  const { sign, gap } = currencyMark(currency);
-  return `${sign}${gap}${figure}`;
+  return written(figure, currency);
 }
 
 /** The bound the contract holds, said in the currency the person is typing in, with the dollar it really is. */

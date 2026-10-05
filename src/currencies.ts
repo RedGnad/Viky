@@ -29,10 +29,30 @@ export const CURRENCIES_WHEN_SILENT: readonly string[] = ["USD", "EUR", "XOF"];
  */
 export const NOT_OFFERED: ReadonlySet<string> = new Set(["ILS"]);
 
-/** The shape of a currency a screen draws: the code, its sign, its name, and what it counts in. */
-export type Currency = Readonly<{ code: string; sign: string; name: string; decimals: number }>;
+/** The shape of a currency a screen draws: the code, its sign, its name, what it counts in, and which side of a figure its sign stands on. */
+export type Currency = Readonly<{ code: string; sign: string; name: string; decimals: number; after: boolean }>;
 
 const LOCALE = "en-GB";
+
+/** A space a line never breaks at: between the thousands of a franc figure, and between that figure and its letters. */
+export const NO_BREAK = "\u00a0";
+
+/**
+ * How the two CFA francs are written where they are spent, and what they are called (the founder, 5 Oct 2026). The
+ * one exception to "asked of `Intl`", written down because `Intl`'s answer is not how they are written.
+ *
+ * `Intl` gives "F CFA 5,000" for one and "FCFA 5,000" for the other, the letters in front, and names them "West
+ * African CFA Franc" and "Central African CFA Franc": in a list sorted by name the first stood on the last line,
+ * after the US dollar, and the founder took it for gone. The people who count in them read "5 000 FCFA", the letters
+ * after the figure and its thousands a space apart: Orange Money's own price list in Côte d'Ivoire ("100 FCFA",
+ * "5000 FCFA") and Wave's terms there ("(200 000) FCFA"), both read that day, and neither says XOF or XAF anywhere.
+ * So both are written "FCFA" after the figure, and both are called "CFA franc", with the part of Africa that tells
+ * them apart, which also puts them side by side in the list.
+ */
+const WRITTEN_AFTER: Readonly<Record<string, Readonly<{ sign: string; name: string }>>> = {
+  XOF: { sign: "FCFA", name: "CFA franc (West Africa)" },
+  XAF: { sign: "FCFA", name: "CFA franc (Central Africa)" },
+};
 
 /**
  * A code that names a currency, asked of the runtime rather than of a list here: `Intl.supportedValuesOf` carries
@@ -48,9 +68,13 @@ export function isCurrencyCode(value: unknown): value is string {
 
 /**
  * The sign a currency is written with where it is spent, its name, and its decimals, from `Intl` rather than from a
- * table: "$", "€", "₹", "F CFA". Several currencies share a sign, which is why a list never shows one alone.
+ * table: "$", "€", "₹". Several currencies share a sign, which is why a list never shows one alone. The two CFA
+ * francs are the exception written above.
  */
 export function currencyOf(code: string): Currency {
+  const written = WRITTEN_AFTER[code];
+  // A franc has no subunit in use: it is counted whole.
+  if (written) return { code, sign: written.sign, name: written.name, decimals: 0, after: true };
   const format = new Intl.NumberFormat(LOCALE, { style: "currency", currency: code, currencyDisplay: "narrowSymbol" });
   const sign = format.formatToParts(1).find((part) => part.type === "currency")?.value ?? code;
   let name = code;
@@ -59,26 +83,61 @@ export function currencyOf(code: string): Currency {
   } catch {
     // A runtime without the currency names says the code, which is still true.
   }
-  return { code, sign, name, decimals: format.resolvedOptions().maximumFractionDigits ?? 2 };
+  return { code, sign, name, decimals: format.resolvedOptions().maximumFractionDigits ?? 2, after: false };
 }
 
 /**
- * The sign a figure is written with, and whether that sign stands away from the figure. Both are the source's own
- * answer, read off what `Intl` formats: "€26.18" has nothing between them, "CHF 26.18" and "F CFA 17,172" have a
- * space. Nothing here decides how a currency is written; it reads how it is written.
+ * The sign a figure is written with, whether it stands away from the figure, and on which side. Read off what `Intl`
+ * formats, "€26.18" with nothing between them and "CHF 26.18" with a space, but for the francs written after their
+ * figure (`WRITTEN_AFTER`). On a control that opens the list of currencies the sign keeps its place in front whatever
+ * the currency (the founder, 21 Sep 2026: a control keeps its place); in a written amount it stands where `after` says.
  */
-export function markOf(code: string): Readonly<{ sign: string; gap: string }> {
+export function markOf(code: string): Readonly<{ sign: string; gap: string; after: boolean }> {
+  const written = WRITTEN_AFTER[code];
+  if (written) return { sign: written.sign, gap: NO_BREAK, after: true };
   const parts = new Intl.NumberFormat(LOCALE, { style: "currency", currency: code, currencyDisplay: "narrowSymbol" }).formatToParts(1);
   const at = parts.findIndex((part) => part.type === "currency");
   const sign = at >= 0 ? parts[at].value : code;
   const between = at >= 0 && parts[at + 1]?.type === "literal" ? parts[at + 1].value : "";
-  return { sign, gap: between.trim() === "" ? between : "" };
+  return { sign, gap: between.trim() === "" ? between : "", after: false };
 }
 
-/** A figure in a currency, grouped and with that currency's own decimals, and no sign: the sign is drawn beside it. */
+/**
+ * A figure in a currency, grouped and with that currency's own decimals, and no sign: the sign is drawn beside it.
+ * A franc figure keeps its thousands a space apart, a space no line breaks at.
+ */
 export function figureIn(amount: number, code: string): string {
-  const { decimals } = currencyOf(code);
-  return amount.toLocaleString(LOCALE, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  const { decimals, after } = currencyOf(code);
+  const figure = amount.toLocaleString(LOCALE, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  return after ? figure.replace(/,/g, NO_BREAK) : figure;
+}
+
+/** A figure with its currency's sign, each on its own side: "€26.18", "CHF 26.18", "5 000 FCFA". */
+export function written(figure: string, code: string): string {
+  const { sign, gap, after } = markOf(code);
+  return after ? `${figure}${gap}${sign}` : `${sign}${gap}${figure}`;
+}
+
+/** An amount as it is written in its currency: grouped, with its decimals and its sign. */
+export function amountIn(amount: number, code: string): string {
+  return written(figureIn(amount, code), code);
+}
+
+/**
+ * What a currency is called beside a figure when no sign is drawn: its letters where it is written by them ("FCFA"),
+ * its code otherwise ("EUR"), which is how a payout service's own page names what it pays in.
+ */
+export function lettersOf(code: string): string {
+  return WRITTEN_AFTER[code]?.sign ?? code;
+}
+
+/**
+ * An amount a payout service names in its own currency, as a line of a screen says it: "20 EUR" by its code, grouped
+ * in English, and a franc amount as francs are written, "5 000 FCFA".
+ */
+export function amountByItsLetters(amount: number, code: string): string {
+  if (WRITTEN_AFTER[code]) return amountIn(amount, code);
+  return `${new Intl.NumberFormat("en-US").format(amount)} ${code}`;
 }
 
 /** How many of a currency one dollar buys, through the euro, which is the unit the file is written in. */

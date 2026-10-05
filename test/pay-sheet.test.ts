@@ -77,7 +77,7 @@ test("the lines add up to what the card pays, in one money, and what stays in th
   // Not typed in this money: the dollars signed, in it, to its decimals; and what the account holds the same way.
   assert.equal(giftTyped({ units, code: "EUR", rates }), 18.99);
   assert.equal(heldIn(10_000_000n, "EUR", rates), 8.91);
-  assert.match(moneyIn(12000, "XOF"), /^F\s?CFA\s?12,000$/, "a currency without cents, whole");
+  assert.match(moneyIn(12000, "XOF"), /^12\s000\sFCFA$/, "a currency without cents, whole");
   // No rate for the money: no sum, and the sheet says only "Pay".
   assert.equal(cardSum({ code: "GBP", gift: 19, cardEuros: 12, feeEuros: 1.24, rates }), undefined);
 });
@@ -289,7 +289,7 @@ test("one writing of money: what the person typed is what they read, on the shee
   assert.equal(giftAsTyped({ typedAmount: "45", typedIn: "EUR" }, "$50.51"), "€45.00");
   assert.equal(giftAsTyped({ typedAmount: "45,5", typedIn: "EUR" }, "$51.07"), "€45.50");
   // A money without cents is written without them.
-  assert.match(giftAsTyped({ typedAmount: "20000", typedIn: "XOF" }, "$34.22"), /^F\sCFA\s20,000$/);
+  assert.match(giftAsTyped({ typedAmount: "20000", typedIn: "XOF" }, "$34.22"), /^20\s000\sFCFA$/);
   // A gift kept without the figure typed, or with one that cannot be read, is said in dollars: what it holds.
   assert.equal(giftAsTyped({}, "$30.00"), "$30.00");
   assert.equal(giftAsTyped({ typedAmount: "abc", typedIn: "EUR" }, "$30.00"), "$30.00");

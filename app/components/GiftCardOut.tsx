@@ -7,6 +7,7 @@ import { ApiError } from "@/src/client/api";
 import { giftCardCodes, listGiftCards, priceGiftCard, type GiftCardCode, type GiftCardKept, type GiftCardListed } from "@/src/client/giftcards";
 import { followPhone, payPhone, type PhonePrice, type PhoneStatus } from "@/src/client/phone";
 import { AUSD } from "@/src/coins";
+import { amountByItsLetters, figureIn, lettersOf } from "@/src/currencies";
 import { twoDecimalsDown } from "@/src/exit-steps";
 import { GIFT_CARD_OUT as W } from "@/src/sentences";
 import { ChoiceList } from "../kit/ChoiceList";
@@ -28,9 +29,15 @@ function dollars(units: bigint): string {
   return `$${twoDecimalsDown(units, AUSD.decimals)}`;
 }
 
+/** A bound of an amount, as a figure alone, its currency being named once after the two: a franc figure with its thousands a space apart. */
+function bound(amount: number, currency: string): string {
+  return lettersOf(currency) === currency ? String(amount) : figureIn(amount, currency);
+}
+
+/** An amount Bitrefill names in its own currency, by that currency's letters: "20 EUR", and "5 000 FCFA" for francs. */
 function local(amount: string, currency: string): string {
   const figure = Number(amount);
-  return `${Number.isFinite(figure) ? new Intl.NumberFormat("en-US").format(figure) : amount} ${currency}`;
+  return Number.isFinite(figure) ? amountByItsLetters(figure, currency) : `${amount} ${lettersOf(currency)}`;
 }
 
 function randomNonce(): Hex {
@@ -233,9 +240,9 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
         ) : null}
         {card && range ? (
           <label className="flex flex-col gap-[var(--space-xs)]">
-            <span className={BODY}>{W.howMuch(card.currency)}</span>
+            <span className={BODY}>{W.howMuch(lettersOf(card.currency))}</span>
             <input value={amount} onChange={(event) => { setAmount(event.target.value); setPackageId(null); setPrice(null); setProblem(null); }} inputMode="decimal" className={FIELD} disabled={busy} />
-            <span className={HELP}>{W.range(String(range.min), String(range.max), card.currency)}</span>
+            <span className={HELP}>{W.range(bound(range.min, card.currency), bound(range.max, card.currency), lettersOf(card.currency))}</span>
             {typedFar ? <span className={HELP}>{W.outOfReach}</span> : null}
           </label>
         ) : null}

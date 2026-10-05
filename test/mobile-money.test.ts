@@ -22,9 +22,12 @@ test("an operator is said as Switch names it, an acronym kept, a name capitalise
 });
 
 test("a CFA franc amount is written as it is said there, cut down to the franc; another currency keeps its code", () => {
-  assert.equal(localInWords(6540.92, "XOF"), "6 540 F");
-  assert.equal(localInWords(587.13, "XAF"), "587 F");
-  assert.equal(localInWords(1_234_567, "XOF"), "1 234 567 F");
+  // As francs are written everywhere in the product since 5 Oct 2026: "FCFA" after the figure, never a bare "F",
+  // and never rounded up.
+  assert.equal(localInWords(6540.92, "XOF"), "6\u00a0540\u00a0FCFA");
+  assert.equal(localInWords(587.13, "XAF"), "587\u00a0FCFA");
+  assert.equal(localInWords(1_234_567, "XOF"), "1\u00a0234\u00a0567\u00a0FCFA");
+  assert.equal(localInWords(6540.99, "xof"), "6\u00a0540\u00a0FCFA", "cut down to the franc, whatever the case of the code");
   assert.equal(localInWords(120.567, "GHS"), "120.56 GHS");
   assert.equal(numberEnd("+221 77 123 45 67"), "4567");
 });

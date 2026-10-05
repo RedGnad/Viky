@@ -63,7 +63,7 @@ test("a converted figure carries about and the date of the rate; the dollar is n
   assert.match(whenInWords(Date.UTC(2026, 8, 17, 12, 5)), /^17 Sep 2026 at /);
   assert.equal(aboutInDisplayCurrency(10_990_000n, "EUR", RATES), `about 9.53 EUR (rate of ${rateDateInWords("2026-09-16")})`);
   // The code names the currency since D152: thirty-one of them, several sharing a sign, and one sentence for all.
-  assert.equal(aboutInDisplayCurrency(10_990_000n, "XOF", RATES), `about 6,249 XOF (rate of ${rateDateInWords("2026-09-16")})`);
+  assert.equal(aboutInDisplayCurrency(10_990_000n, "XOF", RATES), `about 6\u00a0249\u00a0FCFA (rate of ${rateDateInWords("2026-09-16")})`);
   assert.equal(aboutInDisplayCurrency(25_000_000n, "EUR", RATES), `about 21.67 EUR (rate of ${rateDateInWords("2026-09-16")})`);
   assert.equal(aboutInDisplayCurrency(10_990_000n, "USD", RATES), undefined);
   assert.equal(aboutInDisplayCurrency(10_990_000n, "EUR", undefined), undefined, "no rate, no figure: the dollar shows alone");
@@ -79,7 +79,7 @@ test("an amount is led by the reader's currency with about, and the exact dollar
   assert.deepEqual(ledAmount(8_570_000n, "EUR", RATES), { lead: "€7.43", converted: true, exact: "$8.57", rateDate: "16 Sep 2026" });
   // The franc's sign stands apart from its figure, and it has no subunit.
   const franc = ledAmount(8_570_000n, "XOF", RATES);
-  assert.match(franc.lead, /^F\sCFA\s4,873$/);
+  assert.match(franc.lead, /^4\s873\sFCFA$/);
   // In dollars, or without a rate, the dollars lead alone and nothing is about.
   assert.deepEqual(ledAmount(8_570_000n, "USD", RATES), { lead: "$8.57", converted: false, exact: "$8.57", rateDate: undefined });
   assert.equal(ledAmount(8_570_000n, "EUR", undefined).converted, false);
