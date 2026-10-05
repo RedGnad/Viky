@@ -35,6 +35,9 @@ importers:
       dotenv:
         specifier: 17.4.2
         version: 17.4.2
+      gsap:
+        specifier: ^3.15.0
+        version: 3.15.0
       inapp-spy:
         specifier: 5.0.10
         version: 5.0.10
@@ -104,7 +107,7 @@ importers:
         version: 16.3.8(@typescript-eslint/parser@8.70.0(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
       serwist:
         specifier: 9.5.12
-        version: 9.5.12(browserslist@4.28.6)(typescript@5.9.3)
+        version: 9.5.12(browserslist@4.28.9)(typescript@5.9.3)
       tailwindcss:
         specifier: 4.3.3
         version: 4.3.3
@@ -2883,6 +2886,9 @@ packages:
 
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
+
+  gsap@3.15.0:
+    resolution: {integrity: sha512-dMW4CWBTUK1AEEDeZc1g4xpPGIrSf9fJF960qbTZmN/QwZIWY5wgliS6JWl9/25fpTGJrMRtSjGtOmPnfjZB+A==}
 
   hardhat-dependency-compiler@1.2.1:
     resolution: {integrity: sha512-xG5iwbspTtxOEiP5UsPngEYQ1Hg+fjTjliapIjdTQmwGkCPofrsDhQDV2O/dopcYzcR68nTx2X8xTewYHgA2rQ==}
@@ -6086,6 +6092,10 @@ snapshots:
     optionalDependencies:
       browserslist: 4.28.6
 
+  '@serwist/utils@9.5.12(browserslist@4.28.9)':
+    optionalDependencies:
+      browserslist: 4.28.9
+
   '@serwist/window@9.5.12(browserslist@4.28.6)(typescript@5.9.3)':
     dependencies:
       '@types/trusted-types': 2.0.7
@@ -7943,6 +7953,8 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
+  gsap@3.15.0: {}
+
   hardhat-dependency-compiler@1.2.1(hardhat@2.29.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)):
     dependencies:
       hardhat: 2.29.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
@@ -9218,6 +9230,15 @@ snapshots:
   serwist@9.5.12(browserslist@4.28.6)(typescript@5.9.3):
     dependencies:
       '@serwist/utils': 9.5.12(browserslist@4.28.6)
+      idb: 8.0.3
+    optionalDependencies:
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - browserslist
+
+  serwist@9.5.12(browserslist@4.28.9)(typescript@5.9.3):
+    dependencies:
+      '@serwist/utils': 9.5.12(browserslist@4.28.9)
       idb: 8.0.3
     optionalDependencies:
       typescript: 5.9.3

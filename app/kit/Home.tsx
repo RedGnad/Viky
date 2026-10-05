@@ -2,18 +2,19 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAccount } from "@/src/account/provider";
-import { CATALOGUE, HOME as W, ME, NAV } from "@/src/sentences";
-import { BODY, HELP, HERO, LEAD, PRIMARY_BUTTON, SMALL_BUTTON, TITLE } from "../components/ui";
+import { HOME as W, NAV } from "@/src/sentences";
+import { BODY, HERO, LEAD, PRIMARY_BUTTON, SMALL_BUTTON, TITLE } from "../components/ui";
 import { Arrival, Reveal, type ArrivalGift } from "./Motion";
 import { SignInDoor } from "./SignInDoor";
 import { EmptyState } from "./EmptyState";
-import { GiftCard } from "./GiftCard";
+import { conditionNameOf, GiftCard } from "./GiftCard";
+import { MarkNotice } from "./MarkNotice";
 import { HeadCharacter } from "./HeadCharacter";
 import { dropStaleCardFragment, goToTheCard } from "./WayToTheCard";
 import { topAfterLongAbsence } from "@/src/launch-top";
 import { HeroMoment } from "./HeroMoment";
 import { isStandalone } from "./Install";
-import { LandingStory } from "./LandingStory";
+import { LandingFoot, LandingStory } from "./LandingStory";
 import { SideCrowd } from "./SideCrowd";
 import { GoalsGoingBy } from "./GoalsGoingBy";
 import type { LandingGoals } from "@/src/landing-goals";
@@ -98,7 +99,21 @@ export function Home({
 
   if (!address) {
     return (
-      <Shell kind="destination" active="home" action={<SignInDoor />} bare wide>
+      <Shell
+        kind="destination"
+        active="home"
+        action={<SignInDoor />}
+        bare
+        wide
+        // Under the card and the sentence that goes by: what Viky promises, as posters from one edge of the window to
+        // the other (the founder, 5 Oct 2026, over D282), and the page's foot.
+        under={
+          <>
+            <LandingStory />
+            <LandingFoot />
+          </>
+        }
+      >
         {/* The day characters beside the top, on a screen with room beside the column (the founder, 28 Sep 2026). */}
         <SideCrowd />
         {/* Inside another app's page no account can be made: said here, before anything is filled in (1 Oct 2026). */}
@@ -143,21 +158,6 @@ export function Home({
         </div>
         {/* What a gift can wait for, one thing at a time, from the register (D285, over D225's four still names). */}
         {goals ? <GoalsGoingBy first={goals.first} kinds={goals.kinds} /> : null}
-        {/* Under the card, what Viky promises, drawn (the founder, 27 Sep 2026, D282). */}
-        <LandingStory />
-        <p className={`${HELP} flex w-full flex-wrap gap-x-[var(--space-lg)] [@media(min-width:1024px)]:justify-center`}>
-          <Link href="/what-viky-can-check" className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline">
-            {CATALOGUE.title}
-          </Link>
-          <Link href="/privacy" className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline">
-            {ME.privacy}
-          </Link>
-          <Link href="/legal" className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline">
-            {ME.legal}
-          </Link>
-          {/* Installing it needs no account, so the way to do it is on the page that needs none (D139): the phone's own
-              card above says it now, so the line is not said twice. */}
-        </p>
       </Shell>
     );
   }
@@ -210,6 +210,8 @@ export function Home({
             </Link>
           ) : null}
         </section>
+        {/* A card that names the TOEFL: what its owner asks at the bottom of a page that names it. */}
+        <MarkNotice naming={moving.map(conditionNameOf)} />
       </Shell>
     </Arrival>
   );

@@ -24,6 +24,7 @@ import { THEME_BOOT_SCRIPT } from "@/src/theme";
 import { HOME } from "@/src/sentences";
 import { LAUNCH_TOP_SCRIPT } from "@/src/launch-top";
 import { INTRO_BOOT_SCRIPT, introGroundStyle } from "@/src/launch-intro";
+import { MOVES_BOOT_SCRIPT } from "@/src/moves";
 import { FIGURE_ICON_SVG } from "./kit/figure-icon";
 import { LaunchIntro } from "./kit/LaunchIntro";
 import { Pressed } from "./kit/Pressed";
@@ -162,6 +163,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         {/* In the head, before the first paint: the installed app's first opening decides here and grounds the page on
             the launch screen's own image, so not even the first painted image goes empty (src/launch-intro.ts). */}
         <script dangerouslySetInnerHTML={{ __html: INTRO_BOOT_SCRIPT }} />
+        {/* Where movement is welcome and a script runs, said on the document before anything is drawn, so what will
+            play when it is scrolled to is drawn at its starting state from the first image (src/moves.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: MOVES_BOOT_SCRIPT }} />
         <style dangerouslySetInnerHTML={{ __html: introGroundStyle(FIGURE_ICON_SVG) }} />
       </head>
       <body className="antialiased">

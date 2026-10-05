@@ -12,7 +12,7 @@ import { WCA_EVENTS, wcaEventIsTimed } from "./wca";
  * - every live goal of the register, said as `SAID` says it and grouped as it groups it: university, tests, courses,
  *   games, the cube, every day (the founder, 29 Sep 2026: the chess modes, grades and enrolment at universities named
  *   one by one, the Rubik's Cube rather than the WCA alone);
- * - every race still offered, one phrase per distance it offers, saying what it is (`racePhrases`).
+ * - every race still offered, one phrase per distance it offers, by its distance and its town (`racePhrases`).
  * The sentence draws a group, then an item of it, so the many races do not drown the rest.
  */
 export type LandingGoals = Readonly<{ first: string; kinds: readonly (readonly string[])[] }>;
@@ -109,35 +109,36 @@ const SAID: Readonly<Record<string, Readonly<{ group: Group; phrases: (goal: Con
 /** Said by the races themselves, one phrase each. */
 const SAID_BY_RACES = new Set(["marathon-finish"]);
 
-/** A race as a runner names it: without the year, "the Chicago Marathon" for the sponsor's long name, "the" before a "... Marathon". */
-function raceRef(race: Readonly<{ name: string; town: string }>): string {
-  const withoutYear = race.name.replace(/\s+\d{4}$/, "");
-  if (withoutYear.endsWith(`${race.town} Marathon`)) return `the ${race.town} Marathon`;
-  return /Marathon$/.test(withoutYear) ? `the ${withoutYear}` : withoutYear;
+/**
+ * The town a race is run in, as it reads in a sentence, or nothing when the register's field is not a town's name. The
+ * timing companies' lists put other things there now and then: the event's own name ("19. Kristallmarathon"), an
+ * address ("Standalone Farm. Letchworth Garden City."), two places at once ("Moosen/Riedering", "Wettringen -
+ * Haddorf"). A province in brackets is dropped ("Reggio Emilia (RE)").
+ */
+export function townSaid(town: string): string | null {
+  const name = town.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  if (name.length < 2 || name.length > 28) return null;
+  // Letters in any alphabet, with the marks a town's name carries: a space, a hyphen, an apostrophe, "St." for a saint.
+  if (!/^(?:St\. )?\p{L}+(?:[ '’-]\p{L}+)*$/u.test(name)) return null;
+  if (/marat|\brun\b|\brace\b|\bfarm\b/i.test(name)) return null;
+  return name;
 }
 
-/** Whether a race's own name already says marathon, in the languages the register holds ("Syysmaraton", "Maratona"). */
-const SAYS_MARATHON = /marat(h)?on/i;
-
 /**
- * The distances a race offers, as a runner would say them (the founder, 27 Sep 2026: a half marathon or a trail is
- * named as such, and never "a marathon at the ... Marathon"). A gift on a race waits for a finish at the distance the
- * funder chose, whatever the time. A name that already says what the race is carries it alone:
- * - the marathon: "a finish at the Chicago Marathon", "a finish at Maratona di Reggio Emilia";
- * - the half: "the half at the Wase Marathon" where the name says marathon, else "a half marathon at Tout Rennes Court";
- * - the 10 km: "a finish at Trail du Loup Vert" or "a finish at Le 10K'arnag" where the name says it, "a 10 km trail at
- *   ..." where the event is a trail, "a 10 km race at Voie Royale" otherwise; and nothing for a 10 km at a race named a
- *   marathon, which reads as the wrong race.
+ * A race on the landing is said by its distance and its town (the founder, 5 Oct 2026: "the half marathon in
+ * Hamburg"), not by its own name: a name ran to three lines on a phone, and the cell that keeps the room of the
+ * longest phrase left a hole under every shorter one. A gift on a race waits for a finish at the distance the funder
+ * chose, whatever the time, so each distance a race offers is one phrase; a 10 km is said as a trail where the
+ * organiser calls it one. A race whose town the register does not name is not said here, and stays in the chooser.
  */
 export function racePhrases(race: Readonly<{ name: string; town: string; events: readonly { distance: string; label: string }[] }>): readonly string[] {
-  const ref = raceRef(race);
+  const town = townSaid(race.town);
+  if (!town) return [];
   const phrases: string[] = [];
   for (const event of race.events) {
-    if (event.distance === "marathon") phrases.push(`a finish at ${ref}`);
-    else if (event.distance === "half") phrases.push(SAYS_MARATHON.test(ref) ? `the half at ${ref}` : `a half marathon at ${ref}`);
-    else if (SAYS_MARATHON.test(ref)) continue;
-    else if (/trail|10\s?k/i.test(ref)) phrases.push(`a finish at ${ref}`);
-    else phrases.push(/trail/i.test(event.label) ? `a 10 km trail at ${ref}` : `a 10 km race at ${ref}`);
+    if (event.distance === "marathon") phrases.push(`the marathon in ${town}`);
+    else if (event.distance === "half") phrases.push(`the half marathon in ${town}`);
+    else phrases.push(/trail/i.test(`${event.label} ${race.name}`) ? `a 10 km trail in ${town}` : `a 10 km race in ${town}`);
   }
   return phrases;
 }

@@ -44,6 +44,10 @@ test("the drawings: eleven, in outline on a square of 24, a stroke of 1.9, and n
   assert.equal(iconMarkup("flag"), '<path d="M5 21V4M5 4.6h13l-2.6 4 2.6 4H5"/>');
   assert.equal(iconMarkup("rosette"), '<circle cx="12" cy="9" r="5.2"/><circle cx="12" cy="9" r="1.7"/><path d="M9 13.4L7.6 21l4.4-2.6 4.4 2.6-1.4-7.6"/>');
   assert.match(iconMarkup("cube"), /stroke-width="1.2"/);
+  // Code is two angle brackets and the stroke between them, as the founder validated it (5 Oct 2026): the paste the
+  // drawings came in had cut the stroke off, and the line read as "less than, greater than".
+  assert.equal(iconMarkup("code"), '<path d="M8.5 7l-5 5 5 5M15.5 7l5 5-5 5M13.6 5l-3.2 14"/>');
+  assert.match(iconMarkup("language"), /M10\.4 11\.6h3\.2/);
   const icon = readFileSync("app/kit/ConditionIcon.tsx", "utf8");
   assert.match(icon, /aria-hidden/);
   assert.match(icon, /fill="none"\n\s*stroke="currentColor"\n\s*strokeWidth=\{ICON_STROKE\}\n\s*strokeLinecap="round"\n\s*strokeLinejoin="round"\n\s*className="shrink-0 text-\[var\(--text\)\]"/);

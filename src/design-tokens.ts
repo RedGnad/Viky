@@ -526,6 +526,33 @@ export const MOTION = {
    */
   reveal: { durationMs: 250, easing: EASING.standard, rise: 8, staggerMs: 80, mostStaggeredMs: 240, lastTurnMs: 240, fromOpacity: 0.6 },
   /**
+   * The posters under the landing's card (the founder, 5 Oct 2026, on a living mockup): each plays once, when its
+   * title's top reaches `startAt` of the screen's height. The words rise one after the other, their position
+   * overshooting and their opacity never; the character lands in its word out of nothing, on a spring; the day that
+   * was missed comes back from the right instead; the sentence follows, then what stands under it. In the last poster
+   * the figure rises first and the words wait for it.
+   *
+   * `beforeEndMs` is how long before the end of what has played so far a part starts. The eases are named as the
+   * library that plays them names them (gsap, loaded by the landing alone).
+   *
+   * Two things are tied to the scroll and to no clock: the band of stickers drifts `drift.px` each way while it
+   * crosses the screen, and a character leans `lean.deg` each way. `catchUpS` is the library's own smoothing of a
+   * scrubbed movement, in seconds. The speed and the direction of the scroll itself are never touched.
+   */
+  poster: {
+    startAt: 0.8,
+    word: { riseMs: 650, staggerMs: 70, fadeMs: 200, from: "0.6em", fromTurn: 2, ease: "back.out(1.8)", fadeEase: "power1.out" },
+    character: { landMs: 800, fromTurn: -25, ease: "elastic.out(1, 0.5)", beforeEndMs: 400 },
+    back: { ms: 900, from: 220, fromTurn: 24, ease: "back.out(1.3)", beforeEndMs: 450 },
+    line: { ms: 350, rise: 14, staggerMs: 80, ease: "power2.out", beforeEndMs: 500 },
+    strip: { ms: 450, rise: 24, ease: "power2.out", beforeEndMs: 300 },
+    figure: { ms: 700, rise: 60, fromHeight: 0.7, ease: "back.out(2.2)", wordsAfterMs: 250 },
+    drift: { px: 160, catchUpS: 0.5 },
+    lean: { deg: 7, catchUpS: 0.6, origin: "50% 60%" },
+    /** How long the posters wait for their script before they are simply shown, still. */
+    giveUpMs: 5000,
+  },
+  /**
    * A pointer over a button lifts it; over a character, its face turns towards the pointer. Material's short4.
    * A screen with no pointer has no hover: an expression plays once when something is chosen, and `heldMs` is how
    * long it stays before it comes back, so the whole round trip is 700 ms, Material's extra-long1.

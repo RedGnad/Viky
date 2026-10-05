@@ -11,6 +11,7 @@ import { conversionsSent } from "@/src/exit-store";
 import { payoutsArrived } from "@/src/mobile-money-store";
 import { conversionUse, mobileMoneyUse, type FirstUse } from "@/src/judges-first-use";
 import type { Metadata } from "next";
+import { MarkNotice } from "../kit/MarkNotice";
 import { Shell } from "../kit/Shell";
 import { JudgesAccount } from "../components/JudgesAccount";
 import { MilestoneJudges } from "../components/MilestoneJudges";
@@ -843,6 +844,8 @@ export default async function JudgesPage() {
       <MilestoneJudges />
 
       <JudgesAccount />
+      {/* This page names the TOEFL: what its owner asks at the bottom of a page that does (the founder, 5 Oct 2026). */}
+      <MarkNotice />
     </Shell>
   );
 }

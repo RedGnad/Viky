@@ -7,7 +7,8 @@ import { EmptyState } from "./EmptyState";
 import { FinishTheGift } from "./FinishTheGift";
 import { useMinute } from "./clock";
 import { charactersOf } from "./DayStrip";
-import { GiftCard } from "./GiftCard";
+import { conditionNameOf, GiftCard } from "./GiftCard";
+import { MarkNotice } from "./MarkNotice";
 import { HeadCharacter } from "./HeadCharacter";
 import { Arrival, Reveal, type ArrivalGift } from "./Motion";
 import { Shell } from "./Shell";
@@ -54,6 +55,8 @@ export function Gifts({ initialGifts }: Readonly<{ initialGifts?: GiftSummary[] 
             <h2 className={TITLE}>{W.received}</h2>
             {received.length === 0 ? <EmptyState>{W.emptyReceived}</EmptyState> : received.map((gift) => <Reveal key={gift.giftId}><GiftCard gift={gift} /></Reveal>)}
           </section>
+          {/* A card that names the TOEFL: what its owner asks at the bottom of a page that names it. */}
+          <MarkNotice naming={[...given, ...received].map(conditionNameOf)} />
         </>
       ) : null}
     </Shell>

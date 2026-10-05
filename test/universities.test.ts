@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { conditionById } from "../src/conditions";
-import { HOME } from "../src/sentences";
+import { HOME, LANDING_STORY } from "../src/sentences";
 import { CERTIFICATE_LINES, UNIVERSITIES, certificateLinesLive, certificatePlatforms, pickUniversities } from "../src/universities";
 
 /**
@@ -48,9 +48,11 @@ test("every school, distinct, in the order the server's random draws them", () =
 });
 
 test("the schools are named as text only, no partnership claimed, the affiliation said", () => {
-  const read = HOME.waitsFor.read;
-  assert.doesNotMatch(`${HOME.waitsFor.lead} ${read}`, /partner|trusted|as seen|official|endorse/i, "the universities' trademark rules");
-  assert.match(read, /not affiliated with the schools/);
+  // Said at the foot of the landing since 5 Oct 2026, small and readable, where it stood under the sentence that goes by.
+  const said = LANDING_STORY.notAffiliated;
+  assert.doesNotMatch(`${HOME.waitsFor.lead} ${said}`, /partner|trusted|as seen|official|endorse/i, "the universities' trademark rules");
+  assert.equal(said, "Not affiliated with the schools, races or services named.");
+  assert.match(readFileSync("app/kit/LandingStory.tsx", "utf8"), /<p data-not-affiliated="" className=\{`\$\{HELP\} max-w-\[44em\]`\}>\n\s*\{W\.notAffiliated\}/);
   assert.equal(certificatePlatforms(), "edX or Coursera", "the platforms as the register names them: no screen names a source itself");
   assert.doesNotMatch(readFileSync("src/universities.ts", "utf8"), /\.svg|\.png|\.jpe?g|<img/i, "no logo, no crest: names only");
 });

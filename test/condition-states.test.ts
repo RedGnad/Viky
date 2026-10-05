@@ -134,7 +134,9 @@ test("a state is a sentence on the page, never a badge", () => {
 });
 
 test("it is reachable without an account and from the judges page, and it says the chooser still offers only the proved", () => {
-  assert.match(readFileSync("app/kit/Home.tsx", "utf8"), /href="\/what-viky-can-check"/, "Home, where a reader without an account is");
+  // At the foot of the landing, which Home lays under its column (5 Oct 2026).
+  assert.match(readFileSync("app/kit/LandingStory.tsx", "utf8"), /export function LandingFoot\(\)[\s\S]*href="\/what-viky-can-check"/, "Home, where a reader without an account is");
+  assert.match(readFileSync("app/kit/Home.tsx", "utf8"), /<LandingFoot \/>/);
   assert.match(readFileSync("app/kit/Me.tsx", "utf8"), /href="\/what-viky-can-check"/, "and where a reader with one is");
   assert.match(readFileSync("app/judges/JudgesConditions.tsx", "utf8"), /href="\/what-viky-can-check"/);
   assert.match(CATALOGUE.intro, /only what is open is shown to you/);

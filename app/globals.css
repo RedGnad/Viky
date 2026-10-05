@@ -123,6 +123,27 @@
   /* The fill of a button that is not the one action: quiet, and identified by its outline (K, rule 10). */
   --tonal: #E8E3F4;
 
+  /*
+   * The posters under the landing's card (app/kit/LandingStory.tsx; the founder, 5 Oct 2026, on a living mockup). Their
+   * grounds alternate: the page's, the card's paper, the other appearance's ground, the page's again. The third is
+   * the one band that wears the other appearance: the night's ground and text by day, the day's by night.
+   */
+  --other-ground: #151026;
+  --other-text: #FFF6E2;
+  --other-muted: #C7C4DA;
+  /* A sticker's four tones: the raised paper, the tonal lavender, and a quarter of the first and of the second
+     character's colour. Never the sun, which is the action's. */
+  --round-tone-1: #FFFBF0;
+  --round-tone-2: #E8E3F4;
+  --round-tone-3: #FFDDE2;
+  --round-tone-4: #D8ECFF;
+  /* A poster's room above and below, the shoulders of a band that rises, and a sticker, on a phone. */
+  --poster-pad: 76px;
+  --poster-round: 40px;
+  --round-size: 52px;
+  --round-icon: 24px;
+  --round-gap: 10px;
+
   /* The characters' own colours, never text and never a background (brief, section 5). */
   --character-1: #FF7F8E;
   --character-2: #5AB4FF;
@@ -291,6 +312,11 @@
 @media (min-width: 600px) {
   :root {
     --page-margin: 24px;
+    --poster-pad: 150px;
+    --poster-round: 72px;
+    --round-size: 76px;
+    --round-icon: 34px;
+    --round-gap: 18px;
   }
 }
 
@@ -373,6 +399,15 @@
     --character-halftone: #D38421;
     --tonal: #2B2642;
     --card-border: #494454;
+    /* The band that wears the other appearance is the day's ground by night (proposed 5 Oct 2026, the founder decides). */
+    --other-ground: #DDD6EB;
+    --other-text: #1E1633;
+    --other-muted: #5B5470;
+    /* The stickers after dark: the night's raised paper and tonal, and the same quarter of a character's colour on that paper. */
+    --round-tone-1: #393446;
+    --round-tone-2: #2B2642;
+    --round-tone-3: #6D4859;
+    --round-tone-4: #415372;
     --character-1: #FF7F8E;
     --character-2: #5AB4FF;
     --character-3: #B79BFF;
@@ -448,6 +483,15 @@
   --character-halftone: #D38421;
   --tonal: #2B2642;
   --card-border: #494454;
+  /* The band that wears the other appearance is the day's ground by night (proposed 5 Oct 2026, the founder decides). */
+  --other-ground: #DDD6EB;
+  --other-text: #1E1633;
+  --other-muted: #5B5470;
+  /* The stickers after dark: the night's raised paper and tonal, and the same quarter of a character's colour on that paper. */
+  --round-tone-1: #393446;
+  --round-tone-2: #2B2642;
+  --round-tone-3: #6D4859;
+  --round-tone-4: #415372;
   --character-1: #FF7F8E;
   --character-2: #5AB4FF;
   --character-3: #B79BFF;
@@ -975,6 +1019,23 @@ dialog.sheet[open] {
 }
 
 /* From 60 % rather than from nothing (D196): a screen that goes almost blank after a press reads as a blink. */
+/*
+ * A block under the screen when its screen is drawn waits at its starting state until a quarter of it is in view
+ * (app/kit/Motion.tsx, `waitUnderTheScreen`; the founder, 5 Oct 2026): invisible, and lower by the rise. The first
+ * image of its entrance is then the one drawn just before it. Only a script puts a block here, and only where
+ * movement is welcome, so without one every block is simply there; and nothing waits on paper.
+ */
+[data-waits] {
+  opacity: 0;
+  transform: translateY(var(--page-enter-rise));
+}
+@media (prefers-reduced-motion: reduce), print {
+  [data-waits] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @keyframes page-enter {
   from {
     transform: translateY(var(--page-enter-rise));
@@ -2092,6 +2153,137 @@ html[data-intro] .launch-intro.launch-intro-leaving {
   }
   to {
     transform: translateY(calc(var(--depth) * -480px)) rotate(var(--tilt));
+  }
+}
+
+/*
+ * The posters under the landing's card (app/kit/LandingStory.tsx; the founder, 5 Oct 2026, on a living mockup). A band
+ * is one poster, from one edge of the window to the other: a title in the hero's size, one sentence, and under one of
+ * them the stickers. A band that changes ground rises over the one before with round shoulders, like a sheet, and
+ * what shows in its corners is the ground it rises over (`.poster-under`).
+ */
+.poster-under {
+  /* One pixel of overlap, so no hairline of another ground shows between two bands. */
+  margin-top: -1px;
+  background: var(--background);
+}
+.poster-under-paper {
+  background: var(--paper);
+}
+.poster-under-other {
+  background: var(--other-ground);
+}
+.poster-band {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: -1px;
+  padding: var(--poster-pad) var(--page-margin);
+  text-align: center;
+}
+.poster-band-ground {
+  background: var(--background);
+  color: var(--text);
+}
+/* The band that wears the other appearance: its ground, and the two voices that read on it. */
+.poster-band-other {
+  background: var(--other-ground);
+  color: var(--other-text);
+  --text: var(--other-text);
+  --muted: var(--other-muted);
+}
+.poster-band-rises {
+  border-radius: var(--poster-round) var(--poster-round) 0 0;
+}
+/* The phone's card follows the last poster on the same ground, and the last way to the card follows it. */
+.poster-band-follows {
+  padding-top: 0;
+}
+.poster-band-last {
+  padding-top: calc(var(--space-xl) + var(--space-lg));
+}
+.poster-title {
+  max-width: 12.5em;
+  margin-inline: auto;
+}
+/* One of the days' characters in a title: a little taller than the letters, sitting a little under their line. */
+.poster-character {
+  display: inline-block;
+  width: 1.08em;
+  height: 1.08em;
+  margin: 0 0.02em;
+  vertical-align: -0.2em;
+}
+.poster-character-wide {
+  width: 1.7em;
+}
+.poster-line {
+  max-width: 26em;
+  margin: var(--space-xl) auto 0;
+}
+/*
+ * What Viky reads, as stickers: the chooser's pictograms, each in a round with the outline and the relief of a
+ * control, in a band that runs past both edges of the window. The row is wider than any screen and centred on its
+ * own middle, so there is no first sticker and no last one to see.
+ */
+.sticker-strip {
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  margin: calc(var(--space-xl) + var(--space-md)) calc(-1 * var(--page-margin)) 0;
+  /* Room for a leaning sticker's corner above and for its relief below. */
+  padding: 6px 0 10px;
+}
+@media (min-width: 600px) {
+  .sticker-strip {
+    margin-top: calc(2 * var(--space-xl) + var(--space-sm));
+  }
+}
+.stickers {
+  display: flex;
+  flex: none;
+  gap: var(--round-gap);
+}
+.sticker {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--round-size);
+  height: var(--round-size);
+  border: var(--control-border-width) solid var(--control-border);
+  border-radius: 50%;
+  box-shadow: var(--control-relief);
+}
+.sticker svg {
+  width: var(--round-icon);
+  height: var(--round-icon);
+}
+.sticker-1 {
+  background: var(--round-tone-1);
+}
+.sticker-2 {
+  background: var(--round-tone-2);
+}
+.sticker-3 {
+  background: var(--round-tone-3);
+}
+.sticker-4 {
+  background: var(--round-tone-4);
+}
+/*
+ * The first image is the starting state (the rule of 23 Sep 2026). Where the document says movement is welcome and a
+ * script runs (`data-moves`, src/moves.ts), every part of a poster is drawn invisible from the first image, and its
+ * script plays it when its title is scrolled to. Without the attribute, a device that asks for less movement or a
+ * browser without scripts, nothing here applies and everything is there. Posters whose script did not come are shown
+ * as they are (`data-still`), and nothing is hidden on paper.
+ */
+html[data-moves] [data-landing-story]:not([data-still]) [data-band] :is([data-w], [data-ch], [data-line], [data-strip], [data-figure], [data-offer]) {
+  opacity: 0;
+}
+@media print {
+  html[data-moves] [data-landing-story] [data-band] :is([data-w], [data-ch], [data-line], [data-strip], [data-figure], [data-offer]) {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 

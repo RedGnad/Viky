@@ -13,6 +13,11 @@ import { DayStrip } from "./DayStrip";
 import { Climb } from "./Climb";
 import { HadOrNot } from "./HadOrNot";
 
+/** What a gift's card names as its condition, for a page that has to know which marks its list of cards names. */
+export function conditionNameOf(gift: GiftSummary): string | undefined {
+  return (gift.milestone ? conditionById(gift.milestone.conditionId) : conditionOfGoal(gift.goalType))?.name;
+}
+
 /**
  * The one card for a gift, wherever it appears: Home, Gifts, and the head of the gift's own page (structure of 17 Sep,
  * section 12, item 9). On Home and Gifts the whole card opens the gift (Material: "Cards can serve as entry points"),

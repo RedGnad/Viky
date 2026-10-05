@@ -24,12 +24,13 @@ export const CONDITION_ICONS: Readonly<Record<ConditionIcon, readonly IconShape[
   // A speech bubble with a letter in it.
   language: [
     { path: "M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5h-8l-4 3.5v-3.5h-4a1.5 1.5 0 0 1-1.5-1.5v-8a1.5 1.5 0 0 1 1.5-1.5z" },
-    { path: "M9.4 13.6l2.6-5.6 2.6 5.6M10.3 11.7h3.4" },
+    { path: "M9.4 13.6l2.6-5.6 2.6 5.6M10.4 11.6h3.2" },
   ],
   // A rosette and its two ribbons.
   rosette: [{ circle: [12, 9, 5.2] }, { circle: [12, 9, 1.7] }, { path: "M9 13.4L7.6 21l4.4-2.6 4.4 2.6-1.4-7.6" }],
-  // Two angle brackets.
-  code: [{ path: "M8.5 7l-5 5 5 5M15.5 7l5 5-5 5" }],
+  // Two angle brackets and the stroke between them, as the founder validated it: the paste the drawings came in had
+  // cut the stroke off, and the line read as "less than, greater than" until 5 Oct 2026.
+  code: [{ path: "M8.5 7l-5 5 5 5M15.5 7l5 5-5 5M13.6 5l-3.2 14" }],
   // A chess pawn on its base.
   pawn: [{ circle: [12, 6.3, 2.8] }, { path: "M9 10.6h6M10.2 10.6c0 4-2.6 5-3.2 8h10c-.6-3-3.2-4-3.2-8M6 21h12" }],
   // One piece of a jigsaw: a knob on its top and one on its right.
