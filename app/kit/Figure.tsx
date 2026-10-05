@@ -282,7 +282,22 @@ function Limbs({ arms, legs, holding }: Readonly<{ arms: ArmsPose; legs: LegsPos
 /** The eyes, in their sets; a closed eye is the open one's pill, so one can open into the other (D226). */
 function EyesOf({ eyes, gaze, id }: Readonly<{ eyes: Eyes; gaze: Readonly<{ x: number; y: number }>; id: string }>) {
   const at = EYES_AT;
-  if (eyes === "shades") return <Shades id={id} />;
+  if (eyes === "shades") {
+    // The eyes are under the sunglasses, as on anybody (the founder, 5 Oct 2026). Without them the face had none
+    // wherever the sunglasses were not on it yet: in the landing's title, where the scroll brings them down, and for
+    // the moment Me's figure takes to put them on. Each lens is opaque and covers its eye whole, so nothing of them
+    // shows once the sunglasses are on. They are no part of an expression: nothing that moves the eyes names them.
+    return (
+      <>
+        <g data-part="under-shades">
+          {at.map(([x, y]) => (
+            <circle key={x} cx={x} cy={y} r={EYE_R} style={{ fill: INK }} />
+          ))}
+        </g>
+        <Shades id={id} />
+      </>
+    );
+  }
   return (
     <g data-part="eyes" style={{ transform: `translate(${round(gaze.x * 1.6)}px, ${round(gaze.y * 1.2)}px)` }}>
       <g data-part="gaze">

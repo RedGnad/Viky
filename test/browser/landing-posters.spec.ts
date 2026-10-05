@@ -237,9 +237,14 @@ test.describe("the posters under the landing's card", () => {
     const home = await put("back", 0.4);
     expect(home).toMatchObject({ shown: 1, x: 0, turn: 0 });
     expect((await put("back", 0.97)).shown, "scrolled back, it has gone again").toBeLessThan(0.1);
-    // The sunglasses come down onto the face as the title reaches mid screen.
+    // The sunglasses come down onto the face as the title reaches mid screen. Before they do, the face has its eyes.
     expect((await put("shades", 0.9)).shades).toBeLessThan(0.1);
+    const eyes = page.locator('[data-landing-story] [data-act="shades"] [data-part="under-shades"] circle');
+    await expect(eyes).toHaveCount(2);
+    expect(await eyes.evaluateAll((all) => all.map((eye) => `${getComputedStyle(eye).opacity} ${getComputedStyle(eye).visibility}`)), "two eyes, there to see").toEqual(["1 visible", "1 visible"]);
     expect((await put("shades", 0.4)).shades).toBe(1);
+    // Once the sunglasses are on, each lens covers its eye whole.
+    expect(await page.evaluate(`(() => { const held = document.querySelector('[data-landing-story] [data-act="shades"]'); const lenses = [...held.querySelectorAll('[data-prop="shades"] rect')].slice(0, 2).map((one) => one.getBoundingClientRect()); return [...held.querySelectorAll('[data-part="under-shades"] circle')].map((eye) => eye.getBoundingClientRect()).every((eye, index) => eye.left >= lenses[index].left && eye.right <= lenses[index].right && eye.top >= lenses[index].top && eye.bottom <= lenses[index].bottom); })()`)).toBe(true);
     // Today is off the ground at some point of its way up the screen, and the yes leans one way then the other.
     const hops = [await put("hop", 0.8), await put("hop", 0.6), await put("hop", 0.45), await put("hop", 0.3)];
     expect(Math.min(...hops.map((one) => one.y)), "it left the ground").toBeLessThan(-5);
