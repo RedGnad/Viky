@@ -38,7 +38,8 @@ CREATE TABLE IF NOT EXISTS viky_mobile_payouts (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS viky_mobile_payouts_account ON viky_mobile_payouts (account, created_at DESC);
-ALTER TABLE viky_mobile_payouts ADD COLUMN IF NOT EXISTS completed_at timestamptz
+ALTER TABLE viky_mobile_payouts ADD COLUMN IF NOT EXISTS completed_at timestamptz;
+ALTER TABLE viky_mobile_payouts ADD COLUMN IF NOT EXISTS seen_at timestamptz
 `;
 
 export type MobilePayout = Readonly<{
@@ -149,6 +150,33 @@ export async function loadPayout(reference: string): Promise<MobilePayout | null
 export async function payoutOfExit(exitTx: string): Promise<MobilePayout | null> {
   const rows = await ledger`SELECT * FROM viky_mobile_payouts WHERE exit_tx = ${exitTx.toLowerCase()}`;
   return rows[0] ? rowOf(rows[0]) : null;
+}
+
+/**
+ * The last payout this account sent money for and has not been shown the end of (the founder, 5 Oct 2026): what the
+ * way out shows again when the person comes back, since its reference lived only in the screen that was open. A payout
+ * opened and never paid into is not one: nothing left for it, and its dollars are still in the account.
+ */
+export async function lastUnseenPayout(account: string): Promise<MobilePayout | null> {
+  const rows = await ledger`
+    SELECT * FROM viky_mobile_payouts
+     WHERE account = ${account.toLowerCase()} AND seen_at IS NULL
+       AND (deposit_sent_at IS NOT NULL OR status <> 'AWAITING_DEPOSIT')
+     ORDER BY created_at DESC LIMIT 1`;
+  return rows[0] ? rowOf(rows[0]) : null;
+}
+
+/**
+ * Notes that the account was shown the end of a payout, and of every one before it: the screen shows the last one
+ * only, so an older one left unseen would come back after it. Asked only for a payout Switch has finished with.
+ */
+export async function markPayoutSeen(reference: string, account: string): Promise<boolean> {
+  const rows = await ledger`
+    UPDATE viky_mobile_payouts SET seen_at = now(), updated_at = now()
+     WHERE account = ${account.toLowerCase()} AND seen_at IS NULL
+       AND created_at <= (SELECT created_at FROM viky_mobile_payouts WHERE reference = ${reference} AND account = ${account.toLowerCase()})
+     RETURNING reference`;
+  return rows.length > 0;
 }
 
 /** Forgets a payout opened and never paid into, once its window has closed, so the same exchange's dollars can be paid out again. */

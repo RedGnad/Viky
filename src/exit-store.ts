@@ -252,7 +252,7 @@ export async function markExitSent(id: string, txHash: Hex | null): Promise<bool
 }
 
 /** A way out whose conversion landed: the coin that came back, the least of it that could, and when. */
-export type LandedExit = Readonly<{ tokenOut: Hex; minOut: bigint; sentAtMs: number }>;
+export type LandedExit = Readonly<{ tokenOut: Hex; minOut: bigint; sentAtMs: number; /** The transaction that changed it, when this journal heard which one did. */ txHash: Hex | null }>;
 
 /**
  * The last way out that landed for this account, or nothing: money changed for a payout service, which the person then
@@ -260,13 +260,13 @@ export type LandedExit = Readonly<{ tokenOut: Hex; minOut: bigint; sentAtMs: num
  */
 export async function lastLandedExit(account: string): Promise<LandedExit | null> {
   const rows = await sql()`
-    SELECT token_out, min_out, sent_at FROM viky_exits
+    SELECT token_out, min_out, sent_at, tx_hash FROM viky_exits
      WHERE account = ${account.toLowerCase()} AND state = 'sent' AND sent_at IS NOT NULL
        AND token_out <> ${GIFT_COIN}
      ORDER BY sent_at DESC LIMIT 1`;
   const row = rows[0];
   if (!row) return null;
-  return { tokenOut: row.token_out ? getAddress(String(row.token_out)) : ZERO_ADDRESS, minOut: BigInt(String(row.min_out)), sentAtMs: new Date(String(row.sent_at)).getTime() };
+  return { tokenOut: row.token_out ? getAddress(String(row.token_out)) : ZERO_ADDRESS, minOut: BigInt(String(row.min_out)), sentAtMs: new Date(String(row.sent_at)).getTime(), txHash: row.tx_hash ? (String(row.tx_hash) as Hex) : null };
 }
 
 export type SentConversion = Readonly<{ at: Date; amount: bigint; minOut: bigint; txHash: string | null }>;

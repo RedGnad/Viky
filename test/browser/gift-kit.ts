@@ -104,9 +104,9 @@ export async function neverAskedToBeTold(context: BrowserContext): Promise<void>
   await context.addInitScript(`Object.defineProperty(Notification, "permission", { get: () => "default" });`);
 }
 
-export async function profile(browser: Browser, served: string | undefined, viewport: { width: number; height: number }, options: { passkey?: boolean; userAgent?: string } = {}): Promise<Profile> {
+export async function profile(browser: Browser, served: string | undefined, viewport: { width: number; height: number }, options: { passkey?: boolean; userAgent?: string; /** The clock the device keeps, for a screen that says an hour. */ timezoneId?: string } = {}): Promise<Profile> {
   const baseURL = passkeySite(served);
-  const context = await browser.newContext({ baseURL, serviceWorkers: "block", viewport, extraHTTPHeaders: { "x-vercel-forwarded-for": ownAddress() }, ...(options.userAgent ? { userAgent: options.userAgent } : {}) });
+  const context = await browser.newContext({ baseURL, serviceWorkers: "block", viewport, extraHTTPHeaders: { "x-vercel-forwarded-for": ownAddress() }, ...(options.userAgent ? { userAgent: options.userAgent } : {}), ...(options.timezoneId ? { timezoneId: options.timezoneId } : {}) });
   const page = await context.newPage();
   page.setDefaultTimeout(30_000);
   if (options.passkey !== false) await holdAPasskey(context, page, `recipient-${Date.now()}-${Math.random()}`);

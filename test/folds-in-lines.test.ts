@@ -136,7 +136,7 @@ test("a field of that sheet keeps its instruction in the one line under it", () 
 test("how each way out works is four lines: what the person gets, in how long, what it costs, what it takes", () => {
   assert.deepEqual([USE_MONEY.phone.get, USE_MONEY.phone.time, USE_MONEY.phone.cost, USE_MONEY.phone.need], ["credit or data on your number", "usually a minute", "the price shown before you pay", "your number, no ID"]);
   assert.deepEqual([USE_MONEY.giftcard.get, USE_MONEY.giftcard.time, USE_MONEY.giftcard.cost, USE_MONEY.giftcard.need], ["a code for the shop you choose", "usually within a minute", "the price shown before you pay", "nothing: no sign-up, no ID"]);
-  assert.deepEqual([USE_MONEY.mobileGet("Wave or Orange Money"), USE_MONEY.mobileTime("15 minutes"), USE_MONEY.mobile.cost, USE_MONEY.mobile.need], ["money on your Wave or Orange Money number", "within 15 minutes", "Switch's rate, shown before you send", "the number and its holder's name"]);
+  assert.deepEqual([USE_MONEY.mobileGet("Wave or Orange Money"), USE_MONEY.mobileTime("15 minutes"), USE_MONEY.mobile.cost, USE_MONEY.mobile.need], ["money on your Wave or Orange Money number", "within 15 minutes", "the rate shown before you send", "the number and its holder's name"]);
   // The cost of the bank and of the card is the service's published figure, the one the fold of sources dates.
   assert.equal(feeUnderItsName(WAY_OUT_EURO), "0.99 %, at least €1.99");
   assert.equal(feeUnderItsName(WAY_OUT_CARD), "up to 3.95 %, at least €4.00");

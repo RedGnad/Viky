@@ -16,11 +16,11 @@ import { sentSince } from "./send-store";
  * of the coin than that no longer holds what the way out brought, whatever was or was not written down of its leaving
  * (the one way out of 16 Sep 2026 has no send written after it), and nothing is said to be ready.
  */
-export type OpenWithdrawal = Readonly<{ coin: Hex; atLeast: bigint; sinceMs: number }>;
+export type OpenWithdrawal = Readonly<{ coin: Hex; atLeast: bigint; sinceMs: number; /** The transaction that changed it, when it is known. */ txHash: Hex | null }>;
 
 export async function openWithdrawalOf(account: string): Promise<OpenWithdrawal | null> {
   const landed = await lastLandedExit(account);
   if (!landed) return null;
   if (await sentSince(account, landed.tokenOut, landed.sentAtMs)) return null;
-  return { coin: landed.tokenOut, atLeast: landed.minOut, sinceMs: landed.sentAtMs };
+  return { coin: landed.tokenOut, atLeast: landed.minOut, sinceMs: landed.sentAtMs, txHash: landed.txHash };
 }
