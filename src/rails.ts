@@ -129,6 +129,12 @@ export type WayIn = Readonly<{
   /** What they keep, as they publish it. */
   fee: PublishedFee;
   conditions: readonly string[];
+  /**
+   * What the service asks of a person before it takes their card, as the words that follow "asks for" on the pay
+   * sheet (the founder, 5 Oct 2026): said before the person enters its page, and of the service they are offered,
+   * never of another. Where each was read is beside its value.
+   */
+  asks: string;
   /** Where the sentences above were read, and when. Shown on screen, so nobody has to take our word for it. */
   source: string;
   read: string;
@@ -174,6 +180,9 @@ export const WAY_IN_GIFT_COIN: WayIn = {
   smallestEur: 6.25,
   fee: { percent: 3.9, upTo: true, minimum: 2.49, currency: "EUR" },
   conditions: ["Identity check the first time, once.", "A card or a bank account in your name."],
+  // Its help, "What are the KYC limits and requirements?" (updated 23 Sep 2025, read 5 Oct 2026): an identification
+  // document for all purchases, and a proof of address above 5,000 EUR.
+  asks: "your ID the first time",
   source: "Ramp's own asset list",
   read: "1 Oct 2026",
   closedIn: [...RAMP_CLOSED_IN, ...RAMP_NO_GIFT_COIN_IN],
@@ -214,6 +223,9 @@ export const WAY_IN_CHAIN_COIN: WayIn = {
   takes: "most payments take 30 to 60 minutes, and sometimes several hours",
   fee: { percent: 3.8, upTo: false, minimum: 0, currency: "EUR" },
   conditions: ["Identity check the first time, once.", "A card in your name."],
+  // As it stood, and not read again on 5 Oct 2026: its help pages refuse a reader that is no browser. A search
+  // engine reports its partners' help as letting a first 700 EUR through without a document: a lead, not a reading.
+  asks: "your ID the first time",
   source: "Mercuryo's own limits and currencies",
   read: "20 Sep 2026",
   // Buying the coin is shut in the United Kingdom as well as selling it: their own currencies endpoint lists `gb`
@@ -275,6 +287,8 @@ export const WAY_IN_EMBEDDED: WayIn = {
   smallestEur: 10,
   fee: { percent: 9, upTo: true, minimum: 0, currency: "EUR" },
   conditions: ["An account with the card service it sends you to, and its identity check the first time."],
+  // Each quote of 1 Oct 2026 began by signing in to an account with the card service it led to (the note above).
+  asks: "an account with the card service it sends you to, and your ID the first time",
   source: "Swapper's own quotes",
   read: "1 Oct 2026",
   closedIn: SWAPPER_CLOSED_IN,
@@ -328,6 +342,11 @@ export const WAY_IN_USDC: WayIn = {
   smallestEur: 5,
   fee: { percent: 7, upTo: false, plus: 0.4, minimum: 1, currency: "EUR" },
   conditions: ["The first time: your details, a code by text, and your ID.", "A card in your name."],
+  // Two readings. Its documentation, "Onramp Flow" (docs.rampnow.io, read 5 Oct 2026): the person enters an e-mail and
+  // the code sent to it. The founder's own try of 1 Oct 2026, above: then a form of identity, a code by text and an
+  // identity check, before a first payment of 5 EUR. Its documentation also publishes a level it calls unverified,
+  // with orders up to 800 EUR (the table of "Payment Methods & Limits", read 5 Oct 2026): what was met is what is said.
+  asks: "your e-mail, then the first time your details, a code by text and your ID",
   source: "Rampnow's own quotes",
   read: "1 Oct 2026",
   closedIn: [],

@@ -2,7 +2,8 @@
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { CARD, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "./ui";
-import { useDoor, useMadeHere } from "@/src/account/door";
+import { useDoor, useMadeHere, useOnAComputer } from "@/src/account/door";
+import { accountError } from "@/src/account/errors";
 import { useAccount } from "@/src/account/provider";
 import { ACCOUNT_DOOR as W } from "@/src/sentences";
 import { CopyThisLink, Elsewhere, MadeOnTheMainSite, Outdated } from "../kit/AccountDoor";
@@ -35,6 +36,7 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
   const door = useDoor();
   // No account is made on an address that is not Viky's own: there the panel offers signing in, and the way to viky.cash.
   const madeHere = useMadeHere();
+  const computer = useOnAComputer();
   // On a gift the link carries the gift's key, so it is the link that is named and copied, never the site.
   const onGift = (usePathname() ?? "").startsWith("/g/");
   const busy = status === "busy";
@@ -92,7 +94,8 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
       </button>
       {/* One sentence, not two saying the same thing: what it is, rather than what it is not (NN/g, concise). Where
           the computer has nothing to make a passkey with, what it lacks and what to do, a line each. */}
-      {(noSensor ? W.computer(onGift) : [W.how]).map((line) => (
+      {/* On a computer with something to make a passkey with: which choice of the system's sheet follows the person. */}
+      {(noSensor ? W.computer(onGift) : computer ? [W.how, W.onAComputer] : [W.how]).map((line) => (
         <p key={line} className={HELP}>
           {line}
         </p>
@@ -166,7 +169,9 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
 
       {error ? (
         <div role="alert" className="space-y-[var(--space-sm)] rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">
-          <p>{error.guidance}</p>
+          {/* Where signing in is the only thing offered, a closed prompt is not answered with "create one": a second
+              account would not hold what the first one does (D74). */}
+          <p>{signInOnly && error.code === "NO_CREDENTIAL" ? accountError("PASSKEY_CANCELLED").guidance : error.guidance}</p>
           {phone ? <p>{W.ifItKeepsFailing[phone](onGift)}</p> : null}
           {phone ? <CopyThisLink browser={phone === "iphone" ? "safari" : "chrome"} /> : null}
         </div>

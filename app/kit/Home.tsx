@@ -22,6 +22,7 @@ import { MoneyHero } from "./MoneyHero";
 import { SpendOrWithdraw } from "./SpendOrWithdraw";
 import { ReachedMoments, reachedOfSummary, type ReachedGift } from "./ReachedMoment";
 import { DoorNotice } from "./AccountDoor";
+import { KeyKeptNotice } from "./KeyKept";
 import { FinishTheGift } from "./FinishTheGift";
 import { OfferCard } from "./offer/OfferCard";
 import { Shell } from "./Shell";
@@ -181,6 +182,8 @@ export function Home({
           stood higher here than on the two other destinations (the founder, 24 Sep 2026, D230). */}
       <Shell kind="destination" active="home" title={NAV.home} character={<HeadCharacter scene="home" />}>
         <ReachedMoments gifts={owed} />
+        {/* A key this computer keeps for itself alone, said once (the founder, 5 Oct 2026): nothing on any other device. */}
+        <KeyKeptNotice />
         {/* A payment started for a gift never made: said first, since the money for it may be what stands below (D74). */}
         <FinishTheGift />
         <MoneyHero address={address} holdings={holdings} gifts={gifts} giftsUnread={problem !== null} />

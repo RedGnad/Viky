@@ -21,6 +21,7 @@ import { MoneyKey } from "./MoneyKey";
 import { Act, RoundControls } from "./RoundControls";
 import { holdsAnything, useHoldings, useMoneyHeld } from "./money";
 import { useMyGifts } from "./my-gifts";
+import { KeyKeptLine } from "./KeyKept";
 import { SignInDoor } from "./SignInDoor";
 import { SpendOrWithdraw } from "./SpendOrWithdraw";
 import { Shell } from "./Shell";
@@ -155,6 +156,8 @@ export function Me() {
         {/* While the session closes the page stays as it was: this line does not turn to "Not signed in" on the way. */}
         <p className="font-medium">{reach === "signing" && until ? W.signedInUntil(until) : reach === "signed-out" && !leaving ? W.signedOut : W.signedIn}</p>
         {reach === "reading" ? <p className={HELP}>{W.passkeyWhenMoneyMoves}</p> : null}
+        {/* Where this account's key is kept, on a computer whose browser said it (src/account/key-kept.ts). */}
+        <KeyKeptLine />
       </section>
 
       {/* What Viky reads, and the stop, for every gift this account is the person of (the founder, 29 Sep 2026). */}

@@ -406,9 +406,14 @@ export const DOOR_SCREEN: readonly CatalogueScreen[] = [
     states: [
       { name: "Closed", when: "on the page without an account and on You, with nobody signed in", says: ["Sign in"] },
       {
-        name: "Open",
-        when: "the passkey did not open, because this device holds none for Viky or the sheet was waved away",
-        says: ["Your face or your fingerprint, and nothing to remember.", "Create your account", "Try again", "Not now"],
+        name: "Open, on a device that remembers no passkey",
+        when: "the header's entry was pressed: nothing is asked of the browser until Sign in is pressed there",
+        says: ["Your face or your fingerprint, and nothing to remember.", "Create my account", "Sign in", "Not now"],
+      },
+      {
+        name: "Open, after a passkey that did not answer",
+        when: "this device remembers a passkey and its sheet was waved away",
+        says: ["Your face or your fingerprint, and nothing to remember.", "Create my account", "Try again", "Not now"],
       },
     ],
   },

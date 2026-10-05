@@ -53,7 +53,9 @@ for (const size of sizesFor(SHOTS)) {
       await expect(door.getByRole("link", { name: "Create my account on viky.cash" })).toHaveAttribute("href", "https://viky.cash/");
       await expect(page.getByRole("button", { name: /^Create (your|my) account$/ })).toHaveCount(0);
       // An account made on that address before still opens there: the press that asks the device for its passkey stays.
-      await expect(door.getByRole("button", { name: "Try again" })).toBeEnabled();
+      // The header's own press asked for none, since this device remembers no passkey (the founder, 5 Oct 2026).
+      await expect(door.getByRole("button", { name: "Sign in", exact: true })).toBeEnabled();
+      await expect(door.getByRole("button", { name: "Try again" })).toHaveCount(0);
       await shot(page, size.name, "3-the-account-door-on-another-address");
       await context.close();
     });

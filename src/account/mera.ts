@@ -7,9 +7,10 @@ import {
 } from "@category-labs/mera";
 import { toViemAccount } from "@category-labs/mera/viem";
 import type { Address, LocalAccount } from "viem";
-import { ceremonyClient, endConsentKey } from "../client/consent-key";
+import { ceremonyClient, endConsentKey, takeKeyKept } from "../client/consent-key";
 import { deriveEvmPrivateKey } from "./derive";
 import { accountError, passkeyEnvironmentProblem, toAccountError } from "./errors";
+import { readRecord, recordOf, type KeptRecord } from "./key-kept";
 import { accountsAreMadeOn } from "./passkey-support";
 
 /**
@@ -19,6 +20,8 @@ import { accountsAreMadeOn } from "./passkey-support";
  */
 
 export const CREDENTIAL_STORAGE_KEY = "viky.credential";
+/** Where this device's passkey is kept, as its last ceremony said it (src/account/key-kept.ts). Never sent anywhere. */
+export const KEY_KEPT_STORAGE_KEY = "viky.key.kept";
 export const RELYING_PARTY_NAME = "Viky";
 /**
  * How long an unused signing session stays open, in minutes, on an ordinary screen and on a money screen.
@@ -126,6 +129,35 @@ export function hasStoredCredential(): boolean {
   return storedCredential() !== undefined;
 }
 
+/** Read once from the device, then held here: the screens read the same object until a ceremony says otherwise. */
+let kept: KeptRecord | null | undefined;
+
+/** Where the passkey this device signs in with is kept, or nothing when no ceremony said. */
+export function keyKept(): KeptRecord | null {
+  if (typeof window === "undefined") return null;
+  if (kept === undefined) {
+    try {
+      kept = readRecord(window.localStorage.getItem(KEY_KEPT_STORAGE_KEY));
+    } catch {
+      kept = null;
+    }
+  }
+  return kept && kept.credentialId === storedCredential()?.credentialId ? kept : null;
+}
+
+/** What the ceremony just finished said of the passkey now remembered. A sign-in keeps the store's name creation gave. */
+function rememberKeyKept(credentialId: string): void {
+  const next = recordOf(credentialId, takeKeyKept(), keyKept());
+  if (!next) return;
+  kept = next;
+  try {
+    window.localStorage.setItem(KEY_KEPT_STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // A browser that keeps nothing still says it until the page goes.
+  }
+  notify();
+}
+
 function armIdleTimer(): void {
   if (idleTimer) clearTimeout(idleTimer);
   const timeoutMs = idleMinutes * 60_000;
@@ -189,8 +221,10 @@ export async function createAccount(displayName: string): Promise<Address> {
       webAuthnClient: ceremonyClient(),
     });
     rememberCredential({ credentialId: created.credentialId, transports: created.transports });
+    rememberKeyKept(created.credentialId);
     return openSession(created.prfOutput);
   } catch (error) {
+    takeKeyKept();
     throw toAccountError(error);
   }
 }
@@ -221,9 +255,16 @@ export async function signIn(options: { as?: Promise<Address | null> } = {}): Pr
     if (!known || known.credentialId !== result.credentialId) {
       rememberCredential({ credentialId: result.credentialId });
     }
+    rememberKeyKept(result.credentialId);
     return address;
   } catch (error) {
-    throw toAccountError(error);
+    takeKeyKept();
+    const failure = toAccountError(error);
+    // A prompt closed on a device that knows no account (the founder, 5 Oct 2026): with no passkey for Viky here the
+    // browser offers another device or a security key, and "try again" leads back to that same sheet. What happened
+    // and what to do, instead. A session the server names is another matter: that account exists.
+    if (!known && !options.as && failure.code === "PASSKEY_CANCELLED") throw accountError("NO_CREDENTIAL");
+    throw failure;
   }
 }
 
@@ -291,8 +332,10 @@ export function isSignedIn(): boolean {
 export function forgetCredential(): void {
   signOut();
   remembered = undefined;
+  kept = null;
   try {
     window.localStorage.removeItem(CREDENTIAL_STORAGE_KEY);
+    window.localStorage.removeItem(KEY_KEPT_STORAGE_KEY);
   } catch {
     // nothing to forget
   }

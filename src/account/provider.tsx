@@ -84,6 +84,12 @@ const AccountContext = createContext<AccountContextValue | undefined>(undefined)
 
 const noAddress = () => undefined;
 const noCredential = () => false;
+const noKeyKept = () => null;
+
+/** Where this device's passkey is kept, as its last ceremony said it (src/account/key-kept.ts): nothing until one did. */
+export function useKeyKept() {
+  return useSyncExternalStore(mera.subscribe, mera.keyKept, noKeyKept);
+}
 
 export function AccountProvider({ initialAccount, children }: { initialAccount?: Address; children: ReactNode }) {
   // The account module is the source of truth; React mirrors it. The server snapshot is always

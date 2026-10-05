@@ -1,4 +1,5 @@
 import { createEd25519SigningSession, MeraError, type Ed25519SigningSession, type WebAuthnClient } from "@category-labs/mera";
+import { keyKeptOf, type KeyKept } from "../account/key-kept";
 
 /**
  * The key a recipient's yes and stop are signed with (the founder, 29 Sep 2026, Mera's "One Passkey, Many Keys").
@@ -104,6 +105,26 @@ export function meraOwnClient(value: string | undefined = process.env.NEXT_PUBLI
   return value?.trim() === "1";
 }
 
+/**
+ * What the last ceremony said of where its key is kept (src/account/key-kept.ts), taken once by the account module as
+ * it remembers the passkey. A browser that cannot say gives nothing, and nothing is then said to the person.
+ */
+let said: KeyKept | null = null;
+
+function note(credential: PublicKeyCredential, authenticatorData: ArrayBuffer | undefined): void {
+  try {
+    said = keyKeptOf({ authenticatorData: authenticatorData ? new Uint8Array(authenticatorData) : null, attachment: credential.authenticatorAttachment });
+  } catch {
+    said = null;
+  }
+}
+
+export function takeKeyKept(): KeyKept | null {
+  const taken = said;
+  said = null;
+  return taken;
+}
+
 /** The client the account's ceremonies run through: the one below, or Mera's own when the switch says so. */
 export function ceremonyClient(): WebAuthnClient | undefined {
   return meraOwnClient() ? undefined : consentWebAuthnClient;
@@ -134,6 +155,7 @@ export const consentWebAuthnClient: WebAuthnClient = {
     const prf = prfOf(credential);
     keep(prf?.results?.second);
     const response = credential.response as AuthenticatorAttestationResponse;
+    note(credential, typeof response.getAuthenticatorData === "function" ? response.getAuthenticatorData() : undefined);
     const transports = typeof response.getTransports === "function" ? (response.getTransports() as WebAuthnClient.CreateCredentialResult["transports"]) : undefined;
     const first = bytesOf(prf?.results?.first);
     return {
@@ -161,6 +183,7 @@ export const consentWebAuthnClient: WebAuthnClient = {
     );
     const prf = prfOf(credential);
     keep(prf?.results?.second);
+    note(credential, (credential.response as AuthenticatorAssertionResponse).authenticatorData);
     const first = bytesOf(prf?.results?.first);
     return { credentialId: new Uint8Array(credential.rawId), ...(first ? { prfOutput: first } : {}) };
   },

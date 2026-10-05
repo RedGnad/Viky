@@ -237,11 +237,16 @@ async function signedInAccount(page: Page): Promise<string | null> {
   return page.evaluate(() => fetch("/api/account/session", { credentials: "same-origin" }).then((r) => (r.ok ? r.json() : null)).then((s) => (s ? s.account : null)));
 }
 
-/** Presses the one door, and waits for the server's cookie. Creates the account on a profile with no passkey yet. */
+/**
+ * Presses the one door, and waits for the server's cookie. Creates the account on a profile with no passkey yet. On a
+ * device that has the passkey and never opened Viky, the header's press asks the browser nothing (the founder, 5 Oct
+ * 2026): it opens the door, and "Sign in" there is the press that asks for the passkey.
+ */
 async function signIn(page: Page, context: BrowserContext, create: boolean): Promise<string> {
   await page.goto("/");
   await page.getByRole("button", { name: /^Sign in$/ }).first().click();
   if (create) await page.getByRole("button", { name: /^Create (your|my) account$/ }).first().click();
+  else await page.getByRole("dialog", { name: "Sign in or create account" }).getByRole("button", { name: "Sign in", exact: true }).click();
   await expect.poll(async () => (await context.cookies()).some((cookie) => cookie.name === "__Host-viky-session"), { timeout: 30_000 }).toBe(true);
   const account = await signedInAccount(page);
   expect(account).toMatch(/^0x[0-9a-fA-F]{40}$/);

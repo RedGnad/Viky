@@ -21,13 +21,14 @@ export function CardTermsLine({ way }: Readonly<{ way: WayIn }>) {
 }
 
 /**
- * The pay sheet's one line under its button (the founder's mockup of 3 Oct 2026): who takes the card, its ID the first
- * time, and its terms on its own site, in one line rather than a sentence and a line of terms.
+ * The pay sheet's one line under its button (the founder's mockup of 3 Oct 2026): who takes the card, what that
+ * service asks before taking it (`WayIn.asks`), and its terms on its own site, in one line rather than a sentence and
+ * a line of terms.
  */
 export function CardLine({ way }: Readonly<{ way: WayIn }>) {
   return (
     <p className={HELP}>
-      {W.cardLine.before(way.name)}
+      {W.cardLine.before(way.name, way.asks)}
       <a href={way.terms} target="_blank" rel="noopener noreferrer" className="underline">
         {W.cardLine.link(way.name)}
       </a>
