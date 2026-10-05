@@ -133,16 +133,16 @@
   --other-muted: #C7C4DA;
   /* A sticker's four tones: the raised paper, the tonal lavender, and a quarter of the first and of the second
      character's colour. Never the sun, which is the action's. */
-  --sticker-1: #FFFBF0;
-  --sticker-2: #E8E3F4;
-  --sticker-3: #FFDDE2;
-  --sticker-4: #D8ECFF;
+  --round-tone-1: #FFFBF0;
+  --round-tone-2: #E8E3F4;
+  --round-tone-3: #FFDDE2;
+  --round-tone-4: #D8ECFF;
   /* A poster's room above and below, the shoulders of a band that rises, and a sticker, on a phone. */
   --poster-pad: 76px;
   --poster-round: 40px;
-  --sticker-size: 52px;
-  --sticker-icon: 24px;
-  --sticker-gap: 10px;
+  --round-size: 52px;
+  --round-icon: 24px;
+  --round-gap: 10px;
 
   /* The characters' own colours, never text and never a background (brief, section 5). */
   --character-1: #FF7F8E;
@@ -314,9 +314,9 @@
     --page-margin: 24px;
     --poster-pad: 150px;
     --poster-round: 72px;
-    --sticker-size: 76px;
-    --sticker-icon: 34px;
-    --sticker-gap: 18px;
+    --round-size: 76px;
+    --round-icon: 34px;
+    --round-gap: 18px;
   }
 }
 
@@ -404,10 +404,10 @@
     --other-text: #1E1633;
     --other-muted: #5B5470;
     /* The stickers after dark: the night's raised paper and tonal, and the same quarter of a character's colour on that paper. */
-    --sticker-1: #393446;
-    --sticker-2: #2B2642;
-    --sticker-3: #6D4859;
-    --sticker-4: #415372;
+    --round-tone-1: #393446;
+    --round-tone-2: #2B2642;
+    --round-tone-3: #6D4859;
+    --round-tone-4: #415372;
     --character-1: #FF7F8E;
     --character-2: #5AB4FF;
     --character-3: #B79BFF;
@@ -488,10 +488,10 @@
   --other-text: #1E1633;
   --other-muted: #5B5470;
   /* The stickers after dark: the night's raised paper and tonal, and the same quarter of a character's colour on that paper. */
-  --sticker-1: #393446;
-  --sticker-2: #2B2642;
-  --sticker-3: #6D4859;
-  --sticker-4: #415372;
+  --round-tone-1: #393446;
+  --round-tone-2: #2B2642;
+  --round-tone-3: #6D4859;
+  --round-tone-4: #415372;
   --character-1: #FF7F8E;
   --character-2: #5AB4FF;
   --character-3: #B79BFF;
@@ -2241,34 +2241,34 @@ html[data-intro] .launch-intro.launch-intro-leaving {
 .stickers {
   display: flex;
   flex: none;
-  gap: var(--sticker-gap);
+  gap: var(--round-gap);
 }
 .sticker {
   display: flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  width: var(--sticker-size);
-  height: var(--sticker-size);
+  width: var(--round-size);
+  height: var(--round-size);
   border: var(--control-border-width) solid var(--control-border);
   border-radius: 50%;
   box-shadow: var(--control-relief);
 }
 .sticker svg {
-  width: var(--sticker-icon);
-  height: var(--sticker-icon);
+  width: var(--round-icon);
+  height: var(--round-icon);
 }
 .sticker-1 {
-  background: var(--sticker-1);
+  background: var(--round-tone-1);
 }
 .sticker-2 {
-  background: var(--sticker-2);
+  background: var(--round-tone-2);
 }
 .sticker-3 {
-  background: var(--sticker-3);
+  background: var(--round-tone-3);
 }
 .sticker-4 {
-  background: var(--sticker-4);
+  background: var(--round-tone-4);
 }
 /*
  * The first image is the starting state (the rule of 23 Sep 2026). Where the document says movement is welcome and a

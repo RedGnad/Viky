@@ -175,8 +175,10 @@ function usePosters(root: { readonly current: HTMLElement | null }): void {
         }
       }, story);
       story.setAttribute(POSTERS_READY, "playing");
-      // The page's own typefaces change where a title stands: the triggers are measured again once they are in.
-      void document.fonts?.ready.then(() => live && ScrollTrigger.refresh());
+      // The page's own typefaces change where a title stands: the triggers are measured again once they are in. The
+      // safe way, which waits for a scroll under way to end: measuring puts the page at its top and back in one go,
+      // and done at once it cut a smooth scroll short where it stood (the way to the card, pressed as the page loaded).
+      void document.fonts?.ready.then(() => live && ScrollTrigger.refresh(true));
     }, still);
     return () => {
       live = false;
