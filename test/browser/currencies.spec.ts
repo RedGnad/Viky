@@ -37,14 +37,16 @@ test.describe("what money is read in", () => {
     expect(codes).not.toContain("CNY");
     await key(page).click();
     const lines = sheet(page).locator("li button");
-    await expect(lines).toHaveCount(codes.length);
+    // One line a currency, the two CFA francs sharing theirs since they read alike (5 Oct 2026).
+    const drawn = codes.length - (codes.includes("XOF") && codes.includes("XAF") ? 1 : 0);
+    await expect(lines).toHaveCount(drawn);
     // Each one, by its own code, and the one being read is the one pressed.
     for (const code of codes.slice(0, 4)) await expect(sheet(page).getByText(code, { exact: true })).toBeVisible();
     await expect(sheet(page).locator('li button[aria-pressed="true"]')).toHaveCount(1);
     // The filled mark of the choice, on that line and on no other (D209); left to right, the sign, the code, the name.
     await expect(sheet(page).locator('[data-choice="chosen"]')).toHaveCount(1);
     await expect(sheet(page).locator('li button[aria-pressed="true"] [data-choice="chosen"]')).toHaveCount(1);
-    await expect(sheet(page).locator('[data-choice="open"]')).toHaveCount(codes.length - 1);
+    await expect(sheet(page).locator('[data-choice="open"]')).toHaveCount(drawn - 1);
     const first = await sheet(page).locator("li button").first().evaluate((line) => [...line.querySelectorAll(":scope > span")].map((part) => (part.textContent ?? "").trim()));
     expect(first[0]).toBe("");
     expect(first[2]).toMatch(/^[A-Z]{3}/);
@@ -63,15 +65,16 @@ test.describe("what money is read in", () => {
     await expect(sheet(page).getByText(/at the European Central Bank's rate of|exchange rate could not be read/)).toHaveCount(1);
   });
 
-  test("the CFA francs are called CFA franc, stand side by side under C, and an amount in francs is written as francs are", async ({ browser, baseURL, viewport }) => {
+  test("the CFA franc is one line of the list, under C, and an amount in francs is written as francs are", async ({ browser, baseURL, viewport }) => {
     test.skip((viewport?.width ?? 0) !== 375, "measured once: each case opens its own window");
     // The founder, 5 Oct 2026: he looked for the CFA franc in the list and took it for gone. It was the last line,
     // "West African CFA Franc" after the US dollar, written "F CFA 5,000" where the people who count in it read
-    // "5 000 FCFA" (Orange Money's price list and Wave's terms in Côte d'Ivoire).
+    // "5 000 FCFA" (Orange Money's price list and Wave's terms in Côte d'Ivoire). Then: the two francs read alike, so
+    // they are one line, and no line of the list takes two on a phone.
     const abidjan = await browser.newContext({ baseURL, serviceWorkers: "block", viewport: { width: 390, height: 844 }, locale: "en-GB", extraHTTPHeaders: { "x-vercel-ip-country": "CI" } });
     const page = await abidjan.newPage();
     await page.goto("/");
-    await expect(key(page)).toHaveAttribute("aria-label", "Read in another currency, CFA franc (West Africa) now");
+    await expect(key(page)).toHaveAttribute("aria-label", "Read in another currency, CFA franc now");
     // The control that opens the list keeps its place in front of the field (21 Sep 2026), and reads "FCFA".
     await expect(key(page)).toHaveText("FCFA");
     const [control, field] = [(await key(page).boundingBox())!, (await page.locator('#offer input[inputmode="decimal"]').boundingBox())!];
@@ -86,33 +89,45 @@ test.describe("what money is read in", () => {
     // ("667 FCFA a day", "Send 20 000 FCFA").
     for (const one of written) expect(one === "FCFA" || !one.replace(/\d{1,3}(\s\d{3})*\sFCFA/g, "").includes("CFA"), `"${one}" is written as francs are`).toBe(true);
     expect(await page.locator("#offer").innerText()).not.toMatch(/F\sCFA|XOF/);
-    // In the list: by the name somebody looks for, marked as the one being read, with what the amount is worth.
+    // In the list: one line for the two francs, by the name somebody looks for, with both codes, marked as the one
+    // being read, and what the amount is worth.
+    const codes = await offered(page);
     await key(page).click();
     const lines = sheet(page).locator("li button");
-    const mine = lines.filter({ hasText: "CFA franc (West Africa)" });
+    const mine = lines.filter({ hasText: "CFA franc" });
     await expect(mine).toHaveCount(1);
     await expect(mine).toHaveAttribute("aria-pressed", "true");
-    expect(await mine.evaluate((line) => [...line.querySelectorAll(":scope > span")].map((part) => (part.textContent ?? "").trim()))).toEqual(["", "FCFA", "XOFCFA franc (West Africa)", expect.stringMatching(francs)]);
-    await expect(sheet(page).getByText(/West African CFA Franc|Central African CFA Franc|F\sCFA/)).toHaveCount(0);
+    const both = codes.includes("XOF") && codes.includes("XAF");
+    expect(await mine.evaluate((line) => [...line.querySelectorAll(":scope > span")].map((part) => (part.textContent ?? "").trim()))).toEqual(["", "FCFA", `${both ? "XOF · XAF" : "XOF"}CFA franc`, expect.stringMatching(francs)]);
+    await expect(sheet(page).getByText(/West African|Central African|West Africa|Central Africa|F\sCFA/)).toHaveCount(0);
+    await expect(lines).toHaveCount(codes.length - (both ? 1 : 0));
     await abidjan.close();
 
-    // Read from somewhere else: the two stand side by side among the C's, where "CFA" is looked for.
-    const paris = await browser.newContext({ baseURL, serviceWorkers: "block", viewport: { width: 390, height: 844 }, locale: "fr-FR", extraHTTPHeaders: { "x-vercel-ip-country": "FR" } });
-    const other = await paris.newPage();
-    await other.goto("/");
-    await key(other).click();
-    const names = await sheet(other).locator("li button [data-currency-name]").allTextContents();
-    const west = names.indexOf("CFA franc (West Africa)");
-    expect(west, "the franc of West Africa is in the list").toBeGreaterThanOrEqual(0);
-    expect(west, "and it is not the last line any more, unless the list is the three the product was built on").toBeLessThan(names.length <= 3 ? names.length : names.length - 1);
-    const central = names.indexOf("CFA franc (Central Africa)");
-    if (central >= 0) expect(west - central, "side by side").toBe(1);
-    // And each is read whole on a phone: the word that tells the two apart is never cut off.
-    for (const name of ["CFA franc (West Africa)", "CFA franc (Central Africa)"].filter((one) => names.includes(one))) {
-      const whole = await sheet(other).locator("li button [data-currency-name]", { hasText: name }).evaluate((line) => line.scrollWidth <= line.clientWidth + 1 && getComputedStyle(line).textOverflow !== "ellipsis");
-      expect(whole, `${name} is read whole`).toBe(true);
+    // Read from somewhere else, on the two phones measured: the franc is among the C's, read whole, and every line
+    // of the list is one line high. Left to wrap for a few hours that day, eight names took two lines at 360.
+    for (const width of [360, 390]) {
+      const paris = await browser.newContext({ baseURL, serviceWorkers: "block", viewport: { width, height: 844 }, locale: "fr-FR", extraHTTPHeaders: { "x-vercel-ip-country": "FR" } });
+      const other = await paris.newPage();
+      await other.goto("/");
+      await key(other).click();
+      await expect(sheet(other).getByText(/at the European Central Bank's rate of|exchange rate could not be read/)).toHaveCount(1);
+      const read = await sheet(other)
+        .locator("li button")
+        .evaluateAll((rows) =>
+          rows.map((row) => {
+            const name = row.querySelector<HTMLElement>("[data-currency-name]")!;
+            return { name: name.textContent ?? "", whole: name.scrollWidth <= name.clientWidth + 1, high: Math.round(row.getBoundingClientRect().height) };
+          }),
+        );
+      const names = read.map((row) => row.name);
+      const franc = names.indexOf("CFA franc");
+      expect(franc, `at ${width}: the franc is in the list`).toBeGreaterThanOrEqual(0);
+      expect(names.filter((name) => /CFA/.test(name)), `at ${width}: on one line`).toEqual(["CFA franc"]);
+      expect(read[franc].whole, `at ${width}: "CFA franc" is read whole`).toBe(true);
+      if (names.length > 3) expect(franc, `at ${width}: not the last line any more`).toBeLessThan(names.length - 1);
+      expect([...new Set(read.map((row) => row.high))], `at ${width}: every line of the list is one line high`).toHaveLength(1);
+      await paris.close();
     }
-    await paris.close();
   });
 
   test("the key is a thumb's size, and says what it does", async ({ page }) => {

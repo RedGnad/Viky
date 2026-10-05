@@ -1,6 +1,6 @@
 "use client";
 import { figureWithMark } from "@/src/amount-in-currency";
-import { currencyOf, figureIn, perDollar } from "@/src/currencies";
+import { asRead, currencyOf, figureIn, perDollar } from "@/src/currencies";
 import { proposedDisplayCurrency, rateDateInWords } from "@/src/display-currency";
 import type { Rates } from "@/src/rates";
 import { MONEY as W } from "@/src/sentences";
@@ -13,7 +13,7 @@ import { Sheet } from "./Sheet";
  * Every line carries the sign, the code, the name, and on the right the amount on the screen converted into that
  * currency: the choice is useful rather than administrative, because "8.84 EUR" beside "9.99 CHF" beside
  * "880 INR" is what somebody is actually choosing between. Several currencies share a sign, so the code and the
- * name always stand beside it.
+ * name always stand beside it. Two currencies that read alike, the two CFA francs, share a line, with both codes.
  *
  * The one this device suggests comes first, under its own title; the rest follow by name. "About" and the rate's
  * day are said once, at the foot, rather than on every line, and when no rate could be read the sheet says that
@@ -43,8 +43,10 @@ export function CurrencySheet({
   onClose: () => void;
 }>) {
   const proposed = proposedDisplayCurrency(language);
-  const here = offered.includes(proposed) ? [proposed] : [];
-  const rest = offered.filter((code) => !here.includes(code));
+  // One line for each way of reading: the two CFA francs read alike and stand on one (src/currencies.ts).
+  const lines = asRead(offered, rates);
+  const here = lines.filter((codes) => codes.includes(proposed));
+  const rest = lines.filter((codes) => !codes.includes(proposed));
   /** What the screen's own amount is worth in that currency, and nothing at all where there is no amount to show. */
   const worth = (code: string) => {
     const rate = perDollar(code, rates);
@@ -52,11 +54,14 @@ export function CurrencySheet({
     return figureWithMark(figureIn((Number(units) / 1_000_000) * rate, code), code);
   };
 
-  const line = (code: string) => {
+  const line = (codes: readonly string[]) => {
+    // Which of a line's currencies a press chooses: the one already read in, else the one this device would propose,
+    // else the first. They read alike, so nothing a person sees depends on it.
+    const code = codes.includes(currency) ? currency : codes.includes(proposed) ? proposed : codes[0];
     const money = currencyOf(code);
-    const chosen = code === currency;
+    const chosen = codes.includes(currency);
     return (
-      <li key={code}>
+      <li key={codes.join("-")}>
         <button
           type="button"
           onClick={() => onChoose(code)}
@@ -75,10 +80,11 @@ export function CurrencySheet({
           </span>
           {/* Left to right as the spec reads: the sign, the code, the name, and the amount on the right. */}
           <span className="flex min-w-0 flex-col">
-            <span className={CARD_LABEL}>{code}</span>
-            {/* A name is never cut: "CFA franc (West…" and "CFA franc (Cent…" lost the one word that tells the two
-                francs apart (5 Oct 2026). A long one takes a second line, balanced so the part in brackets stays whole. */}
-            <span data-currency-name="" className="[text-wrap:balance]">
+            <span className={CARD_LABEL}>{codes.join(" · ")}</span>
+            {/* One line a currency, on every phone: a name too long for the room beside its amount is cut, and the
+                code above it still says which it is. Left to wrap for a few hours on 5 Oct 2026, eight names took
+                two lines at 360 and one took three. */}
+            <span data-currency-name="" className="truncate">
               {money.name}
             </span>
           </span>
