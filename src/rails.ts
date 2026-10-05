@@ -332,7 +332,9 @@ export const RAMPNOW_OPEN_IN: readonly string[] = [
  * - The founder's own try, to the last step before paying: signing in by e-mail and a code, then the recipient shown as
  *   his account, greyed like the amount and the coin; then a form of identity, a code by text, and an identity check.
  *
- * No payment has run through it yet, and the step that changes USDC is not deployed: `rampnowWayIn` keeps it off.
+ * The step that changes USDC into what a gift holds is deployed since 3 Oct 2026 (the converter of docs/CONTRACTS.md),
+ * and ran with real amounts that day: the USDC a card payment delivered became 7.914524 AUSD on one signature. The way
+ * is offered where its two settings are set (`rampnowWayIn`), and nowhere else.
  */
 export const WAY_IN_USDC: WayIn = {
   name: "Rampnow",

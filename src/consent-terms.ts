@@ -90,10 +90,14 @@ const byCondition: Readonly<Record<string, Terms>> = {
     things: 2,
     what: `${your(v)} results`,
   }),
+  // What the reading takes and what the gift's page shows the person who offered it (the founder, 5 Oct 2026): the
+  // line of the official results, with the name printed on it and the finish time (src/marathon-reading.ts,
+  // `marathonLine` in app/kit/MarathonProof.tsx). The agreement said "whether it was finished" and no more, while the
+  // page showed the time too. No agreement had been signed for a race when this was corrected.
   "marathon-finish": (_, v) => ({
-    reads: `${your(v)} finish at the race named in this gift, on its official results: the distance and whether it was finished`,
-    funderSees: "whether it was finished",
-    things: 1,
+    reads: `${your(v)} line in the official results of the race named in this gift: the name on it, the bib, the distance and the finish time`,
+    funderSees: "whether it was finished, and the line read: the name on it and the finish time",
+    things: 2,
     what: `${your(v)} race result`,
   }),
 };
