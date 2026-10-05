@@ -14,6 +14,8 @@ import { JUDGES } from "../src/sentences";
 
 const page = readFileSync("app/judges/JudgesVerify.tsx", "utf8");
 const readme = readFileSync("README.md", "utf8");
+/** Where the check is explained in full since 5 Oct 2026: the README keeps the command, on its first screen. */
+const verification = readFileSync("docs/VERIFICATION.md", "utf8");
 
 /** What the page actually says: comments explain the code to us, they are not read by anybody on the site. */
 const said = (source: string) => source.replace(/\{\/\*[\s\S]*?\*\/\}/g, " ").replace(/\s+/g, " ");
@@ -24,7 +26,7 @@ test("the note is the founder's, and it promises nothing about where the key is 
   assert.match(page, /J\.ourKey/);
   assert.match(page, /J\.andSo/);
   // Nothing a person reads may say the key sits in an enclave: it does not.
-  for (const source of [said(page), readme, JSON.stringify(JUDGES)]) {
+  for (const source of [said(page), readme, verification, JSON.stringify(JUDGES)]) {
     assert.doesNotMatch(source, /enclave/i, "no page promises an enclave");
   }
 });
@@ -49,11 +51,17 @@ test("both halves of the answer are on the page: what it proves and what it does
 });
 
 test("the check is documented where somebody cloning the repository would look", () => {
-  assert.match(readme, /## Check a credited day yourself/);
-  assert.match(readme, /git clone https:\/\/github\.com\/RedGnad\/Viky\.git/);
-  assert.match(readme, /\*\*What it proves\*\*/);
-  assert.match(readme, /\*\*What it does not prove\*\*/);
-  assert.match(readme, /The key that signs is ours and the owner can replace it/);
+  // The command is on the README's first screen, with both halves of what it says in a sentence each.
+  assert.match(readme, /git clone https:\/\/github\.com\/RedGnad\/Viky\.git && cd Viky && pnpm install && pnpm verify:day/);
+  assert.match(readme, /`pnpm verify:day` proves that the source's own servers answered/);
+  assert.match(readme, /It does not prove whose account it is, nor that a human did the work/);
+  assert.match(readme, /\]\(docs\/VERIFICATION\.md#check-a-credited-day-yourself\)/);
+  // And the whole of it is one link away.
+  assert.match(verification, /## Check a credited day yourself/);
+  assert.match(verification, /git clone https:\/\/github\.com\/RedGnad\/Viky\.git/);
+  assert.match(verification, /\*\*What it proves\*\*/);
+  assert.match(verification, /\*\*What it does not prove\*\*/);
+  assert.match(verification, /The key that signs is ours and the owner can replace it/);
 });
 
 test("it is the first thing on the judges page, before anything we ask to be believed", () => {

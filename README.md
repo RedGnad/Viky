@@ -1,12 +1,50 @@
 # Viky
 
+**Send money that motivates.**
+
 The money is already in their name. Every day they miss, a piece comes back to you.
 
 Viky is a conditional payment on Monad. Someone puts money behind another person's goal. The money is
 allocated in the recipient's name from day one, becomes theirs as verified progress accrues, and
 returns to the funder for whatever is not accomplished. Nobody ever profits from a missed day.
 
-Live app: [viky.cash](https://viky.cash). Built for Monad Metropolis, track Consumer Products & Payments.
+**[The app](https://viky.cash)** · **3-minute video** (its link comes with the submission) · **[The judges page](https://viky.cash/judges)**
+
+Built for Monad Metropolis, track Consumer Products & Payments.
+
+![The card a gift is filled in on, a gift's page with its days, and the screen money is taken out from](docs/readme/in-use.png)
+
+Three of the app's own screens, photographed by the test suite with example data: the card a gift is filled in on, a
+gift's page with its days, and "Spend or withdraw".
+
+| On Monad mainnet (chain 143) | Where | Verified by |
+|---|---|---|
+| `GiftEscrowV3`: a gift for a habit, a day at a time | [`0x591d76863177E70FfcA2C793212d4715A367Ec70`](https://monadvision.com/address/0x591d76863177E70FfcA2C793212d4715A367Ec70) | its source, an [exact match](https://sourcify-api-monad.blockvision.org/v2/contract/143/0x591d76863177E70FfcA2C793212d4715A367Ec70) |
+| `MilestoneGiftV2`: a gift for one thing reached, with a deadline | [`0x493c87A27E637bBc7179C17bE2B215fC18523CC0`](https://monadvision.com/address/0x493c87A27E637bBc7179C17bE2B215fC18523CC0) | its source, an [exact match](https://sourcify-api-monad.blockvision.org/v2/contract/143/0x493c87A27E637bBc7179C17bE2B215fC18523CC0) |
+| `ExitRouter`: the way out of what a gift earned | [`0x8a1790DfD10CF1599bDaeD5eC8BB46B2A6eB6223`](https://monadvision.com/address/0x8a1790DfD10CF1599bDaeD5eC8BB46B2A6eB6223) | its source, an [exact match](https://sourcify-api-monad.blockvision.org/v2/contract/143/0x8a1790DfD10CF1599bDaeD5eC8BB46B2A6eB6223) |
+| `ExitRouter`, a second copy set on USDC: the converter of card payments | [`0xf05449c8b868Ce1e6a0D7223e2ceCbbfD1498F9c`](https://monadvision.com/address/0xf05449c8b868Ce1e6a0D7223e2ceCbbfD1498F9c) | its source, an [exact match](https://sourcify-api-monad.blockvision.org/v2/contract/143/0xf05449c8b868Ce1e6a0D7223e2ceCbbfD1498F9c) |
+| Their owner: a Safe 1.4.1 that signs with 2 of its 3 keys | [`0xE08D926c148A5065F4Df2892702785a183de86F9`](https://monadvision.com/address/0xE08D926c148A5065F4Df2892702785a183de86F9) | `owner()` on each contract |
+| **A credited day, checked again from nothing** | `pnpm verify:day`, below | five answers, each `yes`, for transaction [`0x5aa6…4ffd`](https://monadvision.com/tx/0x5aa6752fc8c7db2526a5e5bafe6aeb91e09bd1cbe0cf3d4a6bc5e8f65f664ffd) |
+| **A refusal**: an account that is not the recipient asks for what a gift earned | `cast call`, below | the error `NotRecipient()`, `0x586d3357` |
+
+```bash
+# A credited day: no key, no account, no variable.
+git clone https://github.com/RedGnad/Viky.git && cd Viky && pnpm install && pnpm verify:day
+
+# A refusal, on the contract in service, with Foundry's cast: it answers "execution reverted", data 0x586d3357,
+# which is NotRecipient().
+cast call 0x591d76863177E70FfcA2C793212d4715A367Ec70 "withdrawEarned(uint256,address,uint256)" \
+  1000 0x000000000000000000000000000000000000dEaD 1 --rpc-url https://rpc.monad.xyz
+```
+
+`pnpm verify:day` proves that the source's own servers answered and that the contract settled that day against that
+one claim, which can never be used again. It does not prove whose account it is, nor that a human did the work:
+[what it checks, and its limits](docs/VERIFICATION.md#check-a-credited-day-yourself). The sources are verified on
+MonadVision, the explorer, through its Sourcify instance. The nine deployments, the earlier versions that still run
+the gifts they hold among them, are in [Contracts](docs/CONTRACTS.md).
+
+[![CI](https://github.com/RedGnad/Viky/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/RedGnad/Viky/actions/workflows/ci.yml?query=branch%3Amain)
+the last run of the checks on `main`: types, lint, the policy tests, the contracts' tests and the screens in a browser.
 
 ## Who it is for, and the problem
 
@@ -20,71 +58,14 @@ the thing was done: the lesson, the rating, the certificate, the enrolment. Each
 and whatever is not earned comes back to the funder by itself. Nobody profits from a missed day: not Viky, not a
 pool, not another user.
 
+## What is new
+
 Tools for keeping a commitment already exist (Beeminder, StickK, Forfeit): there, a person stakes their own
 money and loses it to somebody else. What Viky does differently is the third-party funder, the money allocated in
 the recipient's name, the release on a verified reading, and the automatic return of the rest.
 
 Two things Viky does not claim: that a habit lasts once the money stops, and that a transfer through Viky costs
 less than a bank's.
-
-## For judges
-
-[viky.cash/judges](https://viky.cash/judges) is the one page for verifying Viky: the contract addresses on Monad
-mainnet, who owns them (read from the chain when the page is served), every condition a gift can wait for and the
-source it is read from, the commands to re-verify a credited day yourself, and the risks and limits, written as they
-are. It also says how to try the product with your own passkey.
-
-## How Viky was built
-
-### AI tools
-
-Viky was built with an AI coding tool, Claude Code (Anthropic). It wrote most of the code, the tests and the
-documentation in this repository from the author's written briefs, and it ran the checks before each merge: types,
-lint, the policy tests, the build and the browser tests. The author directed all of it: what the product is, how it
-looks, what every screen says, and every decision that touches money. Nothing was deployed to mainnet and no real
-payment was made without his explicit decision. Two people from outside the project have each opened a gift, one
-of them on an iPhone, from Instagram.
-
-### Pre-existing code
-
-Two things in this repository were not written for this hackathon.
-
-**Code ported from Lock-in.** Lock-in is an earlier project by the same author, in a private repository. It verified
-a daily Duolingo lesson and a Strava run with Reclaim proofs. Viky is another product: a third party funds, and nothing
-is staked. What it took from Lock-in is the verification plumbing, ported file by file on 10 Sep 2026 (commit
-`67656ba`) and edited since:
-
-- the account session and the guards every route starts with: `src/account-auth-server.ts`, `src/api-guard.ts`,
-  `src/rate-limit.ts`, `src/monad-gas.ts`;
-- the Reclaim proof handling: `src/reclaim-abi.ts`, `src/reclaim-types.ts`, `src/reclaim-channel.ts`,
-  `src/reclaim-onchain.ts`, `src/reclaim-proof-set.ts`, `src/proof-session-store.ts`;
-- the Duolingo proof: `src/duolingo-profile.ts`, `src/duolingo-proof-policy.ts`, `src/duolingo-verification.ts`,
-  `src/gift-attestation.ts`, `scripts/capture-duolingo-proof.ts`, `scripts/transform-duolingo-proof.ts`;
-- the two routes of a proof shown from the person's own account, `app/api/proof/session/route.ts` and
-  `app/api/proof/verify/route.ts`, which were Lock-in's Duolingo session and verify routes and now serve every
-  shown condition;
-- the on-chain verifiers, which are not deployed (see Contracts): `contracts/verifiers/VikyProofTypes.sol`,
-  `contracts/verifiers/VikyReclaimVerifier.sol`, `contracts/verifiers/VikyStravaReclaimVerifier.sol`;
-- `scripts/check-contract-sizes.ts`, which came in the same commit;
-- their tests: `test/VikyDuolingoRealProof.t.sol`, `test/VikyReclaimVerifier.t.sol`,
-  `test/VikyStravaRealProof.t.sol`, `test/VikyStravaReclaimVerifier.t.sol`, `test/account-auth.test.ts`,
-  `test/api-guard.test.ts`, `test/duolingo-profile.test.ts`, `test/duolingo-proof-policy.test.ts`,
-  `test/duolingo-verification.test.ts`, `test/gift-attestation.test.ts`, `test/monad-gas.test.ts`,
-  `test/proof-session-store.test.ts`, `test/rate-limit.test.ts`, `test/reclaim-channel.test.ts`,
-  `test/reclaim-proof-set.test.ts`.
-
-That is 37 files and about 7,200 of the 109,700 lines of code and tests in `app`, `src`, `contracts`, `scripts` and
-`test`, as they stood on 1 Oct 2026. `contracts/GiftEscrow.sol` is new, and the guards it applies to an attestation
-(freshness, clock skew, nullifiers, identity binding, pauses) follow the ones of Lock-in's escrow. `src/shown-proof.ts`
-generalises the one-source flow that was ported.
-
-**The template.** The app started from the PWA template Monad publishes for developers,
-`monad-developers/next-serwist-privy-embedded-wallet` (Next.js with Serwist: the service worker, the offline page,
-the install prompt, web push), taken from its `main` branch. Privy was removed by hand and replaced with Mera
-passkeys, and the template was moved from Next 14 to Next 16 and from Serwist's webpack plugin to its Turbopack
-integration.
-
-Everything else was written between 10 Sep 2026 and the submission.
 
 ## Why Monad
 
@@ -106,6 +87,33 @@ Only what was measured, or what Monad's own documentation states.
   margin of 7.5 % and no more (`src/monad-gas.ts`). The chain reserves 10 MON per account
   ([docs](https://docs.monad.xyz/developer-essentials/reserve-balance)), so the relayer refuses to send below 12 MON
   (`src/relayer.ts`).
+
+## What has run with real money
+
+Only what has a transaction on Monad mainnet. How many people have used Viky is counted on the judges page, from the
+index, and the testers' figures come with the submission.
+
+- **A day credited on a proof.** Gift 1, the day of 12 Sep 2026, on the first `GiftEscrow`: [`0x5aa6…4ffd`](https://monadvision.com/tx/0x5aa6752fc8c7db2526a5e5bafe6aeb91e09bd1cbe0cf3d4a6bc5e8f65f664ffd). It is the day
+  `pnpm verify:day` checks again.
+- **A daily gift from its funding to its end, on the contract in service.** Gift 1000 on `GiftEscrowV3`, made by the
+  author between two of his own accounts. All times are UTC.
+  1. 3 Oct 2026, 21:44: created and funded with 5.61 AUSD for 30 days, in one transaction ([`0xa6db…de72`](https://monadvision.com/tx/0xa6db35d9f3716d238c7f55770a8853612fab90a19e059c14706959f0dbafde72)).
+  2. 21:45: opened from the recipient's account ([`0x4616…83a0`](https://monadvision.com/tx/0x461606cd6712f19246f4071768c464a30e5f23a1c9b9ecb906abc696716e83a0)).
+  3. 4 Oct, 00:02: the account it is read from bound to the gift, and a first reading recorded, with no day
+     credited ([`0x3d31…faf7`](https://monadvision.com/tx/0x3d31ec549118f2a01c8d2791939a711b0f1ab4c4afcf1e65528e70f7d55efaf7)).
+  4. 03:23: one day credited, the day its lesson was read ([`0xc7b0…2e02`](https://monadvision.com/tx/0xc7b0d0ab48eff37636570dccd87636306b40be8214597ae8652e2d0b7d3e2e02)).
+  5. 03:44: ended from the recipient's account, and the 29 days neither counted nor missed, 5.423 AUSD, back to the
+     funder in the same transaction ([`0x3881…0bc2`](https://monadvision.com/tx/0x3881bf6675a6b428f6c96a0845a2b8547504033f87db303908986189bc170bc2)).
+  6. 03:44: the 0.187 AUSD it earned withdrawn ([`0xf2d4…cf10`](https://monadvision.com/tx/0xf2d4cdb9393dc0e4507a6f282991edccdf93ecd60e18323cd33e1e5f8b59cf10)). The contract holds nothing of it.
+- **A card payment converted.** 3 Oct 2026: the USDC a card service delivered to the funder's own account, changed
+  into 7.914524 AUSD on one signature ([`0x533e…1616`](https://monadvision.com/tx/0x533ec0746493e0670029b917887b8e15376380a4a9c7bb82706b2de910ed1616)).
+
+What has not run on the third daily contract yet: a missed day going back, and a gift reaching its last day.
+
+[viky.cash/judges](https://viky.cash/judges) is the one page for verifying Viky: the contract addresses on Monad
+mainnet, who owns them (read from the chain when the page is served), every condition a gift can wait for and the
+source it is read from, the commands to re-verify a credited day yourself, and the risks and limits, written as they
+are. It also says how to try the product with your own passkey.
 
 ## Architecture
 
@@ -155,6 +163,9 @@ A person's passkey derives their account in the browser; no key ever reaches a s
 funds a gift. From then on Viky reads the source, the evidence signer attests what was read, the relayer submits it,
 and the contract moves the money: to the recipient for what is verified, back to the funder for what is not.
 
+In detail: [Contracts](docs/CONTRACTS.md), [Verification path](docs/VERIFICATION.md),
+[Pages and routes](docs/PAGES-AND-ROUTES.md), [Indexer](docs/INDEXER.md).
+
 ## Stack
 
 - PWA: Next.js 16 with Serwist (offline fallback, web push), Turbopack build.
@@ -171,190 +182,122 @@ and the contract moves the money: to the recipient for what is verified, back to
 - Tests: `node:test` through `tsx` for TypeScript, `forge test --network monad` for Solidity, Playwright for the
   screens.
 
-## Contracts
+## Run
 
-Three kinds of contract hold or move money, and none can be upgraded. On the two kinds that hold gifts, no function of
-the owner moves a gift's money: the owner registers a goal, replaces the evidence signer, or pauses.
-
-`contracts/GiftEscrow.sol` holds a gift for a habit, a day at a time: creation and funding in one transaction through
-the funder's EIP-3009 authorization, the claim by the recipient's account, daily check-ins attested by the evidence
-signer, the draining of a missed day once its catch-up window of 30 hours has passed, the withdrawal of what is earned
-and the refund of what is not. A gift nobody opens within 14 days goes back whole.
-
-`contracts/MilestoneGift.sol` holds a gift for one thing, with a deadline: all of it becomes the recipient's the first
-time an attested reading shows it reached, or all of it goes back. It has two shapes. A climb, for something measured
-that moves (a rating): the first reading is recorded as the start, and the gift pays only if that start was at or below
-the highest the funder accepted. Something had or not, for something granted once with a date (a certificate, an
-enrolment, a race): it pays when the day it was granted falls between the funding and the deadline, and what was
-granted in time may still be shown for 14 days after.
-
-`contracts/ExitRouter.sol` is the way out: it turns what a gift earned into the coin a payout service takes, through
-an exchange its owner has allowed, in one transaction the relayer submits. One signature says everything, because its
-nonce is the hash of the terms. The exchanged coin goes to the person, never to a payout service. The contract holds
-nothing between two transactions; its owner allows or removes an exchange, and can return what an exchange might leave
-behind (`sweep`). A second copy of it, deployed on 3 Oct 2026 and set on USDC, is the converter of card payments: the
-card service delivers USDC to the funder's own account, and the converter changes it into AUSD on one signature. It ran
-with real amounts that day, in `0x533ec0746493e0670029b917887b8e15376380a4a9c7bb82706b2de910ed1616`: 7.914524 AUSD
-reached the funder's account.
-
-| Contract | On Monad mainnet (chain 143) |
-|---|---|
-| `GiftEscrowV3`, where a daily gift is made since 3 Oct 2026 | `0x591d76863177E70FfcA2C793212d4715A367Ec70` |
-| `GiftEscrowV2`, where a daily gift was made on 2 and 3 Oct 2026, which runs the gifts it holds | `0xC83d8028347967Fc84D0e36Ae5876d9b29EAEc51` |
-| `MilestoneGiftV2`, where a milestone gift is made since 2 Oct 2026 | `0x493c87A27E637bBc7179C17bE2B215fC18523CC0` |
-| `ConsentAnchor` | `0x2a15DF23fF62120700f14D1E5d5d56CA0dAd027e` |
-| `GiftEscrow`, closed to new gifts, which runs the gifts it holds | `0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233` |
-| `GiftEscrow`, the earlier deployment, closed to new gifts, which runs the gifts it holds | `0xE04CD59bB93765333200a9da01df83149D4C4d67` |
-| `MilestoneGift`, closed to new gifts, which runs the gifts it holds | `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e` |
-| `ExitRouter` | `0x8a1790DfD10CF1599bDaeD5eC8BB46B2A6eB6223` |
-| `ExitRouter`, a second copy set on USDC: the converter of card payments | `0xf05449c8b868Ce1e6a0D7223e2ceCbbfD1498F9c` |
-| Owner of the nine, a Safe 1.4.1 that signs with 2 of its 3 keys | `0xE08D926c148A5065F4Df2892702785a183de86F9` |
-| AUSD | `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` |
-
-`cast call <contract> "owner()(address)" --rpc-url https://rpc.monad.xyz` answers the Safe for each of the nine.
-
-`contracts/verifiers` is not deployed. It holds the direct verifiers ported from Lock-in with their real-proof tests,
-kept fail-closed (`LIVE_SCHEMA_CONFIRMED = false`). The path in production is the evidence signer, below.
-
-`contracts/GiftEscrowV2.sol`, `contracts/MilestoneGiftV2.sol` and `contracts/ConsentAnchor.sol` were deployed on
-2 Oct 2026 at the addresses above, their sources verified through Sourcify, and handed to the Safe the same day. A gift
-made since then is made on them; the three contracts of the first version were closed to new gifts that day and run
-the gifts they hold to the end. Whether a gift has run on the second version yet is counted on the judges page, from
-the index: nothing here says it works before one has, end to end. They are the second version of the two gift
-contracts, from the audit of 1 Oct 2026. Opening a gift takes the signature of a key made from the secret its link carries, whose address
-is in the terms the funder signed, so the evidence signer opens nothing (on the contracts above, that one key could
-open an unopened gift and prove it). The person a gift is for can end it: what was counted stays theirs and the rest
-goes back in the same transaction. The owner is bounded: ownership moves in two steps and cannot be given up, a new
-evidence signer stands a day after it is announced, a goal is added and never changed, and a pause ends by itself
-after seven days and holds the open days rather than taking them. `ConsentAnchor` holds no money: it records which
-consent key an account agrees with, bound by the account's own signature, and every yes and stop in order.
-
-`contracts/GiftEscrowV3.sol` is the third version of the daily contract. It was deployed on 3 Oct 2026 at the address
-above, its source verified through Sourcify, and handed to the Safe the same evening. It is the second version with
-one rule changed: a day is paid the day it is read. On the second version a reading judged only days that were over,
-so a lesson was paid the morning after. Here the first day is the day the account is connected, and a reading credits
-the open days up to its own day, the oldest first, and never a day that has not begun. A cumulative figure cannot say
-when the progress was made: a lesson taken after its day was paid is counted by the first reading of the next day. So
-one lesson never pays two days, no more days are paid than lessons were taken, and a day can be paid on which no
-lesson was taken. The change was read by an independent reviewer on 3 Oct 2026 before the deployment, and the
-correction that reading asked for (which day is the first when an account is connected across midnight) is in the
-deployed code. A daily gift made since is made there, numbered from 1000; a gift made on the second version stays
-there, under its rule.
-
-What has run on it, with real amounts: gift 1000, on 4 Oct 2026. Its first day was paid at 03:22 UTC, the day its
-lesson was read, and the person it was for ended it at 03:44 UTC: 0.187 AUSD went to them, the 29 days neither
-counted nor missed went back to the funder (5.423 AUSD), and the contract holds nothing.
-`cast call 0x591d76863177E70FfcA2C793212d4715A367Ec70 "nextGiftId()(uint256)" --rpc-url https://rpc.monad.xyz` answers
-1001 while that gift is the only one. What has not run on it yet: a missed day going back, and a gift reaching its
-last day.
-
-An independent review of 2 Oct 2026 was read before any deployment, and the contracts were corrected from it. A
-pause cannot be sent again while it runs, nor for seven days after it ended, so it cannot hold a funder's unearned
-money or stop the clock of missed days. On the milestone contract a pause sent after a window closed reopens
-nothing, a window that was open has after the pause the time it had left, and a climb whose deadline fell inside a
-pause is judged on a reading taken until the pause ended. The first reading of a gift, which binds an identity for
-good, is signed by the recipient's own account beside the evidence signer. And a signer announced before ownership
-changes hands never stands after it. The reviewer's own tests are in `test/review`: those that proved a defect are
-kept, each with a test that requires it to fail now. What the review left as declared, not corrected: once a gift is
-under way, the evidence signer alone can still attest a reading that never happened, in the recipient's favour or
-against them.
-
-The same review found that the link's secret was in `?t=`, so the server was sent it at every visit, and the key that
-opens a gift is made from that secret alone. The secret is now after the `#` of the link, which a browser sends to no
-server; `?t=` carries a preview token made from it by a hash, enough to print the two names and no use to open the
-gift, and a secret that reaches the server all the same is refused. The limit that stays: the page that reads the `#`
-is served by Viky, and a server that served other code could read it there.
-
-The server side of the anchor is written too, and off until the anchor's address is set: the browser signs the short
-anchored message with the consent key it already holds, in the same gesture as the agreement, and the relayer writes
-it (`src/consent-anchoring.ts`). `pnpm verify:consent` then holds every reading that moved money on the second
-version against a yes anchored before it, checking each Ed25519 signature itself; it needs a Monad RPC and nothing
-else. Both have run on a local fork of mainnet (`pnpm rehearse:v2`) and never on mainnet.
-
-`forge test --network monad` runs the unit suites, the accounting fuzz, the invariant campaigns of the second version
-and the typehash parity pins; with `MONAD_RPC_URL` set it also runs the mainnet fork tests against the real AUSD. `pnpm deploy:gift-escrow` deploys
-and `pnpm check:gift-escrow` verifies a deployment against the expected configuration.
-
-## Verification path
-
-Three kinds of proof reach the evidence signer, and they are not checked the same way. What is true in production
-today (`PROOF_VERIFIER` unset):
-
-1. **A proof the person shows from their own account, with a TEE attestation** (a Reclaim session: `app/api/proof/session`,
-   `app/api/proof/verify`). It is verified server side with js-sdk `verifyProof` and the application secret: the
-   attestor's signature and the attestation of the TEE it ran in, both required. A proof without a TEE attestation
-   (the AI fallback) is refused before anything else is read.
-2. **A proof the person shows through a witness provider, with no TEE** (a university's own portal, read by a
-   provider made for that portal). There is no TEE to require, so the proof is verified by the pinned witness's
-   signature on the portal's own domain (`src/shown-verification.ts`). The first proof from a portal is held, nothing
-   is relayed, and an operator reads what the pattern read before pinning it (`pnpm portal:pin`); once pinned, a proof
-   must match the pin exactly.
-3. **A reading Viky makes itself** (zkFetch: the daily Duolingo lesson, the Chess.com ratings, the certificates, a race,
-   and a connected source's reading with the person's key). It is fetched through Reclaim's TEE client and verified
-   server side by the attestor's signature only: js-sdk `verifyProof` checks it against the attestor list it fetches
-   from Reclaim at that moment, then Viky's own pin (`RECLAIM_ATTESTOR_ADDRESSES`). The proof carries no attestation of
-   the attestor's TEE, so the TEE itself is not verified on this path.
-
-**Behind the switch** (`PROOF_VERIFIER=local`, not set in production): a reading is verified offline, by Viky alone,
-the way `pnpm verify:day` does it by hand: the claim's identifier recomputed, the signers recovered, every signer one
-of Viky's pinned attestors, and the witnesses exactly those signers; with `RECLAIM_ATTESTOR_IMAGE_DIGESTS` set, every
-witness must also carry the attestation of the TEE holding its key, verified offline and pinned by image digest
-(`src/proof-verification.ts`).
-
-Either way, what is accepted is then attested to the contract by the evidence signer (EIP-712 `CheckIn`, or the
-milestone contract's `Proof`), and no reading that could move money is taken without the recipient's signed yes (a
-gift funded before 30 Sep 2026, when agreements began, is read as before until its recipient answers). Session rows
-are held server side; the browser never chooses the account, the phase, the day or the profile.
-
-## Check a credited day yourself
-
-Anybody can check that a day Viky credited really had a proof behind it. It needs no key, no account, no environment
-variable and no permission from us:
+Node 24 (`.nvmrc`) and pnpm 10 (`corepack enable` gives the version `package.json` names).
 
 ```bash
 git clone https://github.com/RedGnad/Viky.git
 cd Viky
 pnpm install
-pnpm verify:day
+cp .env.example .env.local
 ```
 
-It takes the one example published with its account holder's agreement (`/api/judges/example` on viky.cash),
-recomputes the claim's identifier from the signed claim, recovers the attestor that signed it, recomputes the
-fingerprint, asks the gift contract whether that fingerprint is recorded against replay, and reads the transaction
-back to see it credit that day. Every answer is printed beside what it was compared against.
-
-The two people a gift is between can do the same with any day of their own: the gift's page hands over that day's
-proof, then `pnpm verify:day --file day.json --gift <number> --day <day>`. A milestone gift settles on a reading, so
-it takes `--reading <number>` instead.
-
-**What it proves**: the source's own servers answered that, and the contract settled that day against that one claim,
-which can never be replayed. **What it does not prove**: that the account belongs to the person the gift is for, or
-that a human rather than a script did the work. The account is tied to the person once, separately, by a code in its
-display name or by the funder naming it. The key that signs is ours and the owner can replace it, which is why this
-check exists: a signed reading with no claim behind it cannot be re-verified by anybody.
-
-## Indexer
-
-The contracts' events are indexed with Envio HyperIndex in a separate repository,
-[RedGnad/Viky-index](https://github.com/RedGnad/Viky-index): `config.yaml` names the contracts above, all but the converter, and the
-events read from each, `schema.graphql` the entities (every gift, check-in, drained day, payout and refund, and the
-aggregates per day, per condition and in all). It answers GraphQL at
-an endpoint that changes with each hosted deployment: that repository's README gives the one in service. The
-deployment in service was made before the third daily contract and does not read it yet. The app reads
-it in one place, the judges page (who has used Viky, and the index set beside the chain); no movement of money depends
-on it, and every figure a funder or a recipient sees comes from the contracts themselves.
-
-## Run
+In `.env.local`, give `SESSION_SIGNING_SECRET` any random string of 32 characters or more (`openssl rand -hex 32`
+prints one). Then:
 
 ```bash
-pnpm install
 pnpm dev
 ```
+
+and open `http://localhost:3000`. Followed on a fresh clone on 5 Oct 2026, with that one variable: every page answers,
+from the landing and its card to the judges page, and `/api/health` answers 503 and names what is not configured yet.
+
+Each further step is one group of variables in `.env.example`, in the order they are needed: a Neon Postgres
+database (`DATABASE_URL`, then `pnpm db:migrate`, which creates the tables and can be run again) for accounts; the
+relayer, the evidence signer and the contracts' addresses for money on mainnet; the Reclaim applications and the
+reading worker for readings. Environment, at the foot of this page, says what each group opens.
 
 Passkeys need HTTPS or `localhost`. The relying party id is the hostname the app is served from,
 so accounts created on a preview hostname stay on that hostname.
 
-## Environment
+### Deploy
+
+- **The app** is deployed on Vercel from `main`. `vercel.json` sets the region (Paris) and the four daily passes; the
+  variables are those of `.env.example`.
+- **The database** is Postgres on Neon, reached through Neon's own driver: `pnpm db:migrate` creates the tables.
+- **The reading worker** is built from `Dockerfile` and runs `pnpm zkfetch:worker`. The app reaches it through
+  `ZKFETCH_WORKER_URL` and `ZKFETCH_WORKER_SECRET`.
+- **The contracts** are built with Foundry and deployed to Monad mainnet by `pnpm deploy:v2` (the second version of
+  the gift contracts and the anchor of agreements), `pnpm deploy:v3` (the third version of the daily contract),
+  `pnpm deploy:exit-router` and `pnpm deploy:usdc-router`. The two gift deployments hand their contracts to the
+  owner, who accepts them; `pnpm check:v2-handover` and `pnpm check:v3-handover` read a deployment back before its
+  address is set in the app, and `pnpm check:signer` holds the evidence key of the environment against the signer
+  the contracts name.
+- **The index** is its own repository: [Indexer](docs/INDEXER.md).
+
+## Test
+
+```bash
+pnpm test:policy
+pnpm test:solidity
+pnpm test:browser
+```
+
+`pnpm test:policy` needs no variable. `pnpm test:solidity` needs Foundry 1.8.1 and runs `forge test --network monad`;
+with `MONAD_RPC_URL` set it also runs the mainnet fork tests against the real AUSD. `pnpm test:browser` needs a build
+(`pnpm build`) and Playwright's Chromium (`pnpm exec playwright install chromium`).
+
+## Declarations, environment and licences
+
+<details>
+<summary><b>AI tools</b></summary>
+
+Viky was built with an AI coding tool, Claude Code (Anthropic). It wrote most of the code, the tests and the
+documentation in this repository from the author's written briefs, and it ran the checks before each merge: types,
+lint, the policy tests, the build and the browser tests. The author directed all of it: what the product is, how it
+looks, what every screen says, and every decision that touches money. Nothing was deployed to mainnet and no real
+payment was made without his explicit decision. Two people from outside the project have each opened a gift, one
+of them on an iPhone, from Instagram.
+
+</details>
+
+<details>
+<summary><b>Pre-existing code</b></summary>
+
+Two things in this repository were not written for this hackathon.
+
+**Code ported from Lock-in.** Lock-in is an earlier project by the same author, in a private repository. It verified
+a daily Duolingo lesson and a Strava run with Reclaim proofs. Viky is another product: a third party funds, and nothing
+is staked. What it took from Lock-in is the verification plumbing, ported file by file on 10 Sep 2026 (commit
+`67656ba`) and edited since:
+
+- the account session and the guards every route starts with: `src/account-auth-server.ts`, `src/api-guard.ts`,
+  `src/rate-limit.ts`, `src/monad-gas.ts`;
+- the Reclaim proof handling: `src/reclaim-abi.ts`, `src/reclaim-types.ts`, `src/reclaim-channel.ts`,
+  `src/reclaim-onchain.ts`, `src/reclaim-proof-set.ts`, `src/proof-session-store.ts`;
+- the Duolingo proof: `src/duolingo-profile.ts`, `src/duolingo-proof-policy.ts`, `src/duolingo-verification.ts`,
+  `src/gift-attestation.ts`, `scripts/capture-duolingo-proof.ts`, `scripts/transform-duolingo-proof.ts`;
+- the two routes of a proof shown from the person's own account, `app/api/proof/session/route.ts` and
+  `app/api/proof/verify/route.ts`, which were Lock-in's Duolingo session and verify routes and now serve every
+  shown condition;
+- the on-chain verifiers, which are not deployed (see [Contracts](docs/CONTRACTS.md)): `contracts/verifiers/VikyProofTypes.sol`,
+  `contracts/verifiers/VikyReclaimVerifier.sol`, `contracts/verifiers/VikyStravaReclaimVerifier.sol`;
+- `scripts/check-contract-sizes.ts`, which came in the same commit;
+- their tests: `test/VikyDuolingoRealProof.t.sol`, `test/VikyReclaimVerifier.t.sol`,
+  `test/VikyStravaRealProof.t.sol`, `test/VikyStravaReclaimVerifier.t.sol`, `test/account-auth.test.ts`,
+  `test/api-guard.test.ts`, `test/duolingo-profile.test.ts`, `test/duolingo-proof-policy.test.ts`,
+  `test/duolingo-verification.test.ts`, `test/gift-attestation.test.ts`, `test/monad-gas.test.ts`,
+  `test/proof-session-store.test.ts`, `test/rate-limit.test.ts`, `test/reclaim-channel.test.ts`,
+  `test/reclaim-proof-set.test.ts`.
+
+That is 37 files and about 7,200 of the 109,700 lines of code and tests in `app`, `src`, `contracts`, `scripts` and
+`test`, as they stood on 1 Oct 2026. `contracts/GiftEscrow.sol` is new, and the guards it applies to an attestation
+(freshness, clock skew, nullifiers, identity binding, pauses) follow the ones of Lock-in's escrow. `src/shown-proof.ts`
+generalises the one-source flow that was ported.
+
+**The template.** The app started from the PWA template Monad publishes for developers,
+`monad-developers/next-serwist-privy-embedded-wallet` (Next.js with Serwist: the service worker, the offline page,
+the install prompt, web push), taken from its `main` branch. Privy was removed by hand and replaced with Mera
+passkeys, and the template was moved from Next 14 to Next 16 and from Serwist's webpack plugin to its Turbopack
+integration.
+
+Everything else was written between 10 Sep 2026 and the submission.
+
+</details>
+
+<details>
+<summary><b>Environment</b></summary>
 
 [`.env.example`](.env.example) lists every variable, with no value, in the order they are needed. Copy it to
 `.env.local`, which is never committed.
@@ -373,47 +316,10 @@ whole reading pass when the morning one left nothing in the journal. `/api/healt
 network, the reading worker, the relayer, the exchange's pin, the evidence key and the passes all hold, and 503 when
 one does not; it needs no secret and answers nothing of any gift.
 
-## Pages and routes
+</details>
 
-| page | what |
-|---|---|
-| `/` | the landing with the card a gift is prepared on; Home once signed in |
-| `/fund` | paying for the gift prepared on the card, and its link |
-| `/g/<id>?t=...` | a gift's own page, for the person it is for, its funder, or a reader of the link |
-| `/gifts` | everything given and received |
-| `/me` | the account: the currency, the appearance, what Viky reads, signing out (`/account` leads here) |
-| `/cash-out` | "Spend or withdraw": a gift card, phone credit, or a transfer to a bank or a card |
-| `/what-viky-can-check` | the catalogue: every condition and its state |
-| `/add-your-university` | how a student adds their university's portal |
-| `/help`, `/privacy`, `/legal` | five questions; what is kept and who processes it; who publishes and hosts the site |
-| `/judges` | the only page with contract addresses |
-| `/dev/*` | dev pages, answered only with `VIKY_DEV_PAGES=1` to an operator's account; a 404 in production |
-
-Every route is a file under `app/api` (`find app/api -name "route.ts*"` lists them), grouped by what they serve:
-`account` (the passkey session and preferences), `gift` and `gifts` (create, claim, connect, count, withdraw, consent,
-the journal), `proof` (a proof shown from the person's own account), `connect` (a source connected with the person's
-key), one folder per source read (`duolingo`, `chess`, `codeforces`, `coursera`, `edx`, `mitx-online`, `credly`,
-`accredible`, `det`, `marathon`, `wca`, `portals`), `conditions` (what may be offered), `fund`, `exit`, `send`,
-`phone`, `giftcards` and `mobile-money` (money in and out; mobile money is switched off until a first real payout),
-`rails` and `rates` (which partner serves where, and the day's rate),
-`cron` (the passes and the watch), `health`, `judge` and `judges`, and `dev`.
-
-Operator commands: `pnpm keeper` (the same passes from a terminal), `pnpm zkfetch:worker [port]` (the attested-fetch
-worker, deployed from `Dockerfile`), `pnpm portal:pin` (reviewing a first proof from a university), `pnpm pilot:report`
-(the pilot gift by gift, read only), `pnpm relayer:fees`, `pnpm check:signer` (the evidence key of the environment
-against the signer the contracts name, before a deployment), `pnpm check:sources` (every public source Viky reads,
-asked whether it still answers in the shape the readers expect: a few plain GETs each, no secret, to run once a day
-while gifts are read).
-
-## Test
-
-```bash
-pnpm test:policy
-pnpm test:solidity
-pnpm test:browser
-```
-
-## Third-party licences
+<details>
+<summary><b>Third-party licences</b></summary>
 
 This repository is MIT. It depends on packages under other licences, used unmodified and not copied here:
 
@@ -433,10 +339,18 @@ This repository is MIT. It depends on packages under other licences, used unmodi
 
 `pnpm licenses list --prod` prints the whole list.
 
-## Security
+</details>
+
+<details>
+<summary><b>Security</b></summary>
 
 See [SECURITY.md](SECURITY.md) to report a vulnerability.
 
-## License
+</details>
+
+<details>
+<summary><b>License</b></summary>
 
 [MIT](LICENSE)
+
+</details>
