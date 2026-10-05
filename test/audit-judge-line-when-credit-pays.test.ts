@@ -172,7 +172,7 @@ test("a read that fails draws no line", async () => {
 test("the sheet draws the line from the balance and the untouched credit, never from 'credited' alone", () => {
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   assert.doesNotMatch(sheet, /enough && judge/);
-  assert.match(sheet, /\{judgeLineIsTrue\(\{ gift: units, held, untouchedCredit \}\) \? <p className=\{HELP\}>\{W\.fromJudgeCredit\(cardPaidHow\(\), way\.name\)\}<\/p> : null\}/);
+  assert.match(sheet, /\{judgeLineIsTrue\(\{ gift: units, held: held\.state === "read" \? held\.parts\.ausd : null, untouchedCredit \}\) \? <p className=\{HELP\}>\{W\.fromJudgeCredit\(cardPaidHow\(\), way\.name\)\}<\/p> : null\}/);
   assert.ok(sheet.indexOf("W.fromJudgeCredit") < sheet.indexOf("W.payFromAccount"), "above the action");
   // Read again once the code has given the credit, with the balance: never set on the browser's word.
   assert.match(sheet, /getJson<[^>]*untouchedCredit\?: string \| null[^>]*>\("\/api\/judge\/credit"\)[\s\S]*?\}, \[open, address, balanceRead\]\);/);

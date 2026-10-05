@@ -98,9 +98,12 @@ test("paying a gift counts what the person's gifts hold for them, and takes it b
 
   // The pay sheet: "From your Viky money" is the account and the gifts' part, read with the list it already reads.
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
-  assert.match(sheet, /setInGifts\(heldInGifts\(gifts\)\);/);
-  assert.match(sheet, /const inAccount = \(held \?\? 0n\) \+ inGifts;/);
-  assert.match(sheet, /judgeLineIsTrue\(\{ gift: units, held, untouchedCredit \}\)/, "the judge credit line is still about the account alone");
+  // Since 5 Oct 2026 the sheet reads all of it in one reading (src/client/pay-held.ts), and counts it as Home does
+  // (src/pay-held.ts): what the gifts hold is added to what a gift holds before the cut to the cent.
+  assert.match(readFileSync("src/client/pay-held.ts", "utf8"), /const inGifts = mine\.gifts\.reduce\(\(sum, gift\) => sum \+ BigInt\(gift\.takeable \?\? "0"\), 0n\);/);
+  assert.match(readFileSync("src/pay-held.ts", "utf8"), /dollarsToTheCent\(parts\.ausd \+ parts\.inGifts, parts\.usdc\)/);
+  assert.match(sheet, /const inAccount = heldForTheLines\(Boolean\(address\), held\);/);
+  assert.match(sheet, /judgeLineIsTrue\(\{ gift: units, held: held\.state === "read" \? held\.parts\.ausd : null, untouchedCredit \}\)/, "the judge credit line is still about the account alone");
 
   // The screen that makes the gift: read once, taken once, and a refusal is said and not tried again by itself.
   const screen = readFileSync("app/components/PayGift.tsx", "utf8");

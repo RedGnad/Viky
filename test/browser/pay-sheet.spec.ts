@@ -26,6 +26,8 @@ type Setup = Readonly<{
   currency?: string;
   /** What is typed in "how much": 19 unless said; null leaves the figure the card started on. */
   amount?: string | null;
+  /** Done on Home, signed in, just before the press that opens the sheet. */
+  beforeTheSheet?: (funder: Profile) => Promise<void>;
 }>;
 
 async function toTheSheet(browser: Parameters<typeof profile>[0], baseURL: string | undefined, setup: Setup): Promise<Profile> {
@@ -46,6 +48,7 @@ async function toTheSheet(browser: Parameters<typeof profile>[0], baseURL: strin
   if (!setup.signedIn) await page.getByRole("link", { name: "Offer a gift" }).first().click();
   await card(page).getByLabel("Their first name").fill("Boo");
   if (setup.amount !== null) await card(page).getByLabel("how much").fill(setup.amount ?? "19");
+  if (setup.beforeTheSheet) await setup.beforeTheSheet(funder);
   await card(page).locator("[data-card-action]").click();
   await expect(sheet(page)).toBeVisible();
   await page.waitForTimeout(900);
@@ -61,6 +64,75 @@ function figure(text: string): number {
 async function shot(page: Page, name: string): Promise<void> {
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/${name}-390.png` });
 }
+
+/** Keeps whether the open sheet ever said "by card", at any moment: a figure that showed and went is still seen. */
+const WATCH_FOR_THE_CARD = `(() => {
+  const look = () => {
+    const open = document.querySelector("dialog.sheet[open]");
+    if (open && /by card/i.test(open.innerText)) sessionStorage.setItem("test.saidByCard", open.innerText.match(/[^\\n]*by card[^\\n]*/i)[0]);
+  };
+  new MutationObserver(look).observe(document, { subtree: true, childList: true, characterData: true, attributes: true });
+})();`;
+
+test.describe("the pay sheet waits for what the account holds (5 Oct 2026)", () => {
+  test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each case opens its own window");
+  test.setTimeout(150_000);
+
+  test("enough in the account, read slowly and then not at all: the button never says 'by card', and does not go", async ({ browser, baseURL }) => {
+    // What the chain's answers do, changed as the test goes: held back, refused, or let through.
+    let chain: "held" | "refused" | "answered" = "answered";
+    const heldBack: Array<() => void> = [];
+    const funder = await toTheSheet(browser, baseURL, {
+      ausd: 50_000_000n,
+      signedIn: true,
+      beforeTheSheet: async ({ context }) => {
+        await context.addInitScript(WATCH_FOR_THE_CARD);
+        // Registered after the route that answers the chain, so it is asked first.
+        await context.route(
+          (url) => url.hostname !== "localhost" && url.hostname !== "127.0.0.1",
+          async (route) => {
+            if (chain === "held") await new Promise<void>((release) => heldBack.push(release));
+            if (chain === "refused") return route.abort();
+            return route.fallback();
+          },
+        );
+        chain = "held";
+      },
+    });
+    const { page } = funder;
+    await page.evaluate(WATCH_FOR_THE_CARD);
+    const pay = sheet(page).locator("button[data-pays]");
+
+    // Slow: nothing is named, the button does not go, and the wait is said under it.
+    await expect(pay).toHaveAttribute("data-pays", "reading");
+    await expect(pay).toHaveText("Pay");
+    await expect(pay).toBeDisabled();
+    await expect(sheet(page).getByText("Reading what your account holds.", { exact: true })).toBeVisible();
+    await expect(sheet(page).locator("[data-pay-total]")).toHaveCount(0);
+    await expect(sheet(page).getByText("Card fee")).toHaveCount(0);
+    await shot(page, "10-the-account-being-read");
+
+    // Then not at all: said, with what reads again. Still no way named, and still no press.
+    chain = "refused";
+    for (const release of heldBack.splice(0)) release();
+    await expect(pay).toHaveAttribute("data-pays", "unread", { timeout: 60_000 });
+    await expect(sheet(page).getByText("What your account holds could not be read.", { exact: true })).toBeVisible();
+    await expect(pay).toHaveText("Pay");
+    await expect(pay).toBeDisabled();
+    await expect(sheet(page).getByText(/takes your card/)).toHaveCount(0);
+    await shot(page, "11-the-account-not-read");
+
+    // Read again, and answered: the account pays, as it could all along.
+    chain = "answered";
+    await sheet(page).getByRole("button", { name: "Read it again" }).click();
+    await expect(pay).toHaveAttribute("data-pays", "account", { timeout: 60_000 });
+    await expect(pay).toHaveText("Put €19.00 in Boo's name");
+    await expect(pay).toBeEnabled();
+    await shot(page, "12-the-account-read");
+    expect(await page.evaluate(`sessionStorage.getItem("test.saidByCard")`), "at no moment did the sheet say 'by card'").toBeNull();
+    await funder.context.close();
+  });
+});
 
 test.describe("the pay sheet of 3 Oct 2026", () => {
   test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each case opens its own window");
