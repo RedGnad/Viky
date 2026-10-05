@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { chromium, expect, test, type Page } from "@playwright/test";
 import { FORBIDDEN_WORDS } from "../../src/consumer-words";
 
 /** Every screen a person can reach without signing in. The judges page is excluded by design: it is the
@@ -258,6 +258,56 @@ test.describe("the screens a person meets", () => {
     await expect(sheet.getByRole("button", { name: /A Duolingo English Test score/i })).toHaveAttribute("aria-current", "true");
     expect(await explained()).toBe(0);
     expect(await body.evaluate((element) => element.scrollTop)).toBe(0);
+  });
+
+  /**
+   * On the narrowest phone held, 360 by 800, two names took two lines and their rows stood taller than the others
+   * (the founder, 5 Oct 2026): "Harvard, MIT and more, on edX" is "An edX certificate" with the schools on its grey
+   * line, and "Kilometres each day, on Strava" is "Kilometres a day, on Strava". Held here: each of the two is one line
+   * high, with room to spare.
+   *
+   * Measured in a browser of its own that places letters at fractions of a pixel, as a phone does. A machine without a
+   * screen on Linux snaps each letter to a whole pixel by default, and the half pixel of spacing a row's words carry
+   * with it: its lines come out up to a tenth wider than the typeface's own tables say ("A Duolingo lesson each day"
+   * at 231 for 211). The measure asked for here is the typeface's: Strava's name is 209 wide, by its tables, 195.6,
+   * and the 0.5 pixel between its 27 letters.
+   *
+   * Not held yet, and said to the founder: "A puzzle record on Chess.com" (229.8 of 230) and "A Duolingo English Test
+   * score" (227.6 of 230) hold by less than three pixels. Every row of every family is held here once they have room.
+   */
+  test("at 360 pixels the rows of edX and of Strava are one line high, with room to spare", async ({ baseURL, viewport }) => {
+    test.skip((viewport?.width ?? 0) !== 375, "measured once, in a browser of its own");
+    const browser = await chromium.launch({ args: ["--font-render-hinting=none"] });
+    const page = await (await browser.newContext({ baseURL, viewport: { width: 360, height: 800 }, deviceScaleFactor: 3, serviceWorkers: "block" })).newPage();
+    await page.goto("/");
+    await openTheCatalogue(page);
+    const sheet = page.locator("dialog.sheet[open]");
+    for (const [family, name] of [[/^School & studies/, "An edX certificate"], [/^Move/, "Kilometres a day, on Strava"]] as const) {
+      await openTheFamily(page, family);
+      const rows = sheet.locator('div[role="group"] > button');
+      await expect(rows.filter({ hasText: name })).toHaveCount(1);
+      // Measured in the page's own typefaces: a line set in a stand-in is as wide as the stand-in.
+      await page.evaluate(() => document.fonts.ready.then(() => true));
+      const read = await rows.evaluateAll((all) =>
+        all.map((row) => {
+          const [first] = row.querySelectorAll<HTMLElement>(":scope > span > span");
+          const range = document.createRange();
+          range.selectNodeContents(first);
+          const held = first.style.whiteSpace;
+          first.style.whiteSpace = "nowrap";
+          const wide = range.getBoundingClientRect().width;
+          first.style.whiteSpace = held;
+          return { name: first.textContent ?? "", wide, room: first.parentElement!.getBoundingClientRect().width, height: Math.round(row.getBoundingClientRect().height) };
+        }),
+      );
+      const row = read.find((one) => one.name === name)!;
+      const said = read.map((one) => `"${one.name}" ${Math.round(one.wide * 10) / 10} of ${Math.round(one.room)}, ${one.height} high`).join("; ");
+      expect(row.height, `${name} is as high as the lowest row of its list: ${said}`).toBe(Math.min(...read.map((one) => one.height)));
+      expect(row.room - row.wide, `${name} has room to spare on its line: ${said}`).toBeGreaterThanOrEqual(8);
+      // The typeface's own measure, to the pixel: a browser that snaps letters to whole pixels fails here, by its number.
+      if (name === "Kilometres a day, on Strava") expect(Math.abs(row.wide - 209), `Strava's name as the typeface measures it, 209: ${said}`).toBeLessThanOrEqual(2);
+    }
+    await browser.close();
   });
 
   /**

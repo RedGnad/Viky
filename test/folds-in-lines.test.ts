@@ -172,7 +172,11 @@ test("a name not everybody knows says what it is in the grey line under it", () 
   }
   // The ten the founder added, each checked against what its reading counts.
   assert.equal(under("duolingo-english-test"), "Taken online, on camera");
-  assert.equal(under("edx-certificate"), "Online courses");
+  // The schools moved from edX's name to its grey line, and Strava's name lost a word: at 360 pixels each of the
+  // two names took two lines, and its row stood taller than the others (the founder, 5 Oct 2026).
+  assert.equal(under("edx-certificate"), "Harvard, MIT and more");
+  assert.equal(conditionById("edx-certificate")?.name, "An edX certificate");
+  assert.equal(conditionById("strava-daily")?.name, "Kilometres a day, on Strava");
   assert.equal(under("mitx-online-certificate"), "Online, on MITx");
   assert.equal(under("coursera-certificate"), "Online courses");
   assert.equal(under("chess-rating"), "Rapid, blitz, bullet or daily");
