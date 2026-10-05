@@ -66,7 +66,7 @@ common that is: France alone hosted 17,722 students from Senegal and 12,672 from
 [Campus France](https://ressources.campusfrance.org/publications/mobilite_pays/fr/cote_ivoire_fr.pdf)). That is an
 example, not a limit: Viky is a worldwide pilot, and both people confirm they are 18 or older.
 
-[What the funders we spoke to said, in their words.]
+<!-- [What the funders we spoke to said, in their words.] -->
 
 **The one who is read** asked for nothing: somebody else decided their progress would be checked. The research on
 money tied to effort, and on being watched, points the same way. Each line is why a screen of Viky is the way it is.
@@ -83,8 +83,9 @@ money tied to effort, and on being watched, points the same way. Each line is wh
 These studies have their limits: the trial ran at one employer and counted steps, and the reviews are self-selected.
 They are why the design is what it is, not proof that Viky works.
 
-**What using it with people showed us.** [N] people outside the team have opened a gift and [N] have funded one;
-the judges page counts them by account, from the index. Four things changed because of what happened:
+**What using it with people showed us.** <!-- [N] people outside the team have opened a gift and [N] have funded one. -->
+The judges page counts who funded a gift and who opened one, by account, from the index. Four things changed because
+of what happened:
 
 - A link opened inside Instagram could not create an account. The page now has a button that opens it in the phone's
   own browser: shipped within two hours, on 1 Oct 2026.
@@ -170,7 +171,7 @@ Beeminder, with two communities it did not own ([its blog](https://blog.beeminde
 | Clubs where effort is already measured | A chess rating or a race result is already what the club looks at. Chess.com counts 280 million members ([its counter](https://www.chess.com/members), read 5 Oct 2026). | A club officer, to adult members and the relatives who back them | Two clubs, ten funders |
 | Communities that already keep commitments | Language learners first: Duolingo reports 58.7 million daily users ([Q2 2026 shareholder letter](https://www.sec.gov/Archives/edgar/data/1562088/000162828026053299/q2fy26duolingo6-30x26share.htm)). | A member who tells one real gift, with its page. No advertising. | Ten funders. The least certain of the three. |
 
-[The student channel opens once a first student has passed the condition with a real gift: say where that stands.]
+<!-- [The student channel opens once a first student has passed the condition with a real gift: say where that stands.] -->
 
 **What limits growth today.** Paying by card goes through a card service that keeps its own fee, read on its own
 quotes or lists (`src/rails.ts`): Rampnow, tried first where it serves the payer, 7 % plus €0.40 and never less than
