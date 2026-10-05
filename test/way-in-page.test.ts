@@ -48,7 +48,7 @@ test("without the key, the sheet says what to choose on the partner's page and w
   // the pay sheet's fold holds short lines only (the founder, 4 Oct 2026).
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   // The code exists once the account does: before the first press there is no account, and nothing to copy.
-  assert.match(sheet, /!enough && \(cardClosed \|\| \(!wayInFillsIn\(way\) && !way\.embedded\)\) && address \? \(/);
+  assert.match(sheet, /pays === "card" && \(cardClosed \|\| \(!wayInFillsIn\(way\) && !way\.embedded\)\) && address \? \(/);
   assert.match(sheet, /navigator\.clipboard\.writeText\(address\)/);
 });
 

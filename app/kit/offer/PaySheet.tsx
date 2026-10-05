@@ -5,8 +5,7 @@ import { useMadeHere, useOnAComputer } from "@/src/account/door";
 import { useAccount } from "@/src/account/provider";
 import { getJson } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
-import { loadMyGifts } from "@/src/client/gift";
-import { readAusdBalance } from "@/src/client/onchain";
+import { readHeldForPaying } from "@/src/client/pay-held";
 import { whereTheRailsServe } from "@/src/client/rails";
 import { conditionById } from "@/src/conditions";
 import { certificateById, milestoneById } from "@/src/milestone-conditions";
@@ -16,6 +15,7 @@ import { lastNameGiven, tidyGiftName } from "@/src/gift-names";
 import { judgeLineIsTrue } from "@/src/judge-line";
 import { formatAusd } from "@/src/gift-reader";
 import { savePendingGift } from "@/src/pending-gift";
+import { heldForTheLines, payWith, type HeldReading } from "@/src/pay-held";
 import { cardSum, giftTyped, heldIn, moneyIn, perEuro } from "@/src/pay-sum";
 import type { RailReach } from "@/src/rail-country";
 import { feeInALine, wayInFillsIn, wayInPage, waysIn, WAY_IN_USDC } from "@/src/rails";
@@ -27,13 +27,12 @@ import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, PRIMARY_BUTTON, SMALL_BUTTON } fro
 import { AccountPanel } from "../../components/AccountPanel";
 import { Field } from "../Field";
 import { Lines } from "../Lines";
-import { heldInGifts } from "../money";
 import { CardLine, CardNotOffered } from "./CardTerms";
 import { JudgeCode } from "./JudgeCode";
 import { FieldRefusal } from "../FieldRefusal";
 import { FoldChevron } from "../GiftLive";
 import { Sheet } from "../Sheet";
-import { ButtonWords, StepInProgress } from "../Waiting";
+import { ButtonWords, StepInProgress, WaitLine } from "../Waiting";
 
 /**
  * Paying for the gift (the founder's mockup pay-sheet-2026-10-03, validated 3 Oct 2026, which follows pay.html of
@@ -72,13 +71,13 @@ export function PaySheet({
   const computer = useOnAComputer();
   const router = useRouter();
   const money = useDisplayCurrency(address);
-  const [held, setHeld] = useState<bigint | null>(null);
   /**
-   * What the person's gifts have already paid them and still hold (D208). It is theirs to pay with, as Home counts it
-   * (the founder, 4 Oct 2026): somebody who had earned $10 read $10 on Home and "Pay by card" here for a $5 gift. The
-   * screen that makes the gift takes it into the account first, by the way out's own gesture (src/client/gift.ts).
+   * What the account can pay with, as Home counts it (src/pay-held.ts; the founder, 4 and 5 Oct 2026): both dollar
+   * coins, what the person's gifts have already paid them (D208), and the chain's own coin at the exchange's quote.
+   * Not known until it has been read, and said as unread when the reading failed: it used to count as nothing in both
+   * cases, and somebody who had the money read "Pay … by card" on a button that led there.
    */
-  const [inGifts, setInGifts] = useState(0n);
+  const [held, setHeld] = useState<HeldReading>({ state: "reading" });
   const [railIn, setRailIn] = useState<Readonly<Record<string, RailReach>>>({});
   /** Whether the card is offered to this payer (src/card-rail.ts); until the server has said, it is. */
   const [card, setCard] = useState<Readonly<{ offered: boolean; country: string | null }> | null>(null);
@@ -124,20 +123,6 @@ export function PaySheet({
     };
   }, [open]);
 
-  useEffect(() => {
-    if (!open || !address) return;
-    let live = true;
-    void Promise.resolve()
-      .then(() => readAusdBalance(address))
-      .then((balance) => {
-        if (live) setHeld(balance);
-      })
-      .catch(() => undefined);
-    return () => {
-      live = false;
-    };
-  }, [open, address, balanceRead]);
-
   // The name this account gave on its last gift, put in an empty field once per opening (the founder, 3 Oct 2026). Read
   // through refs, so a name typed while the list was being read is never written over.
   const latest = useRef({ draft, onChange });
@@ -147,24 +132,32 @@ export function PaySheet({
   const named = useRef(false);
   useEffect(() => {
     if (!open) named.current = false;
-    if (!open || !address || named.current) return;
-    named.current = true;
+    if (!open || !address) return;
     let live = true;
-    loadMyGifts().then(
-      ({ gifts }) => {
+    void Promise.resolve()
+      .then(() => {
+        // A reading asked again after one that failed is a wait again. One that follows a reading that answered, a
+        // judge's credit just given, keeps what was read on the screen until the new answer lands.
+        if (live) setHeld((was) => (was.state === "read" ? was : { state: "reading" }));
+        return readHeldForPaying(address);
+      })
+      .then(({ parts, gifts }) => {
         if (!live) return;
-        // The same reading says what those gifts hold for this account.
-        setInGifts(heldInGifts(gifts));
+        setHeld({ state: "read", parts });
+        // The same reading says what name this account gave last.
+        if (named.current) return;
+        named.current = true;
         const last = lastNameGiven(gifts);
         const now = latest.current;
         if (last && now.draft.funderName.trim() === "") now.onChange({ ...now.draft, funderName: last });
-      },
-      () => undefined,
-    );
+      })
+      .catch(() => {
+        if (live) setHeld({ state: "unread" });
+      });
     return () => {
       live = false;
     };
-  }, [open, address]);
+  }, [open, address, balanceRead]);
 
   const units = draftUnits(draft);
   const condition = conditionById(draft.conditionId);
@@ -172,15 +165,18 @@ export function PaySheet({
   const milestone = milestoneById(draft.conditionId);
   const certificate = certificateById(draft.conditionId);
   const ready = isComplete(draft) && units !== undefined && condition !== undefined;
-  // "From your Viky money": the account and what the person's gifts hold for them, one figure.
-  const inAccount = (held ?? 0n) + inGifts;
-  const enough = units !== undefined && inAccount >= units;
-  const short = units === undefined ? 0n : units - inAccount;
+  // What pays: the account, the card, or nothing that can be named while the account is unread (src/pay-held.ts).
+  const pays = payWith({ signedIn: Boolean(address), held, wanted: units });
+  const settled = pays === "account" || pays === "card";
+  // "From your Viky money": everything the account can pay with, one figure, the one Home says.
+  const inAccount = heldForTheLines(Boolean(address), held);
+  const enough = pays === "account";
+  const short = units === undefined || units <= inAccount ? 0n : units - inAccount;
   const offer = wayInFor(short, waysIn(), money.rates?.usdPerEur, railIn);
   const way = offer.way;
   /** Paying by card is not offered in the payer's country (the founder, 29 Sep 2026): the account is the way left. */
   const cardClosed = card?.offered === false;
-  const byCard = !enough && !cardClosed;
+  const byCard = pays === "card" && !cardClosed;
   const euros = units === undefined || !byCard ? 0 : offer.euros;
   // One money on the whole sheet, the one the gift was typed in (the mockup of 3 Oct 2026); dollars when no rate is read.
   const code = money.rates && perEuro(money.currency, money.rates) !== undefined ? money.currency : "USD";
@@ -198,7 +194,8 @@ export function PaySheet({
    * the device, the service's page opens inside the same press, and the wait takes over.
    */
   const pay = async () => {
-    if (!ready || units === undefined) return;
+    // Nothing leaves while what the account holds is not known: the press would choose the card for it.
+    if (!ready || units === undefined || !settled) return;
     setProblem(null);
     setBusy(true);
     if (!address) onMaking(true);
@@ -280,7 +277,7 @@ export function PaySheet({
       {/* Lines that add up (src/pay-sum.ts): the gift, less what the account puts in, plus the card's fee, plus what stays. */}
       <div data-pay-lines="">
         {line(W.rows.gift(recipient), giftRead)}
-        {enough ? null : cardClosed ? (
+        {pays !== "card" ? null : cardClosed ? (
           heldRead !== undefined && inAccount > 0n ? line(W.rows.fromAccount, less(heldRead)) : null
         ) : sum ? (
           <>
@@ -303,16 +300,28 @@ export function PaySheet({
 
       {/* Only when the gift is paid from a balance no larger than the judge credit, with nothing gone out of the
           account since it arrived (D295): the balance is then the credit alone. */}
-      {judgeLineIsTrue({ gift: units, held, untouchedCredit }) ? <p className={HELP}>{W.fromJudgeCredit(cardPaidHow(), way.name)}</p> : null}
-      {!enough && cardClosed ? (
+      {judgeLineIsTrue({ gift: units, held: held.state === "read" ? held.parts.ausd : null, untouchedCredit }) ? <p className={HELP}>{W.fromJudgeCredit(cardPaidHow(), way.name)}</p> : null}
+      {pays === "card" && cardClosed ? (
         <CardNotOffered country={card?.country ?? null} whole />
       ) : (
         <>
-          <button type="button" className={PRIMARY_BUTTON} disabled={!ready || busy || status === "busy"} onClick={() => void pay()}>
+          {/* While what the account holds is not known, the button names no way to pay and does not go (the founder,
+              5 Oct 2026): it said "by card" to somebody who had the money, and a press led there. */}
+          <button type="button" className={PRIMARY_BUTTON} disabled={!ready || !settled || busy || status === "busy"} onClick={() => void pay()} data-pays={pays}>
             <ButtonWords busy={busy} doing={W.paying}>
               {enough ? W.payFromAccount(giftRead, recipient) : sum ? W.payByCard(say(sum.card)) : W.pay}
             </ButtonWords>
           </button>
+          {pays === "reading" ? <WaitLine>{W.readingAccount}</WaitLine> : null}
+          {/* A reading that failed is said, with what reads it again. Never the card in its place. */}
+          {pays === "unread" ? (
+            <>
+              <FieldRefusal id="account-unread">{W.accountUnread}</FieldRefusal>
+              <button type="button" className={`${SMALL_BUTTON} self-start`} onClick={() => setBalanceRead((n) => n + 1)}>
+                {W.readAgain}
+              </button>
+            </>
+          ) : null}
           <StepInProgress busy={busy} step={WAITS.account} />
           {/* One line: who takes the card, its ID the first time, and its terms (the mockup of 3 Oct 2026). */}
           {byCard ? <CardLine way={way} /> : null}
@@ -344,9 +353,9 @@ export function PaySheet({
           the panel that creates one or signs an old one in appears in place, rather than on a screen of its own. */}
       {problem && !address ? <AccountPanel /> : null}
       {/* Where the card is not offered, an account is what money can be sent to: somebody without one makes it here. */}
-      {!enough && cardClosed && !address ? <AccountPanel /> : null}
+      {pays === "card" && cardClosed && !address ? <AccountPanel /> : null}
       {/* No code where the card is paid inside Viky: that sheet is already told whose account it is. */}
-      {!enough && (cardClosed || (!wayInFillsIn(way) && !way.embedded)) && address ? (
+      {pays === "card" && (cardClosed || (!wayInFillsIn(way) && !way.embedded)) && address ? (
         <div className="flex flex-col gap-[var(--space-xs)]">
           <p className={CARD_LABEL}>{W.yourCode}</p>
           <p className={`${HELP} select-all break-all tabular-nums`}>{address}</p>
@@ -390,7 +399,7 @@ export function PaySheet({
         <JudgeCode
           folded
           needed={units ?? null}
-          held={held}
+          held={held.state === "read" ? inAccount : null}
           onCredited={() => setBalanceRead((n) => n + 1)}
           onMakeIt={(dollars) => onChange({ ...draft, dollars, typedAmount: dollars, typedIn: "USD" })}
         />
