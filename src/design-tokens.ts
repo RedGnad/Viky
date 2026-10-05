@@ -526,29 +526,44 @@ export const MOTION = {
    */
   reveal: { durationMs: 250, easing: EASING.standard, rise: 8, staggerMs: 80, mostStaggeredMs: 240, lastTurnMs: 240, fromOpacity: 0.6 },
   /**
-   * The posters under the landing's card (the founder, 5 Oct 2026, on a living mockup): each plays once, when its
-   * title's top reaches `startAt` of the screen's height. The words rise one after the other, their position
-   * overshooting and their opacity never; the character lands in its word out of nothing, on a spring; the day that
-   * was missed comes back from the right instead; the sentence follows, then what stands under it. In the last poster
-   * the figure rises first and the words wait for it.
+   * The posters under the landing's card (the founder, 5 Oct 2026, on a living mockup; second pass the same day): each
+   * plays once, when its title's top reaches `startAt` of the screen's height. The words rise one after the other,
+   * their position overshooting and their opacity never; the character lands in its word out of nothing, on a spring;
+   * the lines under the title follow, one after the other, `line.staggerMs` apart, then what stands under them. In the
+   * last poster the figures rise first and the words wait for them.
    *
    * `beforeEndMs` is how long before the end of what has played so far a part starts. The eases are named as the
    * library that plays them names them (gsap, loaded by the landing alone).
    *
-   * Two things are tied to the scroll and to no clock: the band of stickers drifts `drift.px` each way while it
-   * crosses the screen, and a character leans `lean.deg` each way. `catchUpS` is the library's own smoothing of a
-   * scrubbed movement, in seconds. The speed and the direction of the scroll itself are never touched.
+   * Everything else is tied to the scroll and to no clock, so scrolling back plays it backwards. The rows of names
+   * drift `drift.px`, each row the other way from the one above it, while they cross the screen. And each character
+   * has an act of its own (`acts`), from the moment its title comes up from the bottom of the screen until it leaves
+   * by the top: the day earned rolls, today hops, the day missed comes back from the far side and is home by mid
+   * screen, the day that can still be caught nods, and the sunglasses come down onto the face. A length in `em` is the
+   * title's own; `S` is a share of the act, not a time; `catchUpS` is the library's own smoothing of a movement tied to
+   * the scroll, in seconds. The speed and the direction of the scroll itself are never touched.
    */
   poster: {
     startAt: 0.8,
     word: { riseMs: 650, staggerMs: 70, fadeMs: 200, from: "0.6em", fromTurn: 2, ease: "back.out(1.8)", fadeEase: "power1.out" },
     character: { landMs: 800, fromTurn: -25, ease: "elastic.out(1, 0.5)", beforeEndMs: 400 },
-    back: { ms: 900, from: 220, fromTurn: 24, ease: "back.out(1.3)", beforeEndMs: 450 },
-    line: { ms: 350, rise: 14, staggerMs: 80, ease: "power2.out", beforeEndMs: 500 },
-    strip: { ms: 450, rise: 24, ease: "power2.out", beforeEndMs: 300 },
-    figure: { ms: 700, rise: 60, fromHeight: 0.7, ease: "back.out(2.2)", wordsAfterMs: 250 },
+    line: { ms: 400, rise: 14, staggerMs: 160, ease: "power2.out", beforeEndMs: 500 },
+    strip: { ms: 450, rise: 24, ease: "power2.out", beforeEndMs: 250 },
+    figure: { ms: 700, rise: 60, fromHeight: 0.7, ease: "back.out(2.2)", wordsAfterMs: 250, origin: "50% 100%" },
     drift: { px: 160, catchUpS: 0.5 },
-    lean: { deg: 7, catchUpS: 0.6, origin: "50% 60%" },
+    acts: {
+      catchUpS: 0.35,
+      /** The day earned rolls across its place: a turn and a half, three tenths of an em each way. */
+      roll: { turn: 270, shift: "0.3em", origin: "50% 50%" },
+      /** Today hops three times, half an em up, stretching as it rises and squashing where it lands. */
+      hop: { times: 3, height: "-0.5em", turn: 8, stretch: { x: 0.94, y: 1.1 }, squash: { x: 1.12, y: 0.82 }, upS: 1, downS: 1, settleS: 0.35, upEase: "power2.out", downEase: "power2.in", settleEase: "power1.out", origin: "50% 100%" },
+      /** The day missed comes back from the right, from the moment its title is in until it reaches mid screen. */
+      back: { from: "4.4em", fromTurn: 50, startAt: 0.96, homeAt: 0.48, ease: "power2.out", origin: "50% 60%" },
+      /** The day that can still be caught nods, wide, three times, each a little less. */
+      nod: { turns: [20, 18, 14], eachS: 1, ease: "sine.inOut", origin: "50% 100%" },
+      /** The sunglasses come down onto the face as the title reaches mid screen, and the head tilts as it goes by. */
+      shades: { drop: -15, fromTurn: -22, startAt: 0.72, onAt: 0.46, ease: "back.out(2.4)", origin: "50% 50%", tilt: 12, tiltOrigin: "50% 60%" },
+    },
     /** How long the posters wait for their script before they are simply shown, still. */
     giveUpMs: 5000,
   },
