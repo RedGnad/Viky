@@ -317,7 +317,13 @@ export const PAY = {
   /** In the card's place, where no card partner serves the payer's country (the founder's words, 29 Sep 2026). */
   cardNotOffered: (country: string | null) =>
     `Card payment isn't available ${country ? `in ${country}` : "where you are"}. You can pay with money already in your Viky account, and anyone who uses Viky can send money to yours.`,
+  /** The button while nothing says yet what pays: the gift is not filled in, or what the account holds is not read. */
   pay: "Pay",
+  /** Under the button while the account is being read (the founder, 5 Oct 2026): the button names no way until then. */
+  readingAccount: "Reading what your account holds.",
+  /** The reading failed: what happened, and the small button under it reads again. Never the card in its place. */
+  accountUnread: "What your account holds could not be read.",
+  readAgain: "Read it again",
   payByCard: (amount: string) => `Pay ${amount} by card`,
   payFromAccount: (amount: string, recipient: string) => `Put ${amount} in ${their(recipient)} name`,
   /**
