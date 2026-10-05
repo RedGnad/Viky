@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { ApiError, getJson, postJson } from "@/src/client/api";
+import { refusalAfterPaying } from "@/src/after-paying";
+import { getJson, postJson } from "@/src/client/api";
 import { formatAusd } from "@/src/gift-reader";
 import { PAY as W } from "@/src/sentences";
 import { HELP, SMALL_BUTTON } from "../../components/ui";
@@ -83,7 +84,8 @@ export function JudgeCode({
         }
       }
     } catch (error) {
-      setProblem(error instanceof ApiError ? error.message : W.code.failed);
+      // On a screen that pays by card, a call that answered nothing says the code's own sentence (src/after-paying.ts).
+      setProblem(refusalAfterPaying(error, W.code.failed));
     } finally {
       setBusy(false);
     }
