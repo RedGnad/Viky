@@ -1,44 +1,52 @@
 "use client";
 import Link from "next/link";
 import { Fragment, useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
-import type { ConditionIcon as Icon } from "@/src/condition-icons";
 import { MOTION } from "@/src/design-tokens";
+import { inRows, readByName } from "@/src/landing-read";
 import { MOVES, POSTERS_READY, POSTERS_STILL } from "@/src/moves";
 import { CATALOGUE, HOME, LANDING_STORY as W, ME } from "@/src/sentences";
-import { BODY, CARD, HELP, HERO, LEAD, PRIMARY_BUTTON, SAY } from "../components/ui";
+import { BODY, CARD, HELP, HERO, PRIMARY_BUTTON, SAY } from "../components/ui";
 import { Character, type CharacterState } from "./Character";
 import { ConditionIcon } from "./ConditionIcon";
-import { Figure } from "./Figure";
+import { Figure, Scene } from "./Figure";
 import { Install, isStandalone } from "./Install";
 import { MarkNotice } from "./MarkNotice";
 import { reduced } from "./Motion";
 import { CARD_NOTE, goToTheCard } from "./WayToTheCard";
 
 /**
- * What the landing says under the card: four posters, the phone, and one last way to the card (the founder, 5 Oct
- * 2026, validated on a living mockup; it replaces D282's four blocks with a drawing beside each).
+ * What the landing says under the card: five posters, the phone, and one last way to the card (the founder, 5 Oct
+ * 2026, validated on a living mockup; it replaces D282's four blocks with a drawing beside each. Second pass the same
+ * day, on a second mockup).
  *
- * A poster is a title in the hero's own size, one sentence under it, and nothing drawn beside: the card appears once
- * on the page, at the top, and nothing of it is drawn again here. One of the days' characters is held in each title,
- * tied to the word before it so it never starts a line. The grounds alternate, the page's, the card's paper, the other
- * appearance's ground, the page's again, and a band that changes ground rises over the one before with round
- * shoulders, like a sheet. Under "Checked, not claimed." the chooser's eleven pictograms go by as round stickers, in a
- * band with no first one and no last one.
+ * A poster is a title in the hero's own size, short lines under it, and nothing drawn beside: the card appears once
+ * on the page, at the top, and nothing of it is drawn again here. A character is held in each title, tied to the word
+ * before it so it never starts a line. The grounds alternate, the page's, the card's paper, the other appearance's
+ * ground, the paper again, the page's again, and a band that changes ground rises over the one before with round
+ * shoulders, like a sheet. Under "Checked, not claimed." what Viky reads goes by, by name, in rows with no first name
+ * and no last one.
  *
  * The first image is the starting state (the rule of 23 Sep 2026): where movement is welcome and a script runs, the
  * document says so in its head (`src/moves.ts`) and the stylesheet draws every part of a poster invisible from the
- * first image. Each poster then plays once, when its title reaches four fifths of the screen (`MOTION.poster`).
- * Without a script, or where less movement is asked for, everything is there and nothing moves; and posters whose
- * script does not come are shown, still.
+ * first image. Each poster then plays once, when its title reaches four fifths of the screen (`MOTION.poster`), and
+ * each character has an act tied to the scroll, played backwards when the page is scrolled back. Without a script, or
+ * where less movement is asked for, everything is there and nothing moves; and posters whose script does not come are
+ * shown, still.
  */
 type Key = (typeof W.blocks)[number]["key"];
+/** A character's act, tied to the scroll (`MOTION.poster.acts`). */
+type Act = keyof typeof MOTION.poster.acts & ("roll" | "hop" | "back" | "nod" | "shades");
 
-/** The character each poster holds. The day that was missed is the one that comes back, from the far side. */
-const HELD: Readonly<Record<Key, Readonly<{ state: CharacterState; returns?: true }>>> = {
-  theirs: { state: "earned" },
-  checked: { state: "today" },
-  back: { state: "toCome", returns: true },
-  face: { state: "diamond" },
+/**
+ * The character each poster holds, and its act. Four are days: the one earned, today, the one missed, which comes
+ * back, and the one that can still be caught, which is the yes. The fifth is the one who wears sunglasses on Me.
+ */
+const HELD: Readonly<Record<Key, Readonly<{ state: CharacterState | "shades"; act: Act }>>> = {
+  theirs: { state: "earned", act: "roll" },
+  checked: { state: "today", act: "hop" },
+  back: { state: "toCome", act: "back" },
+  yes: { state: "catchable", act: "nod" },
+  key: { state: "shades", act: "shades" },
 };
 
 /** The ground of each poster, and what it rises over. */
@@ -46,29 +54,23 @@ const GROUND: Readonly<Record<Key, Readonly<{ band: string; under: string }>>> =
   theirs: { band: "poster-band-ground", under: "" },
   checked: { band: "on-paper poster-band-rises", under: "" },
   back: { band: "poster-band-other poster-band-rises", under: "poster-under-paper" },
-  face: { band: "poster-band-ground poster-band-rises", under: "poster-under-other" },
+  yes: { band: "on-paper poster-band-rises", under: "poster-under-other" },
+  key: { band: "poster-band-ground poster-band-rises", under: "poster-under-paper" },
 };
 
 /**
- * The chooser's eleven pictograms as stickers, in the order and with the lean and the tone the mockup gives each: the
- * raised paper, the tonal lavender, and a quarter of the first and of the second character's colour. Never the sun,
- * which is the action's.
+ * How the names go by: the tone and the lean of each, in turn. The raised paper, the tonal lavender, and a quarter of
+ * the first and of the second character's colour, never the sun, which is the action's; three degrees at most.
  */
-export const STICKERS: readonly Readonly<{ icon: Icon; tone: 1 | 2 | 3 | 4; tilt: number }>[] = [
-  { icon: "language", tone: 1, tilt: -7 },
-  { icon: "pawn", tone: 1, tilt: 5 },
-  { icon: "university", tone: 2, tilt: -3 },
-  { icon: "flag", tone: 3, tilt: 8 },
-  { icon: "cube", tone: 4, tilt: -5 },
-  { icon: "rosette", tone: 2, tilt: 4 },
-  { icon: "code", tone: 1, tilt: -8 },
-  { icon: "watch", tone: 3, tilt: 3 },
-  { icon: "test", tone: 2, tilt: -4 },
-  { icon: "route", tone: 1, tilt: 6 },
-  { icon: "puzzle", tone: 4, tilt: -2 },
-];
-/** The set laid end to end as many times as it takes to run past both edges of any screen, drift included. */
-const SETS = [0, 1, 2, 3, 4, 5];
+export const PILL_TONES: readonly (1 | 2 | 3 | 4)[] = [1, 4, 2, 3, 1, 2, 4, 3, 1, 2, 3];
+export const PILL_TILTS: readonly number[] = [-2.5, 2, -1.5, 3, -2, 1.5, -3, 2.5, -1.5, 2, -2.5];
+/** Each row laid end to end as many times as it takes to run past both edges of any screen, drift included. */
+const SETS = [0, 1, 2, 3];
+/** Two rows where the window is wide, three on a phone: the stylesheet shows one of the two. */
+const ROWS = [
+  { window: "wide", rows: 2 },
+  { window: "narrow", rows: 3 },
+] as const;
 
 const never = () => () => {};
 const serverFalse = () => false;
@@ -104,13 +106,49 @@ function Poster({ title, after, character, firstUnderTheCard = false }: Readonly
   );
 }
 
-/** One of the days' characters in a title: no floor under it, a little taller than the letters. */
+/** A character in a title: no floor under it, taller than the letters. The one in sunglasses is the head of Me's figure. */
 function Held({ poster }: Readonly<{ poster: Key }>) {
-  const { state, returns } = HELD[poster];
+  const { state, act } = HELD[poster];
   return (
-    <span data-ch={returns ? "back" : "lands"} aria-hidden className={`poster-character${state === "diamond" ? " poster-character-wide" : ""}`}>
-      <Character state={state} standing={false} className="block h-full w-full" />
+    <span data-ch={act === "back" ? "back" : "lands"} data-act={act} aria-hidden className={`poster-character${state === "shades" ? " poster-character-wide" : ""}`}>
+      {state === "shades" ? <Figure id="story-key" limbs={false} eyes="shades" mouth="grin" halftone /> : <Character state={state} standing={false} className="block h-full w-full" />}
     </span>
+  );
+}
+
+/**
+ * What Viky reads, by name (`src/landing-read.ts`): the chooser's own lines, each a pill with its pictogram. Drawn
+ * twice, in two rows and in three, and the stylesheet shows the one the window has room for. In the one shown, one set
+ * of names is read by a screen reader, as a list; the copies that make the rows endless are hidden from it.
+ */
+function ReadByName() {
+  const all = readByName().map((line, index) => ({ ...line, tone: PILL_TONES[index % PILL_TONES.length], tilt: PILL_TILTS[index % PILL_TILTS.length] }));
+  return (
+    <div data-strip="" className="pill-strip">
+      {ROWS.map(({ window, rows }) => (
+        <div key={window} className={`pill-rows pill-rows-${window}`} role="list" aria-label={W.read}>
+          {inRows(all, rows).map((row, at) => (
+            <div key={at} className="pill-row" role="presentation">
+              <div data-pills={at % 2 === 0 ? "one-way" : "the-other"} className="pills" role="presentation">
+                {SETS.map((set) =>
+                  row.map((pill) => (
+                    <span
+                      key={`${set}-${pill.id}`}
+                      {...(set === 0 ? { role: "listitem" } : { "aria-hidden": true })}
+                      className={`read-pill read-pill-${pill.tone}`}
+                      style={{ transform: `rotate(${pill.tilt}deg)` }}
+                    >
+                      <ConditionIcon icon={pill.icon} />
+                      {pill.name}
+                    </span>
+                  )),
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -147,16 +185,16 @@ function usePosters(root: { readonly current: HTMLElement | null }): void {
           const strip = band.querySelector("[data-strip]");
           // Once, when the title's top reaches its share of the screen; clamped, so the last poster of a short page plays at the page's end.
           const play = gsap.timeline({ scrollTrigger: { trigger: band.querySelector("[data-poster]") ?? band, start: `clamp(top ${P.startAt * 100}%)`, once: true } });
-          // The last poster's figure rises first, from its feet, and the words wait for it.
-          if (figure) play.fromTo(figure, { opacity: 0, y: P.figure.rise, scaleY: P.figure.fromHeight }, { opacity: 1, y: 0, scaleY: 1, duration: seconds(P.figure.ms), ease: P.figure.ease, transformOrigin: "50% 100%" }, 0);
+          // The last poster's figures rise first, from their feet, and the words wait for them.
+          if (figure) play.fromTo(figure, { opacity: 0, y: P.figure.rise, scaleY: P.figure.fromHeight }, { opacity: 1, y: 0, scaleY: 1, duration: seconds(P.figure.ms), ease: P.figure.ease, transformOrigin: P.figure.origin }, 0);
           // Each word rises to its place, one after the other; its opacity never overshoots, its position may.
           play
             .to(words, { opacity: 1, duration: seconds(P.word.fadeMs), stagger: seconds(P.word.staggerMs), ease: P.word.fadeEase }, figure ? seconds(P.figure.wordsAfterMs) : 0)
             .fromTo(words, { y: P.word.from, rotate: P.word.fromTurn }, { y: 0, rotate: 0, duration: seconds(P.word.riseMs), stagger: seconds(P.word.staggerMs), ease: P.word.ease }, "<");
           for (const one of band.querySelectorAll<HTMLElement>("[data-ch]")) {
             if (one.dataset.ch === "back") {
-              // The day that was missed comes back from the far side, and settles.
-              play.fromTo(one, { opacity: 0, x: P.back.from, rotate: P.back.fromTurn }, { opacity: 1, x: 0, rotate: 0, duration: seconds(P.back.ms), ease: P.back.ease }, `-=${seconds(P.back.beforeEndMs)}`);
+              // The day that was missed does not land: its place is there from the start, and the scroll brings it.
+              play.set(one, { opacity: 1 }, 0);
             } else {
               // A character lands in its word: out of nothing, then itself, on a spring.
               play
@@ -167,11 +205,57 @@ function usePosters(root: { readonly current: HTMLElement | null }): void {
           if (lines.length) play.fromTo(lines, { opacity: 0, y: P.line.rise }, { opacity: 1, y: 0, duration: seconds(P.line.ms), stagger: seconds(P.line.staggerMs), ease: P.line.ease }, `-=${seconds(P.line.beforeEndMs)}`);
           if (strip) play.fromTo(strip, { opacity: 0, y: P.strip.rise }, { opacity: 1, y: 0, duration: seconds(P.strip.ms), ease: P.strip.ease }, `-=${seconds(P.strip.beforeEndMs)}`);
         }
-        // Tied to the scroll and to nothing else: the stickers drift, and a character leans a little as it goes by.
-        const stickers = story.querySelector("[data-stickers]");
-        if (stickers) gsap.fromTo(stickers, { x: P.drift.px }, { x: -P.drift.px, ease: "none", scrollTrigger: { trigger: stickers.parentElement, start: "top bottom", end: "bottom top", scrub: P.drift.catchUpS } });
-        for (const drawn of story.querySelectorAll("[data-ch] svg")) {
-          gsap.fromTo(drawn, { rotate: -P.lean.deg }, { rotate: P.lean.deg, ease: "none", transformOrigin: P.lean.origin, scrollTrigger: { trigger: drawn, start: "top bottom", end: "bottom top", scrub: P.lean.catchUpS } });
+        // Tied to the scroll and to nothing else: the rows of names drift, each the other way from the one above it.
+        for (const pills of story.querySelectorAll<HTMLElement>("[data-pills]")) {
+          const from = pills.dataset.pills === "one-way" ? P.drift.px : -P.drift.px;
+          gsap.fromTo(pills, { x: from }, { x: -from, ease: "none", scrollTrigger: { trigger: pills.closest("[data-strip]"), start: "top bottom", end: "bottom top", scrub: P.drift.catchUpS } });
+        }
+        // Each character's act, tied to the scroll and to nothing else, from the moment its title comes up from the
+        // bottom of the screen until it leaves by the top. Scrolling back plays it backwards.
+        const A = P.acts;
+        const whole = (held: Element) => ({ trigger: held, start: "top bottom", end: "bottom top", scrub: A.catchUpS });
+        for (const held of story.querySelectorAll<HTMLElement>("[data-ch][data-act]")) {
+          const drawn = held.querySelector("svg");
+          if (!drawn) continue;
+          const act = held.dataset.act;
+          if (act === "roll") {
+            // The day earned rolls across its place.
+            gsap.fromTo(drawn, { rotate: -A.roll.turn, x: `-${A.roll.shift}` }, { rotate: A.roll.turn, x: A.roll.shift, ease: "none", transformOrigin: A.roll.origin, scrollTrigger: whole(held) });
+          } else if (act === "hop") {
+            // Today hops, squashing where it lands.
+            const hops = gsap.timeline({ scrollTrigger: whole(held), defaults: { transformOrigin: A.hop.origin } });
+            for (let hop = 0; hop < A.hop.times; hop += 1) {
+              hops
+                .to(drawn, { y: A.hop.height, scaleY: A.hop.stretch.y, scaleX: A.hop.stretch.x, rotate: hop % 2 ? A.hop.turn : -A.hop.turn, ease: A.hop.upEase, duration: A.hop.upS })
+                .to(drawn, { y: 0, scaleY: A.hop.squash.y, scaleX: A.hop.squash.x, rotate: 0, ease: A.hop.downEase, duration: A.hop.downS })
+                .to(drawn, { scaleY: 1, scaleX: 1, ease: A.hop.settleEase, duration: A.hop.settleS });
+            }
+          } else if (act === "back") {
+            // The day that was missed comes back from the far side as the page is scrolled, and is home by mid screen.
+            gsap.fromTo(
+              drawn,
+              { x: A.back.from, rotate: A.back.fromTurn, opacity: 0 },
+              { x: 0, rotate: 0, opacity: 1, ease: A.back.ease, transformOrigin: A.back.origin, scrollTrigger: { trigger: held, start: `top ${A.back.startAt * 100}%`, end: `top ${A.back.homeAt * 100}%`, scrub: A.catchUpS } },
+            );
+          } else if (act === "nod") {
+            // The yes: it nods, each time a little less.
+            const nod = gsap.timeline({ scrollTrigger: whole(held), defaults: { transformOrigin: A.nod.origin, ease: A.nod.ease, duration: A.nod.eachS } });
+            A.nod.turns.forEach((turn, index) => {
+              if (index === 0) nod.fromTo(drawn, { rotate: -turn }, { rotate: turn });
+              else nod.to(drawn, { rotate: -turn }).to(drawn, { rotate: turn });
+            });
+          } else if (act === "shades") {
+            // The sunglasses come down onto the face as the title reaches mid screen, and the head tilts as it goes by.
+            const shades = drawn.querySelector('[data-prop="shades"]');
+            if (shades) {
+              gsap.fromTo(
+                shades,
+                { y: A.shades.drop, rotate: A.shades.fromTurn, opacity: 0 },
+                { y: 0, rotate: 0, opacity: 1, ease: A.shades.ease, transformOrigin: A.shades.origin, scrollTrigger: { trigger: held, start: `top ${A.shades.startAt * 100}%`, end: `top ${A.shades.onAt * 100}%`, scrub: A.catchUpS } },
+              );
+            }
+            gsap.fromTo(drawn, { rotate: -A.shades.tilt }, { rotate: A.shades.tilt, ease: "none", transformOrigin: A.shades.tiltOrigin, scrollTrigger: whole(held) });
+          }
         }
       }, story);
       story.setAttribute(POSTERS_READY, "playing");
@@ -199,23 +283,13 @@ export function LandingStory() {
         <div key={block.key} className={`poster-under ${GROUND[block.key].under}`}>
           <section data-band={block.key} className={`poster-band ${GROUND[block.key].band}`}>
             <Poster title={block.title} after={block.characterAfter} character={<Held poster={block.key} />} firstUnderTheCard={index === 0} />
-            <p data-line="" className={`${LEAD} poster-line`}>
-              {block.body}
-            </p>
-            {block.key === "checked" ? (
-              // What Viky reads, as stickers. Decoration: the chooser names each one, and the sentence above says it.
-              <div data-strip="" aria-hidden className="sticker-strip">
-                <div data-stickers="" className="stickers">
-                  {SETS.map((set) =>
-                    STICKERS.map((sticker) => (
-                      <span key={`${set}-${sticker.icon}`} className={`sticker sticker-${sticker.tone}`} style={{ transform: `rotate(${sticker.tilt}deg)` }}>
-                        <ConditionIcon icon={sticker.icon} />
-                      </span>
-                    )),
-                  )}
-                </div>
-              </div>
-            ) : null}
+            {/* Short lines, each one fact in a block of its own: a list to scan, never a paragraph. */}
+            {block.lines.map((line, at) => (
+              <p key={line} data-line="" className={`poster-line${at === 0 ? " poster-line-first" : ""}`}>
+                {line}
+              </p>
+            ))}
+            {block.key === "checked" ? <ReadByName /> : null}
           </section>
         </div>
       ))}
@@ -233,11 +307,11 @@ export function LandingStory() {
           </div>
         </section>
       )}
-      {/* One last way to the card, the page's one accent again, under the runner: the two figures at the foot stay
-          two different ones, as they were before the posters (the founder, 5 Oct 2026). */}
+      {/* One last way to the card, the page's one accent again, under the two of Gifts, one with an arm on the other's
+          shoulder (the founder, 5 Oct 2026: they stand where a runner and its speed lines did). */}
       <section data-band="last" className="poster-band poster-band-ground poster-band-last">
-        <div data-figure="" className="mx-auto mb-[var(--space-xl)] w-[130px] [@media(min-width:600px)]:w-[190px]">
-          <Figure id="story-last" arms="run" legs="run" lean={-8} mouth="grin" props={["speed"]} halftone className="h-auto w-full" />
+        <div data-figure="" className="mx-auto mb-[var(--space-xl)] w-[240px] [@media(min-width:600px)]:w-[350px]">
+          <Scene which="gifts" className="h-auto w-full" />
         </div>
         <Poster title={W.last.title} />
         <a data-offer="" href="#offer" className={`${PRIMARY_BUTTON} mt-[calc(var(--space-xl)+var(--space-lg))] w-auto! px-[var(--space-xl)] text-center no-underline`} onClick={goToTheCard}>

@@ -131,18 +131,22 @@
   --other-ground: #151026;
   --other-text: #FFF6E2;
   --other-muted: #C7C4DA;
-  /* A sticker's four tones: the raised paper, the tonal lavender, and a quarter of the first and of the second
-     character's colour. Never the sun, which is the action's. */
+  /* The four tones of the names that go by: the raised paper, the tonal lavender, and a quarter of the first and of
+     the second character's colour. Never the sun, which is the action's. */
   --round-tone-1: #FFFBF0;
   --round-tone-2: #E8E3F4;
   --round-tone-3: #FFDDE2;
   --round-tone-4: #D8ECFF;
-  /* A poster's room above and below, the shoulders of a band that rises, and a sticker, on a phone. */
-  --poster-pad: 76px;
+  /* A poster's room above and below, the shoulders of a band that rises, the lines under its title and a name that
+     goes by, on a phone (the living mockup of 5 Oct 2026, second pass). */
+  --poster-pad: 84px;
   --poster-round: 40px;
-  --round-size: 52px;
-  --round-icon: 24px;
-  --round-gap: 10px;
+  --poster-line: 18px;
+  --poster-line-leading: 1.42;
+  --pill-size: 46px;
+  --pill-type: 17px;
+  --pill-icon: 22px;
+  --pill-gap: 10px;
 
   /* The characters' own colours, never text and never a background (brief, section 5). */
   --character-1: #FF7F8E;
@@ -312,11 +316,14 @@
 @media (min-width: 600px) {
   :root {
     --page-margin: 24px;
-    --poster-pad: 150px;
+    --poster-pad: 132px;
     --poster-round: 72px;
-    --round-size: 76px;
-    --round-icon: 34px;
-    --round-gap: 18px;
+    --poster-line: 26px;
+    --poster-line-leading: 1.36;
+    --pill-size: 58px;
+    --pill-type: 21px;
+    --pill-icon: 28px;
+    --pill-gap: 16px;
   }
 }
 
@@ -403,7 +410,7 @@
     --other-ground: #DDD6EB;
     --other-text: #1E1633;
     --other-muted: #5B5470;
-    /* The stickers after dark: the night's raised paper and tonal, and the same quarter of a character's colour on that paper. */
+    /* The names that go by, after dark: the night's raised paper and tonal, and the same quarter of a character's colour on that paper. */
     --round-tone-1: #393446;
     --round-tone-2: #2B2642;
     --round-tone-3: #6D4859;
@@ -487,7 +494,7 @@
   --other-ground: #DDD6EB;
   --other-text: #1E1633;
   --other-muted: #5B5470;
-  /* The stickers after dark: the night's raised paper and tonal, and the same quarter of a character's colour on that paper. */
+  /* The names that go by, after dark: the night's raised paper and tonal, and the same quarter of a character's colour on that paper. */
   --round-tone-1: #393446;
   --round-tone-2: #2B2642;
   --round-tone-3: #6D4859;
@@ -2158,9 +2165,9 @@ html[data-intro] .launch-intro.launch-intro-leaving {
 
 /*
  * The posters under the landing's card (app/kit/LandingStory.tsx; the founder, 5 Oct 2026, on a living mockup). A band
- * is one poster, from one edge of the window to the other: a title in the hero's size, one sentence, and under one of
- * them the stickers. A band that changes ground rises over the one before with round shoulders, like a sheet, and
- * what shows in its corners is the ground it rises over (`.poster-under`).
+ * is one poster, from one edge of the window to the other: a title in the hero's size, short lines under it, and under
+ * one of them what Viky reads, by name. A band that changes ground rises over the one before with round shoulders,
+ * like a sheet, and what shows in its corners is the ground it rises over (`.poster-under`).
  */
 .poster-under {
   /* One pixel of overlap, so no hairline of another ground shows between two bands. */
@@ -2205,69 +2212,110 @@ html[data-intro] .launch-intro.launch-intro-leaving {
   max-width: 12.5em;
   margin-inline: auto;
 }
-/* One of the days' characters in a title: a little taller than the letters, sitting a little under their line. */
+/* A character in a title: taller than the letters, sitting under their line, with air on each side (second pass). */
 .poster-character {
   display: inline-block;
-  width: 1.08em;
-  height: 1.08em;
-  margin: 0 0.02em;
-  vertical-align: -0.2em;
+  width: 1.3em;
+  height: 1.3em;
+  margin: 0 0.16em;
+  vertical-align: -0.3em;
 }
 .poster-character-wide {
-  width: 1.7em;
+  width: 2.05em;
 }
-.poster-line {
-  max-width: 26em;
-  margin: var(--space-xl) auto 0;
+.poster-character svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
 /*
- * What Viky reads, as stickers: the chooser's pictograms, each in a round with the outline and the relief of a
- * control, in a band that runs past both edges of the window. The row is wider than any screen and centred on its
- * own middle, so there is no first sticker and no last one to see.
+ * The second voice: short lines in ink, not in grey, each one fact in a block of its own, three at most under a
+ * title. On the band that wears the other appearance the ink is that appearance's, since `--text` is.
  */
-.sticker-strip {
-  display: flex;
-  justify-content: center;
+.poster-line {
+  max-width: 30em;
+  margin: calc(var(--poster-line) * 0.55) auto 0;
+  color: var(--text);
+  font-size: var(--poster-line);
+  font-weight: 500;
+  line-height: var(--poster-line-leading);
+  text-wrap: balance;
+}
+.poster-line-first {
+  margin-top: calc(var(--poster-line) * 1.5);
+}
+/*
+ * What Viky reads, by name: each of the chooser's lines as a long pill, its pictogram and its name in the title's
+ * face, with the outline and the relief of a control. The names go by in rows that run past both edges of the window,
+ * two rows where it is wide and three on a phone, so every name goes by on either. A row is wider than any screen and
+ * centred on its own middle: there is no first name and no last one to see.
+ */
+.pill-strip {
   overflow: hidden;
-  margin: calc(var(--space-xl) + var(--space-md)) calc(-1 * var(--page-margin)) 0;
-  /* Room for a leaning sticker's corner above and for its relief below. */
+  margin: calc(var(--poster-line) * 2.2) calc(-1 * var(--page-margin)) 0;
+  /* Room for a leaning pill's corner above and for its relief below. */
   padding: 6px 0 10px;
 }
+.pill-rows {
+  display: none;
+  flex-direction: column;
+  gap: var(--pill-gap);
+}
+.pill-rows-narrow {
+  display: flex;
+}
 @media (min-width: 600px) {
-  .sticker-strip {
-    margin-top: calc(2 * var(--space-xl) + var(--space-sm));
+  .pill-rows-narrow {
+    display: none;
+  }
+  .pill-rows-wide {
+    display: flex;
   }
 }
-.stickers {
+.pill-row {
+  display: flex;
+  justify-content: center;
+}
+.pills {
   display: flex;
   flex: none;
-  gap: var(--round-gap);
+  gap: var(--pill-gap);
 }
-.sticker {
+.read-pill {
   display: flex;
   flex: none;
   align-items: center;
-  justify-content: center;
-  width: var(--round-size);
-  height: var(--round-size);
+  gap: 0.5em;
+  height: var(--pill-size);
+  padding: 0 1.05em 0 0.8em;
   border: var(--control-border-width) solid var(--control-border);
-  border-radius: 50%;
+  border-radius: 999px;
   box-shadow: var(--control-relief);
+  color: var(--text);
+  /* The title's own face, as the names on the card are. */
+  font-family: var(--font-title);
+  font-size: var(--pill-type);
+  font-weight: var(--font-title-weight);
+  line-height: 1;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
 }
-.sticker svg {
-  width: var(--round-icon);
-  height: var(--round-icon);
+.read-pill svg {
+  flex: none;
+  width: var(--pill-icon);
+  height: var(--pill-icon);
 }
-.sticker-1 {
+.read-pill-1 {
   background: var(--round-tone-1);
 }
-.sticker-2 {
+.read-pill-2 {
   background: var(--round-tone-2);
 }
-.sticker-3 {
+.read-pill-3 {
   background: var(--round-tone-3);
 }
-.sticker-4 {
+.read-pill-4 {
   background: var(--round-tone-4);
 }
 /*
@@ -2281,7 +2329,8 @@ html[data-moves] [data-landing-story]:not([data-still]) [data-band] :is([data-w]
   opacity: 0;
 }
 @media print {
-  html[data-moves] [data-landing-story] [data-band] :is([data-w], [data-ch], [data-line], [data-strip], [data-figure], [data-offer]) {
+  /* On paper everything is there and at rest: the parts that play once, and what a character's act had moved. */
+  html[data-moves] [data-landing-story] [data-band] :is([data-w], [data-ch], [data-ch] svg, [data-ch] [data-prop], [data-line], [data-strip], [data-pills], [data-figure], [data-offer]) {
     opacity: 1 !important;
     transform: none !important;
   }
