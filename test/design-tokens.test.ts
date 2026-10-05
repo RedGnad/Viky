@@ -242,6 +242,20 @@ test("three colours per appearance and no fourth background: no joy, no sticker,
     const source = readFileSync(file, "utf8");
     assert.doesNotMatch(source, /var\(--joy\)|var\(--sticker-|var\(--day-/, `${file} paints a retired background`);
   }
+  // Amended by the founder on 5 Oct 2026, on a living mockup: the posters under the landing's card lay two things over
+  // the three colours, and nothing else does. One band wears the other appearance's ground, and the pictograms go by
+  // in rounds of four tones, two of them a quarter of a character's colour. They are painted by the posters' own
+  // classes and by nothing else in the stylesheet or in a component.
+  const painted = (token: string) => [...css.matchAll(new RegExp(`^([^\\n{}]+) \\{[^}]*var\\(${token}[^}]*\\}`, "gm"))].map((match) => match[1].trim());
+  assert.deepEqual(painted("--other-ground"), [".poster-under-other", ".poster-band-other"]);
+  assert.deepEqual(painted("--round-tone-"), [".sticker-1", ".sticker-2", ".sticker-3", ".sticker-4"]);
+  for (const file of globSync("app/**/*.{ts,tsx}")) assert.doesNotMatch(readFileSync(file, "utf8"), /var\(--other-|var\(--round-tone-/, `${file} paints a poster's ground outside the posters`);
+  // The other appearance's ground is the one the look already has for it, and the two tones that are not a
+  // character's are the look's own raised paper and tonal.
+  assert.match(css, new RegExp(`--other-ground: ${COLOURS.dark.background};`));
+  assert.equal(css.match(new RegExp(`--other-ground: ${COLOURS.light.background};`, "g"))?.length, 2);
+  assert.match(css, new RegExp(`--round-tone-2: ${COLOURS.light.tonal};`));
+  assert.equal(css.match(new RegExp(`--round-tone-2: ${COLOURS.dark.tonal};`, "g"))?.length, 2);
 });
 
 test("the one red is Material's error role, declared for day and night, read on the paper, and painted by one class", () => {

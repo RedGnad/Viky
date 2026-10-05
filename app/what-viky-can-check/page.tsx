@@ -5,6 +5,7 @@ import { realProofCounts } from "@/src/proof-counts";
 import { CATALOGUE as W, ME } from "@/src/sentences";
 import { HELP, DISPLAY, TITLE } from "../components/ui";
 import { Nature } from "../kit/Nature";
+import { MarkNotice } from "../kit/MarkNotice";
 import { Shell } from "../kit/Shell";
 
 export const metadata: Metadata = { title: W.title };
@@ -101,6 +102,8 @@ export default async function Page() {
         </Link>
         .
       </p>
+      {/* This page names the TOEFL: what its owner asks at the bottom of a page that does (the founder, 5 Oct 2026). */}
+      <MarkNotice />
     </Shell>
   );
 }

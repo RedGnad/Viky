@@ -26,6 +26,7 @@ import {
 } from "@/src/client/gift";
 import { checkMilestone, requestMilestoneCode, startMilestone, type MilestoneOutcome } from "@/src/client/milestone";
 import { conditionById, conditionOfGoal } from "@/src/conditions";
+import { MarkNotice } from "../kit/MarkNotice";
 import { dayNow, lessonWouldPay } from "@/src/day-now";
 import { stripFromRecord } from "@/src/day-states";
 import { spokenAmount } from "@/src/display-currency";
@@ -904,6 +905,8 @@ function LiveGift({ status, linkKey, reload, refresh }: Readonly<{ status: GiftS
           <ReachedOnItsPage gift={reachedOfStatus(milestone, mine ? "recipient" : "funder", { recipientName, funderName })} />
         ) : null}
 
+        {/* A gift that names the TOEFL: what its owner asks at the bottom of a page that names it. */}
+        <MarkNotice naming={[condition?.name]} />
       </Shell>
     </Arrival>
   );

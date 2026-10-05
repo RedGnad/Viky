@@ -16,6 +16,7 @@ import { FUND, GIFT_LIVE, GRADE_SCALE, LIMIT, MILESTONE_FUND as M, OFFER as W } 
 import { CARD_LABEL, CHOICE, HELP, META, PRIMARY_BUTTON, ROW_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TILE } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
 import { ConditionIcon } from "../ConditionIcon";
+import { MarkNotice } from "../MarkNotice";
 import { FamilyArt } from "../FamilyArt";
 import { Nature } from "../Nature";
 import { Field } from "../Field";
@@ -421,6 +422,8 @@ export function WillSheet({
                   );
                 })}
               </div>
+              {/* A list that names the TOEFL: what its owner asks at the bottom of what names it. */}
+              <MarkNotice naming={lines(shownSection.conditions).map((line) => line.name)} />
             </>
           ) : (
             /* The four families, two by two: a picture, a name, a count. Each is a button and looks like one (D233):

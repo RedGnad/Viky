@@ -6,7 +6,9 @@ test("under the card, the sentence says what a gift can wait for, one item at a 
   const said = page.locator("[data-goal-said]");
   await said.scrollIntoViewIfNeeded();
   await expect(said).toBeVisible();
-  await expect(page.getByText(/Viky is not affiliated with the schools, races or services named/)).toBeVisible();
+  // The small print left the sentence on 5 Oct 2026: who Viky is not affiliated with is said at the foot of the page.
+  await expect(page.locator("[data-goals-going-by]").getByText(/affiliated/)).toHaveCount(0);
+  await expect(page.locator("footer [data-not-affiliated]")).toHaveText("Not affiliated with the schools, races or services named.");
   const [card, box] = await Promise.all([page.locator("#offer").boundingBox(), said.boundingBox()]);
   expect(box!.y).toBeGreaterThan(card!.y + card!.height);
   expect(await said.evaluate((element) => getComputedStyle(element).fontFamily)).toMatch(/Fredoka/i);
