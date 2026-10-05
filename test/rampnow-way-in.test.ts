@@ -106,11 +106,14 @@ test("it is offered where Rampnow says it fully serves, and gives way by one sen
 });
 
 test("the sheet says what the person meets, in the founder's words, and the terms line carries its name and link", () => {
-  // Under the pay sheet's button, one line: who takes the card, its ID the first time, and its terms (the mockup of 3 Oct 2026).
-  assert.equal(
-    `${PAY.cardLine.before(WAY_IN_USDC.name)}${PAY.cardLine.link(WAY_IN_USDC.name)}${PAY.cardLine.after}`,
-    "Rampnow takes your card, with your ID the first time. By paying you are 18 or older and accept Rampnow's terms.",
-  );
+  // Under the pay sheet's button, one line: who takes the card, what that service asks before taking it, and its terms
+  // (the mockup of 3 Oct 2026; the founder, 5 Oct 2026: of the service the person is offered, never of another).
+  const line = (way: { name: string; asks: string }) => `${PAY.cardLine.before(way.name, way.asks)}${PAY.cardLine.link(way.name)}${PAY.cardLine.after}`;
+  assert.equal(line(WAY_IN_USDC), "Rampnow takes your card and asks for your e-mail, then the first time your details, a code by text and your ID. By paying you are 18 or older and accept Rampnow's terms.");
+  assert.equal(line(WAY_IN_GIFT_COIN), "Ramp takes your card and asks for your ID the first time. By paying you are 18 or older and accept Ramp's terms.");
+  // Every service the sheet may offer says what it asks, and the line is drawn from it.
+  for (const way of waysIn({ rampnow: true, swapper: "an-id" })) assert.ok(way.asks.length > 0 && !/[.]$/.test(way.asks), way.name);
+  assert.match(readFileSync("app/kit/offer/CardTerms.tsx", "utf8"), /W\.cardLine\.before\(way\.name, way\.asks\)/);
   assert.equal(`${PAY.cardTerms.before}${PAY.cardTerms.link(WAY_IN_USDC.name)}${PAY.cardTerms.after}`, "By paying by card, you confirm you are 18 or older and accept Rampnow's terms.");
   assert.equal(WAY_IN_USDC.terms, "https://rampnow.io/terms-and-conditions");
   // The pay sheet's fold says the fee in a short line (the founder, 4 Oct 2026), true of the payment on the sheet:

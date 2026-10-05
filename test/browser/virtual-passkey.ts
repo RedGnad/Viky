@@ -7,7 +7,13 @@ import type { BrowserContext, Page } from "@playwright/test";
  * export (measured on 23 Sep 2026), and Viky derives the account from the PRF. So a script in the page answers it: the
  * same output for the same passkey and salt, as a synced passkey gives on a phone, both salts answered.
  */
-export const AUTHENTICATOR = { protocol: "ctap2", ctap2Version: "ctap2_1", transport: "internal", hasResidentKey: true, hasUserVerification: true, hasPrf: true, isUserVerified: true, automaticPresenceSimulation: true } as const;
+/**
+ * It says of its passkey what a phone's store says: one that may be copied to other devices, and is (the two backup
+ * flags). A passkey a computer keeps for itself alone is said by `KEPT_HERE_ALONE`, for the tests that are about it
+ * (src/account/key-kept.ts).
+ */
+export const AUTHENTICATOR = { protocol: "ctap2", ctap2Version: "ctap2_1", transport: "internal", hasResidentKey: true, hasUserVerification: true, hasPrf: true, isUserVerified: true, automaticPresenceSimulation: true, defaultBackupEligibility: true, defaultBackupState: true } as const;
+export const KEPT_HERE_ALONE = { ...AUTHENTICATOR, defaultBackupEligibility: false, defaultBackupState: false } as const;
 
 export const prfStandIn = (seed: string) => `(() => {
   const encoder = new TextEncoder();
@@ -44,11 +50,11 @@ export function passkeySite(served: string | undefined): string {
 }
 
 /** Gives the context's page a virtual authenticator, with the PRF answered in the page. */
-export async function holdAPasskey(context: BrowserContext, page: Page, seed: string): Promise<void> {
+export async function holdAPasskey(context: BrowserContext, page: Page, seed: string, options: typeof AUTHENTICATOR | typeof KEPT_HERE_ALONE = AUTHENTICATOR): Promise<void> {
   await context.addInitScript(prfStandIn(seed));
   const cdp = await context.newCDPSession(page);
   await cdp.send("WebAuthn.enable");
-  await cdp.send("WebAuthn.addVirtualAuthenticator", { options: AUTHENTICATOR });
+  await cdp.send("WebAuthn.addVirtualAuthenticator", { options });
 }
 
 /** Whether the server's session cookie is held. */

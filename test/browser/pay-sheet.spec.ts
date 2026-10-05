@@ -87,7 +87,7 @@ test.describe("the pay sheet of 3 Oct 2026", () => {
     // Signed in, the phone's own prompt says what the passkey does: no line about it, and no link warning here.
     await expect(sheet(page).getByText(/Your face or your fingerprint/)).toHaveCount(0);
     await expect(sheet(page).getByText(/opens the gift for whoever opens it first/)).toHaveCount(0);
-    await expect(sheet(page).getByText(/takes your card, with your ID the first time\. By paying you are 18 or older/)).toBeVisible();
+    await expect(sheet(page).getByText(/takes your card and asks for .+\. By paying you are 18 or older/)).toBeVisible();
     await expect(sheet(page).locator("summary", { hasText: "How it works" })).toHaveCount(0);
     await shot(page, "1-signed-in");
     // The one fold, opened: three short lines, a label and its value, and no paragraph (the founder, 4 Oct 2026).

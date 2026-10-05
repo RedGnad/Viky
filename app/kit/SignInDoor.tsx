@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import * as mera from "@/src/account/mera";
-import { useMadeHere } from "@/src/account/door";
+import { useMadeHere, useOnAComputer } from "@/src/account/door";
 import { doorWasAskedFor } from "@/src/account/door-asked";
 import { useAccount } from "@/src/account/provider";
 import { ACCOUNT_DOOR, DOOR as W } from "@/src/sentences";
@@ -17,12 +17,15 @@ import { WAITS } from "@/src/sentences";
  * for making an account: an account is made where it serves, at the payment for a funder and on the link for the person
  * a gift is for, which is Apple's "Delay sign-in for as long as possible".
  *
- * Pressing it opens the passkey at once. Only when that does not work, because this device holds no passkey for Viky or
- * because the system sheet was waved away, does a panel open under it: what a passkey is in one sentence, making an
- * account, and trying again. After signing in, the person lands on Home, on their money, never on a setting.
+ * On a device that remembers a passkey for Viky, pressing it opens the passkey at once, and a panel opens under it
+ * only when that did not sign anybody in. On a device that remembers none, the press opens the panel and asks nothing
+ * of the browser (the founder, 5 Oct 2026): a tester with no account pressed "Sign in" on an iPhone, then on a
+ * computer, and was offered a QR code, Bluetooth and a security key, which is what a browser shows when it is asked
+ * for a passkey it does not hold. So the panel leads with making an account, and signing in is its second action, the
+ * only one that asks for a passkey. After signing in, the person lands on Home, on their money, never on a setting.
  */
 export function SignInDoor() {
-  const { address, status, error, signIn, createAccount, clearError } = useAccount();
+  const { address, hasCredential, status, error, signIn, createAccount, clearError } = useAccount();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   /** Whether the passkey was tried and did not sign anybody in: the panel's second key then says "Try again". */
@@ -31,6 +34,7 @@ export function SignInDoor() {
   const door = useRef<HTMLButtonElement>(null);
   const busy = status === "busy";
   const madeHere = useMadeHere();
+  const computer = useOnAComputer();
 
   useEffect(() => {
     if (!open) return;
@@ -96,7 +100,8 @@ export function SignInDoor() {
         aria-expanded={open}
         aria-haspopup="dialog"
         disabled={busy}
-        onClick={() => void tryPasskey()}
+        // A device that knows no account is asked for no passkey: the press opens the door, and shuts it again.
+        onClick={() => (hasCredential ? void tryPasskey() : setOpen((was) => !was))}
         className={SMALL_BUTTON}
       >
         {/* One width whatever it says (the founder, 21 Sep 2026): "Sign in" and "One moment" are the same button,
@@ -115,6 +120,12 @@ export function SignInDoor() {
           className={`${CARD} absolute top-[calc(100%+var(--space-sm))] right-0 z-50 flex w-[min(320px,calc(100vw-2*var(--page-margin)))] flex-col`}
         >
           <p className={HELP}>{W.how}</p>
+          {/* On a computer, which choice of the system's sheet follows the person, before they choose (5 Oct 2026). */}
+          {computer && madeHere ? (
+            <p className={HELP} data-on-a-computer="">
+              {ACCOUNT_DOOR.onAComputer}
+            </p>
+          ) : null}
           {/* On an address that is not Viky's own no account is made: the way to viky.cash stands in the button's place. */}
           {madeHere ? (
             <>
@@ -132,7 +143,8 @@ export function SignInDoor() {
             <MadeOnTheMainSite />
           )}
           <button type="button" onClick={() => void tryPasskey()} disabled={busy} className={SECONDARY_BUTTON}>
-            {tried ? W.again : W.open}
+            {/* "Try again" only where a passkey this device remembers did not answer: elsewhere the press signs in. */}
+            {tried && hasCredential ? W.again : W.open}
           </button>
           {error ? (
             <p role="alert" className={HELP}>

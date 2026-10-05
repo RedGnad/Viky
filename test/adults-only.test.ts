@@ -21,7 +21,7 @@ test("'18 or older' is said wherever an account is made, to the person who offer
   // The pay sheet, whose press makes a first account: the card's own line says it when a card pays, this one otherwise.
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   assert.match(sheet, /\{address \|\| hasCredential \|\| !madeHere \|\| byCard \? null : \(\n\s*<p className=\{HELP\} data-adult="">\n\s*\{ACCOUNT_DOOR\.adult\}/);
-  assert.match(`${PAY.cardLine.before("Rampnow")}${PAY.cardLine.link("Rampnow")}${PAY.cardLine.after}`, /By paying you are 18 or older/);
+  assert.match(`${PAY.cardLine.before("Rampnow", "your ID the first time")}${PAY.cardLine.link("Rampnow")}${PAY.cardLine.after}`, /By paying you are 18 or older/);
   // And the legal notice says who Viky is for, and that the age is confirmed, not checked by Viky.
   const legal = readFileSync("app/legal/page.tsx", "utf8");
   assert.match(legal, /Viky is for adults\. The person who offers a gift and the person it is for each confirm they are 18 or older/);
