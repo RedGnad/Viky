@@ -272,14 +272,34 @@ test.describe("the screens a person meets", () => {
     await page.goto("/");
     await openTheCatalogue(page);
     const sheet = page.locator("dialog.sheet[open]");
+    // The four families are read before anything is refused, so one failure names every row that grew, with how wide
+    // its name and its grey line are for the room they have, and whether the page's own typefaces had arrived.
+    const taller: string[] = [];
     for (const family of [/^Learn/, /^School & studies/, /^Play/, /^Move/]) {
       await openTheFamily(page, family);
       const rows = sheet.locator('div[role="group"] > button');
       await expect(rows).not.toHaveCount(0);
-      const read = await rows.evaluateAll((all) => all.map((row) => ({ name: row.querySelector(":scope > span > span")?.textContent ?? "", height: Math.round(row.getBoundingClientRect().height) })));
+      // Measured in the page's own typefaces: a line set in a stand-in is as wide as the stand-in.
+      await page.evaluate(() => document.fonts.ready.then(() => true));
+      const read = await rows.evaluateAll((all) =>
+        all.map((row) => {
+          const lines = [...row.querySelectorAll(":scope > span > span")].slice(0, 2).map((line) => {
+            const range = document.createRange();
+            range.selectNodeContents(line);
+            const held = (line as HTMLElement).style.whiteSpace;
+            (line as HTMLElement).style.whiteSpace = "nowrap";
+            const wide = Math.round(range.getBoundingClientRect().width);
+            (line as HTMLElement).style.whiteSpace = held;
+            return `"${line.textContent}" ${wide} of ${Math.round(line.parentElement!.getBoundingClientRect().width)}`;
+          });
+          return { lines, height: Math.round(row.getBoundingClientRect().height) };
+        }),
+      );
       const least = Math.min(...read.map((row) => row.height));
-      expect(read.filter((row) => row.height !== least).map((row) => `${row.name} (${row.height} for ${least})`), `${family}: rows taller than the others`).toEqual([]);
+      for (const row of read) if (row.height !== least) taller.push(`${row.lines.join(", ")} (${row.height} for ${least})`);
     }
+    const typefaces = await page.evaluate(() => [...document.fonts].filter((face) => face.status === "loaded").map((face) => face.family.replace(/"/g, "")));
+    expect(taller, `rows taller than the others; typefaces arrived: ${[...new Set(typefaces)].join(", ")}`).toEqual([]);
   });
 
   /**
