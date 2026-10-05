@@ -21,7 +21,8 @@ import { GOAL_TYPE_DUOLINGO_COURSE_XP } from "@/src/gift-terms";
 import { cadenceOf, certificateById, milestoneById } from "@/src/milestone-conditions";
 import { spokenAmount, whenInWords } from "@/src/display-currency";
 import { twoDecimalsDown } from "@/src/exit-steps";
-import { nextFundingStep, POLL_MS } from "@/src/funding-step";
+import { afterPaying, refusalAfterPaying } from "@/src/after-paying";
+import { nextFundingStep, pausedAfterFailure, POLL_MS } from "@/src/funding-step";
 import { eurosToBuyOn } from "@/src/gift-amount";
 import { draftToTerms, isComplete, type GiftDraft } from "@/src/gift-draft";
 import { cardDraft, clearedCardDraft, startingCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
@@ -115,10 +116,13 @@ const never = () => () => {};
 const inBrowser = () => true;
 const onServer = () => false;
 const canShare = () => typeof navigator !== "undefined" && typeof navigator.share === "function";
-/** A route's own typed sentence when it gave one; one plain line otherwise, never a library's words. */
+/**
+ * What a refusal to make the gift says, once the money is in the account (src/after-paying.ts): the route's own typed
+ * sentence, the passkey's own, or that the gift was not made and the money is in the account. Never a library's words,
+ * and never "nothing was taken" of somebody whose card was (the founder, 5 Oct 2026).
+ */
 function readable(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
-  return W.failures.other;
+  return refusalAfterPaying(error, W.failures.notMade);
 }
 
 /**
@@ -171,6 +175,19 @@ export function PayGift() {
   const [arrived, setArrived] = useState<bigint | undefined>(undefined);
   const [problem, setProblem] = useState<string | null>(null);
   const [problemCode, setProblemCode] = useState<string | null>(null);
+  /**
+   * What is said under the ring while the money is in the account and a call did not answer, or answered "not now"
+   * (the founder, 5 Oct 2026): the screen stays as it is and asks again, and this line says what is known.
+   */
+  const [asksAgain, setAsksAgain] = useState<string | null>(null);
+  /** When a creation last went unanswered: it is asked again after a pause, never at once (src/funding-step.ts). */
+  const unansweredAtMs = useRef<number | null>(null);
+  /**
+   * A creation was sent and nothing is known of what it did. It is sent again, the same signed request, whatever the
+   * account holds by then: if the first one went through, the money is gone from the account, and a screen that
+   * went back to waiting for a payment would ask for a second one.
+   */
+  const awaitingCreation = useRef(false);
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
   const [copyRefused, setCopyRefused] = useState<"code" | "link" | null>(null);
   const [keptOnDevice, setKeptOnDevice] = useState(true);
@@ -407,6 +424,39 @@ export function PayGift() {
     const look = async () => {
       if (!live || working.current) return;
       try {
+        // Making the gift, and what its failure means once the money is in the account (src/after-paying.ts).
+        const make = async () => {
+          working.current = true;
+          setPhase("giving");
+          try {
+            await give();
+            awaitingCreation.current = false;
+            unansweredAtMs.current = null;
+            setAsksAgain(null);
+          } catch (error) {
+            const after = afterPaying(error, W.arrived.notAnswered);
+            if (after.keep) {
+              // It did not answer, or the gift is being made: the screen stays, says so, and asks again after a
+              // pause. The signed request is kept and sent again as it is, which cannot pay twice (D87).
+              awaitingCreation.current = true;
+              unansweredAtMs.current = Date.now();
+              setAsksAgain(after.says);
+            } else {
+              // A refusal to make the gift is said once, with a way to try again: retrying by itself every few
+              // seconds would repeat a refusal nobody has read (F11).
+              awaitingCreation.current = false;
+              setAsksAgain(null);
+              setProblem(readable(error));
+              setProblemCode(error instanceof ApiError ? error.code : null);
+              setPhase("failed");
+            }
+          }
+          working.current = false;
+        };
+        if (awaitingCreation.current) {
+          if (!pausedAfterFailure(unansweredAtMs.current, Date.now())) await make();
+          return;
+        }
         const read = await refresh();
         if (!read) return;
         const inGifts = totalEarned(earned ?? []);
@@ -446,6 +496,14 @@ export function PayGift() {
           setPhase(after >= wanted ? "giving" : "waiting");
           return;
         }
+        // A change that stayed on the screen after a failure, and nothing is left to change: what arrived has gone, or
+        // was changed elsewhere. The screen that waits says what the account holds. A wait that is only the pause
+        // after a failure keeps the change on the screen.
+        if (next.do === "wait" && phase === "converting" && !pausedAfterFailure(failedAtMs.current, Date.now())) {
+          setAsksAgain(null);
+          setPhase("waiting");
+          return;
+        }
         // The money is in the account: the frame it was paid in closes, whatever the frame said or did not say.
         // Without a partner's key Rampnow's messages may never come, so nothing waits for them (3 Oct 2026).
         if (next.do !== "wait") {
@@ -455,18 +513,7 @@ export function PayGift() {
           clearRampnowPending(address);
         }
         if (next.do === "give") {
-          working.current = true;
-          setPhase("giving");
-          try {
-            await give();
-          } catch (error) {
-            // A refusal to make the gift is said once, with a way to try again: retrying by itself every few seconds
-            // would repeat a refusal nobody has read (F11).
-            setProblem(readable(error));
-            setProblemCode(error instanceof ApiError ? error.code : null);
-            setPhase("failed");
-          }
-          working.current = false;
+          await make();
           return;
         }
         if (next.do === "convertUsdc") {
@@ -485,13 +532,16 @@ export function PayGift() {
             await changeArrivedUsdc({ account, amount: next.amount });
           } catch (error) {
             // Kept from trying again at once, exactly as a conversion of the chain's coin is (src/funding-step.ts).
+            // The screen stays on the change (the founder, 5 Oct 2026): the payment arrived, and going back to the
+            // screen that waits for one put its pay button in front of somebody who had paid.
             failedAtMs.current = Date.now();
-            setProblem(error instanceof ApiError && error.code !== "QUOTE_STALE" ? error.message : W.arrived.priceMoved);
-            setPhase("waiting");
+            const after = afterPaying(error, W.arrived.notAnswered);
+            setAsksAgain(after.keep ? after.says : error instanceof ApiError && error.code !== "QUOTE_STALE" ? readable(error) : W.arrived.priceMoved);
             working.current = false;
             return;
           }
           failedAtMs.current = null;
+          setAsksAgain(null);
           const after = await readAusdBalance(address);
           setBalance(after);
           setArrived(after - read.held);
@@ -514,16 +564,17 @@ export function PayGift() {
             // Held to the amount asked for and to the one exchange, against the chain, before it is sent.
             const quote = await fundingQuote(next.amount);
             await sendWithExplicitGas(account, { to: quote.to, data: quote.data, value: BigInt(quote.value) });
-          } catch {
-            // The phase goes back to waiting, which starts this watch again at once: the time of the failure is what
-            // keeps that first look, and every look inside the pause, from converting again (src/funding-step.ts).
+          } catch (error) {
+            // The time of the failure is what keeps the next look, and every look inside the pause, from converting
+            // again (src/funding-step.ts). The screen stays on the change, as for the card's dollars above.
             failedAtMs.current = Date.now();
-            setProblem(W.arrived.priceMoved);
-            setPhase("waiting");
+            const after = afterPaying(error, W.arrived.notAnswered);
+            setAsksAgain(after.keep ? after.says : W.arrived.priceMoved);
             working.current = false;
             return;
           }
           failedAtMs.current = null;
+          setAsksAgain(null);
           const after = await readAusdBalance(address);
           setBalance(after);
           setArrived(after - read.held);
@@ -749,6 +800,13 @@ export function PayGift() {
           {/* The whole screen while a gift is being made (the mockup paying.html): the ring, what is being done,
               how long it takes, and the gift itself small underneath, so it never leaves the screen. */}
           <Working says={phase === "taking" ? C.gathering : phase === "converting" ? W.arrived.gettingReady : P.putting(gift, recipient)} and={P.takesSeconds} then={P.mayClose} large />
+          {/* A call that did not answer, or a gift being made: the screen stays, and says what is known. Never a
+              failure, and never the sentence of a request that did nothing (the founder, 5 Oct 2026). */}
+          {asksAgain ? (
+            <p className={`${BODY} text-center`} role="status" data-asks-again="">
+              {asksAgain}
+            </p>
+          ) : null}
           <MiniGift recipient={recipient} what={condition.name} line={P.mini(condition.name, gift, days)} />
         </Shell>
       );
@@ -809,7 +867,20 @@ export function PayGift() {
       return (
         <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.arrived.title}>
           {problem ? <FieldRefusal id="give-refused">{problem}</FieldRefusal> : null}
-          {problemCode === "STANDING_MOVED" ? (
+          {problemCode === "ALREADY_MADE" ? (
+            // The creation went through and its answer was lost: the gift exists, with its link, in the list. Making
+            // it again would be a second gift, so the way on is the list, and nothing here is kept as "not made".
+            <Link
+              href="/gifts"
+              className={PRIMARY_BUTTON}
+              onClick={() => {
+                forgetPendingGift();
+                clearedCardDraft();
+              }}
+            >
+              {W.backToGifts}
+            </Link>
+          ) : problemCode === "STANDING_MOVED" ? (
             // Their rating moved past what the gift could start from while the payment arrived: the same terms would be
             // refused again, so the way on is to read where they stand and choose again, on the card. The payment stays.
             <button
@@ -836,7 +907,8 @@ export function PayGift() {
               {W.failures.tryAgain}
             </button>
           )}
-          {held > 0n ? <p className={HELP}>{W.waiting.staysInAccount}</p> : null}
+          {/* Not of a gift already made: what it took is in the gift, and nothing is left to make with the rest. */}
+          {held > 0n && problemCode !== "ALREADY_MADE" ? <p className={HELP}>{W.waiting.staysInAccount}</p> : null}
         </Shell>
       );
     }
@@ -993,6 +1065,7 @@ export function PayGift() {
           euros={toBuy}
           finish={frame?.mode === "finish" ? { orderUid: frame.orderUid } : null}
           known={rampnowPending?.known ?? false}
+          started={rampnowPending !== null}
           onSaid={(what, orderUid) => noteRampnowPending(address, { orderUid, known: what === "paying", via: "frame" })}
           onBack={() => {
             // Back from a new payment, nothing was paid and nothing is waited for; back from a payment already

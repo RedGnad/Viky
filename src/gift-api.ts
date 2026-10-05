@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAddress, type Hex } from "viem";
 import { accountAuthErrorStatus, accountAuthPublicMessage } from "./account-auth-server";
+import { GENERIC_FAILURE } from "./generic-failure";
 import { FinalityTimeout } from "./monad/chain";
 import { RelayerError } from "./relayer";
 import { RequestError } from "./request-error";
@@ -146,7 +147,7 @@ export function giftErrorResponse(error: unknown, forOperator = false): NextResp
   }
   // Anything else is a library or infrastructure error: its text is for our logs, never for the person.
   console.error("gift route failed:", error);
-  return NextResponse.json({ error: "Something went wrong. Nothing was changed.", code: "FAILED" }, { status: 500, headers: NO_STORE });
+  return NextResponse.json({ error: GENERIC_FAILURE, code: "FAILED" }, { status: 500, headers: NO_STORE });
 }
 
 export function contractRefusal(name: string | undefined): { code: string; message: string } | null {

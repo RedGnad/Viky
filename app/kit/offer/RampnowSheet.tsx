@@ -46,6 +46,7 @@ export function RampnowSheet({
   euros,
   finish = null,
   known,
+  started,
   onSaid,
   onBack,
   onFailed,
@@ -59,6 +60,11 @@ export function RampnowSheet({
   finish?: Readonly<{ orderUid: string | null }> | null;
   /** Whether a payment is known, by a message of the frame, now or on an earlier visit. */
   known: boolean;
+  /**
+   * Whether a payment was started, as far as this device keeps it (src/client/rampnow-pending.ts): the frame has been
+   * open long enough for one, an order was named, or a payment is known.
+   */
+  started: boolean;
   /**
    * What is learnt of a payment while the frame is open: it is possible (the frame has been open long enough for
    * one), an order exists, or a payment is under way or made; with the order Rampnow named, when it named one.
@@ -190,7 +196,7 @@ export function RampnowSheet({
       window.removeEventListener("resize", fit);
       watch.disconnect();
     };
-  }, [open, shown, known, late, unreachable]);
+  }, [open, shown, known, started, late, unreachable]);
 
   return (
     // Held: the screen under it closes it, and so does a way out under the frame. Nothing else does.
@@ -211,6 +217,14 @@ export function RampnowSheet({
       ) : null}
       {open ? (
         <div className="flex flex-col gap-[var(--space-sm)]" data-rampnow-under={known ? "known" : "none"}>
+          {/* Rampnow's page shows "Something went wrong!" of its own at a step it does not know (read in its scripts,
+              5 Oct 2026). From the moment a payment was started, what stands under the frame says where that payment
+              is found again, whatever the frame shows. */}
+          {started ? (
+            <p className={HELP} data-rampnow-found-again="">
+              {W.rampnow.foundAgain}
+            </p>
+          ) : null}
           {known ? (
             <p className={`${BODY} font-medium`} role="status" data-rampnow-keep-open="">
               {W.rampnow.keepOpen}

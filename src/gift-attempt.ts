@@ -65,10 +65,15 @@ export function attemptFor(kept: unknown, terms: AttemptTerms): AnyGiftRequest |
  * Whether a refusal ends the kept request. Refusals about the terms themselves, or a gift already made, do: nothing
  * more can come of that request. Anything that says "not now" keeps it: in progress, being recorded, a closed
  * session, a busy source, too many attempts, or no answer at all.
+ *
+ * And an answer that says nothing of what the request did keeps it too (the founder, 5 Oct 2026): the server's own
+ * error, and a creation sent and not known to be final yet. Those two used to end it, so the next try signed a new
+ * request, and a new request is a second payment if the first one went through after all. The same request sent
+ * again cannot be: its authorization is spent once, and the server finds the creation by it (D87).
  */
 export function forgetsAttempt(code: string | undefined): boolean {
   if (!code) return false;
-  return !["IN_PROGRESS", "BEING_RECORDED", "SIGN_IN_REQUIRED", "RATE_LIMITED", "SOURCE_UNAVAILABLE", "QUOTE_UNAVAILABLE", "NOT_CONFIGURED"].includes(code);
+  return !["IN_PROGRESS", "BEING_RECORDED", "SIGN_IN_REQUIRED", "RATE_LIMITED", "SOURCE_UNAVAILABLE", "QUOTE_UNAVAILABLE", "NOT_CONFIGURED", "FAILED", "NOT_FINAL_YET"].includes(code);
 }
 
 /** Whether a kept request is a milestone gift's, which goes to its own route. */

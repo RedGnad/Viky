@@ -277,6 +277,11 @@ export const PAY = {
     cantSignIn: "Can't sign in here?",
     /** Under the frame once a payment is known: no way out, and why. */
     keepOpen: "Keep this window open: Rampnow is finishing your payment.",
+    /**
+     * Under the frame from the moment a payment was started (the founder, 5 Oct 2026): Rampnow's own page shows an
+     * error of its own at a step it does not know, and the payment is not lost for it.
+     */
+    foundAgain: "If this window shows an error, your payment is found again from Home.",
     /** Five minutes without the money: a way out, to the screen that waits. */
     late: "This is taking longer than usual.",
     lateOut: "Close this window",
@@ -838,6 +843,13 @@ export const FUND = {
     payMore: (more: string) => `Pay ${more} more`,
     makeIt: (held: string) => `Make it ${held}`,
     priceMoved: "The price changed and nothing was changed. Viky will try again in a moment.",
+    /**
+     * Under the ring, when a call did not answer once the payment is in the account (the founder, 5 Oct 2026;
+     * src/after-paying.ts). What is known and nothing else: the check did not answer, the payment is not lost, and the
+     * wait goes on. It stands where the sentence of a request that did nothing could come out
+     * (src/generic-failure.ts), which after a payment may be false.
+     */
+    notAnswered: "The check did not answer. Your payment is not lost, and the wait goes on.",
   },
 
   closed: {
@@ -885,6 +897,8 @@ export const FUND = {
 
   failures: {
     other: "That did not go through, and nothing was taken. Try again.",
+    /** A gift that could not be made once the money is in the account: true of somebody whose card was charged. */
+    notMade: "The gift was not made. Your money is in your account.",
     signInFirst: "Sign in first.",
     tryAgain: "Try again",
   },
