@@ -545,67 +545,77 @@ export function ArrivalAmount({ from, to, symbol, decimals = 2, after = "" }: Re
 }
 
 /**
- * Every block of a screen that was below the fold when the screen opened appears the first time it is scrolled into
- * view, rising 8 px in 250 ms, once (the life of the product, step 4, 23 Sep 2026): the blocks of `main` and the turns
- * of a box that arrives in turn. What is in view when the screen opens does not move, since the entrance already
- * brought it; a block holding its own `Reveal` (a list of cards) is left to it, so nothing moves twice. Nothing behind
- * it moves, no parallax, and a device that asks for reduced motion sees every block where it is.
+ * What a block under the screen wears until it enters: the stylesheet draws it at its starting state, invisible and
+ * lower by the rise (`[data-waits]`, app/globals.css).
+ */
+export const WAITS = "data-waits";
+
+/**
+ * A block that is under the screen when its screen is drawn waits there at its starting state, and enters once, when a
+ * quarter of it is in view: it appears, rising the token's few pixels (the founder, 5 Oct 2026, by the rule of 23 Sep
+ * that the first image is the starting state).
+ *
+ * What it replaced: the block was drawn finished, and the animation put it back to nothing when its first pixel came
+ * in, so it was seen, gone, and seen again, at the very bottom edge of the screen. Now the state an entrance starts
+ * from is the one drawn just before it, and the entrance is seen whole.
+ *
+ * Nothing is ever left invisible. A block is made to wait by this script alone, and only one that is wholly under the
+ * screen, where movement is welcome and the browser can say when it enters: a block in view when the screen opens, a
+ * script that never ran, a device that asks for less movement and a browser without the observer all give the block
+ * finished, and still. Called before the browser paints, so a block never shows finished and then waits.
+ */
+function waitUnderTheScreen(blocks: readonly HTMLElement[]): () => void {
+  if (reduced() || typeof IntersectionObserver === "undefined") return () => {};
+  const screen = window.innerHeight;
+  const waiting = blocks.filter((block) => !block.hasAttribute(WAITS) && block.getBoundingClientRect().top >= screen);
+  const watching = waiting.map((block) => {
+    // A quarter of the block, or of the screen when the block is taller than it, has to be in.
+    const quarter = Math.floor(Math.min(block.getBoundingClientRect().height, screen) / 4);
+    block.setAttribute(WAITS, "");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        const { durationMs, easing, rise } = MOTION.reveal;
+        // The first image of the entrance is the waiting state itself, and the block is finished under it.
+        block.animate([{ opacity: 0, transform: `translateY(${rise}px)` }, { opacity: 1, transform: "translateY(0)" }], { duration: durationMs, easing });
+        block.removeAttribute(WAITS);
+      },
+      { rootMargin: `0px 0px -${quarter}px 0px` },
+    );
+    observer.observe(block);
+    return observer;
+  });
+  return () => {
+    watching.forEach((observer) => observer.disconnect());
+    waiting.forEach((block) => block.removeAttribute(WAITS));
+  };
+}
+
+/**
+ * Every block of a screen that is under the screen when the screen opens: the blocks of `main` and the turns of a box
+ * that arrives in turn (the life of the product, step 4, 23 Sep 2026). What is in view when the screen opens does not
+ * move, since the entrance already brought it; a block holding its own `Reveal` (a list of cards) is left to it, so
+ * nothing moves twice. Nothing behind it moves, no parallax.
  */
 export function useRevealOnScroll(main: RefObject<HTMLElement | null>): void {
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = main.current;
-    if (!root || reduced() || typeof IntersectionObserver === "undefined") return;
+    if (!root) return;
     const blocks = [...root.querySelectorAll<HTMLElement>(":scope > *:not(header, dialog), :scope .arrives-in-turn > *")].filter(
       (block) => !block.classList.contains("arrives-in-turn") && !block.querySelector("[data-reveal]") && !block.closest("[data-reveal]"),
     );
-    const seenOnce = new Set<Element>();
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        const block = entry.target as HTMLElement;
-        if (!seenOnce.has(block)) {
-          seenOnce.add(block);
-          // In view as the screen opens: the entrance brought it, and it never moves again.
-          if (entry.isIntersecting) observer.unobserve(block);
-          continue;
-        }
-        if (!entry.isIntersecting) continue;
-        observer.unobserve(block);
-        const { durationMs, easing, rise } = MOTION.reveal;
-        block.animate([{ opacity: 0, transform: `translateY(${rise}px)` }, { opacity: 1, transform: "translateY(0)" }], { duration: durationMs, easing });
-      }
-    });
-    blocks.forEach((block) => observer.observe(block));
-    return () => observer.disconnect();
+    return waitUnderTheScreen(blocks);
   }, [main]);
 }
 
 /**
- * Something scrolled into view for the first time appears, rising a few pixels, once (brief, section 6). What is already
- * in view when the screen opens does not move: that is the arrival's business. Nothing behind it moves, no parallax.
+ * Something under the screen when it is drawn, a card in a list: it waits and enters as every block does (brief,
+ * section 6). What is already in view when the screen opens does not move: that is the arrival's business.
  */
 export function Reveal({ className, children }: Readonly<{ className?: string; children: ReactNode }>) {
   const root = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const element = root.current;
-    if (!element || reduced() || typeof IntersectionObserver === "undefined") return;
-    let first = true;
-    const observer = new IntersectionObserver((entries) => {
-      const entry = entries[entries.length - 1];
-      if (first) {
-        first = false;
-        if (entry.isIntersecting) {
-          observer.disconnect();
-          return;
-        }
-      }
-      if (!entry.isIntersecting) return;
-      observer.disconnect();
-      const { durationMs, easing, rise } = MOTION.reveal;
-      element.animate([{ opacity: 0, transform: `translateY(${rise}px)` }, { opacity: 1, transform: "translateY(0)" }], { duration: durationMs, easing });
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
+  useLayoutEffect(() => (root.current ? waitUnderTheScreen([root.current]) : undefined), []);
   return (
     <div ref={root} data-reveal className={className}>
       {children}

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { MOTION } from "@/src/design-tokens";
 import { nextGoal } from "@/src/landing-goals";
 import { HOME } from "@/src/sentences";
-import { GOAL_SAID, HELP, SAY } from "../components/ui";
+import { GOAL_SAID, SAY } from "../components/ui";
 import { reduced } from "./Motion";
 
 /**
@@ -14,7 +14,9 @@ import { reduced } from "./Motion";
  * Under reduced motion it stays on the first. A reader of the screen hears one sentence, once, and not the changes.
  *
  * Every phrase is laid in the same cell, the unseen ones hidden, so the room kept is the longest phrase's own and
- * nothing under the sentence ever moves, whatever is drawn next.
+ * nothing under the sentence ever moves, whatever is drawn next. A race is said by its distance and its town, so the
+ * longest phrase is two lines on a phone and the cell leaves no hole under the others (the founder, 5 Oct 2026). The
+ * small print that stood under it is at the foot of the page.
  *
  * The one movement on a clock outside the working ring, asked for by the founder over D225's still names; it stops
  * whenever nobody can see it.
@@ -94,7 +96,6 @@ export function GoalsGoingBy({ first, kinds }: Readonly<{ first: string; kinds: 
           {now}.
         </span>
       </p>
-      <p data-card-note="" className={`${HELP} mx-auto max-w-[460px] [@media(min-width:1024px)]:max-w-[34em]`}>{HOME.waitsFor.read}</p>
     </div>
   );
 }

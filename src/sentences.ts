@@ -366,41 +366,43 @@ export const PAY = {
 
 /** Home: the money, the one action, the way out, and what is moving. */
 /**
- * Under the card on the landing (the founder, 27 Sep 2026, after the reference page he gave, D282): four promises, each with its drawing,
- * then the phone and one last way to the card. Every sentence is true of the code (docs/SCREEN-CLAIMS.md): the escrow
- * allocates the money in the recipient's name, releases a day's share on a verified day, sends every missed day back to
- * the funder and pays nobody else (`contracts/GiftEscrow.sol`); progress is read from the service or the certificate's
- * page; the account is a passkey; the app is the website, installable.
+ * Under the card on the landing: four posters, then the phone and one last way to the card (the founder, 5 Oct 2026,
+ * on a living mockup, over D282's four blocks with a drawing each). A poster is a title in the hero's own size with
+ * one of the days' characters held in it, and one sentence. `characterAfter` is the word of the title the character
+ * stands after: it is held to that word and never starts a line.
+ *
+ * Every sentence is true of the code: the escrow allocates the money in the recipient's name when the gift is paid for,
+ * releases a day's share on a verified day, sends every missed day back to the funder by itself and pays nobody else
+ * (`contracts/GiftEscrowV3.sol`); progress is read from the service or the certificate's own page; the account is a
+ * passkey; the app is the website, installable.
  */
 export const LANDING_STORY = {
   blocks: [
-    {
-      key: "theirs",
-      title: "Theirs from day one.",
-      body: "The money is put in their name the moment you pay. Each day they reach the goal, that day's share becomes theirs to keep.",
-    },
-    {
-      key: "checked",
-      title: "Checked, not claimed.",
-      // The source is named by the register, never here: the live daily line's own source.
-      body: (lessonsOn: string) => `Viky reads their progress where it happens, like their lessons on ${lessonsOn} or a certificate's own page. Nothing to send in, and nobody's word to take.`,
-    },
-    {
-      key: "back",
-      title: "A missed day comes back to you.",
-      body: "Each day they miss goes back to you, by itself. Viky keeps none of it, and nobody profits from anyone failing.",
-    },
-    {
-      key: "face",
-      title: "Your face is the key.",
-      body: "Sign in with your face or your fingerprint. No password to invent, and nothing to download first.",
-    },
+    { key: "theirs", title: "Theirs from day one.", characterAfter: "day", body: "The money is in their name the moment you pay." },
+    { key: "checked", title: "Checked, not claimed.", characterAfter: "Checked,", body: "Viky reads it where it happens. Nobody's word to take." },
+    { key: "back", title: "A missed day comes back to you.", characterAfter: "day", body: "By itself. Viky keeps none of it." },
+    { key: "face", title: "Your face is the key.", characterAfter: "face", body: "No password to invent. Nothing to download." },
   ],
   phone: {
     title: "On your phone, like an app.",
     body: "Viky opens in the browser. Add it to your home screen and it opens like your other apps.",
   },
   last: { title: "Back someone's goal today." },
+  /** What the posters are, for somebody who moves through the page by its regions. */
+  region: "What Viky promises",
+  /**
+   * At the foot of the landing, small and readable (the founder, 5 Oct 2026): it stood under the sentence that goes
+   * through what a gift can wait for, after a sentence that said the "Checked, not claimed." poster again.
+   */
+  notAffiliated: "Not affiliated with the schools, races or services named.",
+} as const;
+
+/**
+ * What the owner of a mark asks of a page that names it. ETS, for the TOEFL: this notice "at the bottom of each web
+ * page", "in a legible print size and color" (ets.org/legal/trademarks.html, read on 5 Oct 2026).
+ */
+export const TRADEMARKS = {
+  ets: { name: "TOEFL", notice: "TOEFL is a registered trademark of ETS. This product is not endorsed or approved by ETS." },
 } as const;
 
 export const HOME = {
@@ -415,14 +417,13 @@ export const HOME = {
    */
   promiseUnder: "Back their goal. They earn it day by day.",
   /**
-   * The sentence under the card since D285: the start, then one thing a gift can wait for at a time (`landingGoals`),
-   * and one line on where each is read. True of every item: a certificate from its own page, a goal from the service
-   * it names, a race from its timing company's results.
+   * The sentence under the card since D285: the start, then one thing a gift can wait for at a time (`landingGoals`).
+   * The line that stood under it left on 5 Oct 2026: where each is read is the "Checked, not claimed." poster's to
+   * say, and who Viky is not affiliated with is said at the foot of the page (`LANDING_STORY.notAffiliated`).
    */
   waitsFor: {
     lead: "Their gift can wait for",
     all: "Their gift can wait for a certificate, a grade or a year at university, a score, a rating, a Rubik's Cube time, a goal kept each day, or a race they finish.",
-    read: "Each one is read where it happens: the certificate's own page, the service itself, the race's results, or their own student portal. Viky is not affiliated with the schools, races or services named.",
   },
   offer: "Offer a gift",
   finish: "Finish the gift you set up",
