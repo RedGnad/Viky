@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { MarkNotice } from "../kit/MarkNotice";
 import { Shell } from "../kit/Shell";
 import Link from "next/link";
 import { cardServices } from "@/src/rails";
@@ -134,6 +135,8 @@ export default function LegalPage() {
           at that moment and nothing is taken.
         </p>
       </section>
+      {/* What the TOEFL's owner asks of a product that names it, on the legal page as at the bottom of every page that names it (the founder, 5 Oct 2026). */}
+      <MarkNotice />
     </Shell>
   );
 }

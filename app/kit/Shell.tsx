@@ -39,6 +39,12 @@ type Props =
       /** The page without an account: the column of `.home-column`, the card's width below 1024 and the title's from it (D130). */
       wide?: boolean;
       /**
+       * What the page lays under its column, from one edge of the window to the other: the landing's posters, whose
+       * grounds run the whole width (the founder, 5 Oct 2026). Outside the column, so nothing there is held to it, and
+       * outside what enters and what is revealed block by block: it has its own movement.
+       */
+      under?: ReactNode;
+      /**
        * The character at the head of this screen, opposite its title (D154). Every screen of the app carries it now,
        * not only the ones a gift is made on: it is the one thing here that answers a gesture.
        */
@@ -157,6 +163,7 @@ export function Shell(props: Props) {
           </header>
           {props.children}
         </main>
+        {props.kind === "destination" && props.under ? <div data-under-the-column="">{props.under}</div> : null}
       </div>
       {rail && props.kind === "destination" ? <Nav active={props.active} /> : null}
     </>

@@ -128,8 +128,6 @@ const DOCUMENT = "a page read like Help (the shell's document kind): the rule do
  * the note of non-affiliation, and the two pages read like Help. A sentence joins this list only by his word.
  */
 const ACCEPTED: Readonly<Record<string, string>> = {
-  "LANDING_STORY.blocks.body": "the landing's own story, four paragraphs under their drawings: folding half a pitch hides it",
-  "HOME.waitsFor.read": "the note that says Viky is not affiliated with the schools, races and services named: kept in the open",
   "CATALOGUE.intro": DOCUMENT,
   "CATALOGUE.limits": DOCUMENT,
   "ADD_UNIVERSITY.intro": DOCUMENT,

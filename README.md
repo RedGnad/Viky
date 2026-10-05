@@ -423,6 +423,13 @@ This repository is MIT. It depends on packages under other licences, used unmodi
   `@iden3/bigarray`, `@iden3/binfileutils`) are under GPL-3.0. They come with the Reclaim packages above.
 - `@reclaimprotocol/js-sdk` and `@reclaimprotocol/zk-symmetric-crypto` name their licence in Reclaim's own repository.
 - The fonts under `app/fonts` are under the SIL Open Font License 1.1 (`app/fonts/README.md`).
+- `gsap` and its `ScrollTrigger` are not under a free licence. They are under Webflow's "Standard 'No Charge' GSAP
+  License" (gsap.com/community/standard-license, effective 30 April 2025, read on 5 Oct 2026): use on a website is
+  permitted at no charge, commercial use included, and it stays Webflow's property. It forbids using GSAP in a tool
+  that lets its users build visual animations without code in competition with Webflow's own, reverse engineering it
+  to make such a tool, and removing its notices; Webflow may end the licence for whoever breaks those terms. Viky
+  uses it for one thing, the movement of the posters under the landing's card, and only that page loads it
+  (`app/kit/LandingStory.tsx`). Anybody who reuses this repository takes that licence with that file.
 
 `pnpm licenses list --prod` prints the whole list.
 
