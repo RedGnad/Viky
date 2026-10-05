@@ -1,5 +1,5 @@
 import { conditionById, conditionOfGoal } from "./conditions";
-import { figureIn, markOf } from "./currencies";
+import { amountIn } from "./currencies";
 import { figureInDisplayCurrency, type DisplayCurrency } from "./display-currency";
 import { formatAusd } from "./gift-reader";
 import { holdsGiftLink, loadGift, type GiftRecord } from "./gift-store";
@@ -52,8 +52,8 @@ function amountFor(units: bigint, money: FunderMoney | null): Readonly<{ figure:
   if (!money) return { figure: dollars, said: dollars };
   const converted = figureInDisplayCurrency(units, money.currency, money.rates);
   if (!converted.rateDate) return { figure: dollars, said: dollars };
-  // In a sentence the sign keeps the space its currency writes it with: "about F CFA 15,086", "about €23.04".
-  const figure = `${converted.symbol}${markOf(money.currency).gap}${figureIn(converted.value, money.currency)}`;
+  // In a sentence an amount is written as its currency is: "about €23.04", "about 15 086 FCFA".
+  const figure = amountIn(converted.value, money.currency);
   return { figure, said: W.about(figure) };
 }
 

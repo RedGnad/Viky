@@ -63,6 +63,58 @@ test.describe("what money is read in", () => {
     await expect(sheet(page).getByText(/at the European Central Bank's rate of|exchange rate could not be read/)).toHaveCount(1);
   });
 
+  test("the CFA francs are called CFA franc, stand side by side under C, and an amount in francs is written as francs are", async ({ browser, baseURL, viewport }) => {
+    test.skip((viewport?.width ?? 0) !== 375, "measured once: each case opens its own window");
+    // The founder, 5 Oct 2026: he looked for the CFA franc in the list and took it for gone. It was the last line,
+    // "West African CFA Franc" after the US dollar, written "F CFA 5,000" where the people who count in it read
+    // "5 000 FCFA" (Orange Money's price list and Wave's terms in Côte d'Ivoire).
+    const abidjan = await browser.newContext({ baseURL, serviceWorkers: "block", viewport: { width: 390, height: 844 }, locale: "en-GB", extraHTTPHeaders: { "x-vercel-ip-country": "CI" } });
+    const page = await abidjan.newPage();
+    await page.goto("/");
+    await expect(key(page)).toHaveAttribute("aria-label", "Read in another currency, CFA franc (West Africa) now");
+    // The control that opens the list keeps its place in front of the field (21 Sep 2026), and reads "FCFA".
+    await expect(key(page)).toHaveText("FCFA");
+    const [control, field] = [(await key(page).boundingBox())!, (await page.locator('#offer input[inputmode="decimal"]').boundingBox())!];
+    expect(control.x + control.width).toBeLessThanOrEqual(field.x + 1);
+    // A written amount has its letters after it and its thousands a space apart, wherever the card writes one.
+    const francs = /^\d{1,3}(\s\d{3})*\sFCFA$/;
+    await expect(page.getByRole("button", { name: /^Send \d{1,3}(\s\d{3})*\sFCFA$/ })).toBeVisible();
+    // Every leaf of the card that names the franc, the closed list of currencies apart: that one names it by its name.
+    const written = await page.locator("#offer").evaluate((card) => [...card.querySelectorAll("*")].filter((one) => one.children.length === 0 && !one.closest("dialog") && /FCFA|CFA/.test(one.textContent ?? "")).map((one) => (one.textContent ?? "").trim()));
+    expect(written.length).toBeGreaterThan(2);
+    // The control's own letters stand alone; everywhere else the letters follow a figure, alone or inside a sentence
+    // ("667 FCFA a day", "Send 20 000 FCFA").
+    for (const one of written) expect(one === "FCFA" || !one.replace(/\d{1,3}(\s\d{3})*\sFCFA/g, "").includes("CFA"), `"${one}" is written as francs are`).toBe(true);
+    expect(await page.locator("#offer").innerText()).not.toMatch(/F\sCFA|XOF/);
+    // In the list: by the name somebody looks for, marked as the one being read, with what the amount is worth.
+    await key(page).click();
+    const lines = sheet(page).locator("li button");
+    const mine = lines.filter({ hasText: "CFA franc (West Africa)" });
+    await expect(mine).toHaveCount(1);
+    await expect(mine).toHaveAttribute("aria-pressed", "true");
+    expect(await mine.evaluate((line) => [...line.querySelectorAll(":scope > span")].map((part) => (part.textContent ?? "").trim()))).toEqual(["", "FCFA", "XOFCFA franc (West Africa)", expect.stringMatching(francs)]);
+    await expect(sheet(page).getByText(/West African CFA Franc|Central African CFA Franc|F\sCFA/)).toHaveCount(0);
+    await abidjan.close();
+
+    // Read from somewhere else: the two stand side by side among the C's, where "CFA" is looked for.
+    const paris = await browser.newContext({ baseURL, serviceWorkers: "block", viewport: { width: 390, height: 844 }, locale: "fr-FR", extraHTTPHeaders: { "x-vercel-ip-country": "FR" } });
+    const other = await paris.newPage();
+    await other.goto("/");
+    await key(other).click();
+    const names = await sheet(other).locator("li button [data-currency-name]").allTextContents();
+    const west = names.indexOf("CFA franc (West Africa)");
+    expect(west, "the franc of West Africa is in the list").toBeGreaterThanOrEqual(0);
+    expect(west, "and it is not the last line any more, unless the list is the three the product was built on").toBeLessThan(names.length <= 3 ? names.length : names.length - 1);
+    const central = names.indexOf("CFA franc (Central Africa)");
+    if (central >= 0) expect(west - central, "side by side").toBe(1);
+    // And each is read whole on a phone: the word that tells the two apart is never cut off.
+    for (const name of ["CFA franc (West Africa)", "CFA franc (Central Africa)"].filter((one) => names.includes(one))) {
+      const whole = await sheet(other).locator("li button [data-currency-name]", { hasText: name }).evaluate((line) => line.scrollWidth <= line.clientWidth + 1 && getComputedStyle(line).textOverflow !== "ellipsis");
+      expect(whole, `${name} is read whole`).toBe(true);
+    }
+    await paris.close();
+  });
+
   test("the key is a thumb's size, and says what it does", async ({ page }) => {
     await page.goto("/");
     const box = (await key(page).boundingBox())!;

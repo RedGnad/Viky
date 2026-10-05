@@ -76,7 +76,11 @@ export function CurrencySheet({
           {/* Left to right as the spec reads: the sign, the code, the name, and the amount on the right. */}
           <span className="flex min-w-0 flex-col">
             <span className={CARD_LABEL}>{code}</span>
-            <span className="truncate">{money.name}</span>
+            {/* A name is never cut: "CFA franc (West…" and "CFA franc (Cent…" lost the one word that tells the two
+                francs apart (5 Oct 2026). A long one takes a second line, balanced so the part in brackets stays whole. */}
+            <span data-currency-name="" className="[text-wrap:balance]">
+              {money.name}
+            </span>
           </span>
           <span className="ml-auto shrink-0 tabular-nums">{worth(code)}</span>
         </button>

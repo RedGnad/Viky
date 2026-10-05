@@ -1,4 +1,4 @@
-import { currencyOf, figureIn, markOf } from "./currencies";
+import { amountIn, currencyOf } from "./currencies";
 import type { Rates } from "./rates";
 
 /**
@@ -19,10 +19,9 @@ export function perEuro(code: string, rates: Rates | undefined): number | undefi
   return value !== undefined && Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
-/** An amount as the sheet writes every one: its sign and its own decimals, and never "about". "€19.00", "F CFA 12,000". */
+/** An amount as the sheet writes every one: its sign and its own decimals, and never "about". "€19.00", "12 000 FCFA". */
 export function moneyIn(amount: number, code: string): string {
-  const { sign, gap } = markOf(code);
-  return `${sign}${gap}${figureIn(amount, code)}`;
+  return amountIn(amount, code);
 }
 
 /** Rounded to the decimals a currency has, so a sum of written figures is the written sum. */

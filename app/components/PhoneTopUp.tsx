@@ -7,6 +7,7 @@ import { ApiError } from "@/src/client/api";
 import { lastNumber, rememberNumber } from "@/src/client/account-country";
 import { findPhoneOperators, followPhone, payPhone, phoneKindOf, pricePhone, type PhoneKind, type PhoneOperator, type PhonePrice, type PhoneStatus } from "@/src/client/phone";
 import { AUSD } from "@/src/coins";
+import { amountByItsLetters, figureIn, lettersOf } from "@/src/currencies";
 import { twoDecimalsDown } from "@/src/exit-steps";
 import { PHONE_OUT as W } from "@/src/sentences";
 import { BODY, CARD, CARD_AMOUNT, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
@@ -26,9 +27,15 @@ function dollars(units: bigint): string {
   return `$${twoDecimalsDown(units, AUSD.decimals)}`;
 }
 
+/** A bound of an amount, as a figure alone, its currency being named once after the two: a franc figure with its thousands a space apart. */
+function bound(amount: number, currency: string): string {
+  return lettersOf(currency) === currency ? new Intl.NumberFormat("en-US").format(amount) : figureIn(amount, currency);
+}
+
+/** An amount Bitrefill names in its own currency, by that currency's letters: "20 EUR", and "5 000 FCFA" for francs. */
 function local(amount: string, currency: string): string {
   const figure = Number(amount);
-  return `${Number.isFinite(figure) ? new Intl.NumberFormat("en-US").format(figure) : amount} ${currency}`;
+  return Number.isFinite(figure) ? amountByItsLetters(figure, currency) : `${amount} ${lettersOf(currency)}`;
 }
 
 function randomNonce(): Hex {
@@ -199,9 +206,9 @@ export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; ensure
         ) : null}
         {range ? (
           <label className="flex flex-col gap-[var(--space-xs)]">
-            <span className={BODY}>{W.howMuch(operator.currency)}</span>
+            <span className={BODY}>{W.howMuch(lettersOf(operator.currency))}</span>
             <input value={amount} onChange={(event) => { setAmount(event.target.value); setPackageId(null); setPrice(null); setProblem(null); }} inputMode="numeric" className={FIELD} disabled={busy} />
-            <span className={HELP}>{W.range(local(String(range.min), "").trim(), local(String(range.max), "").trim(), operator.currency)}</span>
+            <span className={HELP}>{W.range(bound(range.min, operator.currency), bound(range.max, operator.currency), lettersOf(operator.currency))}</span>
             {typedFar ? <span className={HELP}>{W.outOfReach}</span> : null}
           </label>
         ) : null}

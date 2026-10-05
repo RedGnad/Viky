@@ -46,7 +46,7 @@ const circle = (size: number, colour: string, place: Readonly<Record<string, num
 );
 
 /**
- * `amount` is the figure inside the title, as the title writes it ("€21.67", "F CFA 15,086", "$25.00"), in whatever
+ * `amount` is the figure inside the title, as the title writes it ("€21.67", "15 086 FCFA", "$25.00"), in whatever
  * currency: it is handed to the text face, as every amount in the product is, and kept on one line. It used to be
  * found by looking for a dollar sign, so an amount in any other currency was set in the display face.
  *

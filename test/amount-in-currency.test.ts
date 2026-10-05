@@ -1,4 +1,5 @@
 import { strict as assert } from "node:assert";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { currencyMark, figureWithMark, readableFigure, typedFromUnits, unitsFromTyped } from "../src/amount-in-currency";
 import { AmountError, MAX_GIFT_UNITS, MIN_GIFT_UNITS } from "../src/money";
@@ -49,7 +50,7 @@ test("the contract's own bounds are said in the currency being typed in, with th
   assert.throws(big, (error: unknown) => error instanceof AmountError && /\$1,000, about €866\.78/.test(error.message));
   // The franc is grouped in the same sentence, because five figures in a row are read by nobody.
   const franc = () => unitsFromTyped("900000", "XOF", RATES);
-  assert.throws(franc, (error: unknown) => error instanceof AmountError && /about F\u202fCFA\u00a0568,568/.test(error.message));
+  assert.throws(franc, (error: unknown) => error instanceof AmountError && /about 568\u00a0568\u00a0FCFA\.$/.test(error.message));
   // And the bounds themselves are the contract's, untouched by any of this.
   assert.equal(MIN_GIFT_UNITS, 1_000_000n);
   assert.equal(MAX_GIFT_UNITS, 1_000_000_000n);
@@ -57,18 +58,29 @@ test("the contract's own bounds are said in the currency being typed in, with th
 });
 
 test("a franc figure is grouped where it is read, and a field still holds plain digits", () => {
-  assert.equal(readableFigure("17172", "XOF"), "17,172");
+  // As francs are written: the thousands a space apart, a space no line breaks at (the founder, 5 Oct 2026).
+  assert.equal(readableFigure("17172", "XOF"), "17\u00a0172");
+  assert.equal(readableFigure("17172", "JPY"), "17,172", "another whole currency keeps its comma");
   assert.equal(readableFigure("26.18", "EUR"), "26.18");
 });
 
-test("the mark stands in front of the figure in every currency, and both are the source's own (D145, D152)", () => {
-  // Read off what Intl formats rather than written here: the euro sits against its figure, the franc and the Swiss
-  // franc stand away from theirs, and a currency nobody had thought of is written the way it is written.
-  assert.deepEqual(currencyMark("EUR"), { sign: "€", gap: "" });
-  assert.deepEqual(currencyMark("USD"), { sign: "$", gap: "" });
-  assert.deepEqual(currencyMark("XOF"), { sign: "F\u202fCFA", gap: "\u00a0" });
-  assert.deepEqual(currencyMark("CHF"), { sign: "CHF", gap: "\u00a0" });
+test("a mark is written on its currency's own side: in front as Intl writes it, and after the figure for the CFA francs", () => {
+  // Read off what Intl formats rather than written here: the euro sits against its figure, the Swiss franc stands
+  // away from its own, and a currency nobody had thought of is written the way it is written.
+  assert.deepEqual(currencyMark("EUR"), { sign: "€", gap: "", after: false });
+  assert.deepEqual(currencyMark("USD"), { sign: "$", gap: "", after: false });
+  assert.deepEqual(currencyMark("CHF"), { sign: "CHF", gap: "\u00a0", after: false });
   assert.equal(figureWithMark("30.00", "USD"), "$30.00");
   assert.equal(figureWithMark("26.18", "EUR"), "€26.18");
-  assert.equal(figureWithMark("17,172", "XOF"), "F\u202fCFA\u00a017,172");
+  // The two CFA francs are the exception written down (the founder, 5 Oct 2026): "FCFA", after the figure, as the
+  // people who count in them read it. Intl gave "F CFA" for one and "FCFA" for the other, both in front.
+  assert.deepEqual(currencyMark("XOF"), { sign: "FCFA", gap: "\u00a0", after: true });
+  assert.deepEqual(currencyMark("XAF"), currencyMark("XOF"));
+  assert.equal(figureWithMark("17\u00a0172", "XOF"), "17\u00a0172\u00a0FCFA");
+  // The control that opens the list keeps its mark in front of the field in every currency (21 Sep 2026): it reads
+  // the sign alone, and the card draws it before the field whatever `after` says.
+  const key = readFileSync("app/kit/MoneyMark.tsx", "utf8");
+  assert.match(key, /\{currencyMark\(currency\)\.sign\}/);
+  const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
+  assert.ok(card.indexOf("<MoneyKey") > 0 && card.indexOf("<MoneyKey") < card.indexOf("inputMode=", card.indexOf("<MoneyKey")), "the key stands before the amount's field");
 });

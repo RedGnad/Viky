@@ -1,6 +1,6 @@
 import type { Rates } from "./rates";
 import { PRODUCT_LOCALE } from "./moments";
-import { currencyOf, figureIn, isCurrencyCode, markOf, NOT_OFFERED, perDollar } from "./currencies";
+import { amountIn, currencyOf, figureIn, isCurrencyCode, markOf, NO_BREAK, NOT_OFFERED, perDollar } from "./currencies";
 import { formatAusd } from "./gift-reader";
 
 /**
@@ -139,14 +139,15 @@ export function whenInWords(atMs: number): string {
  * A dollar amount in the display currency, with "about" and the rate's date, or nothing when the currency is
  * the dollar itself or no usable rate exists. The caller prints the dollar figure beside it or alone.
  *
- * Euros keep two decimals. The CFA franc has no subunit in use, so it is a whole number, with English grouping
- * because the sentences around it are English.
+ * Euros keep two decimals. The CFA franc has no subunit in use, so it is a whole number, written as the people who
+ * count in it write it: its thousands a space apart and its letters after it (src/currencies.ts, 5 Oct 2026).
  */
 export function aboutInDisplayCurrency(units: bigint, currency: DisplayCurrency, rates: Rates | undefined): string | undefined {
   const rate = perDollar(currency, rates);
   if (currency === "USD" || !rates || rate === undefined) return undefined;
   const amount = (Number(units) / DOLLAR_UNITS) * rate;
-  return `about ${figureIn(amount, currency)} ${currency} (rate of ${rateDateInWords(rates.date)})`;
+  // By its code where nothing else names it ("9.54 EUR"), and a franc amount as francs are written ("6 249 FCFA").
+  return `about ${currencyOf(currency).after ? amountIn(amount, currency) : `${figureIn(amount, currency)} ${currency}`} (rate of ${rateDateInWords(rates.date)})`;
 }
 
 /** The one line a screen prints when it wanted to convert and could not. */
@@ -157,16 +158,18 @@ export const SHOWN_IN_DOLLARS = "Shown in dollars: the exchange rate could not b
  * 2026, section 8): at that size, the symbol and the number and nothing else, on one line. "about", the rate's date and
  * the dollars go in the caption under it, which `aboutInDisplayCurrency` and the screen's own words carry.
  *
- * The CFA franc has no symbol in use, so its name follows the number; it has no subunit either, so it is whole.
+ * The CFA franc has no symbol in use, so its letters follow the number; it has no subunit either, so it is whole.
  */
 export type DisplayFigure = Readonly<{
-  /** What the display size shows, "€9.54" or "6,000 CFA". */
+  /** What the display size shows, "€9.54" or "6 000 FCFA". */
   text: string;
   /** The number itself, so an amount that changed can count up to it. */
   value: number;
+  /** What stands in front of the number, what stands after it, and what parts its thousands: the pieces a count-up writes each figure with. */
   symbol: string;
   decimals: number;
   after: string;
+  thousands: string;
   /** Set when the figure is converted, so the caption can say "about" and name the rate's day. */
   rateDate: string | undefined;
 }>;
@@ -178,12 +181,15 @@ export function figureInDisplayCurrency(units: bigint, currency: DisplayCurrency
   const code = currency === "USD" || rate === undefined || !rates ? "USD" : currency;
   const money = currencyOf(code);
   const value = code === "USD" ? dollars : dollars * (rate ?? 1);
+  const mark = markOf(code);
   return {
-    text: `${money.sign}${figureIn(value, code)}`,
+    // A sign in front stands against its figure at this size, as it always has; the franc's letters follow theirs.
+    text: mark.after ? amountIn(value, code) : `${money.sign}${figureIn(value, code)}`,
     value,
-    symbol: money.sign,
+    symbol: mark.after ? "" : money.sign,
     decimals: money.decimals,
-    after: "",
+    after: mark.after ? `${mark.gap}${mark.sign}` : "",
+    thousands: mark.after ? NO_BREAK : ",",
     rateDate: code === "USD" ? undefined : rateDateInWords(rates!.date),
   };
 }
@@ -195,7 +201,7 @@ export function figureInDisplayCurrency(units: bigint, currency: DisplayCurrency
  * When the reader counts in dollars, or no usable rate exists, the dollars lead alone and nothing is "about".
  */
 export type LedAmount = Readonly<{
-  /** The figure a person reads first, with its sign: "€7.53", "F CFA 4,940", or the dollars themselves. */
+  /** The figure a person reads first, with its sign: "€7.53", "4 940 FCFA", or the dollars themselves. */
   lead: string;
   /** Whether `lead` is a conversion, so the screen says "about" before it and the exact dollars under it. */
   converted: boolean;
@@ -209,8 +215,8 @@ export function ledAmount(units: bigint, currency: DisplayCurrency, rates: Rates
   const figure = figureInDisplayCurrency(units, currency, rates);
   const exact = formatAusd(units);
   if (!figure.rateDate) return { lead: exact, converted: false, exact, rateDate: undefined };
-  // The sign keeps the space its currency is written with: "F CFA 4,940" stands apart, "€7.53" does not.
-  return { lead: `${figure.symbol}${markOf(currency).gap}${figureIn(figure.value, currency)}`, converted: true, exact, rateDate: figure.rateDate };
+  // Written as its currency is: "€7.53" with nothing between, "4 940 FCFA" with its letters after it.
+  return { lead: amountIn(figure.value, currency), converted: true, exact, rateDate: figure.rateDate };
 }
 
 /** A led amount inside a sentence: "about €21.67" when converted, the exact dollars otherwise; "About" to open one. */
