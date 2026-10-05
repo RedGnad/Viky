@@ -34,9 +34,9 @@ import { FoldChevron } from "../kit/GiftLive";
 import { Said } from "../kit/Said";
 import { AccountPanel } from "./AccountPanel";
 import { PhoneTopUp } from "./PhoneTopUp";
-import { MobileMoneyOut } from "./MobileMoneyOut";
-import { mobileMoneyOffer, type AccountOffer } from "@/src/client/mobile-money";
-import { delayInWords, localInWords, localOfUnits, operatorsInWords } from "@/src/mobile-money";
+import { MobileMoneyOut, MobilePayoutCard } from "./MobileMoneyOut";
+import { latestMobilePayout, mobileMoneyOffer, payableFor, type AccountOffer, type FollowedPayout, type PayableNow } from "@/src/client/mobile-money";
+import { delayInWords, localInWords, MOBILE_REFUSALS, operatorsInWords } from "@/src/mobile-money";
 import { GiftCardOut } from "./GiftCardOut";
 import { AMOUNT_IN_TITLE, BODY, CARD, CARD_LABEL, CARD_TITLE, FIELD, HELP, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE, TITLE_IN_FACE } from "./ui";
 import { ButtonWords, StepInProgress, WaitLine } from "../kit/Waiting";
@@ -200,6 +200,27 @@ export function CashOut() {
     };
   }, [countryNow]);
   const mobileOffered = mobile && mobile.offered === true && "mostUnits" in mobile && mobile.country === countryNow?.toUpperCase() ? mobile : null;
+  /** What this account can really send to a number now, read when the mobile money card is opened. */
+  const [mobilePayable, setMobilePayable] = useState<PayableNow | null>(null);
+  /**
+   * The payout this account is still owed a screen for (the founder, 5 Oct 2026): the last one money left for, until
+   * it is finished and was seen finished, read from the server's ledger each time the way out is opened. Its reference
+   * lived only in the screen that sent it, so "Back", a closed tab or a reload lost it. "Back" puts it away for this
+   * visit, so the rest of the way out can be reached while it is still on its way.
+   */
+  const [owedPayout, setOwedPayout] = useState<FollowedPayout | null>(null);
+  const [putAway, setPutAway] = useState<string | null>(null);
+  useEffect(() => {
+    if (!address) return;
+    let current = true;
+    latestMobilePayout().then(
+      (payout) => current && setOwedPayout(payout),
+      () => undefined,
+    );
+    return () => {
+      current = false;
+    };
+  }, [address]);
 
   const coinOf = (way: WayOut): Coin => coinAt(way.coin) ?? USDC;
 
@@ -417,11 +438,26 @@ export function CashOut() {
     setStage("own");
   };
 
+  /**
+   * The mobile money card opens on what the account can really send, the cost of changing it included (the founder,
+   * 5 Oct 2026), so that is read first: the balance, the exchange and Switch. When one of them does not answer nothing
+   * could be sent either, and the first screen says so.
+   */
   const startMobile = async () => {
     const now = await gather();
-    if (!now) return;
+    if (!now || !mobileOffered) return;
     setProblem(null);
-    setStage("mobile");
+    setBusy(true);
+    try {
+      setMobilePayable(await payableFor(mobileOffered.country));
+      setStage("mobile");
+    } catch (error) {
+      if (sessionClosed(error)) closeSession();
+      else setProblem({ where: "gather", text: error instanceof ApiError ? error.message : MOBILE_REFUSALS.notNow, code: error instanceof ApiError ? error.code : undefined });
+      setStage("base");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const askPrice = async (again = false) => {
@@ -698,6 +734,17 @@ export function CashOut() {
     );
   }
 
+  // A payout money left for, not finished or not yet seen finished: its own card, as after the press that sent it.
+  if (stage === "base" && owedPayout && putAway !== owedPayout.reference) {
+    return (
+      <div className="flex flex-col gap-[var(--space-xl)]">
+        {heading}
+        {moneyCard}
+        <MobilePayoutCard payout={owedPayout} onChanged={refresh} onBack={() => setPutAway(owedPayout.reference)} />
+      </div>
+    );
+  }
+
   if (stage === "base") {
     const led = holdings === null || figureUnknown ? undefined : heldLed();
     // Only when the coin's quote did not answer: while it is being read the figure's place is held, and once it has
@@ -817,7 +864,7 @@ export function CashOut() {
               ) : null}
               {use === "card" && cardSmallest ? <p className={HELP}>{U.cardFrom(figureIn(cardSmallest.amount, cardSmallest.currency))}</p> : null}
               {/* Mobile money says its smallest payout too, in the country's money, before the form is opened. */}
-              {use === "mobile" && mobileOffered ? <p className={HELP} data-mobile-from>{U.mobileFrom(localInWords(localOfUnits(BigInt(mobileOffered.minimumUnits), mobileOffered.rate, "up"), mobileOffered.currency))}</p> : null}
+              {use === "mobile" && mobileOffered ? <p className={HELP} data-mobile-from>{U.mobileFrom(localInWords(mobileOffered.leastLocal, mobileOffered.currency))}</p> : null}
               <button type="button" onClick={act} disabled={holdings === null || changeable === 0n} className={inTheSun(use, index, eurosHeld) ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
                 {words.action}
               </button>
@@ -856,12 +903,12 @@ export function CashOut() {
     );
   }
 
-  if (stage === "mobile" && mobileOffered) {
+  if (stage === "mobile" && mobileOffered && mobilePayable) {
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
         {heading}
         {moneyCard}
-        <MobileMoneyOut offer={mobileOffered} ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
+        <MobileMoneyOut offer={mobileOffered} payable={mobilePayable} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
       </div>
     );
   }
