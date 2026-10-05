@@ -184,8 +184,8 @@ before anything is distributed. An association that declines because "it is cryp
 which a check looks for at every change, in the screens' source (`pnpm check:words`) and in what a browser renders
 (`test/browser/screens.spec.ts`).
 
-**What is not claimed.** No market size, no conversion rate, no viral loop. One recipient who earned a gift then funded
-one himself, for someone else: it has happened once.
+**What is not claimed.** No market size, no conversion rate, no viral loop. One recipient who earned a gift used that
+money to offer one to someone else: it has happened once.
 
 ## Architecture
 
