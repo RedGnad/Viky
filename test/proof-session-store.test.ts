@@ -9,6 +9,8 @@ import {
   consumeAndSaveVerification,
   ensureProofSessionSchema,
   loadAttestation,
+  loadOpenShownSession,
+  PROOF_SESSION_TTL_SECONDS,
   loadLatestEvidence,
   loadProofSession,
   pruneExpiredProofSessions,
@@ -135,4 +137,43 @@ test("expiry is enforced in SQL and pruning removes only stale unconsumed sessio
     ["s1", "s2"],
     "consumed sessions stay (they hold the evidence), the stale unconsumed one is gone",
   );
+});
+
+test("the session open for a gift's one proof is found again by the gift and the account, never by a name the page gives", async () => {
+  // A phone loads the gift's page again on the way back from the verification (7 Oct 2026): the row is what is left.
+  const URL_OLD = "https://share.reclaimprotocol.org/verify/?template=old";
+  const URL_NEW = "https://share.reclaimprotocol.org/verify/?template=new";
+  const open = (sessionId: string, requestUrl: string | undefined, account = ACCOUNT, giftId = "1000006") =>
+    saveProofSession({ sessionId, account, giftId, conditionId: "university-enrollment-shown", goalType: 13, phase: "reach", dayIndex: 0, ...(requestUrl ? { requestUrl } : {}) });
+  assert.equal(await loadOpenShownSession("1000006", ACCOUNT), null, "nothing was opened");
+  await open("reach-old", URL_OLD);
+  await db.query("UPDATE viky_proof_sessions SET created_at = now() - interval '10 minutes' WHERE session_id = 'reach-old'");
+  const first = await loadOpenShownSession("1000006", ACCOUNT.toLowerCase());
+  assert.equal(first?.sessionId, "reach-old");
+  assert.equal(first?.requestUrl, URL_OLD, "the same verification page is offered again");
+  assert.equal(first?.conditionId, "university-enrollment-shown");
+  // What is left of its thirty minutes, by the database's clock: twenty, give or take the test's own seconds.
+  assert.ok(first!.secondsLeft <= PROOF_SESSION_TTL_SECONDS - 600 && first!.secondsLeft > PROOF_SESSION_TTL_SECONDS - 660, String(first!.secondsLeft));
+
+  // The newest one, when the person opened another.
+  await open("reach-new", URL_NEW);
+  assert.equal((await loadOpenShownSession("1000006", ACCOUNT))?.sessionId, "reach-new");
+  // Somebody else's account, another gift, or a gift that is no number: nothing.
+  assert.equal(await loadOpenShownSession("1000006", "0x000000000000000000000000000000000000b0b0"), null);
+  assert.equal(await loadOpenShownSession("1000007", ACCOUNT), null);
+  assert.equal(await loadOpenShownSession("1000006' OR 1=1", ACCOUNT), null);
+  // A row from before the address was kept has no page to offer: it is not taken up.
+  await open("reach-bare", undefined, ACCOUNT, "1000008");
+  assert.equal(await loadOpenShownSession("1000008", ACCOUNT), null);
+  // A daily gift's session is not a milestone's one proof.
+  await saveProofSession({ sessionId: "daily-open", account: ACCOUNT, giftId: "77", conditionId: "duolingo-daily", goalType: 1, phase: "check-in", dayIndex: 2, requestUrl: URL_NEW });
+  assert.equal(await loadOpenShownSession("77", ACCOUNT), null);
+
+  // Answered: gone, and the older one is the open one again.
+  assert.equal(await consumeAndSaveVerification({ sessionId: "reach-new", evidence: { held: "utoulouse-fr" }, attestation: { message: {}, signature: "0x" }, proofs: null }), true);
+  assert.equal((await loadOpenShownSession("1000006", ACCOUNT))?.sessionId, "reach-old");
+  // Aged out: gone, by the same thirty minutes that stop it being answered.
+  await db.query(`UPDATE viky_proof_sessions SET created_at = now() - interval '${PROOF_SESSION_TTL_SECONDS + 5} seconds' WHERE session_id = 'reach-old'`);
+  assert.equal(await loadOpenShownSession("1000006", ACCOUNT), null);
+  assert.equal(await loadProofSession("reach-old"), null);
 });

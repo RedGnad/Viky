@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ReclaimProofRequest } from "@reclaimprotocol/js-sdk";
-import { accountAuthErrorStatus, accountAuthPublicMessage, readAccountAuthSession } from "@/src/account-auth-server";
+import { accountAuthErrorStatus, accountAuthOriginFromRequest, accountAuthPublicMessage, readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
 import { DUOLINGO_MAX_DAY_INDEX } from "@/src/duolingo-proof-policy";
 import { resolvePublicDuolingoProfile } from "@/src/duolingo-profile";
@@ -8,7 +8,7 @@ import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
 import { isReclaimQuotaRefusal, limitsNow, noteAttestedCall, REAL_READINGS_OFF, realReadingsOff, ReclaimLimitReached, startsAgainInWords } from "@/src/attested-calls";
 import { conditionById } from "@/src/conditions";
 import { LIMIT } from "@/src/sentences";
-import { loadLatestEvidence, pruneExpiredProofSessions, saveProofSession, type ProofSessionPhase } from "@/src/proof-session-store";
+import { loadLatestEvidence, loadOpenShownSession, PROOF_SESSION_TTL_SECONDS, pruneExpiredProofSessions, saveProofSession, type ProofSessionPhase } from "@/src/proof-session-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { reclaimChannelInitOptions, reclaimChannelLaunchOptions, resolveReclaimChannel } from "@/src/reclaim-channel";
 import { loadGift } from "@/src/gift-store";
@@ -19,6 +19,30 @@ import { shownContextMessage } from "@/src/shown-proof";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
+
+/**
+ * The session this account has open for a gift's one proof, or nothing (7 Oct 2026). The gift's page asks when it
+ * loads, so a page loaded again while a proof is being made goes on waiting for it instead of offering to start over.
+ * By the signed cookie's account and the gift alone: the browser names no session here.
+ */
+export async function GET(request: Request) {
+  try {
+    const auth = readAccountAuthSession(request);
+    const rate = checkRateLimit("status", request, auth.account);
+    if (!rate.allowed) {
+      return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
+    }
+    const giftId = new URL(request.url).searchParams.get("giftId")?.trim() ?? "";
+    const open = await loadOpenShownSession(giftId, auth.account);
+    return NextResponse.json({ open }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    const authStatus = accountAuthErrorStatus(error);
+    return NextResponse.json(
+      { error: authStatus ? accountAuthPublicMessage(error) : "The open proof could not be read" },
+      { status: authStatus || 400, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+}
 
 /**
  * Opens a Reclaim session for one phase of a gift, for whichever condition the gift is on (D162). Ported from
@@ -111,6 +135,10 @@ export async function POST(request: Request) {
     });
     if (bound) proofRequest.setParams({ duolingo_user_id: bound.profileId });
     proofRequest.addContext(account.toLowerCase(), shownContextMessage(giftId, phase, dayIndex));
+    // Once the proof is made, the verification page brings the person back to the gift's page (7 Oct 2026): with no
+    // address to go to it left them where they were, and a phone had by then let go of the page they came from. The
+    // address is this request's own site and the gift's number, and carries nothing else.
+    proofRequest.setRedirectUrl(`${accountAuthOriginFromRequest(request)}/g/${giftId}`);
 
     const sessionId = proofRequest.getStatusUrl().split("/").pop() || "";
     const requestUrl = await proofRequest.getRequestUrl(reclaimChannelLaunchOptions(channel));
@@ -124,12 +152,13 @@ export async function POST(request: Request) {
       phase,
       dayIndex,
       ...(bound ? { duolingoUsername: bound.username, duolingoProfileId: bound.profileId } : {}),
+      requestUrl,
     });
     // Written down from the moment it is opened: a session that never comes back is deleted from its table after a
     // day, and this row is what still says it was asked (src/attested-calls.ts).
     await noteAttestedCall({ kind: "asked", source: entry.condition.conditionId, ok: true, ref: sessionId });
 
-    return NextResponse.json({ sessionId, phase, dayIndex, requestUrl }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ sessionId, phase, dayIndex, requestUrl, secondsLeft: PROOF_SESSION_TTL_SECONDS }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof ReclaimLimitReached) {
       return NextResponse.json({ code: error.code, error: LIMIT.said(source, "proofs", startsAgainInWords(), true) }, { status: 409, headers: { "Cache-Control": "no-store" } });

@@ -40,7 +40,7 @@ test.describe("the path of the person a gift is for", () => {
         if (route.request().method() === "POST") seen = true;
         return route.fulfill(json({ seen }));
       });
-      await page.route("**/api/proof/session", (route) => route.fulfill(json({ sessionId: "session_recipient_path", requestUrl: "https://share.reclaimprotocol.org/verify/?template=recipient-path" })));
+      await page.route("**/api/proof/session", (route) => route.fulfill(json({ sessionId: "session_recipient_path", requestUrl: "https://share.reclaimprotocol.org/verify/?template=recipient-path", secondsLeft: 1_800 })));
       await page.route("**/api/proof/verify", (route) => {
         looks += 1;
         // The first look finds nothing yet, as a person still signing in to the source would have it.

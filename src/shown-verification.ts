@@ -2,11 +2,11 @@ import type { Hex } from "viem";
 import { signedSubjectOf } from "./subject-key";
 import { NO_AGREEMENT, type ReadingLeave } from "./consent-guard";
 import type { Proof } from "@reclaimprotocol/js-sdk";
-import { MAX_PROOF_AGE_SECONDS, MAX_PROOF_FUTURE_SKEW_SECONDS, VerificationError, verifyDuolingoSession, type ReclaimStatus, type SdkVerification, type VerificationDeps } from "./duolingo-verification";
+import { MAX_PROOF_FUTURE_SKEW_SECONDS, VerificationError, verifyDuolingoSession, type ReclaimStatus, type SdkVerification, type VerificationDeps } from "./duolingo-verification";
 import type { MilestoneReading } from "./milestone-store";
 import type { MilestoneProofMessage } from "./milestone-protocol";
 import type { ProvedReading } from "./milestone-relay";
-import type { ProofSession, StoredAttestation } from "./proof-session-store";
+import { PROOF_SESSION_TTL_SECONDS, type ProofSession, type StoredAttestation } from "./proof-session-store";
 import { assertReclaimSessionProvenance, assertSdkProofSet, ReclaimProofRejectedError } from "./reclaim-proof-set";
 import type { ReclaimTrustedData } from "./reclaim-types";
 import { portalProviderFor, shownConditionById, type ShownEntry, type ShownProvider } from "./shown-conditions";
@@ -80,10 +80,19 @@ function storedEvidence(evidence: ShownEvidence, verdict: boolean): StoredShownE
   return { ...rest, reading: { metricValue: reading.metricValue.toString(), eventAt: reading.eventAt, accountKey: reading.accountKey, ...(reading.inWords === undefined ? {} : { inWords: reading.inWords }) } };
 }
 
+/**
+ * How old a milestone's proof may be when it is taken: as old as its session can be, and no older (7 Oct 2026). It had
+ * the daily lesson's ten minutes, which are right there, where a proof says what a day held. A milestone's proof is
+ * signed with the session it was made in (`reclaimSessionId`, checked by `validateShownEvidence`), so it is never older
+ * than a session the store still answers for; a shorter age of its own only refused a person who took eleven minutes
+ * to come back to the page, with a proof Reclaim had counted. The session's thirty minutes are the one clock.
+ */
+export const SHOWN_MAX_PROOF_AGE_SECONDS = PROOF_SESSION_TTL_SECONDS;
+
 function assertFresh(timestamps: readonly number[], now: number): void {
   for (const at of timestamps) {
     if (at > now + MAX_PROOF_FUTURE_SKEW_SECONDS) throw new VerificationError("PROOF_IN_FUTURE", "The proof is dated in the future");
-    if (now - at > MAX_PROOF_AGE_SECONDS) throw new VerificationError("PROOF_TOO_OLD", "The proof is older than ten minutes. Show it again.");
+    if (now - at > SHOWN_MAX_PROOF_AGE_SECONDS) throw new VerificationError("PROOF_TOO_OLD", "The proof is older than its session. Show it again.");
   }
 }
 
@@ -214,8 +223,9 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
 /** Each proof of a witness portal, verified on the pinned witness, the portal's domain and, once pinned, its pattern. */
 function witnessReadings(proofs: readonly Proof[], expected: Readonly<{ domain: string; pin: WitnessPin | null; providerVersion: string; witness?: string }>): WitnessReading[] {
   try {
-    // A page is read with GET until the pin says otherwise: the method is part of what the first proof fixes.
-    return proofs.map((proof) => verifyWitnessProof(proof, { domain: expected.domain, method: expected.pin?.method ?? "GET", pin: expected.pin, providerVersion: expected.providerVersion, witness: expected.witness }));
+    // The method is part of what the first proof fixes: before the pin a page read with GET or with POST is held,
+    // and the operator reads which (src/witness-portal.ts).
+    return proofs.map((proof) => verifyWitnessProof(proof, { domain: expected.domain, method: expected.pin?.method ?? null, pin: expected.pin, providerVersion: expected.providerVersion, witness: expected.witness }));
   } catch (error) {
     if (error instanceof WitnessProofError) {
       // What was read, by its host alone (never a path, which can carry a student's number): a domain or a method the

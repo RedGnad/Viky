@@ -13,6 +13,13 @@ import type { DuolingoEvidence } from "./duolingo-proof-policy";
  * consume-and-write happens in ONE statement so a burned session can never leave a missing result.
  */
 
+/**
+ * How long an opened session can be answered. It is the one clock of a shown proof (7 Oct 2026): the page waits for
+ * as long as it runs (src/client/gift.ts) and a milestone's proof is fresh for as long as it runs
+ * (src/shown-verification.ts), where each of those had its own ten minutes before. The first real passes on a phone,
+ * a student of Toulouse, took 9 min 31 s and 8 min 27 s from the session's opening to the proof: ten minutes left
+ * under a minute to come back to the page, and thirty leave three passes' worth.
+ */
 export const PROOF_SESSION_TTL_SECONDS = 30 * 60;
 export const PROOF_SESSION_PRUNE_SECONDS = 24 * 60 * 60;
 
@@ -37,6 +44,7 @@ CREATE INDEX IF NOT EXISTS viky_proof_sessions_gift_account
 ALTER TABLE viky_proof_sessions ADD COLUMN IF NOT EXISTS condition_id text NOT NULL DEFAULT 'duolingo-daily';
 ALTER TABLE viky_proof_sessions ALTER COLUMN duolingo_username DROP NOT NULL;
 ALTER TABLE viky_proof_sessions ALTER COLUMN duolingo_profile_id DROP NOT NULL;
+ALTER TABLE viky_proof_sessions ADD COLUMN IF NOT EXISTS request_url text;
 `;
 
 /** A tagged-template SQL executor: Neon's `neon(url)` in production, a PGlite adapter in tests. */
@@ -72,6 +80,8 @@ export type ProofSession = Readonly<{
   /** The Duolingo account a daily gift binds: the one condition whose proof is checked against a named profile. */
   duolingoUsername?: string;
   duolingoProfileId?: string;
+  /** The address of the verification page, kept so a page loaded again offers the same one (`loadOpenShownSession`). */
+  requestUrl?: string;
 }>;
 
 export type StoredAttestation = Readonly<{
@@ -88,13 +98,55 @@ export async function ensureProofSessionSchema(): Promise<void> {
   }
 }
 
+/**
+ * The verification page's column, made the first time a session is saved or looked for in a process (7 Oct 2026):
+ * production never runs the migration, and a session is opened by a person who is waiting.
+ */
+let requestUrlColumn: Promise<void> | undefined;
+function withRequestUrlColumn(): Promise<void> {
+  requestUrlColumn ??= (async () => {
+    await sql()`ALTER TABLE viky_proof_sessions ADD COLUMN IF NOT EXISTS request_url text`;
+  })().catch((error: unknown) => {
+    requestUrlColumn = undefined;
+    throw error;
+  });
+  return requestUrlColumn;
+}
+
 export async function saveProofSession(session: ProofSession): Promise<void> {
+  await withRequestUrlColumn();
   await sql()`
     INSERT INTO viky_proof_sessions
-      (session_id, account, gift_id, goal_type, condition_id, phase, day_index, duolingo_username, duolingo_profile_id)
+      (session_id, account, gift_id, goal_type, condition_id, phase, day_index, duolingo_username, duolingo_profile_id, request_url)
     VALUES (${session.sessionId}, ${session.account.toLowerCase()}, ${session.giftId}, ${session.goalType}, ${session.conditionId},
-            ${session.phase}, ${session.dayIndex}, ${session.duolingoUsername ?? null}, ${session.duolingoProfileId ?? null})
+            ${session.phase}, ${session.dayIndex}, ${session.duolingoUsername ?? null}, ${session.duolingoProfileId ?? null}, ${session.requestUrl ?? null})
     ON CONFLICT (session_id) DO NOTHING`;
+}
+
+/** A milestone's session still waiting for its proof, as the page that opened it needs it back. */
+export type OpenShownSession = Readonly<{ sessionId: string; conditionId: string; requestUrl: string; /** How long it can still be answered, by the database's clock. */ secondsLeft: number }>;
+
+/**
+ * The newest session this account opened for this gift's one proof that is neither answered nor aged out, or nothing
+ * (7 Oct 2026). A phone loads the gift's page again when the person comes back from the verification page, and the
+ * page kept the session in its own memory alone: two real proofs were made and never asked for. The row is what
+ * survives, so the page asks for it by the gift and the account of the signed cookie, never by a session it names.
+ */
+export async function loadOpenShownSession(giftId: string, account: string): Promise<OpenShownSession | null> {
+  if (!/^\d{1,78}$/.test(giftId)) return null;
+  await withRequestUrlColumn();
+  const rows = await sql()`
+    SELECT session_id, condition_id, request_url,
+           EXTRACT(EPOCH FROM (created_at + make_interval(secs => ${PROOF_SESSION_TTL_SECONDS}) - now())) AS seconds_left
+      FROM viky_proof_sessions
+     WHERE gift_id = ${giftId} AND account = ${account.toLowerCase()} AND phase = 'reach'
+       AND consumed_at IS NULL AND request_url IS NOT NULL
+       AND created_at > now() - make_interval(secs => ${PROOF_SESSION_TTL_SECONDS})
+     ORDER BY created_at DESC
+     LIMIT 1`;
+  const row = rows[0];
+  if (!row) return null;
+  return { sessionId: String(row.session_id), conditionId: String(row.condition_id), requestUrl: String(row.request_url), secondsLeft: Math.max(0, Math.floor(Number(row.seconds_left))) };
 }
 
 /** The live session, or null if it does not exist, is already consumed, or has aged out. */

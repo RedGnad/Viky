@@ -7,11 +7,11 @@ import { keccak256, stringToHex, type Hex } from "viem";
 import type { Proof } from "@reclaimprotocol/js-sdk";
 import { VerificationError } from "../src/duolingo-verification";
 import type { MilestoneProofMessage } from "../src/milestone-protocol";
-import type { ProofSession } from "../src/proof-session-store";
+import { PROOF_SESSION_TTL_SECONDS, type ProofSession } from "../src/proof-session-store";
 import { PRIVACY, type ConditionPrivacy } from "../src/condition-privacy";
 import { SHOWN_CONDITIONS, type ShownEntry } from "../src/shown-conditions";
 import { ShownProofError } from "../src/shown-proof";
-import { verifyShownSession, type ShownVerificationDeps } from "../src/shown-verification";
+import { SHOWN_MAX_PROOF_AGE_SECONDS, verifyShownSession, type ShownVerificationDeps } from "../src/shown-verification";
 import { sdkProof } from "./reclaim-proof-set.test";
 
 /**
@@ -111,6 +111,18 @@ test("a proof shown for a milestone becomes the same attestation a certificate r
   assert.equal(d.recorded.length, 1, "the reading is in the gift's history");
 });
 
+test("a milestone's proof is fresh for as long as its session lives, and the session's clock is the only one", async () => {
+  // A pass on a phone took nine minutes (7 Oct 2026), and the ten that a proof then had left under one to come back.
+  assert.equal(SHOWN_MAX_PROOF_AGE_SECONDS, PROOF_SESSION_TTL_SECONDS);
+  assert.equal(PROOF_SESSION_TTL_SECONDS, 30 * 60);
+  const status = (timestampS: number) => async () => ({ session: { sessionId: SESSION_ID, appId: APP_ID, providerId: "provider-test", providerVersionString: "1.0.0", statusV2: "PROOF_SUBMITTED", proofs: [proof(timestampS)] } as never });
+  // Eleven minutes and forty seconds old: refused under the ten minutes, taken now.
+  const taken = await verifyShownSession(deps({ fetchStatus: status(NOW - 700) }), { sessionId: SESSION_ID, account: ACCOUNT });
+  assert.equal(taken.kind, "reached");
+  assert.equal((await verifyShownSession(deps({ fetchStatus: status(NOW - SHOWN_MAX_PROOF_AGE_SECONDS) }), { sessionId: SESSION_ID, account: ACCOUNT })).kind, "reached");
+  await refuses("PROOF_TOO_OLD", () => verifyShownSession(deps({ fetchStatus: status(NOW - SHOWN_MAX_PROOF_AGE_SECONDS - 1) }), { sessionId: SESSION_ID, account: ACCOUNT }));
+});
+
 test("what the contract would refuse is refused before anything is signed, each with its reason", async () => {
   await refuses("NOT_RECIPIENT", () => verifyShownSession(deps({ milestoneOf: async () => ({ contract: CONTRACT, recipient: "0x000000000000000000000000000000000000b0b0", opened: true, settled: false, target: 90n }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
   await refuses("NOT_OPENED", () => verifyShownSession(deps({ milestoneOf: async () => ({ contract: CONTRACT, recipient: ACCOUNT as Hex, opened: false, settled: false, target: 90n }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
@@ -125,7 +137,7 @@ test("the gates the daily path has are the gates this path has", async () => {
   await refuses("WRONG_PHASE", () => verifyShownSession(deps({ loadSession: async () => session({ phase: "baseline" }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
   await refuses("NO_PROOF_YET", () => verifyShownSession(deps({ fetchStatus: async () => ({ session: { sessionId: SESSION_ID, appId: APP_ID, providerId: "provider-test", providerVersionString: "1.0.0", statusV2: "PROOF_SUBMITTED", proofs: [] } as never }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
   await refuses("TEE_NOT_VERIFIED", () => verifyShownSession(deps({ verifyProofs: async () => ({ isVerified: true, isTeeAttestationVerified: false, data: [] }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
-  await refuses("PROOF_TOO_OLD", () => verifyShownSession(deps({ fetchStatus: async () => ({ session: { sessionId: SESSION_ID, appId: APP_ID, providerId: "provider-test", providerVersionString: "1.0.0", statusV2: "PROOF_SUBMITTED", proofs: [proof(NOW - 700)] } as never }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
+  await refuses("PROOF_TOO_OLD", () => verifyShownSession(deps({ fetchStatus: async () => ({ session: { sessionId: SESSION_ID, appId: APP_ID, providerId: "provider-test", providerVersionString: "1.0.0", statusV2: "PROOF_SUBMITTED", proofs: [proof(NOW - SHOWN_MAX_PROOF_AGE_SECONDS - 1)] } as never }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
   await refuses("PROOF_REJECTED", () => verifyShownSession(deps({ fetchStatus: async () => ({ session: { sessionId: SESSION_ID, appId: APP_ID, providerId: "another", providerVersionString: "1.0.0", statusV2: "PROOF_SUBMITTED", proofs: [proof()] } as never }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
   await refuses("ALREADY_RECORDED", () => verifyShownSession(deps({ consumeShownSession: async () => false }), { sessionId: SESSION_ID, account: ACCOUNT }));
   await refuses("NOT_CONFIGURED", () => verifyShownSession(deps({ appId: "" }), { sessionId: SESSION_ID, account: ACCOUNT }));
