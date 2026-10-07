@@ -56,7 +56,11 @@ kept fail-closed (`LIVE_SCHEMA_CONFIRMED = false`). The path in production is th
 the Safe the same day. A gift
 made since then is made on them; the three contracts of the first version were closed to new gifts that day and run
 the gifts they hold to the end. Whether a gift has run on the second version yet is counted on the judges page, from
-the index: nothing here says it works before one has, end to end. They are the second version of the two gift
+the index: nothing here says it works before one has, end to end. What has run on the second milestone contract, with
+real amounts: gift 1000006, 8.98 AUSD between two people who are not the author, created on 5 Oct 2026, opened on
+7 Oct, and paid in full the same day on a proof shown from a university's portal
+(`0x9c5508e83b0dd20668bb6a8c683faa047820734d6938387f8b6f516c3467c4fd`); on 7 Oct 2026 its money had not been taken
+out. They are the second version of the two gift
 contracts, from the audit of 1 Oct 2026. Opening a gift takes the signature of a key made from the secret its link carries, whose address
 is in the terms the funder signed, so the evidence signer opens nothing (on the contracts above, that one key could
 open an unopened gift and prove it). The person a gift is for can end it: what was counted stays theirs and the rest

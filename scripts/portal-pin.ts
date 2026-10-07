@@ -5,7 +5,7 @@ import { readMilestoneGift } from "../src/milestone-reader";
 import { relayProve } from "../src/milestone-relay";
 import { loadMilestoneGift, recordReading } from "../src/milestone-store";
 import { isMilestoneGiftId } from "../src/milestone-protocol";
-import { decideReview, ensurePortalSchema, loadPortal, loadReview, pendingReviews, pinProvider, type PortalReview, type ResultsFields } from "../src/portal-store";
+import { decideReview, ensurePortalSchema, loadPortal, loadReview, pendingReviews, pinProvider, runProviderOn, type PortalReview, type PortalSense, type ResultsFields } from "../src/portal-store";
 import { ENROLMENT_FIELD, RESULTS_FIELDS } from "../src/provider-instruction";
 import { escrowOf } from "../src/relayer";
 import { settleHeldReview, type SettleDeps } from "../src/shown-verification";
@@ -36,6 +36,10 @@ import type { WitnessPin } from "../src/witness-portal";
  *     for a proof held before its provider was pinned by another: settles it on that pin.
  *   pnpm portal:pin <session> --refuse "<note for the journal>"
  *     closes the review: the person reads that the page did not show what the gift is for, and nothing moves.
+ *   PROVEN_BY=0x… pnpm portal:pin --portal <id> --sense enrolment --run <version>
+ *     pins a university again, on a rule written by hand (7 Oct 2026): takes the pin off and sets the version of its
+ *     Reclaim provider its sessions are opened on. The next proof is held as a first one is, and is pinned from with
+ *     the command above. Refused while a proof of that provider is held: decide it first.
  *
  * Against production, the operator command of "The test database" applies (`VIKY_ALLOW_PRODUCTION_DATABASE=1`), and
  * the relayer and evidence signer of the environment sign and carry the proof. `DRY_RUN=1` pins and relays nothing.
@@ -111,6 +115,24 @@ async function settle(review: PortalReview): Promise<void> {
 async function main() {
   await ensurePortalSchema();
   const sessionId = process.argv[2] && !process.argv[2].startsWith("--") ? process.argv[2] : null;
+  const version = flag("run");
+  if (version !== undefined) {
+    const portalId = need("portal");
+    const sense = (flag("sense")?.trim() || "enrolment") as PortalSense;
+    if (sense !== "enrolment" && sense !== "results") throw new Error("--sense is enrolment or results");
+    const held = (await pendingReviews()).filter((review) => review.portalId === portalId && review.sense === sense);
+    if (held.length > 0) throw new Error(`${held.length} proof of this provider is held (${held.map((review) => review.sessionId).join(", ")}): pin or refuse it first`);
+    const before = (await loadPortal(portalId))?.[sense];
+    const step = { portal: portalId, sense, runsOn: version.trim(), before: before ? { version: before.providerVersion, pinned: Boolean(before.pin), reads: before.pin ? { url: before.pin.url, method: before.pin.method, responseRedactions: before.pin.responseRedactions } : null } : null };
+    if (process.env.DRY_RUN === "1") {
+      console.log(JSON.stringify({ step: "would take the pin off and run on", ...step }, null, 2));
+      return;
+    }
+    const operator = getAddress(String(process.env.PROVEN_BY?.trim()));
+    if (!(await runProviderOn(portalId, sense, { version: version.trim(), operator }))) throw new Error(`${portalId} has no witness provider for ${sense}`);
+    console.log(JSON.stringify({ step: "pin taken off, running on", ...step, next: "the next proof is held: pnpm portal:pin, then pnpm portal:pin <session> --matches … --keeps …" }, null, 2));
+    return;
+  }
   if (!sessionId) {
     const pending = await pendingReviews();
     console.log(JSON.stringify({ held: pending.length, reviews: pending.map(shown) }, null, 2));

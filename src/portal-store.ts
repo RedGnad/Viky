@@ -226,7 +226,11 @@ export function providerProblem(provider: PortalProvider): string | undefined {
   if (provider.verification === "witness") {
     // One domain, or a few of the university's own, "utoulouse.fr,univ-tlse3.fr".
     if (!provider.domain || !provider.domain.split(",").every((domain) => DOMAIN.test(domain))) return "the domain its proofs read, like ucad.sn, or several separated by commas";
-    if (!provider.pin) return provider.extract === null ? undefined : "a field to read only once the provider is pinned";
+    if (!provider.pin) {
+      if (provider.extract !== null) return "a field to read only once the provider is pinned";
+      // Not pinned, it may still name the version its sessions are opened on (`runProviderOn`), or none.
+      return !provider.providerVersion || isWitnessVersion(provider.providerVersion) ? undefined : "a version to run on, like 1.0.1";
+    }
     if (!isWitnessVersion(provider.pin.providerVersion)) return "a pinned version the session reported, like 1.0.0-ai.1";
     if (!HASH.test(provider.pin.specHash)) return "the pinned request spec's hash";
   } else if (provider.verification === "tee") {
@@ -445,6 +449,28 @@ export async function pinProvider(portalId: string, sense: PortalSense, input: {
            provider_version = ${input.pin.providerVersion}, request_hash = ${input.pin.specHash.toLowerCase()}, pinned_at = now(), added_by = ${input.operator.toLowerCase()}
      WHERE portal_id = ${portalId} AND sense = ${sense}`;
   await sql()`UPDATE viky_portals SET unverified = false WHERE portal_id = ${portalId}`;
+  return true;
+}
+
+/**
+ * Sets a witness provider to run on one version of its Reclaim provider, with no pin (7 Oct 2026). It is how a
+ * university is pinned again on a rule written by hand: Reclaim's agent wrote a different rule at each of the first
+ * three passes of the first university, and the one that happened to be pinned read less than it could. From then on
+ * its sessions are opened on that version, its next proof is held as a first one is, and the operator reads it and
+ * pins from it (`pinProvider`), the way every pin is made: from a real proof, never from a description.
+ * False when the university has no witness provider of that sense.
+ */
+export async function runProviderOn(portalId: string, sense: PortalSense, input: { version: string; operator: string }): Promise<boolean> {
+  const portal = await loadPortal(portalId);
+  const provider = portal?.[sense];
+  if (!provider || provider.verification !== "witness") return false;
+  const next = { ...provider, pin: null, extract: null, providerVersion: input.version, requestHash: "", addedBy: input.operator } as PortalProvider;
+  const problem = providerProblem(next);
+  if (problem) throw new Error(`A provider run on a version needs ${problem}`);
+  await sql()`
+    UPDATE viky_portal_providers
+       SET pin = NULL, extract = NULL, provider_version = ${input.version}, request_hash = '', pinned_at = NULL, added_by = ${input.operator.toLowerCase()}
+     WHERE portal_id = ${portalId} AND sense = ${sense}`;
   return true;
 }
 

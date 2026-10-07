@@ -1806,6 +1806,8 @@ export const SHOW_PROOF = {
   /** The link the person presses themselves, named after where they sign in: it opens the verification page in a new tab. */
   signInTo: (source: string) => `Sign in to ${spokenTo(source)}`,
   waiting: "Waiting for the proof. Come back to this page when you are done there.",
+  /** While the page asks the server what became of the proof: no link is offered until the answer, since it may be dead. */
+  checking: "Checking for your proof",
   stopWaiting: "Stop waiting",
   shown: (score: string) => `Shown: ${score}. It is yours.`,
   /**
@@ -1833,6 +1835,13 @@ export const SHOW_PROOF = {
   refusals: {
     notConfigured: "Showing a proof is not open yet. Nothing was changed.",
     tooOld: "That proof took too long. Show it again.",
+    /**
+     * The verification ended on Reclaim's side with no proof (src/shown-verification.ts, `RECLAIM_STOPPED`): said as
+     * what happened, with the one thing there is to do. It promises nothing about the month's count, which is Reclaim's.
+     */
+    stopped: "The verification stopped before it made a proof. Show it again.",
+    /** A session answered from another page of the gift, or closed since: what the gift says now is read first. */
+    over: "That verification is over. Show it again.",
     cancelled: "Stopped before the proof came back. Nothing was changed.",
     unavailable: "The proof could not be checked right now. Try again in a moment.",
   },

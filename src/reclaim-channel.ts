@@ -35,6 +35,16 @@ export function resolveReclaimChannel(value = process.env.RECLAIM_VERIFICATION_M
 }
 
 /**
+ * The channel one session runs on. A university's portal, read through a provider Reclaim's agent wrote, runs on the
+ * portal whatever the setting says (7 Oct 2026, the first real university proof): in `app` mode the agent did nothing
+ * for the Université de Toulouse, and in `portal` mode the proof was made from the phone alone. The setting still
+ * decides for every other source, and production keeps it on `portal`.
+ */
+export function channelFor(source: Readonly<{ witness: boolean }>, value = process.env.RECLAIM_VERIFICATION_MODE): ReclaimChannel {
+  return source.witness ? "portal" : resolveReclaimChannel(value);
+}
+
+/**
  * Init options for the channel. `useAppClip` belongs to ProofRequestOptions; the deferred deep link does
  * NOT, it lives in the launch options below.
  */

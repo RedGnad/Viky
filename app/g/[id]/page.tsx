@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { giftPreview } from "@/src/gift-preview";
 import { giftStatusFor, type AnyGiftStatus } from "@/src/gift-status";
+import { loadOpenShownSession, type OpenShownSession } from "@/src/proof-session-store";
 import { originOfThePage, signedInAccount } from "@/src/who-is-reading";
 import { GiftPage } from "../../components/GiftPage";
 
@@ -58,11 +59,27 @@ async function giftOnTheServer(id: string, linkKey: string | null): Promise<AnyG
   }
 }
 
+/**
+ * The session the reader has open for this gift's one proof, read with the page (7 Oct 2026). A person brought back by
+ * the verification page then sees "checking" from the first image, never the button to start over for the moment it
+ * took the browser to ask. Nothing when nobody is signed in, when nothing is open, or when it cannot be read: the page
+ * asks from the browser then, as before.
+ */
+async function openProofOnTheServer(id: string): Promise<OpenShownSession | null> {
+  try {
+    const account = await signedInAccount();
+    return account ? await loadOpenShownSession(id, account) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The page a recipient lands on from the link. No install, no crypto words, one screen. */
 export default async function Page(props: Props) {
   const { id } = await props.params;
   const { t } = await props.searchParams;
   if (!/^\d{1,78}$/.test(id)) notFound();
   const linkKey = keyOf(t);
-  return <GiftPage giftId={id} linkKey={linkKey} initialStatus={await giftOnTheServer(id, linkKey)} />;
+  const [initialStatus, openProof] = await Promise.all([giftOnTheServer(id, linkKey), openProofOnTheServer(id)]);
+  return <GiftPage giftId={id} linkKey={linkKey} initialStatus={initialStatus} openProof={openProof} />;
 }

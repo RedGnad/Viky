@@ -67,18 +67,30 @@ export async function POST(request: Request) {
     const record = session && entry?.providerOf ? await loadMilestoneGift(session.giftId) : null;
     const provider = entry?.providerOf && record ? await entry.providerOf(record) : null;
 
+    // A proof came back from Reclaim: counted once for its session, whatever is then made of it, because it is the
+    // proof that Reclaim's month counts and not the verdict (src/attested-calls.ts). Counted here and not where the
+    // enclave is checked (7 Oct 2026): a university's proof is verified by the witness and never goes there, and a
+    // proof refused before that check came back all the same.
+    let cameBackWithProof = false;
+    let counted = false;
+    const cameBack = async (ok: boolean) => {
+      counted = true;
+      await noteAttestedCall({ kind: "verification", source: session?.conditionId ?? "unknown", ok, ref: sessionId });
+    };
     const result = await verifyShownSession(
       {
         loadSession: loadProofSession,
         loadLatestEvidence,
         consumeAndSaveVerification,
         consumeShownSession: consumeAndSaveVerification,
-        fetchStatus: (id) => fetchStatusUrl(id) as Promise<ReclaimStatus>,
+        fetchStatus: async (id) => {
+          const status = (await fetchStatusUrl(id)) as ReclaimStatus;
+          const proofs = status.session?.proofs;
+          cameBackWithProof = Array.isArray(proofs) ? proofs.length > 0 : Boolean(proofs);
+          return status;
+        },
         verifyProofs: async (proofs: Proof[]) => {
           if (!appSecret) throw new VerificationError("NOT_CONFIGURED", "The Reclaim application is not configured", 503);
-          // A proof came back from Reclaim: counted once for its session, whatever is then made of it, because it
-          // is the proof that Reclaim's month counts and not the verdict (src/attested-calls.ts).
-          const cameBack = (ok: boolean) => noteAttestedCall({ kind: "verification", source: session?.conditionId ?? "unknown", ok, ref: sessionId });
           const verified = await verifyProof(proofs, {
             providerId: provider?.providerId ?? entry?.condition.providerId,
             providerVersion: provider?.providerVersion ?? entry?.condition.providerVersion,
@@ -122,6 +134,15 @@ export async function POST(request: Request) {
         now: () => Math.floor(Date.now() / 1_000),
       },
       { sessionId, account: auth.account },
+    ).then(
+      async (outcome) => {
+        if (cameBackWithProof && !counted) await cameBack(true);
+        return outcome;
+      },
+      async (error: unknown) => {
+        if (cameBackWithProof && !counted) await cameBack(false);
+        throw error;
+      },
     );
 
     if (result.kind === "reached") {

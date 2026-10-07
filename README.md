@@ -144,6 +144,17 @@ index, and the testers' figures come with the submission.
   6. 03:44: the 0.187 AUSD it earned withdrawn ([`0xf2d4…cf10`](https://monadvision.com/tx/0xf2d4cdb9393dc0e4507a6f282991edccdf93ecd60e18323cd33e1e5f8b59cf10)). The contract holds nothing of it.
 - **A card payment converted.** 3 Oct 2026: the USDC a card service delivered to the funder's own account, changed
   into 7.914524 AUSD on one signature ([`0x533e…1616`](https://monadvision.com/tx/0x533ec0746493e0670029b917887b8e15376380a4a9c7bb82706b2de910ed1616)).
+- **A gift between two people who are not the author, paid on a proof from a university's portal.** Gift 1000006 on
+  the second `MilestoneGift`, 8.98 AUSD for staying enrolled. All times are UTC.
+  1. 5 Oct 2026, 12:19: created and funded by a third party, in a student's name ([`0x7ab3…0690`](https://monadvision.com/tx/0x7ab335573f852af027c034f181c5788f4d38f0c1bc4a4937ef0dc28f787a0690)).
+  2. 7 Oct, 12:15: opened by the student ([`0xdf97…a950`](https://monadvision.com/tx/0xdf971f921f2533b984c434d2010e73a08e2012e43532ebc95d54843053c3a950)).
+  3. 15:36: paid, 8.98 of 8.98 AUSD his, on the proof he showed at 14:58 from his own student file on the Université
+     de Toulouse's portal. It was the first proof from that university, so it was held, and nothing moved until the
+     operator had read what it had read ([`0x9c55…c4fd`](https://monadvision.com/tx/0x9c5508e83b0dd20668bb6a8c683faa047820734d6938387f8b6f516c3467c4fd)).
+
+  What that proof read is narrow, and is said as it is: signed in to his own file, the answer to one click carried the
+  academic year 2026-2027. The rule was written by Reclaim's agent during his pass, it names no person, no number and
+  no faculty, and it is the one pinned on 7 Oct 2026. The judges page prints the rule in force for each university.
 
 What has not run on the third daily contract yet: a missed day going back, and a gift reaching its last day.
 

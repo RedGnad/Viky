@@ -20,6 +20,7 @@ import {
   claimGift,
   countNow,
   loadGiftStatus,
+  type OpenShown,
   nameGoalAccount,
   type GiftStatus,
   type PublicOutcome,
@@ -110,7 +111,12 @@ function screenMessage(error: unknown): string {
  * one tree and then the entrance animation of another. What the browser still does is ask again after something
  * happens on the screen, which is a refresh of the same tree and not a second screen.
  */
-export function GiftPage({ giftId, linkKey, initialStatus }: Readonly<{ giftId: string; linkKey: string | null; initialStatus?: AnyGiftStatus | null }>) {
+export function GiftPage({
+  giftId,
+  linkKey,
+  initialStatus,
+  openProof = null,
+}: Readonly<{ giftId: string; linkKey: string | null; initialStatus?: AnyGiftStatus | null; /** The session the reader has open for this gift's proof, as the server read it with the page. */ openProof?: OpenShown | null }>) {
   const [status, setStatus] = useState<GiftStatus | MilestoneStatus | null>(initialStatus ?? null);
   const [loadError, setLoadError] = useState<string | null>(null);
   /** Whether the gift on screen is the one the server just read, which needs no second reading to be true. */
@@ -169,7 +175,7 @@ export function GiftPage({ giftId, linkKey, initialStatus }: Readonly<{ giftId: 
       </Shell>
     );
   }
-  return <LiveGift status={status} linkKey={linkKey} reload={reload} refresh={refresh} />;
+  return <LiveGift status={status} linkKey={linkKey} reload={reload} refresh={refresh} openProof={openProof} />;
 }
 
 const onHashChange = (changed: () => void) => {
@@ -186,7 +192,7 @@ function useOpeningSecret(): string | null {
   return useSyncExternalStore(onHashChange, () => openingSecretOf(window.location.hash), () => null);
 }
 
-function LiveGift({ status, linkKey, reload, refresh }: Readonly<{ status: GiftStatus | MilestoneStatus; linkKey: string | null; reload: () => Promise<void>; refresh: () => Promise<void> }>) {
+function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ status: GiftStatus | MilestoneStatus; linkKey: string | null; reload: () => Promise<void>; refresh: () => Promise<void>; openProof: OpenShown | null }>) {
   const { address, hasCredential, ensureSigner, status: accountStatus } = useAccount();
   const openingSecret = useOpeningSecret();
   const door = useDoor();
@@ -657,7 +663,7 @@ function LiveGift({ status, linkKey, reload, refresh }: Readonly<{ status: GiftS
         if (milestone.conditionId === "marathon-finish") return <MarathonProof giftId={giftId} status={milestone} yours={mine} onChanged={reloadAll} />;
         if (milestone.conditionId === "wca-time") return <WcaProof giftId={giftId} status={milestone} yours={mine} onChanged={reloadAll} />;
         return conditionById(milestone.conditionId)?.nature === "shown" ? (
-          <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} review={milestone.review?.status ?? null} reviewMessage={milestone.review?.message ?? null} limitReached={emptyReserve === "proofs"} onShown={reloadAll} />
+          <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} review={milestone.review?.status ?? null} reviewMessage={milestone.review?.message ?? null} limitReached={emptyReserve === "proofs"} openAtLoad={openProof} onShown={reloadAll} />
         ) : (
           <CertificateProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} onProved={reloadAll} />
         );

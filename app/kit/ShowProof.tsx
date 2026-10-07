@@ -22,13 +22,19 @@ import { Said } from "./Said";
  * The wait outlives the page (7 Oct 2026). The first two real proofs of a university were made and never asked for:
  * the person came back from nine minutes on the verification page, the phone had let go of this one and loaded it
  * again, and the session, kept in this component's memory alone, was gone, so the page offered "Show it". The server
- * holds the session, so the page asks it when it loads: one still open is waited for again, looked at at once, with
- * its link back in its place. A press made before that answer takes the open one up and never opens a second.
+ * holds the session, so the page asks it when it loads: one still open is taken up again and looked at at once. A
+ * press made before that answer takes the open one up and never opens a second.
+ *
+ * And no page offers the link of a verification that is over (the same day, on the third proof). Several pages of the
+ * gift were open on the phone; one had shown the proof, the others still offered a link that Reclaim answered
+ * "verification failed" to. So a page that is loaded on an open session, or comes back to the front, says "checking"
+ * and asks the server before any link is drawn again: a session answered elsewhere makes it read the gift anew, and
+ * one that Reclaim ended with no proof is said as that, with the button to show it again.
  *
  * The character at the head of the page answers a proof shown as it answers a day earned: once, from the button,
  * the happy face (app/kit/mood.ts), and back to rest by itself.
  */
-type State = { at: "asking" } | { at: "preparing" } | { at: "waiting"; requestUrl: string } | { at: "done"; score: string } | { at: "held" } | { at: "refused"; message: string };
+type State = { at: "asking" } | { at: "preparing" } | { at: "checking" } | { at: "waiting"; requestUrl: string } | { at: "done"; score: string } | { at: "held" } | { at: "refused"; message: string };
 
 const CARD = "on-paper flex flex-col gap-[var(--space-md)] rounded-[var(--radius-card)] p-[var(--space-lg)]";
 /** Why a wait was stopped when it was the page being left and not the person's own press. */
@@ -41,12 +47,18 @@ export function ShowProof({
   review = null,
   reviewMessage = null,
   limitReached = false,
+  openAtLoad = null,
   onShown,
-}: Readonly<{ giftId: string; conditionId: string; yours: boolean; /** A first proof under review, or refused by it (D312). */ review?: "building" | "pending" | "refused" | null; /** A refusal in its own words, where it has them. */ reviewMessage?: string | null; /** The month's limit of proofs is reached: said before the person starts (the founder, 3 Oct 2026). */ limitReached?: boolean; onShown: () => Promise<void> | void }>) {
+}: Readonly<{ giftId: string; conditionId: string; yours: boolean; /** A first proof under review, or refused by it (D312). */ review?: "building" | "pending" | "refused" | null; /** A refusal in its own words, where it has them. */ reviewMessage?: string | null; /** The month's limit of proofs is reached: said before the person starts (the founder, 3 Oct 2026). */ limitReached?: boolean; /** The session open for this gift when the page was read on the server, or nothing. */ openAtLoad?: OpenShown | null; onShown: () => Promise<void> | void }>) {
   const condition = conditionById(conditionId);
-  const [state, setState] = useState<State>({ at: "asking" });
+  // A session open when the page was read is "checking" from the first image: the person is back from the
+  // verification page, and the button to start over is never drawn for the moment the browser takes to ask.
+  const [state, setState] = useState<State>(() => (yours && !review && openAtLoad ? { at: "checking" } : { at: "asking" }));
+  /** The session handed with the page is taken up once; after that the server is asked. */
+  const handed = useRef<OpenShown | null>(openAtLoad);
+  /** The wait this page is running, or nothing: a page with none asks the server itself when it comes to the front. */
   const waiting = useRef<AbortController | null>(null);
-  /** The session the server says is open for this gift, asked once when the page loads; taken up once and no more. */
+  /** The session the server says is open for this gift, being asked; taken up once and no more. */
   const found = useRef<Promise<OpenShown | null> | null>(null);
   const shows = yours && condition?.nature === "shown" && !review;
   const reload = useRef(onShown);
@@ -55,10 +67,19 @@ export function ShowProof({
   });
 
   /** Waits for one session's proof and says how it ended. A wait stopped by the page being left says nothing. */
-  const waitFor = useRef(async (session: OpenShown, stop: AbortController, resumed: boolean) => {
+  const waitFor = useRef(async (gift: string, session: OpenShown, stop: AbortController, resumed: boolean) => {
     try {
-      setState({ at: "waiting", requestUrl: session.requestUrl });
-      const outcome = await awaitShownProof({ sessionId: session.sessionId, signal: stop.signal, secondsLeft: session.secondsLeft, resumed });
+      // Taken up again: what became of it is asked before its link is offered, since it may be over.
+      setState(resumed ? { at: "checking" } : { at: "waiting", requestUrl: session.requestUrl });
+      const outcome = await awaitShownProof({
+        sessionId: session.sessionId,
+        signal: stop.signal,
+        secondsLeft: session.secondsLeft,
+        resumed,
+        // A lookup that does not answer drops nothing: the wait goes on as it was.
+        stillOpen: () => openShownSessionOf(gift).then((open) => open?.sessionId === session.sessionId, () => true),
+        onPhase: (phase) => setState(phase === "checking" ? { at: "checking" } : { at: "waiting", requestUrl: session.requestUrl }),
+      });
       if (outcome.kind === "reached") {
         setState({ at: "done", score: outcome.shown });
         await reload.current();
@@ -79,33 +100,70 @@ export function ShowProof({
         NOT_CONFIGURED: W.refusals.notConfigured,
         PROOF_TOO_OLD: W.refusals.tooOld,
         TIMED_OUT: W.refusals.tooOld,
-        UNKNOWN_SESSION: W.refusals.tooOld,
+        UNKNOWN_SESSION: W.refusals.over,
+        // Reclaim ended it with no proof: said as that, and the button is back to show it again.
+        VERIFICATION_STOPPED: W.refusals.stopped,
         // Stopped by the person: the button is back, and the page says nothing was changed.
         CANCELLED: W.refusals.cancelled,
       };
       setState({ at: "refused", message: said[code] ?? (error instanceof ApiError && error.message ? error.message : W.refusals.unavailable) });
+    } finally {
+      if (waiting.current === stop) waiting.current = null;
     }
+  });
+
+  /**
+   * Asks the server which session is open for the gift and takes it up. `again` is a page come back to the front with
+   * no wait of its own: with nothing open it reads the gift anew, since another page of it may have shown the proof.
+   */
+  const find = useRef((gift: string, again: boolean, left: AbortSignal, given: OpenShown | null = null) => {
+    // A lookup that fails is a page with nothing open, as before: the button opens a session.
+    const asked = given ? Promise.resolve<OpenShown | null>(given) : openShownSessionOf(gift).catch(() => null);
+    found.current = asked;
+    void asked.then(async (open) => {
+      // Taken up by a press made meanwhile, asked again since, or the page was left.
+      if (left.aborted || found.current !== asked) return;
+      found.current = null;
+      if (!open) {
+        if (again) await reload.current();
+        return;
+      }
+      const stop = new AbortController();
+      waiting.current = stop;
+      void waitFor.current(gift, open, stop, true);
+    });
   });
 
   useEffect(() => {
     if (!shows) return;
-    const stop = new AbortController();
-    // A lookup that fails is a page with nothing open, as before: the button opens a session.
-    const asked = openShownSessionOf(giftId).catch(() => null);
-    found.current = asked;
-    void asked.then((open) => {
-      // Taken up by a press made meanwhile, or the page was left.
-      if (!open || stop.signal.aborted || found.current !== asked) return;
-      found.current = null;
-      waiting.current = stop;
-      void waitFor.current(open, stop, true);
-    });
+    const left = new AbortController();
+    const given = handed.current;
+    handed.current = null;
+    find.current(giftId, false, left.signal, given);
+    // A page with a wait of its own is asked by that wait (src/client/gift.ts); an idle one asks here.
+    const front = () => {
+      if (document.visibilityState === "visible" && !waiting.current) find.current(giftId, true, left.signal);
+    };
+    document.addEventListener("visibilitychange", front);
     // A wait still running when the page is left asks nothing more.
     return () => {
-      stop.abort(LEFT);
+      document.removeEventListener("visibilitychange", front);
+      left.abort(LEFT);
       waiting.current?.abort(LEFT);
     };
   }, [giftId, shows]);
+  // A proof under review is decided while the page stands (7 Oct 2026: the first one was, and the page went on saying
+  // "checked within an hour" to a person whose gift had been paid). A page that comes back to the front reads the gift
+  // again, so what the review decided, and the moment it owes, are there without a reload.
+  const underReview = yours && (review === "pending" || review === "building");
+  useEffect(() => {
+    if (!underReview) return;
+    const front = () => {
+      if (document.visibilityState === "visible") void reload.current();
+    };
+    document.addEventListener("visibilitychange", front);
+    return () => document.removeEventListener("visibilitychange", front);
+  }, [underReview]);
   if (!yours || !condition || condition.nature !== "shown") return null;
 
   const show = async () => {
@@ -118,15 +176,17 @@ export function ShowProof({
       found.current = null;
       const open = asked ? await asked : null;
       if (stop.signal.aborted) return;
-      if (open) return await waitFor.current(open, stop, true);
+      if (open) return await waitFor.current(giftId, open, stop, true);
       // Opening the portal is the yes, signed before anything is shown (the founder, 29 Sep 2026).
       await agreeFirst(giftId);
       const session = await openShownProof({ giftId, conditionId, phase: "reach" });
       if (stop.signal.aborted) return;
-      await waitFor.current(session, stop, false);
+      await waitFor.current(giftId, session, stop, false);
     } catch (error) {
       const code = error instanceof ApiError ? error.code : "";
       setState({ at: "refused", message: code === "NOT_CONFIGURED" ? W.refusals.notConfigured : error instanceof ApiError && error.message ? error.message : W.refusals.unavailable });
+    } finally {
+      if (waiting.current === stop) waiting.current = null;
     }
   };
 
@@ -149,7 +209,7 @@ export function ShowProof({
 
   // The month's reserve of proofs is used up: the card says so above, quietly, with what the person can do (the
   // founder, 3 Oct 2026). Nothing is offered here, so nothing is opened or asked of them.
-  if (limitReached && state.at !== "waiting") return null;
+  if (limitReached && state.at !== "waiting" && state.at !== "checking") return null;
 
   return (
     <section className={CARD}>
@@ -168,6 +228,11 @@ export function ShowProof({
             {W.stopWaiting}
           </button>
         </>
+      ) : state.at === "checking" ? (
+        // No link and no button while the server is asked: the link may be a verification that is over.
+        <p className={HELP} role="status">
+          {W.checking}
+        </p>
       ) : (
         <button type="button" onClick={() => void show()} disabled={state.at === "preparing"} className={PRIMARY_BUTTON}>
           {state.at === "preparing" ? W.preparing : W.button}

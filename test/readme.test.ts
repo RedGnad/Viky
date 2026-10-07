@@ -153,15 +153,24 @@ test("what the rules ask of a README is all there (section 4.1), and the licence
 test("what has run with real money is only what has a transaction, each with its link", () => {
   const ran = section("What has run with real money");
   const links = [...ran.matchAll(/\[`0x[0-9a-f]{4}…[0-9a-f]{4}`\]\(https:\/\/monadvision\.com\/tx\/(0x[0-9a-f]{64})\)/g)].map((found) => found[1]);
-  assert.equal(links.length, 8);
-  assert.equal(new Set(links).size, 8, "eight transactions, none said twice");
+  assert.equal(links.length, 11);
+  assert.equal(new Set(links).size, 11, "eleven transactions, none said twice");
   // Every item of the lists carries one: nothing is said to have run on words alone.
   const items = ran.split("\n").filter((line) => /^\s*(- \*\*|\d\. )/.test(line));
-  assert.equal(items.length, 9, "three things, one of them in six steps");
+  assert.equal(items.length, 13, "four things, one of them in six steps and one in three");
   const text = ran.replace(/\n\s+/g, " ");
   for (const step of text.split(/(?=\s\d\. )/).slice(1)) assert.match(step, /monadvision\.com\/tx\/0x[0-9a-f]{64}/, step.slice(0, 60));
   // The gift that ran end to end is said for what it is: the author's own, between two of his accounts.
   assert.match(ran, /made by the\s+author between two of his own accounts/);
+  // The first gift between two people who are not the author: said with its three transactions, with the review that
+  // came before the money, and with what its proof read and no more (7 Oct 2026).
+  assert.match(ran, /\*\*A gift between two people who are not the author, paid on a proof from a university's portal\.\*\*/);
+  assert.match(ran, /created and funded by a third party, in a student's name/);
+  assert.match(ran, /it was held, and nothing moved until the\s+operator had read what it had read/);
+  assert.match(ran, /What that proof read is narrow, and is said as it is: signed in to his own file, the answer to one click carried the\s+academic year 2026-2027\./);
+  assert.match(ran, /it names no person, no number and\s+no faculty/);
+  assert.ok(links.includes("0x9c5508e83b0dd20668bb6a8c683faa047820734d6938387f8b6f516c3467c4fd"));
+  assert.match(readFileSync(DOCS.contracts, "utf8"), /gift 1000006, 8\.98 AUSD between two people who are not the author/);
   // And what has not run is said.
   assert.match(ran, /What has not run on the third daily contract yet: a missed day going back, and a gift reaching its last day\./);
   // The day `pnpm verify:day` checks is the first of them, the one Why Monad gives the fee of.

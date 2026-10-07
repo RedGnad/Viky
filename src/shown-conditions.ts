@@ -137,7 +137,8 @@ function portalProvider(portal: Portal, sense: PortalSense, read: (fields: Reado
   if (provider.verification === "witness") {
     return {
       providerId: provider.providerId,
-      providerVersion: provider.pin?.providerVersion ?? "",
+      // The pinned version, or before a pin the one its sessions are set to run on, if any (`runProviderOn`).
+      providerVersion: provider.pin?.providerVersion ?? provider.providerVersion,
       requestHashes: provider.pin ? [provider.pin.specHash] : [],
       loginUrl: portal.loginUrl,
       witness: { portalId: portal.portalId, sense, domain: provider.domain ?? "", pin: provider.pin && provider.extract ? provider.pin : null },

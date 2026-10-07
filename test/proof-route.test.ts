@@ -10,6 +10,7 @@ import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { GET as sessionOpen, POST as sessionPost } from "../app/api/proof/session/route";
 import { configureProofSessionStore, consumeAndSaveVerification, ensureProofSessionSchema, saveProofSession, type SqlExecutor } from "../src/proof-session-store";
+import { channelFor } from "../src/reclaim-channel";
 import { POST as verifyPost } from "../app/api/proof/verify/route";
 
 const ORIGIN = "https://viky.test";
@@ -131,4 +132,18 @@ test("the verification page is told where to bring the person back, and the row 
   assert.ok(source.indexOf("setRedirectUrl(") < source.indexOf("getRequestUrl("), "set before the page's address is made, or the address does not carry it");
   assert.match(source, /await saveProofSession\(\{[\s\S]*?requestUrl,\s*\}\)/);
   assert.match(source, /secondsLeft: PROOF_SESSION_TTL_SECONDS/);
+});
+
+test("a university's session runs on the portal channel whatever the setting says, and on the version its provider is set to", () => {
+  // In app mode Reclaim's agent did nothing for the first university (7 Oct 2026); in portal mode the proof was made.
+  assert.equal(channelFor({ witness: true }, "app"), "portal");
+  assert.equal(channelFor({ witness: true }, "nonsense"), "portal", "a university does not wait on a setting written wrong");
+  assert.equal(channelFor({ witness: false }, "app"), "app");
+  assert.equal(channelFor({ witness: false }, ""), "portal");
+  assert.equal(channelFor({ witness: false }, undefined), "portal", "production's own, when nothing is set");
+  const source = readFileSync("app/api/proof/session/route.ts", "utf8");
+  assert.match(source, /const channel = channelFor\(\{ witness: Boolean\(witness\) \}\);/);
+  // Before a pin: no version, so Reclaim's agent writes one, unless the operator set the one to run on.
+  assert.match(source, /\.\.\.\(witness && !witness\.pin && !providerVersion \? \{\} : \{ providerVersion \}\),/);
+  assert.match(readFileSync(".env.example", "utf8"), /Production stays on portal/);
 });

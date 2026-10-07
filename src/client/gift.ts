@@ -398,8 +398,13 @@ export function nextShownLookMs(startedAt: number, looks: readonly number[], now
 
 const cancelled = () => new ApiError({ status: 499, code: "CANCELLED", message: "Cancelled." });
 
-/** Waits until the next look is due, or until the page comes back to the front and an early look is allowed. */
-function untilNextLook(startedAt: number, looks: readonly number[], signal: AbortSignal): Promise<void> {
+/**
+ * Waits until the next look is due, and says why it is: its turn came with the page in front ("due"), or the page came
+ * back to the front ("front"). A page behind another asks nothing (7 Oct 2026): on a phone several pages of one gift
+ * were open at once, each spending the ten looks the route allows in ten minutes, and the one the person came back to
+ * was answered "too many". A look whose turn comes while the page is behind waits for the page.
+ */
+function untilNextLook(startedAt: number, looks: readonly number[], signal: AbortSignal, soon: boolean): Promise<"due" | "front"> {
   return new Promise((resolve, reject) => {
     const timers: Array<ReturnType<typeof setTimeout>> = [];
     const done = (settle: () => void) => {
@@ -410,13 +415,16 @@ function untilNextLook(startedAt: number, looks: readonly number[], signal: Abor
     };
     const stop = () => done(() => reject(cancelled()));
     const front = () => {
-      if (document.visibilityState !== "visible") return;
-      timers.push(setTimeout(() => done(resolve), nextShownLookMs(startedAt, looks, Date.now(), true)));
+      if (document.visibilityState === "visible") done(() => resolve("front"));
     };
     if (signal.aborted) return stop();
     signal.addEventListener("abort", stop);
     document.addEventListener("visibilitychange", front);
-    timers.push(setTimeout(() => done(resolve), nextShownLookMs(startedAt, looks, Date.now(), false)));
+    timers.push(
+      setTimeout(() => {
+        if (document.visibilityState === "visible") done(() => resolve("due"));
+      }, nextShownLookMs(startedAt, looks, Date.now(), soon)),
+    );
   });
 }
 
@@ -461,21 +469,56 @@ export function openShownProof(input: { giftId: string; conditionId: string; pha
  * A wait taken up by a page loaded again looks at once: the person is back, and the proof may be there already. Its
  * looks are counted from nothing, so with those of the page it replaces they can pass the route's ten in ten minutes:
  * "too many" is then a look to make later, never the end of the wait.
+ *
+ * A page that comes back to the front asks first what became of its session (`stillOpen`, the server's own row, which
+ * costs none of the ten looks), and says "checking" meanwhile, so the link of a verification that is over is never
+ * offered (7 Oct 2026: one page of a gift had shown the proof, and the others still offered a link Reclaim answered
+ * "verification failed" to). A session that is no longer the open one ends the wait as `UNKNOWN_SESSION`, which the
+ * page turns into the gift read again.
  */
-export async function awaitShownProof(input: { sessionId: string; signal: AbortSignal; secondsLeft: number; resumed?: boolean; onLook?: (look: number) => void }): Promise<ShownProofOutcome> {
+export async function awaitShownProof(input: {
+  sessionId: string;
+  signal: AbortSignal;
+  secondsLeft: number;
+  resumed?: boolean;
+  /** Whether this session is still the one open for its gift, by the server's row. */
+  stillOpen?: () => Promise<boolean>;
+  /** "checking" while the page asks what became of the proof, "waiting" once the link may be offered again. */
+  onPhase?: (phase: "checking" | "waiting") => void;
+  onLook?: (look: number) => void;
+}): Promise<ShownProofOutcome> {
   const startedAt = Date.now();
   const endsAt = startedAt + input.secondsLeft * 1_000;
   const looks: number[] = [];
+  let first = Boolean(input.resumed);
+  let soon = false;
   while (Date.now() < endsAt) {
     if (input.signal.aborted) throw cancelled();
-    if (!(input.resumed && looks.length === 0)) await untilNextLook(startedAt, looks, input.signal);
+    const why = first ? "front" : await untilNextLook(startedAt, looks, input.signal, soon);
+    soon = false;
+    if (why === "front") {
+      input.onPhase?.("checking");
+      // A page just loaded was told by the server a moment ago that the session is open: it is not asked twice.
+      if (!first && input.stillOpen && !(await input.stillOpen())) throw new ApiError({ status: 409, code: "UNKNOWN_SESSION", message: "This verification is over." });
+      if (input.signal.aborted) throw cancelled();
+      // Looks stay ten seconds apart and eight in ten minutes, however often the page is brought to the front.
+      if (!first && looks.length > 0 && nextShownLookMs(startedAt, looks, Date.now(), true) > 0) {
+        input.onPhase?.("waiting");
+        soon = true;
+        continue;
+      }
+      first = false;
+    }
     looks.push(Date.now());
     input.onLook?.(looks.length);
     try {
       return await postJson<ShownProofOutcome>("/api/proof/verify", { sessionId: input.sessionId });
     } catch (error) {
       if (input.signal.aborted) throw cancelled();
-      if (error instanceof ApiError && (error.code === "NO_PROOF_YET" || error.status === 429)) continue;
+      if (error instanceof ApiError && (error.code === "NO_PROOF_YET" || error.status === 429)) {
+        input.onPhase?.("waiting");
+        continue;
+      }
       throw error;
     }
   }

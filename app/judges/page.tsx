@@ -19,6 +19,7 @@ import { DISPLAY } from "../components/ui";
 import { readOwnership, ownershipWords } from "@/src/judges-owner";
 import { portalsListedAndRead, providerCounts, witnessProviders } from "@/src/portal-store";
 import { countryInWords } from "@/src/university-shown";
+import { pinInWords } from "@/src/witness-portal";
 import { usesDelivered } from "@/src/phone-order-store";
 import { consentAnchorAddress, giftEscrowV2Address, giftEscrowV3Address, milestoneGiftV2Address } from "@/src/v2";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, PUBLIC_RPC_URL } from "@/src/monad/chain";
@@ -574,7 +575,8 @@ export default async function JudgesPage() {
                 {witnessLines.map((line) => (
                   <li key={`${line.portalId}-${line.sense}`}>
                     {line.university}, {countryInWords(line.country)}, {line.sense}: witness signature, no enclave; {line.domain};{" "}
-                    {line.pin ? "pinned" : "first proof awaited"}.
+                    {/* What a pinned provider reads is printed from its pin, the rule in force and no other. */}
+                    {line.pin ? `pinned: ${pinInWords(line.pin, line.sense === "enrolment" && line.extract ? line.extract : null)}` : "first proof awaited"}.
                   </li>
                 ))}
               </ul>
