@@ -382,8 +382,6 @@ export const SHOWN_LOOKS_PER_WINDOW = 8;
 export const SHOWN_WINDOW_MS = 10 * 60_000;
 /** The least time between two looks, for a person who comes back to the page again and again. */
 export const SHOWN_LOOK_EARLY_MS = 10_000;
-/** How long a proof is waited for before the page says it took too long. */
-export const SHOWN_WAIT_MS = 10 * 60_000;
 
 /**
  * When the next look may be made, in milliseconds from `now`, given when the wait started and the looks already made.
@@ -423,13 +421,30 @@ function untilNextLook(startedAt: number, looks: readonly number[], signal: Abor
 }
 
 /**
+ * A session waiting for its proof: its verification page, and how long the server will still answer for it. The wait
+ * has no clock of its own (7 Oct 2026): it had ten minutes, a pass on a phone takes nine, and the server's thirty are
+ * the ones that decide whether a proof can still be taken (PROOF_SESSION_TTL_SECONDS, src/proof-session-store.ts).
+ */
+export type OpenShown = Readonly<{ sessionId: string; requestUrl: string; secondsLeft: number }>;
+
+/**
+ * The session this account already has open for the gift's one proof, or nothing: asked when the gift's page loads.
+ * A phone lets go of a page left for the verification and loads it again on the way back, and the session lived in
+ * that page's memory alone, so a proof was made and the page offered to start over. The server's row is what is left.
+ */
+export async function openShownSessionOf(giftId: string): Promise<OpenShown | null> {
+  const answer = await getJson<{ open: OpenShown | null }>(`/api/proof/session?giftId=${encodeURIComponent(giftId)}`);
+  return answer.open;
+}
+
+/**
  * Opens a Reclaim session for this gift's condition and answers the address of its verification page. Nothing is
  * opened here: a window opened after the awaits of a press is outside the press, and Safari blocks it. The page shows
  * the address as a link the person presses themselves (app/kit/ShowProof.tsx). The source is the condition's, not this
  * function's: a daily gift names the account it binds, a milestone names nothing and takes its one proof.
  */
-export function openShownProof(input: { giftId: string; conditionId: string; phase: "baseline" | "check-in" | "reach"; dayIndex?: number; username?: string }): Promise<{ sessionId: string; requestUrl: string }> {
-  return postJson<{ sessionId: string; requestUrl: string }>("/api/proof/session", {
+export function openShownProof(input: { giftId: string; conditionId: string; phase: "baseline" | "check-in" | "reach"; dayIndex?: number; username?: string }): Promise<OpenShown> {
+  return postJson<OpenShown>("/api/proof/session", {
     giftId: input.giftId,
     conditionId: input.conditionId,
     phase: input.phase,
@@ -440,21 +455,27 @@ export function openShownProof(input: { giftId: string; conditionId: string; pha
 
 /**
  * Waits for the proof of a session opened above: asks the verify route until Reclaim has returned a proof and the
- * server has recorded it (or refused it, with a reason), at the pace `nextShownLookMs` sets, and stops when `signal`
- * says so.
+ * server has recorded it (or refused it, with a reason), at the pace `nextShownLookMs` sets, for as long as the
+ * session can be answered, and stops when `signal` says so.
+ *
+ * A wait taken up by a page loaded again looks at once: the person is back, and the proof may be there already. Its
+ * looks are counted from nothing, so with those of the page it replaces they can pass the route's ten in ten minutes:
+ * "too many" is then a look to make later, never the end of the wait.
  */
-export async function awaitShownProof(input: { sessionId: string; signal: AbortSignal; onLook?: (look: number) => void }): Promise<ShownProofOutcome> {
+export async function awaitShownProof(input: { sessionId: string; signal: AbortSignal; secondsLeft: number; resumed?: boolean; onLook?: (look: number) => void }): Promise<ShownProofOutcome> {
   const startedAt = Date.now();
+  const endsAt = startedAt + input.secondsLeft * 1_000;
   const looks: number[] = [];
-  while (Date.now() - startedAt < SHOWN_WAIT_MS) {
-    await untilNextLook(startedAt, looks, input.signal);
+  while (Date.now() < endsAt) {
+    if (input.signal.aborted) throw cancelled();
+    if (!(input.resumed && looks.length === 0)) await untilNextLook(startedAt, looks, input.signal);
     looks.push(Date.now());
     input.onLook?.(looks.length);
     try {
       return await postJson<ShownProofOutcome>("/api/proof/verify", { sessionId: input.sessionId });
     } catch (error) {
       if (input.signal.aborted) throw cancelled();
-      if (error instanceof ApiError && error.code === "NO_PROOF_YET") continue;
+      if (error instanceof ApiError && (error.code === "NO_PROOF_YET" || error.status === 429)) continue;
       throw error;
     }
   }

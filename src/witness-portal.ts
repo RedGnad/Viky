@@ -10,9 +10,18 @@ import type { ReclaimTrustedData } from "./reclaim-types";
  * as a version of its own ("1.0.0-ai.1"): the URL, the method, the response match and the redaction. That version and
  * what it holds are the portal's pin, set by the operator after reading the first proof (`pnpm portal:pin`).
  *
- * Without a pin, a proof is checked on what is already sure (the witness, the site's domain, the method) and held for
- * review, never paid on its own. With a pin, a proof whose request, match, redaction or version differ is refused.
+ * Without a pin, a proof is checked on what is already sure (the witness, the site's domain, a method a page is read
+ * with) and held for review, never paid on its own. With a pin, a proof whose request, method, match, redaction or
+ * version differ is refused.
+ *
+ * The method is the agent's choice and not ours (7 Oct 2026): the first real proofs of a university, Toulouse's "Mon
+ * dossier web", read the page with POST, as an application that draws its pages from the answers to its own posts
+ * does, and a server that expected GET before the pin refused both. Before a pin either of the two is held, the
+ * operator reads which it was beside the address and the pattern, and the pin fixes it.
  */
+
+/** The ways a page is read. Anything else (PUT, DELETE, PATCH) changes something and is never a reading. */
+export const READING_METHODS: readonly string[] = ["GET", "POST"];
 
 export type WitnessPin = Readonly<{
   /** The provider version the agent wrote, "1.0.0-ai.1". */
@@ -92,13 +101,13 @@ export type WitnessReading = Readonly<{
 
 /**
  * One proof of a witness-verified portal, checked: the claim's identifier is the hash of what it holds, it is signed by
- * the pinned witness and nobody else, it read the portal's own domain with the expected method, and, once the portal
- * is pinned, exactly the pinned request, match, redaction and spec. What comes back is trusted in the same sense as the
+ * the pinned witness and nobody else, it read the portal's own domain with a method a page is read with (the pinned
+ * one once there is a pin), and, once the portal is pinned, exactly the pinned request, match, redaction and spec. What comes back is trusted in the same sense as the
  * SDK's `verifyProof` data: context and extracted parameters the witness signed.
  */
 export function verifyWitnessProof(
   proof: Proof,
-  expected: Readonly<{ domain: string; method: string; pin: WitnessPin | null; providerVersion: string; /** Tests only: the witness a test key stands for. */ witness?: string }>,
+  expected: Readonly<{ domain: string; /** The pinned method, or nothing before the pin: any of READING_METHODS. */ method: string | null; pin: WitnessPin | null; providerVersion: string; /** Tests only: the witness a test key stands for. */ witness?: string }>,
 ): WitnessReading {
   const claim = proof?.claimData;
   if (!claim || typeof claim.parameters !== "string" || typeof claim.context !== "string" || !Array.isArray(proof.signatures)) {
@@ -120,7 +129,8 @@ export function verifyWitnessProof(
   const url = String(parameters.url ?? "");
   const method = String(parameters.method ?? "GET").toUpperCase();
   if (!onAnyDomain(url, expected.domain)) throw new WitnessProofError("WITNESS_OTHER_DOMAIN", "The proof read another site than this university's portal");
-  if (method !== expected.method.toUpperCase()) throw new WitnessProofError("WITNESS_OTHER_METHOD", "The proof asked the portal in another way than this university's pin");
+  const methods = expected.method ? [expected.method.toUpperCase()] : READING_METHODS;
+  if (!methods.includes(method)) throw new WitnessProofError("WITNESS_OTHER_METHOD", "The proof asked the portal in another way than this university's pin");
   const responseMatches = canonical(parameters.responseMatches ?? []);
   const responseRedactions = canonical(parameters.responseRedactions ?? []);
   const specHash = String(context.providerHash ?? "").toLowerCase();

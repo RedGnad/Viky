@@ -14,7 +14,7 @@ import type { ProofSession } from "../src/proof-session-store";
 import { portalProviderFor, SHOWN_CONDITIONS, UNIVERSITY_SHOWN, type ShownEntry } from "../src/shown-conditions";
 import { settleHeldReview, verifyShownSession, type ShownVerificationDeps } from "../src/shown-verification";
 import { UNIVERSITY_ENROLLED, universitySubject } from "../src/university-shown";
-import { canonical, onAnyDomain, onDomain, pinOf, verifyWitnessProof, WitnessProofError, type WitnessPin } from "../src/witness-portal";
+import { canonical, onAnyDomain, onDomain, pinOf, READING_METHODS, verifyWitnessProof, WitnessProofError, type WitnessPin } from "../src/witness-portal";
 
 /**
  * A university read through a Reclaim AI provider (D312): the proof carries no enclave, so it is verified by the
@@ -83,7 +83,7 @@ async function pinned(): Promise<Portal> {
 }
 
 function expect(pin: WitnessPin | null, version = AGENT_VERSION) {
-  return { domain: "ucad.sn", method: pin?.method ?? "GET", pin, providerVersion: version, witness: WITNESS.address };
+  return { domain: "ucad.sn", method: pin?.method ?? null, pin, providerVersion: version, witness: WITNESS.address };
 }
 
 function refusedAs(code: string) {
@@ -115,11 +115,26 @@ test("a witness proof is read only when the witness alone signed what it holds, 
   const tampered = structuredClone(proofSync.good) as Proof;
   (tampered.claimData as { context: string }).context = tampered.claimData.context.replace("Inscrit", "Admis");
   assert.throws(() => verifyWitnessProof(tampered, expect(null)), refusedAs("WITNESS_UNSIGNED"));
-  // Another site, or the method.
+  // Another site, or a method no page is read with.
   assert.throws(() => verifyWitnessProof(proofSync.otherDomain, expect(null)), refusedAs("WITNESS_OTHER_DOMAIN"));
-  assert.throws(() => verifyWitnessProof(proofSync.post, expect(null)), refusedAs("WITNESS_OTHER_METHOD"));
+  assert.throws(() => verifyWitnessProof(proofSync.put, expect(null)), refusedAs("WITNESS_OTHER_METHOD"));
   // A spec hash the request does not produce.
   assert.throws(() => verifyWitnessProof(proofSync.lyingSpec, expect(null)), refusedAs("WITNESS_OTHER_PATTERN"));
+});
+
+test("before the pin a page read with POST is read as one read with GET is, and the pin then fixes which", async () => {
+  // Toulouse's "Mon dossier web" answers its pages to POSTs (7 Oct 2026): a server that expected GET before any pin
+  // refused the first two real proofs of a university. The method is the agent's, read by the operator, then pinned.
+  assert.deepEqual(READING_METHODS, ["GET", "POST"]);
+  const posted = verifyWitnessProof(proofSync.post, expect(null));
+  assert.equal(posted.method, "POST");
+  const onPost = pinOf(posted, AGENT_VERSION);
+  assert.equal(onPost.method, "POST", "the pin keeps the method the first proof read with");
+  verifyWitnessProof(proofSync.post, expect(onPost));
+  // The pin compares what a GET and a POST share here (address, pattern, spec), so the method is what refuses.
+  const got = pinOf(verifyWitnessProof(proofSync.good, expect(null)), AGENT_VERSION);
+  assert.throws(() => verifyWitnessProof(proofSync.post, expect(got)), refusedAs("WITNESS_OTHER_METHOD"));
+  assert.throws(() => verifyWitnessProof(proofSync.good, expect(onPost)), refusedAs("WITNESS_OTHER_METHOD"));
 });
 
 test("once pinned, another pattern, another request or another version of the provider is refused", async () => {
@@ -131,12 +146,13 @@ test("once pinned, another pattern, another request or another version of the pr
 });
 
 // Built once, before the synchronous assertions above read them.
-const proofSync = {} as Record<"good" | "stranger" | "otherDomain" | "post" | "lyingSpec" | "otherPattern" | "otherPage", Proof>;
+const proofSync = {} as Record<"good" | "stranger" | "otherDomain" | "post" | "put" | "lyingSpec" | "otherPattern" | "otherPage", Proof>;
 test.before(async () => {
   proofSync.good = await witnessProof();
   proofSync.stranger = await witnessProof({}, STRANGER);
   proofSync.otherDomain = await witnessProof({ url: "https://studentcenter.ucad.sn.example.com/api/me" });
   proofSync.post = await witnessProof({ method: "POST" });
+  proofSync.put = await witnessProof({ method: "PUT" });
   proofSync.lyingSpec = await witnessProof({ spec: `0x${"12".repeat(32)}` });
   proofSync.otherPattern = await witnessProof({ matches: [{ type: "regex", value: ".*" }] });
   proofSync.otherPage = await witnessProof({ url: "https://studentcenter.ucad.sn/api/other" });
@@ -216,6 +232,15 @@ test("before the pin, a proof from another site, another signer, another account
   await assert.rejects(verifyShownSession(await other(proofSync.stranger), { sessionId: SESSION_ID, account: ACCOUNT }), refusedAs("WITNESS_OTHER_SIGNER"));
   await assert.rejects(verifyShownSession(await other(await witnessProof({ message: "1000010:reach" })), { sessionId: SESSION_ID, account: ACCOUNT }), refusedAs("WRONG_GIFT_PHASE"));
   await assert.rejects(verifyShownSession(await other(await witnessProof({}, WITNESS, NOW - 3_600)), { sessionId: SESSION_ID, account: ACCOUNT }), refusedAs("PROOF_TOO_OLD"));
+  // Old is older than a session lives. A proof made a quarter of an hour ago, in a session still open, is held: the
+  // person took their time coming back, and the ten minutes that refused it here were the daily lesson's.
+  const late = deps([await witnessProof({}, WITNESS, NOW - 15 * 60)]);
+  assert.equal((await verifyShownSession(late.deps, { sessionId: SESSION_ID, account: ACCOUNT })).kind, "held");
+  // Read with POST: held too, with the method the operator reads before pinning.
+  const posted = deps([proofSync.post]);
+  assert.equal((await verifyShownSession(posted.deps, { sessionId: SESSION_ID, account: ACCOUNT })).kind, "held");
+  assert.equal((posted.held[0].reading as { method: string }).method, "POST");
+  await assert.rejects(verifyShownSession(await other(proofSync.put), { sessionId: SESSION_ID, account: ACCOUNT }), refusedAs("WITNESS_OTHER_METHOD"));
   // A version that is no version at all is refused; the provider's base ("1.0.0", what a session reports when it opens)
   // is held like the agent's, so a student's first proof is never lost to the name of a version.
   await assert.rejects(verifyShownSession(deps([proofSync.good], "latest").deps, { sessionId: SESSION_ID, account: ACCOUNT }), refusedAs("PROOF_REJECTED"));

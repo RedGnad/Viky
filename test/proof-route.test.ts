@@ -6,7 +6,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { privateKeyToAccount } from "viem/accounts";
 import { ACCOUNT_AUTH_COOKIE_NAME, createAccountAuthChallenge, issueAccountAuthSession } from "../src/account-auth-server";
-import { POST as sessionPost } from "../app/api/proof/session/route";
+import { readFileSync } from "node:fs";
+import { PGlite } from "@electric-sql/pglite";
+import { GET as sessionOpen, POST as sessionPost } from "../app/api/proof/session/route";
+import { configureProofSessionStore, consumeAndSaveVerification, ensureProofSessionSchema, saveProofSession, type SqlExecutor } from "../src/proof-session-store";
 import { POST as verifyPost } from "../app/api/proof/verify/route";
 
 const ORIGIN = "https://viky.test";
@@ -86,4 +89,46 @@ test("a cross-site request is refused by the API guard", async () => {
   const response = await sessionPost(post("/api/proof/session", { giftId: "1" }, { cookie, origin: "https://attacker.test" }));
   assert.equal(response.status, 400);
   assert.match(((await response.json()) as { error: string }).error, /Cross-origin/);
+});
+
+test("GET /session answers the session this account has open for the gift, and nobody else's", async () => {
+  const db = new PGlite();
+  const executor: SqlExecutor = async (strings, ...values) => (await db.query<Record<string, unknown>>(strings.reduce((query, part, index) => `${query}${part}${index < values.length ? `$${index + 1}` : ""}`, ""), values)).rows;
+  configureProofSessionStore(executor);
+  try {
+    await ensureProofSessionSchema();
+    const B = privateKeyToAccount("0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d");
+    const get = (giftId: string, cookie?: string) => sessionOpen(new Request(`${ORIGIN}/api/proof/session?giftId=${giftId}`, { headers: { host: "viky.test", ...(cookie ? { cookie } : {}) } }));
+    assert.equal((await get("1000006")).status, 401, "no account, no answer");
+
+    const mine = await cookieFor(A);
+    assert.deepEqual(await (await get("1000006", mine)).json(), { open: null });
+    const requestUrl = "https://share.reclaimprotocol.org/verify/?template=toulouse";
+    await saveProofSession({ sessionId: "session_toulouse", account: A.address, giftId: "1000006", conditionId: "university-enrollment-shown", goalType: 13, phase: "reach", dayIndex: 0, requestUrl });
+    const answer = await get("1000006", mine);
+    assert.equal(answer.headers.get("cache-control"), "no-store");
+    const { open } = (await answer.json()) as { open: { sessionId: string; requestUrl: string; conditionId: string; secondsLeft: number } };
+    assert.equal(open.sessionId, "session_toulouse");
+    assert.equal(open.requestUrl, requestUrl);
+    assert.ok(open.secondsLeft > 29 * 60 && open.secondsLeft <= 30 * 60, String(open.secondsLeft));
+    // Another gift, another account, or a gift that is no number: nothing, and no error that says more.
+    assert.deepEqual(await (await get("1000007", mine)).json(), { open: null });
+    assert.deepEqual(await (await get("1000006", await cookieFor(B))).json(), { open: null });
+    assert.deepEqual(await (await get("x", mine)).json(), { open: null });
+    // Answered: nothing is open any more.
+    await consumeAndSaveVerification({ sessionId: "session_toulouse", evidence: { held: "utoulouse-fr" }, attestation: { message: {}, signature: "0x" }, proofs: null });
+    assert.deepEqual(await (await get("1000006", mine)).json(), { open: null });
+  } finally {
+    configureProofSessionStore(undefined);
+    await db.close();
+  }
+});
+
+test("the verification page is told where to bring the person back, and the row keeps its address", () => {
+  // Reclaim's own redirect was empty (7 Oct 2026): the person stayed on its page with a proof made.
+  const source = readFileSync("app/api/proof/session/route.ts", "utf8");
+  assert.match(source, /proofRequest\.setRedirectUrl\(`\$\{accountAuthOriginFromRequest\(request\)\}\/g\/\$\{giftId\}`\)/, "this request's own site and the gift's number, nothing else");
+  assert.ok(source.indexOf("setRedirectUrl(") < source.indexOf("getRequestUrl("), "set before the page's address is made, or the address does not carry it");
+  assert.match(source, /await saveProofSession\(\{[\s\S]*?requestUrl,\s*\}\)/);
+  assert.match(source, /secondsLeft: PROOF_SESSION_TTL_SECONDS/);
 });
