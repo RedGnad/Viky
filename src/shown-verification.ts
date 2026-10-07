@@ -30,6 +30,20 @@ import { SHOW_PROOF } from "./sentences";
 
 export const SHOWN_MAX_SIGNED_JSON_BYTES = 20_000;
 
+/**
+ * The states of a Reclaim session that end it with no proof (7 Oct 2026), read in Reclaim's own code that day, since
+ * its documentation lists none. Its client stops waiting at once on an error it was told of, an error it could not be
+ * told of, and a proof it could not hand in (@reclaimprotocol/js-sdk 5.8.2, `startSession`). Its verification page,
+ * the one a session's link opens, holds those and a cancelled session as final, and makes nothing more of them
+ * (portal.reclaimprotocol.org, "is already finalized with status"). A proof that failed to be made is not one of
+ * them: the client gives it thirty seconds, because the person can try again inside the session.
+ *
+ * Seen once for real, session 53800accd7: signed in at 14:34 UTC, nothing more, then `ERROR_SUBMITTED` at 14:48 with
+ * "Connection lost. The session was disconnected." The gift's page went on waiting and said nothing, and its link led
+ * to a verification Reclaim had closed.
+ */
+export const RECLAIM_STOPPED: readonly string[] = ["ERROR_SUBMITTED", "ERROR_SUBMISSION_FAILED", "PROOF_SUBMISSION_FAILED", "SESSION_CANCELLED"];
+
 export type ShownVerificationDeps = VerificationDeps & {
   /** Signs the proof attestation with the evidence signer and sends it to the milestone contract. */
   prove(input: { contract: Hex; message: MilestoneProofMessage }): Promise<ProvedReading>;
@@ -38,7 +52,7 @@ export type ShownVerificationDeps = VerificationDeps & {
   /** The milestone gift's recipient, contract and target, read from the contract itself, or nothing when it is not a milestone. */
   milestoneOf(giftId: string): Promise<{ contract: Hex; recipient: Hex; opened: boolean; settled: boolean; target: bigint } | null>;
   /** Records the milestone proof against the session so a replay is refused; the daily path has its own. */
-  consumeShownSession(input: { sessionId: string; evidence: StoredShownEvidence | Readonly<{ held: string }>; attestation: StoredAttestation; proofs: unknown }): Promise<boolean>;
+  consumeShownSession(input: { sessionId: string; evidence: StoredShownEvidence | Readonly<{ held: string }> | Readonly<{ stopped: string }>; attestation: StoredAttestation; proofs: unknown }): Promise<boolean>;
   /** The milestone gift's own record (its condition, its portal), or nothing when it has none. */
   milestoneRecordOf(giftId: string): Promise<MilestoneRecord | null>;
   /** Holds the first proof of a witness portal with no pin for the operator's review (D312); false when already held. */
@@ -144,7 +158,16 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
   const status: ReclaimStatus = await deps.fetchStatus(session.sessionId);
   const rawProofs = status.session?.proofs;
   const candidates = Array.isArray(rawProofs) ? rawProofs : rawProofs ? [rawProofs] : [];
-  if (candidates.length === 0) throw new VerificationError("NO_PROOF_YET", "Reclaim has not returned a proof yet");
+  if (candidates.length === 0) {
+    const state = String(status.session?.statusV2 ?? "");
+    if (RECLAIM_STOPPED.includes(state)) {
+      // Ended at Reclaim with no proof: closed here as well, so no page takes it up again or offers its link, and the
+      // person is told to start another. Nothing was read, so nothing is recorded against the gift.
+      await deps.consumeShownSession({ sessionId: session.sessionId, evidence: { stopped: state }, attestation: { message: {}, signature: "0x" }, proofs: null });
+      throw new VerificationError("VERIFICATION_STOPPED", SHOW_PROOF.refusals.stopped, 409);
+    }
+    throw new VerificationError("NO_PROOF_YET", "Reclaim has not returned a proof yet");
+  }
 
   // A witness portal (D312) has no enclave to require. Its version is the pinned one, or, before the pin, whichever
   // version Reclaim's agent wrote for it, and nothing else.

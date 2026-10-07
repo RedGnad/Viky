@@ -2,6 +2,7 @@ process.env.IDENTITY_HMAC_KEY = Buffer.alloc(32, 7).toString("base64");
 process.env.EVIDENCE_SIGNER_PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { getHashFromProof, getIdentifierFromClaimInfo, type Proof } from "@reclaimprotocol/js-sdk";
 import type { Hex } from "viem";
@@ -14,7 +15,7 @@ import type { ProofSession } from "../src/proof-session-store";
 import { portalProviderFor, SHOWN_CONDITIONS, UNIVERSITY_SHOWN, type ShownEntry } from "../src/shown-conditions";
 import { settleHeldReview, verifyShownSession, type ShownVerificationDeps } from "../src/shown-verification";
 import { UNIVERSITY_ENROLLED, universitySubject } from "../src/university-shown";
-import { canonical, onAnyDomain, onDomain, pinOf, READING_METHODS, verifyWitnessProof, WitnessProofError, type WitnessPin } from "../src/witness-portal";
+import { canonical, onAnyDomain, onDomain, pinInWords, pinOf, READING_METHODS, verifyWitnessProof, WitnessProofError, type WitnessPin } from "../src/witness-portal";
 
 /**
  * A university read through a Reclaim AI provider (D312): the proof carries no enclave, so it is verified by the
@@ -135,6 +136,28 @@ test("before the pin a page read with POST is read as one read with GET is, and 
   const got = pinOf(verifyWitnessProof(proofSync.good, expect(null)), AGENT_VERSION);
   assert.throws(() => verifyWitnessProof(proofSync.post, expect(got)), refusedAs("WITNESS_OTHER_METHOD"));
   assert.throws(() => verifyWitnessProof(proofSync.good, expect(onPost)), refusedAs("WITNESS_OTHER_METHOD"));
+});
+
+test("the judges' page prints what a pinned provider reads from the pin itself, the rule in force and no other", () => {
+  // The first university, as it was pinned on 7 Oct 2026 from its first paid proof.
+  const toulouse: WitnessPin = {
+    providerVersion: "1.0.0-ai.3",
+    url: "https://mondossierweb.univ-tlse3.fr/UIDL/?v-uiId=0",
+    method: "POST",
+    responseMatches: '[{"type":"contains","value":"_{{academicYear}}_"}]',
+    responseRedactions: '[{"regex":"_(?<academicYear>2026-2027)_"}]',
+    specHash: "0xc4a4c2ee74a4a71a2aca7c3a6a1a89edc5f9322c1dfea358efe0e53733a8bc3a",
+  };
+  assert.equal(
+    pinInWords(toulouse, { field: "academicYear", matches: "^2026-2027$" }),
+    'version 1.0.0-ai.3 reads POST mondossierweb.univ-tlse3.fr/UIDL/ and keeps of the answer what matches "_(?<academicYear>2026-2027)_"; Viky counts it when academicYear matches "^2026-2027$"',
+  );
+  // The query of the address is not printed, and a results provider's fields are said elsewhere.
+  assert.doesNotMatch(pinInWords(toulouse, null), /v-uiId|Viky counts/);
+  // A pattern is printed as it is, cut when it is long, and a list that does not parse prints no pattern at all.
+  assert.match(pinInWords({ ...toulouse, responseRedactions: JSON.stringify([{ jsonPath: "$.status" }, { regex: "x".repeat(400) }]) }, null), /"x{200}…", "\$\.status"$/);
+  assert.equal(pinInWords({ ...toulouse, responseRedactions: "not json" }, null), "version 1.0.0-ai.3 reads POST mondossierweb.univ-tlse3.fr/UIDL/");
+  assert.match(readFileSync("app/judges/page.tsx", "utf8"), /line\.pin \? `pinned: \$\{pinInWords\(line\.pin, line\.sense === "enrolment" && line\.extract \? line\.extract : null\)\}` : "first proof awaited"/);
 });
 
 test("once pinned, another pattern, another request or another version of the provider is refused", async () => {

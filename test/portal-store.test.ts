@@ -28,6 +28,7 @@ import {
   removePortal,
   requestProvider,
   resultsExtractOf,
+  runProviderOn,
   savePortal,
   savePortalRows,
   saveProvider,
@@ -37,7 +38,7 @@ import {
 } from "../src/portal-store";
 import { providerInstruction } from "../src/provider-instruction";
 import type { SqlExecutor } from "../src/proof-session-store";
-import { UNIVERSITY_GRADE_SHOWN, UNIVERSITY_YEAR_SHOWN } from "../src/shown-conditions";
+import { portalProviderFor, UNIVERSITY_GRADE_SHOWN, UNIVERSITY_YEAR_SHOWN } from "../src/shown-conditions";
 import { ShownProofError } from "../src/shown-proof";
 import type { ResultsExtract } from "../src/university-shown";
 
@@ -291,6 +292,27 @@ test("a missing provider is asked for once, with its instruction, and a witness 
   // Asked again for the same sense once built: the request stays built.
   assert.notEqual((await requestProvider({ portalId: "uni-a-br", sense: "enrolment", instruction, giftId: null })).builtAt, null);
   assert.deepEqual((await witnessProviders())?.map((one) => [one.portalId, one.sense, one.domain]), [["uni-a-br", "enrolment", "a.br"]]);
+  assert.deepEqual(await providerCounts(), { listed: 4, enrolment: 3, results: 1, witness: 1, pinned: 1, requested: 0 });
+
+  // Pinned again on a rule written by hand (7 Oct 2026): the pin comes off, the version its sessions are opened on is
+  // set, and its next proof is held as a first one is. The university stays one that was read with a student.
+  assert.equal(await runProviderOn("uni-a-br", "results", { version: "1.0.1", operator: OPERATOR }), false, "no results provider to run");
+  await assert.rejects(runProviderOn("uni-a-br", "enrolment", { version: "latest", operator: OPERATOR }), /a version to run on/);
+  assert.equal((await loadPortal("uni-a-br"))?.enrolment?.pin?.specHash, pin.specHash, "a refused version changes nothing");
+  assert.equal(await runProviderOn("uni-a-br", "enrolment", { version: "1.0.1", operator: OPERATOR }), true);
+  const unpinned = (await loadPortal("uni-a-br"))!;
+  assert.equal(unpinned.enrolment?.pin, null);
+  assert.equal(unpinned.enrolment?.extract, null);
+  assert.equal(unpinned.enrolment?.providerVersion, "1.0.1");
+  assert.equal(unpinned.enrolment?.requestHash, "");
+  assert.equal(awaitingPin(unpinned.enrolment!), true);
+  assert.equal(portalProviderFor("university-enrollment-shown", unpinned)?.providerVersion, "1.0.1", "its sessions are opened on that version");
+  assert.equal(portalProviderFor("university-enrollment-shown", unpinned)?.witness?.pin, null, "and its next proof is held");
+  // Before any pin and with no version set, a provider's sessions name none: Reclaim's agent writes one.
+  assert.equal(portalProviderFor("university-enrollment-shown", { ...unpinned, enrolment: { ...unpinned.enrolment!, providerVersion: "" } })?.providerVersion, "");
+  // Pinned from the proof that follows, as every pin is.
+  assert.equal(await pinProvider("uni-a-br", "enrolment", { pin: { ...pin, providerVersion: "1.0.1" }, extract: { field: "academicYear", matches: "^2026.2027$", keeps: "whether enrolled in 2026" }, operator: OPERATOR }), true);
+  assert.equal((await loadPortal("uni-a-br"))?.enrolment?.pin?.providerVersion, "1.0.1");
   assert.deepEqual(await providerCounts(), { listed: 4, enrolment: 3, results: 1, witness: 1, pinned: 1, requested: 0 });
 });
 

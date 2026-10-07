@@ -175,3 +175,38 @@ export function isAgentVersion(version: string): boolean {
 export function isWitnessVersion(version: string): boolean {
   return isAgentVersion(version) || /^\d+\.\d+\.\d+$/.test(version);
 }
+
+/** The values one key holds across a pin's list, "regex" of its redactions or "value" of its matches. */
+function held(list: string, key: string): string[] {
+  try {
+    const parsedList: unknown = JSON.parse(list);
+    if (!Array.isArray(parsedList)) return [];
+    return parsedList.flatMap((one) => (one && typeof one === "object" && typeof (one as Record<string, unknown>)[key] === "string" ? [String((one as Record<string, unknown>)[key])] : []));
+  } catch {
+    return [];
+  }
+}
+
+const PRINTED_AT_MOST = 200;
+const printed = (text: string) => (text.length > PRINTED_AT_MOST ? `${text.slice(0, PRINTED_AT_MOST)}…` : text);
+
+/**
+ * What a pinned provider reads, as the judges' page prints it (7 Oct 2026): the version, the request, what its
+ * pattern keeps of the answer, and the field Viky then compares. Made from the pin itself, so the page says the rule
+ * in force and no other, and says a new one the day the provider is pinned again. A rule holds no name, no number
+ * and no faculty: the operator reads it before pinning, and this prints what was pinned.
+ */
+export function pinInWords(pin: WitnessPin, compared: Readonly<{ field: string; matches: string }> | null): string {
+  let where = pin.url;
+  try {
+    const url = new URL(pin.url);
+    where = `${url.hostname}${url.pathname}`;
+  } catch {
+    // A pin always holds an address a proof read; printed as it is if it ever does not parse.
+  }
+  const kept = [...held(pin.responseRedactions, "regex"), ...held(pin.responseRedactions, "jsonPath"), ...held(pin.responseRedactions, "xPath")];
+  const reads = `version ${pin.providerVersion} reads ${pin.method} ${where}`;
+  const keeps = kept.length > 0 ? ` and keeps of the answer what matches ${kept.map((one) => `"${printed(one)}"`).join(", ")}` : "";
+  const counts = compared ? `; Viky counts it when ${compared.field} matches "${printed(compared.matches)}"` : "";
+  return `${reads}${keeps}${counts}`;
+}
