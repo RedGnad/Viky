@@ -25,6 +25,11 @@ import type { SqlExecutor } from "./proof-session-store";
  * Reclaim (app/api/proof/verify/route.ts), whatever Viky then makes of it. The second is what Reclaim's dashboard
  * counts ("Proofs"), as far as it can be told from here: it showed none while one session had been opened.
  *
+ * Since 7 Oct 2026 the second row is written for every proof Reclaim made, whichever way it is verified. Until then
+ * it was written where the enclave's attestation is checked, which a university's portal never reaches (it is
+ * verified by the witness's signature), so the first university proofs were in Reclaim's month and not in this
+ * journal; and a proof made and never asked for was written nowhere at all (`countProofsNeverTaken`).
+ *
  * Past the limit Viky sends nothing to Reclaim and says so (`ReclaimLimitReached`, the refusal `LIMIT_REACHED`). The
  * same refusal is given when Reclaim itself answers that the quota is used up.
  *
@@ -483,6 +488,67 @@ export async function noteAttestedCall(call: AttestedCall, after: () => Promise<
   } catch (error) {
     console.error(`attested call not counted (${call.kind} ${call.source}): ${error instanceof Error ? error.message.slice(0, 200) : String(error).slice(0, 200)}`);
   }
+}
+
+/** Reclaim's states of a session whose proof was made and handed in: what its month counts. */
+export const RECLAIM_PROOF_MADE: readonly string[] = ["PROOF_SUBMITTED", "AI_PROOF_SUBMITTED"];
+
+/** How long after a session is opened it is looked up: past its own thirty minutes, when no page can take its proof any more. */
+export const NEVER_TAKEN_AFTER_SECONDS = 30 * 60;
+/** How far back sessions are looked up: a proof is made within minutes of its session or never. */
+export const NEVER_TAKEN_WINDOW_SECONDS = 3 * 86_400;
+
+export type NeverTakenDeps = Readonly<{
+  /** The state Reclaim gives for a session, read from its public record, or nothing when it does not answer. */
+  stateOf: (sessionId: string) => Promise<string | null>;
+}>;
+
+async function reclaimStateOf(sessionId: string): Promise<string | null> {
+  // Imported here and not at the top: the reading service loads this file and has no use for Reclaim's client.
+  const { fetchStatusUrl } = await import("@reclaimprotocol/js-sdk");
+  const status = (await fetchStatusUrl(sessionId)) as { session?: { statusV2?: string } };
+  return status.session?.statusV2 ?? null;
+}
+
+/**
+ * Counts the proofs Reclaim made that Viky never counted (7 Oct 2026). Run once a night by the watch.
+ *
+ * A proof is counted where it comes back (app/api/proof/verify/route.ts). One that never comes back was counted
+ * nowhere: on 7 Oct 2026 a student made two proofs the gift's page never asked for, and Reclaim's month had them
+ * while this journal showed none. So each session opened and not counted since is looked up in Reclaim's own public
+ * record, once its thirty minutes are over; where Reclaim says a proof was handed in, the row is written at the time
+ * the session was opened, so it falls in the cycle and on the day it belongs to. It is `ok` when Viky took the proof
+ * (the session's own row says so), and marked `NEVER_TAKEN` otherwise. A session Reclaim ended with no proof writes
+ * nothing. Returns how many rows were written.
+ */
+export async function countProofsNeverTaken(nowMs: number = Date.now(), deps: NeverTakenDeps = { stateOf: reclaimStateOf }): Promise<number> {
+  await ensureAttestedCallsSchema();
+  const from = new Date(nowMs - NEVER_TAKEN_WINDOW_SECONDS * 1_000).toISOString();
+  const until = new Date(nowMs - NEVER_TAKEN_AFTER_SECONDS * 1_000).toISOString();
+  const open = await sql()`
+    SELECT a.ref, a.source, a.at
+      FROM viky_attested_calls a
+     WHERE a.kind = 'asked' AND a.ref IS NOT NULL AND a.at >= ${from} AND a.at < ${until}
+       AND NOT EXISTS (SELECT 1 FROM viky_attested_calls v WHERE v.kind = 'verification' AND v.ref = a.ref)
+     ORDER BY a.at
+     LIMIT 60`;
+  let written = 0;
+  for (const row of open) {
+    const sessionId = String(row.ref);
+    const state = await deps.stateOf(sessionId).catch(() => null);
+    if (!state || !RECLAIM_PROOF_MADE.includes(state)) continue;
+    const taken = await sql()`
+      SELECT 1 FROM viky_proof_sessions
+       WHERE session_id = ${sessionId} AND consumed_at IS NOT NULL AND evidence IS NOT NULL AND evidence->>'stopped' IS NULL`.catch(() => []);
+    const at = row.at instanceof Date ? row.at.toISOString() : String(row.at);
+    const rows = await sql()`
+      INSERT INTO viky_attested_calls (at, kind, source, ok, code, ref)
+      VALUES (${at}, 'verification', ${String(row.source).slice(0, 80)}, ${taken.length > 0}, ${taken.length > 0 ? null : "NEVER_TAKEN"}, ${sessionId})
+      ON CONFLICT (kind, ref) WHERE ref IS NOT NULL DO NOTHING
+      RETURNING id`;
+    written += rows.length;
+  }
+  return written;
 }
 
 /**

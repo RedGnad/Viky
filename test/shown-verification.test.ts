@@ -11,7 +11,7 @@ import { PROOF_SESSION_TTL_SECONDS, type ProofSession } from "../src/proof-sessi
 import { PRIVACY, type ConditionPrivacy } from "../src/condition-privacy";
 import { SHOWN_CONDITIONS, type ShownEntry } from "../src/shown-conditions";
 import { ShownProofError } from "../src/shown-proof";
-import { SHOWN_MAX_PROOF_AGE_SECONDS, verifyShownSession, type ShownVerificationDeps } from "../src/shown-verification";
+import { RECLAIM_STOPPED, SHOWN_MAX_PROOF_AGE_SECONDS, verifyShownSession, type ShownVerificationDeps } from "../src/shown-verification";
 import { sdkProof } from "./reclaim-proof-set.test";
 
 /**
@@ -121,6 +121,34 @@ test("a milestone's proof is fresh for as long as its session lives, and the ses
   assert.equal(taken.kind, "reached");
   assert.equal((await verifyShownSession(deps({ fetchStatus: status(NOW - SHOWN_MAX_PROOF_AGE_SECONDS) }), { sessionId: SESSION_ID, account: ACCOUNT })).kind, "reached");
   await refuses("PROOF_TOO_OLD", () => verifyShownSession(deps({ fetchStatus: status(NOW - SHOWN_MAX_PROOF_AGE_SECONDS - 1) }), { sessionId: SESSION_ID, account: ACCOUNT }));
+});
+
+test("a session Reclaim ended with no proof is said as stopped and closed, so no page takes it up again", async () => {
+  // Seen once for real (7 Oct 2026, session 53800accd7): signed in, then nothing, then ERROR_SUBMITTED a quarter of an
+  // hour later. The page went on waiting, and its link led to a verification Reclaim had closed.
+  assert.deepEqual(RECLAIM_STOPPED, ["ERROR_SUBMITTED", "ERROR_SUBMISSION_FAILED", "PROOF_SUBMISSION_FAILED", "SESSION_CANCELLED"]);
+  const ended = (statusV2: string) => async () => ({ session: { sessionId: SESSION_ID, appId: APP_ID, providerId: "provider-test", providerVersionString: "1.0.0", statusV2, proofs: [], error: { type: "ReclaimVerificationAbortedException", message: "Connection lost. The session was disconnected." } } as never });
+  for (const state of RECLAIM_STOPPED) {
+    const closed: unknown[] = [];
+    const d = deps({ fetchStatus: ended(state), consumeShownSession: async (input) => (closed.push(input), true) });
+    await assert.rejects(verifyShownSession(d, { sessionId: SESSION_ID, account: ACCOUNT }), (error: unknown) => {
+      assert.ok(error instanceof VerificationError);
+      assert.equal(error.code, "VERIFICATION_STOPPED");
+      assert.equal(error.status, 409);
+      assert.equal(error.message, "The verification stopped before it made a proof. Show it again.");
+      return true;
+    });
+    assert.deepEqual(closed, [{ sessionId: SESSION_ID, evidence: { stopped: state }, attestation: { message: {}, signature: "0x" }, proofs: null }]);
+    assert.equal(d.proved.length, 0);
+    assert.equal(d.recorded.length, 0, "nothing was read, so nothing is written against the gift");
+  }
+  // A proof that failed to be made can be tried again inside the session (Reclaim's own client gives it thirty
+  // seconds), and a session nobody has finished is simply not there yet: neither is closed.
+  for (const state of ["PROOF_GENERATION_FAILED", "USER_STARTED_VERIFICATION", "SESSION_INIT", ""]) {
+    const closed: unknown[] = [];
+    await refuses("NO_PROOF_YET", () => verifyShownSession(deps({ fetchStatus: ended(state), consumeShownSession: async (input) => (closed.push(input), true) }), { sessionId: SESSION_ID, account: ACCOUNT }));
+    assert.equal(closed.length, 0, state);
+  }
 });
 
 test("what the contract would refuse is refused before anything is signed, each with its reason", async () => {

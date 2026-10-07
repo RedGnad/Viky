@@ -10,7 +10,7 @@ import { conditionById } from "@/src/conditions";
 import { LIMIT } from "@/src/sentences";
 import { loadLatestEvidence, loadOpenShownSession, PROOF_SESSION_TTL_SECONDS, pruneExpiredProofSessions, saveProofSession, type ProofSessionPhase } from "@/src/proof-session-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { reclaimChannelInitOptions, reclaimChannelLaunchOptions, resolveReclaimChannel } from "@/src/reclaim-channel";
+import { channelFor, reclaimChannelInitOptions, reclaimChannelLaunchOptions } from "@/src/reclaim-channel";
 import { loadGift } from "@/src/gift-store";
 import { loadMilestoneGift } from "@/src/milestone-store";
 import { shownConditionById, type ShownProvider } from "@/src/shown-conditions";
@@ -115,16 +115,18 @@ export async function POST(request: Request) {
     if (!providerId) throw new Error(provider?.missing?.message ?? "This gift names no portal a proof could come from");
 
     // A university read through a Reclaim AI provider (D312): the one case AI is accepted, verified by the pinned
-    // witness on the portal's domain. Before its pin, whichever version the agent writes; after, the pinned one.
+    // witness on the portal's domain. Before its pin, whichever version the agent writes, unless the operator set the
+    // version it runs on (a rule written by hand, src/portal-store.ts `runProviderOn`); after, the pinned one.
     const witness = provider?.witness;
-    const channel = resolveReclaimChannel();
+    // A university's portal runs on the portal channel whatever the setting says (src/reclaim-channel.ts).
+    const channel = channelFor({ witness: Boolean(witness) });
     // The month's limit of proofs (src/attested-calls.ts): said before the person starts, and nothing is opened at
     // Reclaim. The same when Reclaim itself refuses the session for its quota.
     if ((await limitsNow()).proofs) throw new ReclaimLimitReached("proofs");
     // A developer's machine opens no proof at Reclaim (src/attested-calls.ts).
     if (realReadingsOff()) throw new Error(REAL_READINGS_OFF);
     const proofRequest = await ReclaimProofRequest.init(appId, appSecret, providerId, {
-      ...(witness && !witness.pin ? {} : { providerVersion }),
+      ...(witness && !witness.pin && !providerVersion ? {} : { providerVersion }),
       // Everywhere else the portal can substitute AI-witnessed proofs while still reporting success. We refuse AI
       // there, and the verify route refuses anything without a verified TEE attestation anyway.
       acceptAiProviders: Boolean(witness),
