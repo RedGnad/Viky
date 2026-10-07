@@ -15,7 +15,8 @@ today (`PROOF_VERIFIER` unset):
    provider made for that portal). There is no TEE to require, so the proof is verified by the pinned witness's
    signature on the portal's own domain (`src/shown-verification.ts`). The first proof from a portal is held, nothing
    is relayed, and an operator reads what the pattern read before pinning it (`pnpm portal:pin`); once pinned, a proof
-   must match the pin exactly.
+   must match the pin exactly. Before the pin a page read with GET or with POST is held, since the provider chooses
+   how it reads (Toulouse's portal answers its pages to POST); the pin then fixes the method with the rest.
 3. **A reading Viky makes itself** (zkFetch: the daily Duolingo lesson, the Chess.com ratings, the certificates, a race,
    and a connected source's reading with the person's key). It is fetched through Reclaim's TEE client and verified
    server side by the attestor's signature only: js-sdk `verifyProof` checks it against the attestor list it fetches
