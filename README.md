@@ -60,11 +60,10 @@ pool, not another user.
 
 ## What we know about the two people
 
-**The one who pays** is an adult paying for another adult's studies or training from a distance. One measure of how
-common that is: France alone hosted 17,722 students from Senegal and 12,672 from Côte d'Ivoire in 2024-2025
-([Campus France](https://ressources.campusfrance.org/publications/mobilite_pays/fr/senegal_fr.pdf),
-[Campus France](https://ressources.campusfrance.org/publications/mobilite_pays/fr/cote_ivoire_fr.pdf)). That is an
-example, not a limit: Viky is a worldwide pilot, and both people confirm they are 18 or older.
+**The one who pays** pays for another person's studies or training from a distance. One measure of how common that
+is: nearly 7.3 million students study abroad
+([UNESCO](https://www.unesco.org/en/articles/number-students-higher-education-more-doubled-20-years-inequalities-remain),
+2023 data). Viky is a worldwide pilot, and both people confirm they are 18 or older.
 
 <!-- [What the funders we spoke to said, in their words.] -->
 

@@ -19,9 +19,9 @@ import { ButtonWords, WaitLine } from "../kit/Waiting";
  * with the time Switch publishes for the country, and then arrived, or that it failed and the money comes back.
  *
  * The operators, the rules of the number and of the name and the time are Switch's own for the country (`offer`, read
- * while the person looks). The amount is typed in the country's own money, francs in Senegal, and the dollars it takes
- * from the balance come second (the founder, 3 Oct 2026): the figure is Switch's quote for exactly the amount typed,
- * asked again whenever it changes. Nothing moves before the button.
+ * while the person looks). The amount is typed in the country's own money, francs for instance, and the dollars it
+ * takes from the balance come second (the founder, 3 Oct 2026): the figure is Switch's quote for exactly the amount
+ * typed, asked again whenever it changes. Nothing moves before the button.
  *
  * The bounds of the amount are what this account can really send (`payable`, the founder, 5 Oct 2026): the largest is
  * what the balance pays once changed, the cost included, so the amount the field opens on leaves at the first press.
