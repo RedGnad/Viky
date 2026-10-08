@@ -111,10 +111,11 @@ export const RECLAIM_CYCLE_DAY = 1;
 export const RECLAIM_ALERT_LEFT = [15, 10, 5, 0] as const;
 
 /**
- * The judging of the event this is built for, in UTC days, both included. Each of those mornings the operator is sent
- * what the day before spent (`morningSummaryDue`), from six o'clock UTC.
+ * The judging of the event this is built for, in UTC days, both included: to 3 Nov 2026 (the founder, 9 Oct 2026; it
+ * was 27 Oct). Each of those mornings the operator is sent what the day before spent (`morningSummaryDue`), from six
+ * o'clock UTC.
  */
-export const JUDGING = { from: "2026-10-14", until: "2026-10-27" } as const;
+export const JUDGING = { from: "2026-10-14", until: "2026-11-03" } as const;
 export const MORNING_SUMMARY_HOUR_UTC = 6;
 
 /**

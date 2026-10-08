@@ -363,9 +363,9 @@ test("the alert says the cycle, both counts, what stops at the limit, and how to
 });
 
 test("each morning of the judging the operator reads what the day before spent, by gift and by reason, what is left and when it starts again", async () => {
-  assert.deepEqual(JUDGING, { from: "2026-10-14", until: "2026-10-27" });
+  assert.deepEqual(JUDGING, { from: "2026-10-14", until: "2026-11-03" });
   const judging = (iso: string) => inJudging(Date.parse(iso));
-  assert.deepEqual(["2026-10-13T23:59:59Z", "2026-10-14T00:00:00Z", "2026-10-27T23:59:59Z", "2026-10-28T00:00:00Z"].map(judging), [false, true, true, false]);
+  assert.deepEqual(["2026-10-13T23:59:59Z", "2026-10-14T00:00:00Z", "2026-11-03T23:59:59Z", "2026-11-04T00:00:00Z"].map(judging), [false, true, true, false]);
 
   // The journal of 15 Oct: a gift's count, a milestone that failed once and then read, a fetch nobody named.
   await db.query(`INSERT INTO viky_attested_calls (at, kind, source, ok, gift, reason) VALUES
@@ -432,8 +432,8 @@ test("the morning's summary leaves once a day, from six o'clock UTC, and only du
   assert.equal(await due("2026-10-14T23:55:00Z"), null);
   // A morning the five-minute call missed is still told, later that day.
   assert.equal(await due("2026-10-15T13:20:00Z"), "Reclaim, 14 Oct 2026: 1 proof spent, 88 left until 1 Dec 2026");
-  assert.equal(await due("2026-10-27T06:00:00Z"), "Reclaim, 26 Oct 2026: 1 proof spent, 88 left until 1 Dec 2026", "the last morning");
-  assert.equal(await due("2026-10-28T06:00:00Z"), null, "the judging is over");
+  assert.equal(await due("2026-11-03T06:00:00Z"), "Reclaim, 2 Nov 2026: 1 proof spent, 88 left until 1 Dec 2026", "the last morning");
+  assert.equal(await due("2026-11-04T06:00:00Z"), null, "the judging is over");
   assert.equal(claimed.length, 3);
   // It rides the call that already arrives every five minutes, and leaves through the operator's alerts.
   const route = readFileSync("app/api/cron/milestones/route.ts", "utf8");

@@ -84,7 +84,10 @@ test("the universities are three lines a judge reads in a minute, and Rome's wai
   const minute = read("app/judges/JudgesMinute.tsx");
   assert.ok(minute.includes('<span className="block">Toulouse: a real student showed their enrolment, and the gift paid.</span>'));
   assert.ok(minute.includes("more: each set up within two days of a first gift.</span>"));
-  assert.ok(minute.includes('<span className="block">Every university&apos;s first proof is reviewed by hand, within the hour.</span>'));
+  // Both cases (the founder, 9 Oct 2026): a rule set ahead pays the proof that fits it at once, and review is for the rest.
+  assert.ok(minute.includes('<span className="block">A first proof that fits a rule set ahead for its university is paid at once.</span>'));
+  assert.ok(minute.includes('<span className="block">Any other first proof is reviewed by hand, within the hour.</span>'));
+  assert.ok(!minute.includes("Every university&apos;s first proof is reviewed by hand"));
   // How many more is counted as the page is served, by the thousand, never typed in.
   assert.ok(minute.includes("{countInWords(moreUniversities)} more: each set up within two days of a first gift."));
   assert.doesNotMatch(minute, /11,000/);
