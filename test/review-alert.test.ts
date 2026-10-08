@@ -16,7 +16,7 @@ const REVIEW = { sessionId: "session_12345678", portalId: "utoulouse-fr", sense:
 
 test("a first proof held for review is said to be checked within an hour, and the operator is emailed at once", async () => {
   assert.equal(SHOW_PROOF.held, "First proof from this university: checked within an hour.");
-  assert.equal(UNIVERSITY_CHOICE.allLine, "Set up on the first gift, within two days.", "setting a university up still waits on a student");
+  assert.equal(UNIVERSITY_CHOICE.more("11,000"), "11,000 more, added on request within two days", "setting a university up still waits on a student");
   const mail = reviewAlert(REVIEW, "Université de Toulouse");
   assert.equal(ALERT_TO, "founder@viky.cash");
   assert.equal(mail.subject, "First proof to review within the hour: Université de Toulouse (utoulouse-fr), enrolment");

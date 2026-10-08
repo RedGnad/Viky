@@ -68,7 +68,8 @@ export function ChoiceList<T extends string>({
     // which is what was making a title wrap that the image draws on one line.
     <fieldset className={`m-0 flex flex-col border-0 p-0 ${lines ? "gap-[var(--space-xs)]" : "gap-[var(--space-sm)]"}`} disabled={disabled}>
       {/* A family of a catalogue is a heading over its own rows, in the third voice, not a question in the body. */}
-      <legend className={legendHidden ? "sr-only" : lines ? `${CARD_LABEL} mb-[var(--space-sm)]` : "mb-[var(--space-sm)] font-medium"}>{legend}</legend>
+      {/* A heading long enough to wrap is cut in even lines, never one word alone on the second (8 Oct 2026). */}
+      <legend className={legendHidden ? "sr-only" : lines ? `${CARD_LABEL} mb-[var(--space-sm)] [text-wrap:balance]` : "mb-[var(--space-sm)] font-medium"}>{legend}</legend>
       {note ? <p className={`${HELP} mb-[var(--space-xs)]`}>{note}</p> : null}
       {options.map((option) => {
         const chosen = value === option.value;

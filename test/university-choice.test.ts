@@ -7,7 +7,8 @@ import { GET as searchGet } from "../app/api/portals/search/route";
 import { configurePortalStore, ensurePortalSchema, FOLD_FROM, FOLD_TO, foldForSearch, savePortalRows } from "../src/portal-store";
 import type { SqlExecutor } from "../src/proof-session-store";
 import { SHOW_PROOF, UNIVERSITY_CHOICE } from "../src/sentences";
-import { indexUniversities, inGroups, matching, shownUniversities, sortName, type ListedUniversity } from "../src/university-choice";
+import { countInWords, indexUniversities, inGroups, matching, senseOfCondition, shownUniversities, sortName, type ListedUniversity } from "../src/university-choice";
+import { readySenses } from "../src/university-ready";
 
 /**
  * "Which university?" (D247, D313, the founder, 29 and 30 Sep 2026): the world's list, read whole, opens on every
@@ -21,13 +22,63 @@ const LIST = [
   one("bem-sn", "BEM Dakar Management School", "Senegal", "SN"),
 ];
 
-test("a country's list in two groups, the tested first, the search on both, and a tested one never twice (the founder, 29 Sep 2026)", () => {
-  const list = [...LIST, { ...one("uadb-sn", "Université Alioune Diop de Bambey", "Senegal", "SN"), tested: true }];
-  assert.deepEqual(inGroups(list, "").tested.map((u) => u.pair), ["uadb-sn"]);
-  assert.deepEqual(inGroups(list, "").others.map((u) => u.pair), ["bem-sn", "ucad-sn", "ugb-sn"]);
-  assert.deepEqual(inGroups(list, "universite").tested.map((u) => u.pair), ["uadb-sn"]);
-  assert.deepEqual(inGroups(list, "universite").others.map((u) => u.pair), ["ucad-sn", "ugb-sn"]);
-  assert.deepEqual(inGroups(list, "bem"), { tested: [], others: [LIST[2]] });
+test("a country's list in two groups, the ones ready today first, the search on both, and a ready one never twice", () => {
+  const list = [...LIST, { ...one("uadb-sn", "Université Alioune Diop de Bambey", "Senegal", "SN"), ready: ["enrolment"] as const }];
+  assert.deepEqual(inGroups(list, "", "enrolment").ready.map((u) => u.pair), ["uadb-sn"]);
+  assert.deepEqual(inGroups(list, "", "enrolment").others.map((u) => u.pair), ["bem-sn", "ucad-sn", "ugb-sn"]);
+  assert.deepEqual(inGroups(list, "universite", "enrolment").ready.map((u) => u.pair), ["uadb-sn"]);
+  assert.deepEqual(inGroups(list, "universite", "enrolment").others.map((u) => u.pair), ["ucad-sn", "ugb-sn"]);
+  assert.deepEqual(inGroups(list, "bem", "enrolment"), { ready: [], others: [LIST[2]] });
+});
+
+test("ready today is said of what the gift asks: a university read for enrolment is not ready for a grade (the UI pass of 8 Oct 2026)", () => {
+  const list = [...LIST, { ...one("uadb-sn", "Université Alioune Diop de Bambey", "Senegal", "SN"), ready: ["enrolment"] as const }];
+  assert.equal(senseOfCondition("university-enrollment-shown"), "enrolment");
+  assert.equal(senseOfCondition("university-year-passed-shown"), "results");
+  assert.equal(senseOfCondition("university-grade-shown"), "results");
+  // The same senses the gift's own page reads each condition by.
+  assert.match(readFileSync("src/milestone-status.ts", "utf8"), /"university-enrollment-shown": "enrolment",\n  "university-year-passed-shown": "results",\n  "university-grade-shown": "results",/);
+  assert.deepEqual(inGroups(list, "", "results").ready, [], "its results page has no provider yet: it is set up like any other");
+  assert.deepEqual(inGroups(list, "", "results").others.map((u) => u.pair), ["uadb-sn", "bem-sn", "ucad-sn", "ugb-sn"]);
+  const index = indexUniversities(list);
+  assert.deepEqual(shownUniversities(index, "", null, "enrolment").ready.map((u) => u.pair), ["uadb-sn"]);
+  assert.deepEqual(shownUniversities(index, "", null, "results").ready, []);
+  assert.deepEqual(shownUniversities(index, "", "FR", "enrolment"), { ready: [], others: [] });
+  // The chooser asks by the gift's own condition.
+  const chooser = readFileSync("app/kit/offer/UniversityChooser.tsx", "utf8");
+  assert.match(chooser, /const sense = senseOfCondition\(draft\.conditionId\);/);
+  assert.match(chooser, /shownUniversities\(index, typed, country, sense\)/);
+});
+
+test("which universities are ready: a witness provider with its rule pinned, made by a first proof or ahead of one", () => {
+  const pin = { providerVersion: "3.0.0", url: "https://portal.test/", method: "POST", responseMatches: "[]", responseRedactions: "[]", specHash: `0x${"11".repeat(32)}` };
+  const witness = (over: Record<string, unknown>) => ({ portalId: "utoulouse-fr", providerId: "p", verification: "witness", domain: "utoulouse.fr", providerVersion: "3.0.0", requestHash: "", extract: null, pin: null, ...over }) as never;
+  // Toulouse on 8 Oct 2026: pinned ahead of any proof on a rule written by hand. Its students can show today.
+  assert.deepEqual(readySenses({ enrolment: witness({ pin: { ...pin, ahead: true, fixed: true } }) }), ["enrolment"]);
+  assert.deepEqual(readySenses({ enrolment: witness({ pin }) }), ["enrolment"]);
+  assert.deepEqual(readySenses({ enrolment: witness({ pin }), results: witness({ pin }) }), ["enrolment", "results"]);
+  // A witness provider no proof has pinned yet, a provider being built, and none at all.
+  assert.deepEqual(readySenses({ enrolment: witness({ pin: null }) }), []);
+  assert.deepEqual(readySenses({}), []);
+  // A provider taken from Reclaim's directory, as Rome's is, is not said ready by a rule: it goes up on its own checks.
+  assert.deepEqual(readySenses({ enrolment: witness({ verification: "tee", pin: null, requestHash: `0x${"22".repeat(32)}` }) }), []);
+});
+
+test("the second group's heading counts what it holds, by the thousand once there are thousands", () => {
+  assert.equal(countInWords(11_412), "11,000");
+  assert.equal(countInWords(11_000), "11,000");
+  assert.equal(countInWords(999), "999");
+  assert.equal(countInWords(312), "312");
+  assert.equal(countInWords(1), "1");
+  assert.equal(UNIVERSITY_CHOICE.more(countInWords(11_412)), "11,000 more, added on request within two days");
+  assert.equal(UNIVERSITY_CHOICE.moreAlone(countInWords(312)), "312 universities, added on request within two days");
+  assert.equal(UNIVERSITY_CHOICE.moreAlone(countInWords(1)), "1 university, added on request within two days");
+  // At 390 the heading of eleven thousand takes two lines: cut evenly, never one word alone on the second.
+  assert.match(readFileSync("app/kit/ChoiceList.tsx", "utf8"), /lines \? `\$\{CARD_LABEL\} mb-\[var\(--space-sm\)\] \[text-wrap:balance\]`/);
+  const chooser = readFileSync("app/kit/offer/UniversityChooser.tsx", "utf8");
+  assert.match(chooser, /legend=\{\(shown\.ready\.length > 0 \? W\.more : W\.moreAlone\)\(countInWords\(shown\.others\.length\)\)\}/);
+  // The line that said it under the heading is gone: the heading says it.
+  assert.doesNotMatch(chooser, /note=\{/);
 });
 
 test("the search within a country: every word, without case or accents, by name, and all of them when nothing is typed", () => {
@@ -55,8 +106,8 @@ test("the list route gives the countries with their counts, then one country's u
     assert.deepEqual(countries.countries, [{ code: "NG", count: 1 }, { code: "SN", count: 2 }]);
     const senegal = (await (await listGet(new Request("https://viky.test/api/portals?country=sn"))).json()) as { results: ListedUniversity[] };
     assert.deepEqual(senegal.results.map((u) => u.pair), ["ucad-sn", "ugb-sn"]);
-    assert.deepEqual(Object.keys(senegal.results[0]).sort(), ["country", "issuer", "pair", "scale", "tested", "title"], "no sign-in address, no provider; the scale a grade is typed on, and whether it was tested, for grouping");
-    assert.equal(senegal.results[0].tested, false);
+    assert.deepEqual(Object.keys(senegal.results[0]).sort(), ["country", "issuer", "pair", "ready", "scale", "tested", "title"], "no sign-in address, no provider; the scale a grade is typed on, and what it is ready for, for grouping");
+    assert.deepEqual(senegal.results[0].ready, []);
     assert.equal(senegal.results[0].scale, null);
     assert.equal(senegal.results[0].issuer, "Senegal");
     assert.equal((await listGet(new Request("https://viky.test/api/portals?country=Senegal"))).status, 400);
@@ -76,12 +127,11 @@ test("the chooser lists names alone, says nothing about checking, and invites th
   assert.doesNotMatch(chooser, /W\.reading\}<\/p>|Reading the/, "no sentence while the list is read: empty lines hold its place");
   // Nothing about checking in the chooser: that is said folded on the gift's page, where the proof is shown.
   assert.doesNotMatch(chooser, /<details|<summary|navigator\.share|clipboard/);
-  assert.deepEqual(Object.keys(UNIVERSITY_CHOICE).sort(), ["addYours", "all", "allLine", "change", "country", "everywhere", "inCountry", "notListed", "nothing", "reading", "search", "tested", "unreadable"]);
-  // The two groups' words, as the founder wrote them (29 Sep 2026), and nothing on each line.
-  assert.equal(UNIVERSITY_CHOICE.tested, "Tested with a student");
-  assert.equal(UNIVERSITY_CHOICE.all, "All universities");
-  assert.equal(UNIVERSITY_CHOICE.allLine, "Set up on the first gift, within two days.");
-  assert.doesNotMatch(JSON.stringify(Object.values(UNIVERSITY_CHOICE).filter((v) => typeof v === "string")), /unverified|password|proof|checked|connected/i);
+  assert.deepEqual(Object.keys(UNIVERSITY_CHOICE).sort(), ["addYours", "change", "country", "everywhere", "inCountry", "more", "moreAlone", "notListed", "nothing", "reading", "ready", "search", "unreadable"]);
+  // The two groups' words, as the founder validated them on the mockup of 8 Oct 2026, and nothing on each line.
+  assert.equal(UNIVERSITY_CHOICE.ready, "Ready today");
+  assert.equal(UNIVERSITY_CHOICE.more("11,000"), "11,000 more, added on request within two days");
+  assert.doesNotMatch(JSON.stringify([...Object.values(UNIVERSITY_CHOICE).filter((v) => typeof v === "string"), UNIVERSITY_CHOICE.more("1"), UNIVERSITY_CHOICE.moreAlone("1")]), /unverified|password|proof|checked|connected|tested/i);
   // One line under the list: the question and the link to the page a student adds theirs from.
   assert.equal(`${UNIVERSITY_CHOICE.notListed} ${UNIVERSITY_CHOICE.addYours}`, "Yours isn't here? Add your university");
   // The question, and beside it a small button to the page a student adds theirs from: never a link in the text.
@@ -119,16 +169,16 @@ test("the list shows every university, drawn a hundred at a time as its end come
 test("the whole list is indexed once by own name, and shown whole, narrowed by country and by every word typed", () => {
   const list = [
     one("ut1-fr", "Toulouse I Capitole University", "France", "FR"),
-    { ...one("ucad-sn", "Université Cheikh Anta Diop", "Senegal", "SN"), tested: true },
+    { ...one("ucad-sn", "Université Cheikh Anta Diop", "Senegal", "SN"), ready: ["enrolment"] as const },
     one("ut3-fr", "Université de Toulouse (Paul Sabatier)", "France", "FR"),
     one("ugb-sn", "Université Gaston Berger", "Senegal", "SN"),
   ];
   const index = indexUniversities(list);
   const pairs = (words: string, country: string | null) => {
-    const shown = shownUniversities(index, words, country);
-    return [shown.tested.map((u) => u.pair), shown.others.map((u) => u.pair)];
+    const shown = shownUniversities(index, words, country, "enrolment");
+    return [shown.ready.map((u) => u.pair), shown.others.map((u) => u.pair)];
   };
-  assert.deepEqual(pairs("", null), [["ucad-sn"], ["ugb-sn", "ut3-fr", "ut1-fr"]], "every country, the tested first, the others by own name");
+  assert.deepEqual(pairs("", null), [["ucad-sn"], ["ugb-sn", "ut3-fr", "ut1-fr"]], "every country, the ones ready today first, the others by own name");
   assert.deepEqual(pairs("", "FR"), [[], ["ut3-fr", "ut1-fr"]], "Toulouse (Paul Sabatier) beside Toulouse I Capitole");
   assert.deepEqual(pairs("toulouse universite", null), [[], ["ut3-fr"]], "every word, in any order, without its accent");
   assert.deepEqual(pairs("cheikh", "FR"), [[], []], "a country narrows the search too");
@@ -156,7 +206,7 @@ test("the whole list comes in one answer kept five minutes at the edge, and the 
     assert.match(String(whole.headers.get("cache-control")), /public, max-age=0, s-maxage=300/);
     const everything = ((await whole.json()) as { results: ListedUniversity[] }).results;
     assert.deepEqual(everything.map((u) => u.pair).sort(), ["ucad-sn", "ucam-gb", "ut1-fr", "ut3-fr", "uwr-pl"], "every country, every university");
-    assert.deepEqual(Object.keys(everything[0]).sort(), ["country", "issuer", "pair", "scale", "tested", "title"], "the shape of a country's list");
+    assert.deepEqual(Object.keys(everything[0]).sort(), ["country", "issuer", "pair", "ready", "scale", "tested", "title"], "the shape of a country's list");
 
     const search = async (query: string) => (await (await searchGet(new Request(`https://viky.test/api/portals/search?${query}`))).json()) as { results: ListedUniversity[]; more: boolean };
     const pairs = async (query: string) => (await search(query)).results.map((u) => u.pair);
@@ -168,7 +218,7 @@ test("the whole list comes in one answer kept five minutes at the edge, and the 
     assert.deepEqual(await pairs("q=cambridge&except=FR"), ["ucam-gb"]);
     assert.deepEqual(await pairs("q=sn"), ["ucad-sn"], "a country's two letters");
     const answer = await search("q=cambridge");
-    assert.deepEqual(Object.keys(answer.results[0]).sort(), ["country", "issuer", "pair", "scale", "tested", "title"], "the shape of a country's list");
+    assert.deepEqual(Object.keys(answer.results[0]).sort(), ["country", "issuer", "pair", "ready", "scale", "tested", "title"], "the shape of a country's list");
     assert.equal(answer.more, false);
     assert.equal((await searchGet(new Request("https://viky.test/api/portals/search?q=%25"))).status, 400);
   } finally {

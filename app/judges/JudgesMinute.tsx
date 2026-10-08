@@ -4,6 +4,7 @@ import { formatAusd } from "@/src/gift-reader";
 import { BLOCK_TIME, creditedDayMon, dollarsOf, FINALITY_GAP, monWords, RELAYER_FEES } from "@/src/measured";
 import { PUBLIC_RPC_URL } from "@/src/monad/chain";
 import { founderAccounts, usageOf } from "@/src/pilot-accounts";
+import { countInWords } from "@/src/university-choice";
 import { CopyLine } from "../kit/CopyLine";
 import { TITLE } from "../components/ui";
 
@@ -25,11 +26,25 @@ function Address({ address }: Readonly<{ address: string }>) {
  * for, who has used it in one line, where it runs, why Monad in three lines, and one command. Everything here is said
  * again, at length and with its source, in a section below; this block adds no claim of its own.
  *
+ * The universities are three lines: the one a student has shown from, with the gift it paid (its transactions are in
+ * the README), how many more are listed, counted from the list as the page is served, and what happens to a first
+ * proof. What a first proof meets exactly, held and read or paid on a rule fixed ahead, is said under "Providers read
+ * through a witness".
+ *
  * The figures of use are counted from the index as the page is served, the same count as "Who has used Viky"; when
  * the index does not answer the line says so and gives no figure. The figures of "Why Monad" are the measured ones
  * (src/measured.ts), each with its date in the section that states it in full.
  */
-export function JudgesMinute({ index, contracts }: Readonly<{ index: IndexRead | null; contracts: Readonly<{ daily: string | null; milestone: string | null; anchor: string | null; version: 1 | 2 | 3 }> }>) {
+export function JudgesMinute({
+  index,
+  contracts,
+  moreUniversities,
+}: Readonly<{
+  index: IndexRead | null;
+  contracts: Readonly<{ daily: string | null; milestone: string | null; anchor: string | null; version: 1 | 2 | 3 }>;
+  /** How many universities are listed beyond the ones a student can show from today, or nothing when not counted. */
+  moreUniversities: number | null;
+}>) {
   const usage = index ? usageOf(index.gifts, founderAccounts(operatorAccounts())) : null;
   return (
     <section className="space-y-[var(--space-sm)]" id="minute">
@@ -64,6 +79,14 @@ export function JudgesMinute({ index, contracts }: Readonly<{ index: IndexRead |
             who has used Viky
           </a>
           .
+        </dd>
+        {/* The universities in lines (the UI pass of 8 Oct 2026): what has run, how many more, and what happens to a
+            first proof. A university ready on a check of Reclaim's alone gets its line when that check passes. */}
+        <dt className={MUTED}>Universities</dt>
+        <dd className={HELP} data-minute="universities">
+          <span className="block">Toulouse: a real student showed their enrolment, and the gift paid.</span>
+          {moreUniversities !== null && moreUniversities > 0 ? <span className="block">{countInWords(moreUniversities)} more: each set up within two days of a first gift.</span> : null}
+          <span className="block">Every university&apos;s first proof is reviewed by hand, within the hour.</span>
         </dd>
         <dt className={MUTED}>Where it runs</dt>
         <dd className={HELP} data-minute="addresses">

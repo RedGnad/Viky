@@ -172,8 +172,8 @@ function universities(): unknown {
       issuer: names.of(row.country) ?? row.country,
       country: row.country,
       scale: null,
-      // The one university the register's own comment names as read from a first proof (D200), so the first group shows.
-      tested: row.portalId === "aur-edu",
+      // One university read for enrolment today, so the first group shows.
+      ready: row.portalId === "aur-edu" ? ["enrolment"] : [],
     })),
   };
 }

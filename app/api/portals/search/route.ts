@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { NO_STORE } from "@/src/gift-api";
-import { isValidPortalSearch, PORTAL_SEARCH_LIMIT, portalListed, searchPortals } from "@/src/portal-store";
+import { isValidPortalSearch, PORTAL_SEARCH_LIMIT, searchPortals } from "@/src/portal-store";
+import { universityListed } from "@/src/university-ready";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
 export const runtime = "nodejs";
@@ -22,5 +23,5 @@ export async function GET(request: Request) {
   const words = params.get("q") ?? "";
   if (!isValidPortalSearch(words)) return NextResponse.json({ code: "INVALID_SEARCH", error: "Type a word or two of the university's name" }, { status: 400, headers: NO_STORE });
   const portals = await searchPortals(words, { except: params.get("except")?.trim().toUpperCase(), limit: PORTAL_SEARCH_LIMIT + 1 });
-  return NextResponse.json({ results: portals.slice(0, PORTAL_SEARCH_LIMIT).map(portalListed), more: portals.length > PORTAL_SEARCH_LIMIT }, { headers: NO_STORE });
+  return NextResponse.json({ results: portals.slice(0, PORTAL_SEARCH_LIMIT).map(universityListed), more: portals.length > PORTAL_SEARCH_LIMIT }, { headers: NO_STORE });
 }

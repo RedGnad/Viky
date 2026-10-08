@@ -14,9 +14,28 @@ export type ListedUniversity = Readonly<{
   country: string;
   /** The grading scale its results provider pins ("20", "letters"), or nothing while none is pinned. */
   scale?: string | null;
-  /** Tested with a student: a provider of it pinned from a reviewed first proof. Only for grouping, never said on the line. */
-  tested?: boolean;
+  /**
+   * The senses a student of it can show a proof of today (src/university-ready.ts): its provider of that sense is in
+   * place, with the rule its proofs are checked against. Only for grouping, never said on the line.
+   */
+  ready?: readonly UniversitySense[];
 }>;
+
+/** What a university gift asks its student to show: that they are enrolled, or a page of results (D313). */
+export type UniversitySense = "enrolment" | "results";
+
+/** The sense a gift's condition reads: enrolment for "enrolled", the results page for a year passed and for a grade. */
+export function senseOfCondition(conditionId: string): UniversitySense {
+  return conditionId === "university-enrollment-shown" ? "enrolment" : "results";
+}
+
+/**
+ * How many universities a group holds, as its heading says it: by the thousand once there are thousands, since the
+ * list grows by the day and a heading is not a count to check, and the number itself under that.
+ */
+export function countInWords(count: number): string {
+  return (count >= 1_000 ? Math.floor(count / 1_000) * 1_000 : count).toLocaleString("en-US");
+}
 
 /** The chosen university as the gift's sentence reads it: its name and its country. */
 export function chosenUniversityTitle(one: ListedUniversity): string {
@@ -27,13 +46,15 @@ export function chosenUniversityTitle(one: ListedUniversity): string {
 const folded = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 
 /**
- * One country's universities as the chooser draws them (the founder, 29 Sep 2026): those tested with a student first,
- * then all the others, the search on both.
+ * One country's universities as the chooser draws them (the founder, 29 Sep 2026, and the UI pass of 8 Oct 2026): those
+ * a student can show from today first, for what the gift asks, then all the others, the search on both.
  */
-export function inGroups(universities: readonly ListedUniversity[], words: string): Readonly<{ tested: readonly ListedUniversity[]; others: readonly ListedUniversity[] }> {
+export function inGroups(universities: readonly ListedUniversity[], words: string, sense: UniversitySense): Readonly<{ ready: readonly ListedUniversity[]; others: readonly ListedUniversity[] }> {
   const found = matching(universities, words);
-  return { tested: found.filter((one) => one.tested === true), others: found.filter((one) => one.tested !== true) };
+  return { ready: found.filter((one) => readyOn(one, sense)), others: found.filter((one) => !readyOn(one, sense)) };
 }
+
+const readyOn = (one: ListedUniversity, sense: UniversitySense) => one.ready?.includes(sense) === true;
 
 /**
  * What a university is sorted by (the founder, 29 Sep 2026): its own name, without the word every university's name
@@ -72,16 +93,17 @@ export function indexUniversities(universities: readonly ListedUniversity[]): re
 
 /**
  * What the chooser shows (the founder, 30 Sep 2026): every university, or one country's when a country is chosen, those
- * whose name carries every word typed, the tested first and then all the others, each group by own name.
+ * whose name carries every word typed, the ones ready today for what the gift asks first and then all the others, each
+ * group by own name.
  */
-export function shownUniversities(index: readonly IndexedUniversity[], words: string, country: string | null): Readonly<{ tested: readonly ListedUniversity[]; others: readonly ListedUniversity[] }> {
+export function shownUniversities(index: readonly IndexedUniversity[], words: string, country: string | null, sense: UniversitySense): Readonly<{ ready: readonly ListedUniversity[]; others: readonly ListedUniversity[] }> {
   const wanted = folded(words).split(/\s+/).filter(Boolean);
-  const tested: ListedUniversity[] = [];
+  const ready: ListedUniversity[] = [];
   const others: ListedUniversity[] = [];
   for (const entry of index) {
     if (country && entry.one.country !== country) continue;
     if (!wanted.every((word) => entry.name.includes(word))) continue;
-    (entry.one.tested === true ? tested : others).push(entry.one);
+    (readyOn(entry.one, sense) ? ready : others).push(entry.one);
   }
-  return { tested, others };
+  return { ready, others };
 }

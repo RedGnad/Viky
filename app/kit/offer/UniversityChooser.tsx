@@ -5,7 +5,7 @@ import { listAllUniversities } from "@/src/client/certificate-gift";
 import type { GiftDraft } from "@/src/gift-draft";
 import { countryInWords } from "@/src/rail-country";
 import { UNIVERSITY_CHOICE as W } from "@/src/sentences";
-import { indexUniversities, shownUniversities, type IndexedUniversity, type ListedUniversity } from "@/src/university-choice";
+import { countInWords, indexUniversities, senseOfCondition, shownUniversities, type IndexedUniversity, type ListedUniversity } from "@/src/university-choice";
 import { CHOICE, HELP, META, SMALL_BUTTON } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
 import { CountryPicker } from "../CountryPicker";
@@ -53,6 +53,9 @@ const PAGE = 100;
  * chip in the app's button style narrows it to one country. Every line says its country until one is chosen. While the
  * list is read, empty lines hold its place and nothing is written.
  *
+ * Two groups (the UI pass of 8 Oct 2026): the universities a student can show from today, for what this gift asks, and
+ * every other, under how many they are and how fast one is added.
+ *
  * All of it is listed: the lines are drawn a hundred at a time as the end comes near, so eleven thousand of them do not
  * weigh on a phone, and nothing is held back. Once a university is chosen the list folds into it, with a way to change
  * it, so what comes after (a grade) is in reach. Under the list one invitation to add a university (D264): a university
@@ -96,7 +99,9 @@ export function UniversityChooser({
   // What is typed narrows the list a moment later than the field shows it, so typing never waits on eleven thousand lines.
   const typed = useDeferredValue(words.trim());
   const countries = useMemo(() => (Array.isArray(index) ? [...new Set(index.map((entry) => entry.one.country))] : []), [index]);
-  const shown = useMemo(() => (Array.isArray(index) ? shownUniversities(index, typed, country) : null), [index, typed, country]);
+  // Ready is said of what this gift asks for: enrolment, or a page of results.
+  const sense = senseOfCondition(draft.conditionId);
+  const shown = useMemo(() => (Array.isArray(index) ? shownUniversities(index, typed, country, sense) : null), [index, typed, country, sense]);
   const listKey = `${country ?? ""}|${typed}`;
   const count = drawn.key === listKey ? drawn.count : PAGE;
 
@@ -172,12 +177,19 @@ export function UniversityChooser({
         <p className={HELP}>{W.unreadable}</p>
       ) : (
         <>
-          {shown.tested.length > 0 ? <ChoiceList name="university" legend={W.tested} shape="lines" value={value} onChange={pick(shown.tested)} options={shown.tested.map(line)} /> : null}
+          {shown.ready.length > 0 ? <ChoiceList name="university" legend={W.ready} shape="lines" value={value} onChange={pick(shown.ready)} options={shown.ready.map(line)} /> : null}
           {shown.others.length > 0 ? (
-            <ChoiceList name="university" legend={W.all} note={W.allLine} shape="lines" value={value} onChange={pick(shown.others)} options={shown.others.slice(0, count).map(line)} />
+            <ChoiceList
+              name="university"
+              legend={(shown.ready.length > 0 ? W.more : W.moreAlone)(countInWords(shown.others.length))}
+              shape="lines"
+              value={value}
+              onChange={pick(shown.others)}
+              options={shown.others.slice(0, count).map(line)}
+            />
           ) : null}
           {shown.others.length > count ? <MoreWhenNear onNear={() => setDrawn({ key: listKey, count: count + PAGE })} /> : null}
-          {shown.tested.length + shown.others.length === 0 ? <p className={HELP}>{W.nothing}</p> : null}
+          {shown.ready.length + shown.others.length === 0 ? <p className={HELP}>{W.nothing}</p> : null}
         </>
       )}
       {/* One line under the list (D264): an invitation, and nothing about how a university is checked, which the gift's

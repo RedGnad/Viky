@@ -79,3 +79,35 @@ test("the minute says what Viky is, for whom, who used it, where it runs, why Mo
   // Never the claims the product rules forbid.
   assert.doesNotMatch(minute, /cheaper than a bank|nobody does this|no licen[cs]e/i);
 });
+
+test("the universities are three lines a judge reads in a minute, and Rome's waits on its own checks (the UI pass of 8 Oct 2026)", () => {
+  const minute = read("app/judges/JudgesMinute.tsx");
+  assert.ok(minute.includes('<span className="block">Toulouse: a real student showed their enrolment, and the gift paid.</span>'));
+  assert.ok(minute.includes("more: each set up within two days of a first gift.</span>"));
+  assert.ok(minute.includes('<span className="block">Every university&apos;s first proof is reviewed by hand, within the hour.</span>'));
+  // How many more is counted as the page is served, by the thousand, never typed in.
+  assert.ok(minute.includes("{countInWords(moreUniversities)} more: each set up within two days of a first gift."));
+  assert.doesNotMatch(minute, /11,000/);
+  const page = read("app/judges/page.tsx");
+  assert.ok(page.includes("moreUniversities={portals && witnessLines ? Math.max(0, portals.listed - new Set(witnessLines.filter((line) => line.pin).map((line) => line.portalId)).size) : null}"));
+  // The gift Toulouse's line speaks of is the one the README gives the three transactions of.
+  assert.match(read("README.md"), /Gift 1000006 on\s+the second `MilestoneGift`, 8\.98 AUSD for staying enrolled/);
+  // Rome's line is written only once its three checks pass: on 8 Oct 2026 the request hash its row holds was not the
+  // one Reclaim's own SDK derives from the provider's published configuration.
+  assert.doesNotMatch(minute, /Rome/);
+});
+
+test("what a first proof meets is said in both cases: held and read, or paid on a rule fixed ahead (the audit of 8 Oct 2026)", () => {
+  const page = read("app/judges/page.tsx").replace(/\s+/g, " ");
+  assert.ok(page.includes("That first proof is held, never paid on its own: the operator reads what the pattern read"));
+  assert.ok(page.includes("The second case, since 8 Oct 2026: the operator can fix a university&apos;s rule ahead of any proof"));
+  assert.ok(page.includes("first proof that fits it whole is paid at once, with nobody reading it first; one that does not fit is held and read as a first proof is, never refused."));
+  // The code that makes the second case true: a proof that fits a pin made ahead is settled, one that does not is held.
+  const verification = read("src/shown-verification.ts");
+  assert.match(verification, /const ahead = Boolean\(witness\?\.pin\?\.ahead\);/);
+  assert.match(verification, /if \(witness && ahead && deps\.confirmPin\) await deps\.confirmPin\(witness\.portalId, witness\.sense\)/);
+  // And the line each university condition carries on the page says the same.
+  const proof = read("src/condition-proof.ts");
+  assert.equal(proof.split("where the operator fixed the rule ahead, from a version Reclaim publishes, the first proof that fits it is paid at once and one that does not is held.").length - 1, 2);
+  assert.doesNotMatch(proof, /the first proof from an AI provider is read by the operator before anything pays\./);
+});
