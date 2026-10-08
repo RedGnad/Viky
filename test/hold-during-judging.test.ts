@@ -542,8 +542,9 @@ test("a connection may try the judge code ten times a day, and the eleventh is r
   assert.match(readFileSync("app/api/judge/credit/route.ts", "utf8"), /await admitJudgeTry\(request\)/);
 });
 
-test("the credit still ends on 28 Oct 2026 UTC: its date moves only on the founder's word", () => {
-  assert.equal(JUDGE_CREDIT_ENDS, Date.UTC(2026, 9, 28));
+test("the credit ends at 5 Nov 2026, 00:00 UTC, on the founder's word of 9 Oct 2026: its date moves on his word alone", () => {
+  assert.equal(JUDGE_CREDIT_ENDS, Date.UTC(2026, 10, 5));
+  assert.equal(new Date(JUDGE_CREDIT_ENDS).toISOString(), "2026-11-05T00:00:00.000Z");
 });
 
 // --- the doors that were open --------------------------------------------------------------------------------------

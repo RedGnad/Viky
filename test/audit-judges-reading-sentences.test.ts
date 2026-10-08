@@ -170,7 +170,7 @@ test("the cycle's detail is said as it is: October's real count, and September's
   assert.ok(page.includes("in September&apos;s cycle readings went on giving their proof after the hundredth fetch was started, with no refusal for a quota: {SEPTEMBER_2026.proofs}{\" \"} proofs given that we know of, for at least {SEPTEMBER_2026.started} fetches started."));
   // The operator's alerts, as the page says them, are the marks and the judging the code holds.
   assert.deepEqual(RECLAIM_ALERT_LEFT, [15, 10, 5, 0]);
-  assert.deepEqual(JUDGING, { from: "2026-10-14", until: "2026-10-27" });
+  assert.deepEqual(JUDGING, { from: "2026-10-14", until: "2026-11-03" });
   assert.ok(page.includes('{RECLAIM_ALERT_LEFT.filter((mark) => mark > 0).join(", ")} and none are left of an allowance'));
   assert.ok(!page.includes("at half of an allowance"), "the shares are gone");
   assert.ok(!page.includes("each attempt to connect an account by a code in its name is still a proof"), "closed on 3 Oct 2026 by the look for the code");

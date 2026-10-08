@@ -22,7 +22,11 @@ export const DIRECTORY_PORTALS: readonly DirectoryPortal[] = [
     // "American University of Rome", "Student Status", version 1.0.0, WITNESS, used by three applications.
     providerId: "8a769077-53f8-4bbb-b75f-d2afe3eb6a42",
     providerVersion: "1.0.0",
-    requestHash: "0xe7543349ac7ac9b06c34a04ad8a1b5062e699513a8fcb61b1f82d85b6f06f18c",
+    // The hash a proof of this version carries, as Reclaim's own library works it out from the published request
+    // (`fetchProviderHashRequirementsBy`, read 9 Oct 2026; the same working-out gives the hash Toulouse's real proofs
+    // carry). The configuration also publishes a `requestHash` field, 0xe754...f18c, which is not that hash: this row
+    // held it until 9 Oct 2026, and a proof from Rome would not have fitted it. No student of Rome has shown one yet.
+    requestHash: "0x19bf1b0a18b2f66b9612b82348e97e070fd076db972d279131cdaf15beba11c2",
     loginUrl: "https://my.aur.edu/ics",
     // `GET https://my.aur.edu/ICS/Student/`: the student's own course schedule page, "Course Schedule for <name>", and
     // the term it is for, "<term> - All Divisions". A schedule of this academic year is what says enrolled now.
