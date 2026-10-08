@@ -3,7 +3,7 @@ import { LIMIT } from "@/src/sentences";
 import { PROOF_EVERY_SECONDS } from "@/src/milestone-reading";
 import { formatAusd } from "@/src/gift-reader";
 import { judgeCreditConfig, judgeCreditsStanding, standingInWords } from "@/src/judge-credit";
-import { rampHostApiKey, rampnowWayIn } from "@/src/rails";
+import { rampHostApiKey, rampnowWayIn, waysIn } from "@/src/rails";
 import { rampnowFrameOn } from "@/src/rampnow-frame";
 import { usdcRouterAddress } from "@/src/usdc-router";
 import { USDC_ROUTER } from "@/src/viky-contracts";
@@ -130,6 +130,49 @@ export default async function JudgesPage() {
   const judgeCredit = judgeCreditConfig();
   // How many were given and how many the ceiling still allows, counted from the journal at each reading of the page.
   const judgeStanding = judgeCredit ? await judgeCreditsStanding(judgeCredit).catch(() => null) : null;
+  // How money comes in, a block for each service, drawn in the order the pay sheet tries them (src/rails.ts, `waysIn`).
+  const rampWay = (
+    <>
+      <p className={HELP}>
+        {rampnowOn ? "After Rampnow, the way is Ramp: a" : "A"} funder pays by card or bank transfer on Ramp&apos;s own page, not Viky&apos;s. Ramp Swaps (Ireland) Limited is an
+        authorised crypto-asset service provider under MiCA, regulated by the Central Bank of Ireland (
+        <a className="underline" href="https://rampnetwork.com/licenses-and-registrations">Ramp&apos;s licences and registrations</a>
+        , read 27 Sep 2026). What arrives in the funder&apos;s account is AUSD on Monad, <code>MONAD_AUSD</code> in Ramp&apos;s
+        own asset list, the asset the gift contract holds, so nothing is swapped after it. Where Ramp does not serve, the
+        {rampnowOn ? " last" : " second"} way is Mercuryo, which delivers MON that the account then swaps to AUSD.
+      </p>
+      <p className={HELP}>
+        The next step is Ramp embedded with a partner key. Without one, Ramp&apos;s page answers any pre-filled
+        parameter with &quot;Integration issue detected&quot; (read on its live page and in its own script, 27 Sep 2026), so
+        today it opens bare and the funder copies their account from Viky&apos;s waiting screen. With the key, the page
+        opens with the account, the amount in euros and AUSD already filled in.{" "}
+        {rampHostApiKey() ? "The key is set on this deployment: the page opens filled in." : "The key is not set on this deployment yet."}
+      </p>
+    </>
+  );
+  const rampnowWay = (
+    <p className={HELP} data-rampnow-way>
+      {rampnowOn ? "The first way is Rampnow" : "Rampnow, switched off here, is a way"}, by card: the funder pays on Rampnow&apos;s page, which delivers USDC on Monad to their
+      account, and the converter changes it into AUSD on one signature, though the account holds none of the
+      chain&apos;s coin. The converter is a second copy of the way out&apos;s contract, ExitRouter, set on USDC
+      {converter ? (
+        <>
+          {" "}at{" "}
+          <a className="underline" href={`https://monadvision.com/address/${converter}`}>
+            <code>{converter}</code>
+          </a>
+          , its source verified through Sourcify on 3 Oct 2026, and its owner read with the others&apos; under Network
+        </>
+      ) : null}
+      . A conversion promises at least ninety-nine for a hundred, or nothing moves.{" "}
+      {rampnowOn
+        ? rampnowFrameOn()
+          ? "Rampnow's page opens in a frame inside Viky. Its limit: Rampnow finishes a payment from its own page (the card buys USDC on Base, and its page then sends it on to Monad), so the frame has to stay open until the money arrives. The frame has no cross: one way out under it while no payment is known, \"Go back without paying\", and one after five minutes without the money. Left before the end, the payment waits at Rampnow: the screen that waits leads back to it, and opens another only when the person answers that they did not pay. Seen on the first payment through the frame, on 3 Oct 2026: 6 EUR paid at 21:23 UTC, the frame closed, the money held on Base for 14 minutes, then 5.60 USDC on the account at 21:38 UTC, once Rampnow's page was opened in a tab. Where the frame cannot keep the person signed in at Rampnow, it is never shown: \"Pay by card\" opens Rampnow's page in a tab of its own, and the payment is followed as one started from a tab. That is Safari's engine before 18.4 and from 18.5 to 26.1, so every browser on an iPhone at those versions: Rampnow's session in a frame lives in cookies set \"Partitioned\", which that engine reads in 18.4 and from 26.2. Measured on Safari 17.6 on 4 Oct 2026, on a neutral page holding the same frame: after the code received by e-mail, Rampnow's page went back to its sign-in form. It is read from what the browser says of itself; it was not measured on viky.cash in Safari, nor on the versions in between. "
+          : "Rampnow's page opens in a tab of its own. "
+        : null}
+      <UseLine use={conversion} name="rampnow" />
+    </p>
+  );
   return (
     <Shell kind="document" back="/me">
       <header className="space-y-[var(--space-lg)]">
@@ -178,13 +221,16 @@ export default async function JudgesPage() {
             offers to make the gift that amount.
           </li>
           <li>
-            To see the other side on this device: copy the link, press Me, then Use another account, open the link and
+            To see the other side on this device: copy the link, press Me, then Other account, open the link and
             press Create my account. Press Open my gift, then connect the source. With one account you only ever see
             the funder&apos;s side of your own gift.
           </li>
           <li data-try-paths>
-            What to offer, and what each costs of the month&apos;s attested readings, which are few and counted under
-            &quot;How a day is read&quot;, below.
+            What to offer. Each path asks something of you: Duolingo, an account there, and a lesson done after you
+            connect it; Chess.com, an account there, and one rating point won. With no account of a source, the path
+            is the link of a gift already made, where the portal&apos;s instructions give one (the next step). And what
+            each costs of the month&apos;s attested readings, which are few and counted under &quot;How a day is
+            read&quot;, below.
             {reclaimUse ? <span data-readings-left> {readingsLeftInWords(reclaimUse)}</span> : null}
             <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)] pt-[var(--space-xs)]">
               <li>
@@ -391,42 +437,26 @@ export default async function JudgesPage() {
 
       {/* How money comes in (D289): through a licensed partner, the asset named, and the next step said as it is. */}
       <Fold id="money-in" title="How money comes in">
-        <p className={HELP}>
-          A funder pays by card or bank transfer on Ramp&apos;s own page, not Viky&apos;s. Ramp Swaps (Ireland) Limited is an
-          authorised crypto-asset service provider under MiCA, regulated by the Central Bank of Ireland (
-          <a className="underline" href="https://rampnetwork.com/licenses-and-registrations">Ramp&apos;s licences and registrations</a>
-          , read 27 Sep 2026). What arrives in the funder&apos;s account is AUSD on Monad, <code>MONAD_AUSD</code> in Ramp&apos;s
-          own asset list, the asset the gift contract holds, so nothing is swapped after it. Where Ramp does not serve, the
-          second way is Mercuryo, which delivers MON that the account then swaps to AUSD.
-        </p>
-        <p className={HELP}>
-          The next step is Ramp embedded with a partner key. Without one, Ramp&apos;s page answers any pre-filled
-          parameter with &quot;Integration issue detected&quot; (read on its live page and in its own script, 27 Sep 2026), so
-          today it opens bare and the funder copies their account from Viky&apos;s waiting screen. With the key, the page
-          opens with the account, the amount in euros and AUSD already filled in.{" "}
-          {rampHostApiKey() ? "The key is set on this deployment: the page opens filled in." : "The key is not set on this deployment yet."}
-        </p>
-        <p className={HELP} data-rampnow-way>
-          A third way is Rampnow, by card: the funder pays on Rampnow&apos;s page, which delivers USDC on Monad to their
-          account, and the converter changes it into AUSD on one signature, though the account holds none of the
-          chain&apos;s coin. The converter is a second copy of the way out&apos;s contract, ExitRouter, set on USDC
-          {converter ? (
-            <>
-              {" "}at{" "}
-              <a className="underline" href={`https://monadvision.com/address/${converter}`}>
-                <code>{converter}</code>
-              </a>
-              , its source verified through Sourcify on 3 Oct 2026, and its owner read with the others&apos; under Network
-            </>
-          ) : null}
-          . A conversion promises at least ninety-nine for a hundred, or nothing moves.{" "}
+        {/* The order is the pay sheet's own (src/rails.ts, `waysIn`): Rampnow first where it is turned on and serves
+            the payer, then Ramp, then Mercuryo. The page said Ramp was the way and Rampnow a third until 8 Oct 2026. */}
+        <p className={HELP} data-ways-in-order>
+          A funder pays by card, through a licensed service, never to Viky. The pay sheet tries them in this order:{" "}
+          {waysIn().map((way) => way.name).join(", then ")}.{" "}
           {rampnowOn
-            ? rampnowFrameOn()
-              ? "Rampnow's page opens in a frame inside Viky. Its limit: Rampnow finishes a payment from its own page (the card buys USDC on Base, and its page then sends it on to Monad), so the frame has to stay open until the money arrives. The frame has no cross: one way out under it while no payment is known, \"Go back without paying\", and one after five minutes without the money. Left before the end, the payment waits at Rampnow: the screen that waits leads back to it, and opens another only when the person answers that they did not pay. Seen on the first payment through the frame, on 3 Oct 2026: 6 EUR paid at 21:23 UTC, the frame closed, the money held on Base for 14 minutes, then 5.60 USDC on the account at 21:38 UTC, once Rampnow's page was opened in a tab. Where the frame cannot keep the person signed in at Rampnow, it is never shown: \"Pay by card\" opens Rampnow's page in a tab of its own, and the payment is followed as one started from a tab. That is Safari's engine before 18.4 and from 18.5 to 26.1, so every browser on an iPhone at those versions: Rampnow's session in a frame lives in cookies set \"Partitioned\", which that engine reads in 18.4 and from 26.2. Measured on Safari 17.6 on 4 Oct 2026, on a neutral page holding the same frame: after the code received by e-mail, Rampnow's page went back to its sign-in form. It is read from what the browser says of itself; it was not measured on viky.cash in Safari, nor on the versions in between. "
-              : "Rampnow's page opens in a tab of its own. "
-            : null}
-          <UseLine use={conversion} name="rampnow" />
+            ? "Rampnow comes first where it serves the payer's country and takes the gift's amount; where it does not, the sheet goes on to the next."
+            : "Rampnow, by card, is written and switched off on this deployment: the two others are the ways offered."}
         </p>
+        {rampnowOn ? (
+          <>
+            {rampnowWay}
+            {rampWay}
+          </>
+        ) : (
+          <>
+            {rampWay}
+            {rampnowWay}
+          </>
+        )}
       </Fold>
 
       <Fold id="reading" title="How a day is read">
@@ -479,8 +509,10 @@ export default async function JudgesPage() {
           look that failed takes no read: the gift is looked at again at 03:30 UTC, and only then, if a day of it closes
           at 06:00 that morning, is one read taken without a look, once. And a breaker holds every paid read
           (<code>src/attested-calls.ts</code>): {dailyCeilings().perGift} for one gift in a UTC day and {dailyCeilings().all} for
-          all gifts, counted on the proofs given. Past it nothing is asked of Reclaim until the next day, nothing is
-          settled against the gift, and its page says when reading resumes. A certificate&apos;s link is looked at plainly
+          all gifts, counted on the proofs given. Past it nothing is asked of Reclaim until the next day, and the
+          gift&apos;s page says when reading resumes and until when its open day can still be counted. The ceiling holds
+          no day: a day not read stays open until its catch-up window closes, 30 hours after it ends, and then goes back
+          to the funder like a missed day, whoever was at fault. A certificate&apos;s link is looked at plainly
           before its proof, and a climb at its target is given three proofs a day at most. Connecting the account is one more, and a connection by code takes it only once a plain look
           has found the code in the name; a count the person asks for looks first in the same way. No daily ceiling bounds
           those asks, only ten in ten minutes from one IP address, counted in each app server&apos;s memory. A gift on
@@ -499,7 +531,7 @@ export default async function JudgesPage() {
             ? " Reclaim has granted more than the free tier, and the limits in force are the ones counted against."
             : ""}
           {reclaimLimits?.readings
-            ? ` The limit of readings is reached: Viky sends no attested reading to Reclaim until the next cycle or until more is granted, nothing is settled against a reading that was not taken, and a person whose gift waits for one reads this on its page, by the gift's own source, with what they can do folded under it: "${LIMIT.said("Duolingo", "readings", startsAgainInWords())}"`
+            ? ` The limit of readings is reached: Viky sends no attested reading to Reclaim until the next cycle or until more is granted. The limit holds no day: a day waiting for a reading stays open until its catch-up window closes, then goes back to the funder like a missed day. A person whose gift waits for one reads this on its page, by the gift's own source, with what they can do folded under it: "${LIMIT.said("Duolingo", "readings", startsAgainInWords())}"`
             : ""}
           {reclaimLimits?.proofs
             ? ` The limit of proofs is reached: Viky opens no new proof at Reclaim, and a person reads this before starting one, by the gift's own source: "${LIMIT.said("their university", "proofs", startsAgainInWords())}"`
@@ -537,9 +569,13 @@ export default async function JudgesPage() {
           <li>
             <strong>Duolingo&apos;s terms.</strong> The profile Viky reads is a public endpoint Duolingo does not
             document, and Duolingo&apos;s terms say &quot;You may not use any data mining, robots, scraping, or similar
-            data gathering or extraction methods&quot;. Viky reads a profile once a day for each gift made on it, a
-            second time that day when the first shows a day to credit, and again each time the person connects it or
-            asks for a count. The risk is
+            data gathering or extraction methods&quot;. On the first two versions of the daily contract Viky reads a
+            profile once a day for each gift made on it, a second time that day when the first shows a day to credit,
+            and again each time the person connects it or asks for a count.
+            {thirdVersionSet
+              ? " On the third, where a daily gift is made today, it looks at the profile every quarter of an hour while a day of the gift is open, and once a minute while the gift's page is open, plainly; an attested reading is taken only for a lesson a look saw, and when the person connects the account."
+              : ""}{" "}
+            The risk is
             accepted and spread by having several conditions rather than one; the shape of that endpoint is pinned by
             the tests, like any other source that could drift, and if it changes or closes, the reading fails on our
             side. The day then stays open until its catch-up window closes, 30 hours after it ends, and goes back to

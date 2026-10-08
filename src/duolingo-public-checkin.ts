@@ -73,7 +73,7 @@ export type PublicCheckInOutcome =
   /** `read_recently`: a proof was taken for this gift less than `PROOF_EVERY_SECONDS` ago, so none is taken now. */
   | Readonly<{ kind: "already"; giftId: string; reason: "counted_today" | "not_bound" | "not_opened" | "no_account" | "already_bound" | "finished" | "cancelled" | "read_recently" }>
   /**
-   * `countableUntil`, with the refusal `LIMIT_REACHED` only: when the window of the day still to count closes, in UTC
+   * `countableUntil`, with the refusals `LIMIT_REACHED` and `CEILING_REACHED` only: when the window of the day still to count closes, in UTC
    * seconds (src/daily-count.ts). `looked`, when a plain look answered and no attested reading was taken.
    */
   | Readonly<{ kind: "refused"; giftId: string; code: string; message: string; xp?: number; countableUntil?: number | null; looked?: true }>

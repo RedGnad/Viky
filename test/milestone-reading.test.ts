@@ -525,7 +525,7 @@ test("at the target a proof is taken three times a day at most: then the operato
   // The fourth ask of the day: no proof, the refusal is ours, and the operator is told.
   const fourth = harness(BOUND, CLIMBING, { ...failingSend, attest: async () => assert.fail("no fourth proof") });
   const stopped = await runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, fourth.deps);
-  assert.deepEqual(stopped, { kind: "refused", giftId: "1000000", code: "CEILING_REACHED", message: "Viky has read this as often as it does in one day. It resumes tomorrow. Nothing is lost.", rating: undefined });
+  assert.deepEqual(stopped, { kind: "refused", giftId: "1000000", code: "CEILING_REACHED", message: "Viky has read this as often as it does in one day. It resumes tomorrow.", rating: undefined });
   assert.ok(MILESTONE_OURS_TO_FIX.has("CEILING_REACHED"), "the pass holds the gift: nothing is settled against it");
   assert.deepEqual(told, ["1000000"]);
   assert.deepEqual(asked.map(([, day]) => day), Array.from({ length: 4 }, () => Math.floor(NOW / 86_400)), "claimed by the UTC day");
