@@ -56,6 +56,21 @@ export function noDayToCredit(gift: Days, nowSeconds: number): "OutsideWindow" |
 }
 
 /**
+ * Whether a reading of a connected source taken now has no day it could credit (8 Oct 2026). Its reading judges
+ * yesterday's page (src/connected-checkin.ts), so the last day it can pay is yesterday, on every version of the daily
+ * contract: the rule of the first two versions, kept on the third. Left to the third contract's own rule, which
+ * credits through the day of the reading, the day a person connected was paid by what they had done the day before,
+ * and a press that read the same page again paid the next open day with the same activity. So on the day of the
+ * connection nothing is read, `OutsideWindow` as the first two versions say it, and nothing once yesterday is settled.
+ */
+export function noDayForYesterdaysPage(gift: Days, nowSeconds: number): "OutsideWindow" | "NothingToCredit" | null {
+  if (!gift.startDay) return null;
+  const yesterday = utcDayOf(nowSeconds) - 1;
+  if (yesterday < gift.startDay) return "OutsideWindow";
+  return Math.min(yesterday, gift.endDay) <= gift.settledThroughDay ? "NothingToCredit" : null;
+}
+
+/**
  * What the contract would answer to a reading of this figure taken now, when that is a refusal, in the order
  * `checkIn` gives them: a figure below the last one, no day to credit, not one full target of progress.
  */
