@@ -8,7 +8,8 @@ for byte as it is pasted at Reclaim (sha256 `d8cceb860f46c19e3ac6856b421231f14b4
 
 ## The record at Reclaim
 
-Everything but the script is what version 3.0.0 holds, read from Reclaim's public record on 8 Oct 2026.
+Everything but the script is what version 3.0.0 held, and what version 4.0.0 holds, read from Reclaim's public record
+on 8 Oct 2026.
 
 | Field | Value |
 | --- | --- |
@@ -45,7 +46,7 @@ function on the bridge`, `pressed Inscriptions`, `on the Inscriptions view`; and
 "never" lines end with counts of what the page held (buttons, menu entries, whether "Inscriptions" was found and
 shown, whether a sign-in form was there). Nothing of the page's content is written.
 
-## What the pass of 8 Oct 2026 showed, and what 3.0.1 changes
+## What the pass of 8 Oct 2026 showed, and what version 4.0.0 changes
 
 One student, version 3.0.0, no proof. The session's log read `file never ready` two minutes after the file loaded,
 while the page was alive: the script never saw the menu, so it never pressed.
@@ -56,7 +57,8 @@ The file is esup-mdw (EsupPortail). Its menu entries are Vaadin 7.7 buttons (`Ma
 `<button>` (`VButton`). Version 3.0.0 looked for `<button>` elements and found none. It also asked for three entries
 together, one of which, "Calendrier des épreuves", is shown or not by a setting of the university.
 
-Version 3.0.1:
+Version 4.0.0, saved at Reclaim and pinned in production on 8 Oct 2026 (Reclaim gave it that number; the script is
+this file, and its sign-in address, request and rule are those of 3.0.0):
 - looks for `[role="button"]`, `button`, `.v-button` and `.valo-menu-item`, and reads the label from the caption,
   without the icon's glyph;
 - asks for "Inscriptions" alone, the entry every student's file has, preferring the entry that says exactly that;
