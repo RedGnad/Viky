@@ -194,6 +194,15 @@ export function testnetTransactionUrl(hash: Hex): string {
   return `${MONAD_TESTNET_EXPLORER}/tx/${hash}`;
 }
 
+/**
+ * The explorer's own registry of verified sources for Monad's two networks (docs.monad.xyz, "Verify a contract with
+ * Foundry"): its record of a contract says whether the source it holds compiles to the code on the chain. The copy of
+ * the router was submitted to it on 8 Oct 2026 and answered an exact match.
+ */
+export function testnetSourceRecordUrl(address: Hex): string {
+  return `https://sourcify-api-monad.blockvision.org/v2/contract/${MONAD_TESTNET_CHAIN_ID}/${address}`;
+}
+
 export function testnetAddressUrl(address: Hex): string {
   return `${MONAD_TESTNET_EXPLORER}/address/${address}`;
 }

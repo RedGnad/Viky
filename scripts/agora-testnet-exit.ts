@@ -38,6 +38,7 @@ import {
   sameCodeButTheCoin,
   testAusdDomain,
   testnetAddressUrl,
+  testnetSourceRecordUrl,
   testnetTransactionUrl,
 } from "../src/agora-testnet";
 import { RECEIVE_WITH_AUTHORIZATION_TYPES } from "../src/ausd-authorization";
@@ -358,7 +359,17 @@ async function check(): Promise<void> {
   const found = await readExit(hash);
   await sameCodeAsMainnet(found.router);
   const sent = await testnet.getTransactionCount({ address: found.payer });
+  // The explorer's registry of sources, asked as anybody can ask it: an answer that is not an exact match, or no
+  // answer at all, is said as it is.
+  let source = "the registry did not answer";
+  try {
+    const record = (await (await fetch(testnetSourceRecordUrl(found.router), { headers: { accept: "application/json" }, signal: AbortSignal.timeout(20_000) })).json()) as { runtimeMatch?: unknown };
+    source = typeof record.runtimeMatch === "string" ? record.runtimeMatch : "no record of this address";
+  } catch {
+    // Kept as "did not answer".
+  }
   const held: Array<[boolean, string]> = [
+    [source === "exact_match", `the copy's source in the explorer's registry: ${source}`],
     [found.otherCoinOut === oneForOne(found.ausdIn), `${found.ausdIn} units of test AUSD gave ${found.otherCoinOut} of the other coin: one for one`],
     [sent === 0, "the account that signed has never sent a transaction"],
   ];

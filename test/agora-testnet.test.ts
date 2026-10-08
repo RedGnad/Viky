@@ -158,6 +158,9 @@ test("with a run, the three lines: the market's cost, the pair one for one with 
   assert.match(html, /sent 10\.00 test AUSD through Agora's Instant Settlement pair and handed back 10\.00 CTK/);
   assert.ok(html.includes(`href="https://testnet.monadscan.com/tx/${A_RUN.exit}"`));
   assert.ok(html.includes(`href="https://testnet.monadscan.com/address/${ROUTER}"`));
+  // The source of the copy, in the explorer's own registry, by its address on the testnet's chain.
+  assert.ok(html.includes(`href="https://sourcify-api-monad.blockvision.org/v2/contract/10143/${ROUTER}"`));
+  assert.match(html, /its source is in the explorer's registry as an\s*<a[^>]*>exact match<\/a>/);
   assert.match(html, /on mainnet the pair\s+swaps only for an address Agora approved, and none of Viky's is/);
   assert.match(html, /No money\s+of a gift has gone through Instant Settlement/);
   // A test coin is a count of a coin, never a sum of dollars, and nothing says it ran where it did not.

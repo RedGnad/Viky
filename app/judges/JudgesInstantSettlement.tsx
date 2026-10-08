@@ -5,6 +5,7 @@ import {
   MAINNET_EXIT_ROUTER,
   MARKET_PATH_MEASURE,
   testnetAddressUrl,
+  testnetSourceRecordUrl,
   testnetTransactionUrl,
   type AgoraTestnetRun,
 } from "@/src/agora-testnet";
@@ -59,8 +60,9 @@ export function JudgesInstantSettlement({ run = AGORA_TESTNET_RUN }: Readonly<{ 
             {short(run.exit)}
           </a>
           ). One signature, from an account that holds none of the chain&apos;s coin, as on mainnet. The copy&apos;s code is the code of the way out
-          on mainnet (<span className="[overflow-wrap:anywhere]">{MAINNET_EXIT_ROUTER}</span>) byte for byte, but for the coin&apos;s address, and{" "}
-          <code>pnpm agora:testnet check</code> reads all of it back from the chain with no key. It is the way out and not the conversion above: the
+          on mainnet (<span className="[overflow-wrap:anywhere]">{MAINNET_EXIT_ROUTER}</span>) byte for byte, but for the coin&apos;s address, its source is in the explorer&apos;s registry as an{" "}
+          <a className="underline" href={testnetSourceRecordUrl(run.router)}>exact match</a>, and <code>pnpm agora:testnet check</code> reads all of it
+          back with no key. It is the way out and not the conversion above: the
           pair&apos;s other test coin takes no signed transfer, so only the direction that starts from AUSD has a path there.
         </dd>
         <dt className={MUTED}>Why not on mainnet</dt>
