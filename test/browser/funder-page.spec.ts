@@ -283,7 +283,7 @@ test.describe("the funder's page", () => {
     const link = `${device.baseURL}/g/8?t=AbCdEfGhIjKlMnOpQrStUv`;
     await page.evaluate((kept) => window.localStorage.setItem("viky.gift-link.8", kept), link);
     await page.goto("/g/8");
-    const card = page.locator("section.gift-card-width");
+    const card = page.locator("section.gift-card-placed");
     await expect(card).toBeVisible();
     const box = (await card.boundingBox())!;
     expect(Math.round(box.width), "the card's own width: it stood at 432 in a task's column").toBe(440);
