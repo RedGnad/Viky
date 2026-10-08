@@ -144,6 +144,8 @@ export default async function JudgesPage() {
       {/* For a judge in a hurry (the audit of 1 Oct 2026, D-11): the page in one minute, then its contents. */}
       <JudgesMinute
         index={index}
+        // The universities beyond the ones a student can show from today: listed, less those whose rule is pinned.
+        moreUniversities={portals && witnessLines ? Math.max(0, portals.listed - new Set(witnessLines.filter((line) => line.pin).map((line) => line.portalId)).size) : null}
         // Where a gift is made today: the third daily contract once it is set, with the second version's two others.
         contracts={
           secondVersionSet
@@ -586,7 +588,12 @@ export default async function JudgesPage() {
             student shows a first proof. That first proof is held, never paid on its own: the operator reads what the
             pattern read, then pins the provider (the version, the request, the match, the redaction and the fields) and
             the held gift is settled, or refuses it and the person reads why, the money left where it is. After the pin,
-            a proof from another domain, another request or another pattern is refused.{" "}
+            a proof from another domain, another request or another pattern is refused. The second case, since 8 Oct
+            2026: the operator can fix a university&apos;s rule ahead of any proof, from a version of its provider that
+            Reclaim publishes and that runs no agent. The pin is then worked out from that published request, and the
+            first proof that fits it whole is paid at once, with nobody reading it first; one that does not fit is
+            held and read as a first proof is, never refused. A rule fixed ahead says so below until a proof has borne
+            it out. It has been done for one university, whose first proof had been held and read the day before.{" "}
             {counts ? `${counts.witness} such ${counts.witness === 1 ? "provider" : "providers"}, ${counts.pinned} pinned.` : "The count could not be read right now."}
             {witnessLines && witnessLines.length > 0 ? (
               <ul className="mt-[var(--space-sm)] flex flex-col gap-[var(--space-xs)]">

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { NO_STORE } from "@/src/gift-api";
-import { allPortals, portalCountries, portalListed, portalsIn } from "@/src/portal-store";
+import { allPortals, portalCountries, portalsIn } from "@/src/portal-store";
+import { universityListed } from "@/src/university-ready";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
 export const runtime = "nodejs";
@@ -21,13 +22,13 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   if (params.get("all") === "1") {
     const portals = await allPortals();
-    return NextResponse.json({ results: portals.map(portalListed) }, { headers: { "cache-control": "public, max-age=0, s-maxage=300, stale-while-revalidate=86400" } });
+    return NextResponse.json({ results: portals.map(universityListed) }, { headers: { "cache-control": "public, max-age=0, s-maxage=300, stale-while-revalidate=86400" } });
   }
   const country = params.get("country")?.trim().toUpperCase();
   if (country) {
     if (!/^[A-Z]{2}$/.test(country)) return NextResponse.json({ error: "A country is two letters.", code: "BAD_COUNTRY" }, { status: 400, headers: NO_STORE });
     const portals = await portalsIn(country);
-    return NextResponse.json({ results: portals.map(portalListed) }, { headers: NO_STORE });
+    return NextResponse.json({ results: portals.map(universityListed) }, { headers: NO_STORE });
   }
   return NextResponse.json({ countries: await portalCountries() }, { headers: NO_STORE });
 }

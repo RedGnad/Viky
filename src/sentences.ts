@@ -1773,10 +1773,15 @@ export const UNIVERSITY_CHOICE = {
   reading: "Reading the list",
   unreadable: "The list could not be read right now. Close this and try again in a moment.",
   nothing: "No university by that name in the list yet.",
-  /** The two groups of a country's list (the founder, 29 Sep 2026): the tested first, and one line under the others. */
-  tested: "Tested with a student",
-  all: "All universities",
-  allLine: "Set up on the first gift, within two days.",
+  /**
+   * The two groups of the list (the UI pass of 8 Oct 2026): where a student can show today, then every other, whose
+   * heading says how many they are and how fast one is added. The line that said it under the heading is gone: the
+   * heading says it, and the gift's page says it again when it matters. `count` is src/university-choice.ts's.
+   */
+  ready: "Ready today",
+  more: (count: string) => `${count} more, added on request within two days`,
+  /** The same heading where no university of the list shown is ready: there is nothing to be "more" than. */
+  moreAlone: (count: string) => `${count}, added on request within two days`,
   /** Beside the university chosen, which folds the list away so what comes after it is in reach. */
   change: "Change",
   /** The one line under the list: a question, and the link that answers it. */
