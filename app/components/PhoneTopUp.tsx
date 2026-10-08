@@ -12,8 +12,8 @@ import { twoDecimalsDown } from "@/src/exit-steps";
 import { PHONE_OUT as W } from "@/src/sentences";
 import { BODY, CARD, CARD_AMOUNT, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
 import { Said } from "../kit/Said";
-import { ButtonWords, StepInProgress } from "../kit/Waiting";
 import { WAITS } from "@/src/sentences";
+import { Button } from "../kit/Button";
 
 /**
  * Your phone, the third way out (D238), in three screens at most: where (the number and its phone company), how much
@@ -223,17 +223,14 @@ export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; ensure
         {alert}
         <div className="flex flex-wrap gap-[var(--tap-gap)]">
           {price ? (
-            <button type="button" onClick={() => void topUp()} disabled={busy} className={PRIMARY_BUTTON}>
-              {busy ? W.confirming : W.confirm}
-            </button>
+            <Button doing={busy ? W.confirming : null} onPress={() => void topUp()}>
+              {W.confirm}
+            </Button>
           ) : (
             <>
-              <button type="button" onClick={() => void askPrice()} disabled={busy || (!chosenPackage && (!typedFits || typedFar))} className={PRIMARY_BUTTON}>
-                <ButtonWords busy={busy} doing={W.pricing}>
-                  {W.getPrice}
-                </ButtonWords>
-              </button>
-              <StepInProgress busy={busy} step={WAITS.price("Bitrefill")} />
+              <Button doing={busy ? W.pricing : null} step={WAITS.price("Bitrefill")} waiting={!chosenPackage && (!typedFits || typedFar)} onPress={() => void askPrice()}>
+                {W.getPrice}
+              </Button>
             </>
           )}
           <button type="button" onClick={() => { setScreen("where"); setProblem(null); setPrice(null); }} disabled={busy} className={SMALL_BUTTON}>
@@ -276,12 +273,9 @@ export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; ensure
       {operators && operators.length > 0 && ofKind.length === 0 ? <p className={HELP}>{W.noneOfKind(W.kinds[kind])}</p> : null}
       {alert}
       <div className="flex flex-wrap gap-[var(--tap-gap)]">
-        <button type="button" onClick={() => void find()} disabled={busy || phone.trim().length < 8} className={PRIMARY_BUTTON}>
-          <ButtonWords busy={busy} doing={W.finding}>
-            {W.find}
-          </ButtonWords>
-        </button>
-        <StepInProgress busy={busy} step={WAITS.operator} />
+        <Button doing={busy ? W.finding : null} step={WAITS.operator} waiting={phone.trim().length < 8} onPress={() => void find()}>
+          {W.find}
+        </Button>
         <button type="button" onClick={props.onBack} disabled={busy} className={SMALL_BUTTON}>
           {W.back}
         </button>

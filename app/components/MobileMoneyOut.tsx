@@ -10,8 +10,9 @@ import { delayInWords, localInWords, MOBILE_REFUSALS, momentOf } from "@/src/mob
 import { MOBILE_OUT as W, USE_MONEY } from "@/src/sentences";
 import { ChoiceList } from "../kit/ChoiceList";
 import { FieldRefusal } from "../kit/FieldRefusal";
-import { BODY, CARD, CARD_AMOUNT, CARD_LABEL, FIELD, HELP, PRIMARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
-import { ButtonWords, WaitLine } from "../kit/Waiting";
+import { BODY, CARD, CARD_AMOUNT, CARD_LABEL, FIELD, HELP, SMALL_BUTTON, TITLE } from "./ui";
+import { WaitLine } from "../kit/Waiting";
+import { Button } from "../kit/Button";
 
 /**
  * Your mobile money, the third way out (the founder, 2 Oct 2026), on one card: the operator, the number, the name on the
@@ -368,11 +369,9 @@ export function MobileMoneyOut(props: Readonly<{ offer: Offered; payable: Payabl
         </p>
       ) : null}
       {/* Pressable while nothing is under way, as the giver's sheet is: a press says what is missing. */}
-      <button type="button" onClick={() => void send()} disabled={busy} className={PRIMARY_BUTTON}>
-        <ButtonWords busy={busy} doing={doing}>
-          {operatorName ? W.send(operatorName) : USE_MONEY.mobile.action}
-        </ButtonWords>
-      </button>
+      <Button doing={busy ? doing : null} onPress={() => void send()}>
+        {operatorName ? W.send(operatorName) : USE_MONEY.mobile.action}
+      </Button>
       <button type="button" onClick={props.onBack} disabled={busy} className={`${SMALL_BUTTON} self-start`}>
         {W.back}
       </button>
