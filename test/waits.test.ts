@@ -83,7 +83,9 @@ test("doing or done, the button is not pressed again and does not fade; one that
   assert.match(button, /data-state=\{state\}\s+aria-busy=\{doing \? true : undefined\}\s+aria-disabled=\{state \? true : undefined\}/);
   // The fade is the look of a button that waits for something else: never the look of one at work.
   assert.match(button, /disabled=\{waiting && !state\}/);
-  assert.match(button, /onClick=\{\(\) => \{\s+if \(!state\) onPress\(\);\s+\}\}/);
+  // A press while it works is dropped, a form's own included (`submits`): the form is sent once.
+  assert.match(button, /onClick=\{\(event\) => \{\n[^\n]*\n\s+if \(state\) event\.preventDefault\(\);\s+else onPress\?\.\(\);\s+\}\}/);
+  assert.match(button, /type=\{submits \? "submit" : "button"\}/);
   // It stays down where the press put it, on no relief, and no pointer lifts it meanwhile.
   assert.match(css, /\.control-relief\[data-state\],\n\.action-relief\[data-state\] \{\n  transform: translateY\(var\(--control-relief-depth\)\);\n  box-shadow: none;\n  cursor: default;\n\}/);
   assert.match(css, /\.small-button\[data-state\] \{\n  transform: translateY\(3px\);\n  box-shadow: none;/);
@@ -99,6 +101,37 @@ test("done lasts long enough to be read, and then the button is there to press a
   const link = readFileSync("app/kit/LinkAgain.tsx", "utf8");
   assert.match(link, /const \[copied, markCopied\] = useDone\(\);/);
   assert.match(link, /<Button done=\{copied \? W\.copied : null\} failed=\{refusal\} failedId=\{`link-refused-\$\{giftId\}`\} onPress=\{\(\) => copy\(link\)\} data-copy-the-link="">/);
+});
+
+test("the gift's own path uses the one button too: the connection, the proofs, the agreement, the decisions, the door", () => {
+  // The rest of rule 3 of the UI pass of 8 Oct 2026, on the screens of the person a gift is for. Each of these drew
+  // its own button, faded while it worked, with the wheel and the step under it written beside.
+  const uses: Record<string, readonly RegExp[]> = {
+    "app/kit/ConnectTheAccount.tsx": [
+      /<Button doing=\{busy === "starting" \? W\.reading : null\} step=\{WAITS\.connecting\(condition\?\.source \?\? ""\)\} waiting=\{working && busy !== "starting"\} onPress=\{\(\) => void start\(\)\}>/,
+      /<Button look="secondary" doing=\{busy === "erasing" \? W\.working : null\} step=\{WAITS\.erasing\} waiting=\{working && busy !== "erasing"\} onPress=\{\(\) => void erase\(\)\}>/,
+    ],
+    "app/kit/ConnectTheSource.tsx": [
+      /<Button doing=\{busy === "starting" \? W\.reading : null\} step=\{step\} waiting=\{working && busy !== "starting"\} onPress=\{onStart\}>/,
+      /<Button doing=\{busy === "naming" \? W\.checking : null\} step=\{step\} waiting=\{working && busy !== "naming"\} onPress=\{onAskCode\}>/,
+      /<Button submits doing=\{busy === "naming" \? W\.checking : null\} step=\{step\} waiting=\{\(working && busy !== "naming"\) \|\| typed\.trim\(\) === ""\}>/,
+    ],
+    "app/kit/CertificateProof.tsx": [/<Button submits doing=\{busy \? words\.checking : null\} step=\{WAITS\.proof\} waiting=\{link\.trim\(\) === ""\}>/],
+    "app/kit/MarathonProof.tsx": [/<Button doing=\{state\.at === "reading" \|\| state\.at === "proving" \? W\.reading : null\} step=\{WAITS\.proof\}/],
+    "app/kit/WcaProof.tsx": [/<Button submits doing=\{state\.at === "checking" \? W\.checking : null\} step=\{WAITS\.registration\}/, /<Button doing=\{state\.at === "reading" \|\| state\.at === "proving" \? W\.reading : null\} step=\{WAITS\.proof\}/],
+    "app/kit/Consent.tsx": [/<Button doing=\{busy \? C\.working : null\} step=\{WAITS\.choice\} onPress=\{onStop\}>/, /<Button look="small" doing=\{busy \? C\.working : null\} onPress=\{\(\) => void agree\(\)\}>/],
+    "app/kit/YouDecide.tsx": [/<Button doing=\{busy \? C\.working : null\} step=\{WAITS\.choice\} onPress=\{\(\) => void takeABreak\(\)\}>/, /<Button doing=\{ending\.busy \? E\.working : null\} step=\{WAITS\.ending\} onPress=\{\(\) => void endIt\(\)\}>/],
+    "app/kit/SignInDoor.tsx": [/<Button doing=\{busy \? W\.busy : null\} step=\{WAITS\.account\} onPress=\{\(\) => void make\(\)\}>/],
+  };
+  for (const [file, patterns] of Object.entries(uses)) {
+    const source = readFileSync(file, "utf8");
+    for (const use of patterns) assert.match(source, use, file);
+  }
+  // A button that works is one of these everywhere on that path: no wheel is written by hand any more, but inside the
+  // two controls that are not buttons of this kind, the header's door and a line of the sheet "You decide".
+  for (const file of ["ConnectTheAccount", "ConnectTheSource", "CertificateProof", "MarathonProof", "WcaProof", "Consent"]) assert.doesNotMatch(readFileSync(`app/kit/${file}.tsx`, "utf8"), /<ButtonWords|<StepInProgress/, file);
+  assert.equal((readFileSync("app/kit/YouDecide.tsx", "utf8").match(/<ButtonWords/g) ?? []).length, 1, "the option 'Start again', a line of the sheet");
+  assert.equal((readFileSync("app/kit/SignInDoor.tsx", "utf8").match(/<ButtonWords/g) ?? []).length, 1, "the header's door, one width whatever it says");
 });
 
 test("the screens of the person who pays use the one button for every press that waits", () => {
