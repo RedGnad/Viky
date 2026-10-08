@@ -145,9 +145,19 @@ export function ShowProof({
       if (document.visibilityState === "visible" && !waiting.current) find.current(giftId, true, left.signal);
     };
     document.addEventListener("visibilitychange", front);
+    // The page as the browser kept it, shown again by "Back" after the same tab went to the verification (the trial of
+    // the one press): the press it was frozen on is over, so the button is the button again, and the server is asked
+    // what became of the session.
+    const shownAgain = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      setState({ at: "asking" });
+      if (!waiting.current) find.current(giftId, true, left.signal);
+    };
+    window.addEventListener("pageshow", shownAgain);
     // A wait still running when the page is left asks nothing more.
     return () => {
       document.removeEventListener("visibilitychange", front);
+      window.removeEventListener("pageshow", shownAgain);
       left.abort(LEFT);
       waiting.current?.abort(LEFT);
     };
@@ -181,6 +191,14 @@ export function ShowProof({
       await agreeFirst(giftId);
       const session = await openShownProof({ giftId, conditionId, phase: "reach" });
       if (stop.signal.aborted) return;
+      // The trial of the one press (the UI pass of 8 Oct 2026, screen 2), for the accounts the server says: this same
+      // tab goes to the verification, which brings the person back to this gift (the session's own return address),
+      // where the page finds the session open and looks at it. The button stays as it is while the browser leaves.
+      // Should the browser not leave, or come back with nothing, the two steps of before are what the page draws.
+      if (session.sameTab) {
+        window.location.assign(session.requestUrl);
+        return;
+      }
       await waitFor.current(giftId, session, stop, false);
     } catch (error) {
       const code = error instanceof ApiError ? error.code : "";

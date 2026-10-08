@@ -433,7 +433,13 @@ function untilNextLook(startedAt: number, looks: readonly number[], signal: Abor
  * has no clock of its own (7 Oct 2026): it had ten minutes, a pass on a phone takes nine, and the server's thirty are
  * the ones that decide whether a proof can still be taken (PROOF_SESSION_TTL_SECONDS, src/proof-session-store.ts).
  */
-export type OpenShown = Readonly<{ sessionId: string; requestUrl: string; secondsLeft: number }>;
+export type OpenShown = Readonly<{
+  sessionId: string;
+  requestUrl: string;
+  secondsLeft: number;
+  /** The server's word that this press takes the same tab to the verification: the trial of 8 Oct 2026, the operator's accounts only. */
+  sameTab?: boolean;
+}>;
 
 /**
  * The session this account already has open for the gift's one proof, or nothing: asked when the gift's page loads.

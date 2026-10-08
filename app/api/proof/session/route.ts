@@ -7,6 +7,7 @@ import { resolvePublicDuolingoProfile } from "@/src/duolingo-profile";
 import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
 import { isReclaimQuotaRefusal, limitsNow, noteAttestedCall, REAL_READINGS_OFF, realReadingsOff, ReclaimLimitReached, startsAgainInWords } from "@/src/attested-calls";
 import { conditionById } from "@/src/conditions";
+import { isOperator } from "@/src/dev-access";
 import { LIMIT } from "@/src/sentences";
 import { loadLatestEvidence, loadOpenShownSession, PROOF_SESSION_TTL_SECONDS, pruneExpiredProofSessions, saveProofSession, type ProofSessionPhase } from "@/src/proof-session-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
@@ -164,7 +165,11 @@ export async function POST(request: Request) {
     // day, and this row is what still says it was asked (src/attested-calls.ts).
     await noteAttestedCall({ kind: "asked", source: entry.condition.conditionId, ok: true, ref: sessionId });
 
-    return NextResponse.json({ sessionId, phase, dayIndex, requestUrl, secondsLeft: PROOF_SESSION_TTL_SECONDS }, { headers: { "Cache-Control": "no-store" } });
+    // The trial of the one press (the UI pass of 8 Oct 2026, screen 2, to be tried on a real iPhone before anybody
+    // else has it): for one of the operator's own accounts, the page takes the same tab to the verification, which
+    // brings the person back to the gift. Decided here, by the account of the signed cookie, never by the browser.
+    const sameTab = isOperator(account);
+    return NextResponse.json({ sessionId, phase, dayIndex, requestUrl, secondsLeft: PROOF_SESSION_TTL_SECONDS, ...(sameTab ? { sameTab } : {}) }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof ReclaimLimitReached) {
       return NextResponse.json({ code: error.code, error: LIMIT.said(source, "proofs", startsAgainInWords(), true) }, { status: 409, headers: { "Cache-Control": "no-store" } });
