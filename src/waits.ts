@@ -5,3 +5,9 @@
  * know what is being done, not only that something is.
  */
 export const NAME_THE_STEP_AFTER_MS = 10_000;
+
+/**
+ * How long a button says it is done before it is back at rest (the UI pass of 8 Oct 2026, rule 3; the validated
+ * mockup holds its mark for 2.2 s): long enough to be read, short enough that the button is there to press again.
+ */
+export const DONE_SHOWN_MS = 2_200;
