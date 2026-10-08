@@ -850,8 +850,8 @@ export default async function JudgesPage() {
           </li>
           <li>
             <strong>Mobile money.</strong> A payout to a mobile money number through Switch Labs. The person types the
-            amount in their own money, francs in Senegal, and Switch&apos;s quote for exactly that amount gives the dollars
-            it takes. Its ceilings are the gift cards&apos; rule: {MOBILE_CEILINGS_WORDS}, checked when the payout is
+            amount in their own money, francs for instance, and Switch&apos;s quote for exactly that amount gives the
+            dollars it takes. Its ceilings are the gift cards&apos; rule: {MOBILE_CEILINGS_WORDS}, checked when the payout is
             priced and again when it is sent, and said in place of the form when the day&apos;s is met. Switch refused
             every quote to Viky&apos;s key until 2 Oct 2026, 23:23 UTC, and has answered them since.{" "}
             {mobileOn
