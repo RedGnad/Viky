@@ -6,6 +6,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { followsThirdDailyContract } from "../src/envio-index";
 import { MILESTONE_GOALS } from "../src/milestone-goals";
+import { waysIn } from "../src/rails";
+import { ME } from "../src/sentences";
 
 const page = readFileSync(new URL("../app/judges/page.tsx", import.meta.url), "utf8").replace(/\s+/g, " ");
 
@@ -34,7 +36,7 @@ const read = (file: string) => readFileSync(new URL(`../${file}`, import.meta.ur
 test("the judge's path leads to the recipient's side, and promises nothing a single judge alone could use", () => {
   assert.doesNotMatch(page, /shown in the video/);
   assert.doesNotMatch(page, /open the gift the founder made for you from the operator account/);
-  assert.ok(page.includes("To see the other side on this device: copy the link, press Me, then Use another account, open the link and press Create my account. Press Open my gift, then connect the source."));
+  assert.ok(page.includes("To see the other side on this device: copy the link, press Me, then Other account, open the link and press Create my account. Press Open my gift, then connect the source."));
   // The words are the screens' own.
   const sentences = read("src/sentences.ts");
   for (const label of ['me: "Me"', 'anotherAccount: "Use another account"', 'openMyGift: "Open my gift"']) assert.ok(sentences.includes(label), label);
@@ -188,4 +190,49 @@ test("the index block names the contracts the deployment read follows, from what
   const who = read("app/judges/JudgesWhoUsed.tsx");
   assert.ok(who.includes("{giftEscrowV3Address() !== null && !followsThirdDailyContract(index) ? ("));
   assert.ok(who.includes("The index read here does not follow the third daily contract: a daily gift made since 3 Oct 2026 is not"));
+});
+
+// Sentences of the judges page the code no longer held (the audit of 8 Oct 2026, points 6 and 7), each with the code
+// that makes the new one true.
+
+test("a day's ceiling and the month's limit hold no day: the page says the day stays open, then goes back", () => {
+  assert.doesNotMatch(page, /nothing is settled against the gift, and its page says when reading resumes/);
+  assert.doesNotMatch(page, /nothing is settled against a reading that was not taken/);
+  assert.ok(page.includes("The ceiling holds no day: a day not read stays open until its catch-up window closes, 30 hours after it ends, and then goes back to the funder like a missed day, whoever was at fault."));
+  assert.ok(page.includes("The limit holds no day: a day waiting for a reading stays open until its catch-up window closes, then goes back to the funder like a missed day."));
+  // What the reliability block already said, and the contract: a day is drained once its window has elapsed, whoever asks.
+  assert.ok(read("app/judges/JudgesReliability.tsx").includes("A failure of ours does not hold a day past its window."));
+  assert.match(read("contracts/GiftEscrowV3.sol"), /function drain\(uint256 giftId\) external \{/);
+  // On the screen the ceiling's sentence no longer says nothing is lost, and gives the hour the day counts until.
+  assert.doesNotMatch(read("src/sentences.ts").slice(read("src/sentences.ts").indexOf("export const CEILING"), read("src/sentences.ts").indexOf("export type Reserve")), /Nothing is lost\.`/);
+  assert.ok(read("src/client/limit.ts").includes("${dayCeilingInWords()} ${openDayInWords(outcome.countableUntil, true, null)}"));
+});
+
+test("what Viky asks of Duolingo is said for the contract a daily gift is made on today", () => {
+  assert.ok(page.includes("On the first two versions of the daily contract Viky reads a profile once a day for each gift made on it"));
+  assert.ok(page.includes("it looks at the profile every quarter of an hour while a day of the gift is open, and once a minute while the gift's page is open, plainly; an attested reading is taken only for a lesson a look saw"));
+  // The quarter of an hour, the minute, and the look that comes before any reading.
+  assert.match(read("src/frequent-pass.ts"), /export const FREQUENT_DAILY_PASS_EVERY_SECONDS = 14 \* 60;/);
+  assert.match(read("app/kit/LiveReading.tsx"), /60_000|EVERY_MS|every minute|once a minute/i);
+  assert.ok(read("src/daily-look.ts").includes("if (noDay) return { kind: \"refused\", refusal: noDay };"), "no day open, and the source is not even asked");
+});
+
+test("the card services are said in the order the pay sheet tries them", () => {
+  assert.doesNotMatch(page, /A third way is Rampnow/);
+  assert.ok(page.includes('The pay sheet tries them in this order:{" "} {waysIn().map((way) => way.name).join(", then ")}.'));
+  assert.ok(page.includes("{rampnowOn ? ( <> {rampnowWay} {rampWay} </> ) : ( <> {rampWay} {rampnowWay} </> )}"));
+  // The order is the code's: Rampnow first where it is on, then the two there were.
+  assert.deepEqual(waysIn({ rampnow: true }).map((way) => way.name), ["Rampnow", "Ramp", "Mercuryo"]);
+  assert.deepEqual(waysIn({}).map((way) => way.name), ["Ramp", "Mercuryo"]);
+});
+
+test("the judges' path names the button as Me draws it, and says what each path asks of them", () => {
+  assert.ok(page.includes("press Me, then Other account, open the link and press Create my account"));
+  assert.doesNotMatch(page, /then Use another account/);
+  assert.equal(ME.otherAccount, "Other account");
+  assert.ok(read("app/kit/Me.tsx").includes("name={W.otherAccount}"));
+  assert.ok(page.includes("Each path asks something of you: Duolingo, an account there, and a lesson done after you connect it; Chess.com, an account there, and one rating point won."));
+  assert.ok(page.includes("With no account of a source, the path is the link of a gift already made, where the portal&apos;s instructions give one (the next step)."));
+  // The next step is that link.
+  assert.ok(page.indexOf("With no account of a source") < page.indexOf("If the portal&apos;s instructions give you the link of a gift made for you"));
 });

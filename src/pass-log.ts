@@ -121,6 +121,11 @@ export type PassPlanCounts = Readonly<{
   /** How long after its scheduled minute the earliest and the latest run began, in seconds. */
   soonestSeconds: number;
   latestSeconds: number;
+  /**
+   * When this plan's own first recorded run began (the audit of 8 Oct 2026): a pass added later than the others has
+   * fewer days behind it, and its runs are counted over its own days, never over the journal's.
+   */
+  firstAt: Date;
 }>;
 
 /** A plan with no recorded run is absent from `plans`: the journal counts runs, it does not invent them. */
@@ -137,6 +142,7 @@ export async function passesSince(): Promise<PassesSince> {
            count(*) FILTER (WHERE started_hour = scheduled_hour)::int AS on_time,
            min(least(gap, 86400 - gap))::int AS soonest,
            max(least(gap, 86400 - gap))::int AS latest,
+           min(started_at) AS plan_first_at,
            min(min(started_at)) OVER () AS first_pass_at
       FROM (
         SELECT plan,
@@ -158,6 +164,7 @@ export async function passesSince(): Promise<PassesSince> {
       onTime: Number(row.on_time),
       soonestSeconds: Number(row.soonest ?? 0),
       latestSeconds: Number(row.latest ?? 0),
+      firstAt: row.plan_first_at instanceof Date ? row.plan_first_at : new Date(String(row.plan_first_at)),
     })),
   };
 }

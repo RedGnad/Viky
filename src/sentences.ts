@@ -37,11 +37,16 @@ function spokenTo(source: string): string {
 /**
  * A day's ceiling of attested readings is reached (the founder, 3 Oct 2026; src/attested-calls.ts): Viky holds itself
  * to a number of them a day, for one gift and for all, so that a reading that keeps failing cannot spend the month.
- * Nothing was read and nothing is settled against it. Readings resume with the next UTC day, which the browser says
- * in the reader's own clock (src/client/limit.ts); a place with no clock says "tomorrow".
+ * Nothing was read. Readings resume with the next UTC day, which the browser says in the reader's own clock
+ * (src/client/limit.ts); a place with no clock says "tomorrow".
+ *
+ * It said "Nothing is lost." until 8 Oct 2026, which the contract does not promise: the ceiling holds no day. A day
+ * not read stays open until its catch-up window closes and then goes back to the funder like a missed day. So the
+ * sentence says when reading resumes, and the browser adds until when the open day can still be counted, as it does
+ * for the month's limit (`LIMIT.dayYours`): the two hours are what the person can act on.
  */
 export const CEILING = {
-  reading: (resumes: string | null) => `Viky has read this as often as it does in one day. It resumes ${resumes ?? "tomorrow"}. Nothing is lost.`,
+  reading: (resumes: string | null) => `Viky has read this as often as it does in one day. It resumes ${resumes ?? "tomorrow"}.`,
 } as const;
 
 /**
@@ -2115,7 +2120,7 @@ export const CASH_OUT = {
    * What the gifts made out to this account still hold for it (D208). It is counted in the figure above and in every
    * way's figure, and it is taken into the account first, the moment a way is chosen.
    */
-  inYourGifts: (amount: string) => `${amount} of it is still in your gifts. It comes out first, with one signature per gift.`,
+  inYourGifts: (amount: string) => `${amount} of it is still in your gifts. It comes out first: you confirm once per gift.`,
   gathering: "Taking what your gifts hold into your account.",
   gatherFailed: "What your gifts hold could not be taken out just now. Nothing was lost: it is still yours, in the gift.",
   /**

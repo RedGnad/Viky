@@ -191,9 +191,12 @@ credited day uses an attested reading, and the plan in force covers 100 a month,
 their own account (`RECLAIM_ALLOWANCE` in `src/attested-calls.ts`).
 
 **What would stop this plan, and how we would know.** Funders who do not finish without help: the journey is redone
-before anything is distributed. An association that declines because "it is crypto": a word leaked onto a screen,
-which a check looks for at every change, in the screens' source (`pnpm check:words`) and in what a browser renders
-(`test/browser/screens.spec.ts`).
+before anything is distributed. An association that declines because "it is crypto": a word leaked onto a screen.
+A check looks for seven of them at every change (wallet, gas, chain, seed, token, transaction hash, address:
+`src/consumer-words.ts`), in the source of the screens, of the sentences they print and of the routes that answer
+them (`pnpm check:words`, whose list of files is `scripts/check-consumer-words.ts`), and in what a browser renders
+(`test/browser/screens.spec.ts`). What it does not read: the routes of the way out, `app/api/exit`, where one line
+written for the operator's log carries one of those words.
 
 **What is not claimed.** No market size, no conversion rate, no viral loop. One recipient who earned a gift used that
 money to offer one to someone else: it has happened once.
@@ -210,7 +213,7 @@ flowchart LR
     APP[Next.js PWA and routes]
     REL[Relayer: submits and pays every step]
     SIG[Evidence signer: EIP-712 attestations]
-    CRON[Two passes a day: 00:30 and 07:00 UTC]
+    CRON[Passes: 00:30, 03:30 and 07:00 UTC, and one called every five minutes]
   end
   DB[(Neon Postgres: sessions, records, agreements)]
   subgraph Sources
@@ -333,6 +336,11 @@ looks, what every screen says, and every decision that touches money. Nothing wa
 payment was made without his explicit decision. Two people from outside the project have each opened a gift, one
 of them on an iPhone, from Instagram.
 
+A second AI is in the product itself, and is not Viky's: Reclaim's agent. The first time a student shows a page of a
+university's portal, that agent finds the page in the student's own signed-in session and writes the rule the proof
+is made on. Viky holds that first proof, and its operator reads what the rule read before anything is paid
+([Verification](docs/VERIFICATION.md)).
+
 </details>
 
 <details>
@@ -357,6 +365,10 @@ is staked. What it took from Lock-in is the verification plumbing, ported file b
 - the on-chain verifiers, which are not deployed (see [Contracts](docs/CONTRACTS.md)): `contracts/verifiers/VikyProofTypes.sol`,
   `contracts/verifiers/VikyReclaimVerifier.sol`, `contracts/verifiers/VikyStravaReclaimVerifier.sol`;
 - `scripts/check-contract-sizes.ts`, which came in the same commit;
+- three files of the build and of the checks, which came in that commit too: `foundry.toml` and `remappings.txt`,
+  unchanged since, which hold what the ported verifiers build with (the paths of Reclaim's Solidity SDK and of
+  OpenZeppelin, and the folder of real proofs kept out of the repository), and `.github/workflows/ci.yml`, one job
+  then and rewritten since for this repository's own checks;
 - their tests: `test/VikyDuolingoRealProof.t.sol`, `test/VikyReclaimVerifier.t.sol`,
   `test/VikyStravaRealProof.t.sol`, `test/VikyStravaReclaimVerifier.t.sol`, `test/account-auth.test.ts`,
   `test/api-guard.test.ts`, `test/duolingo-profile.test.ts`, `test/duolingo-proof-policy.test.ts`,
@@ -395,7 +407,10 @@ The functions run in Vercel's Paris region (`vercel.json`), next to the Frankfur
 passes: `/api/cron/daily` at 00:30 UTC and `/api/cron/settle` at 07:00 UTC. A third, `/api/cron/watch` at 02:00 UTC,
 emails the operator when the morning pass is not in the journal. A fourth, `/api/cron/recount` at 03:30 UTC, reads
 again the gifts whose reading failed on our side, before the day's catch-up window closes at 06:00 UTC, and runs the
-whole reading pass when the morning one left nothing in the journal. `/api/health` answers 200 when the database, the
+whole reading pass when the morning one left nothing in the journal. A fifth address, `/api/cron/milestones`, is not
+on Vercel's schedule: a scheduler outside Vercel, cron-job.org, calls it every five minutes. It reads the milestones
+still climbing, and every quarter of an hour the daily gifts of the third daily contract, which is how a day there is
+paid the day it is done (`src/frequent-pass.ts`). `/api/health` answers 200 when the database, the
 network, the reading worker, the relayer, the exchange's pin, the evidence key and the passes all hold, and 503 when
 one does not; it needs no secret and answers nothing of any gift.
 

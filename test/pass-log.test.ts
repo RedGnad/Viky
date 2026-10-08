@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test, { after, before, beforeEach } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import { COUNTING_PASS, dailyPass, SETTLING_PASS, type DailyPassDeps } from "../src/daily-pass";
@@ -273,7 +274,8 @@ test("passesSince says from when it speaks, how many runs kept the platform's pr
   await ran("counting", at(20, 1, 35));
   // The evening before, which is far from the counting minute even though it is close to midnight.
   await ran("counting", at(21, 23, 58));
-  await ran("settling", at(18, SETTLING_PASS_UTC.hour, SETTLING_PASS_UTC.minute, 30));
+  const firstSettling = at(18, SETTLING_PASS_UTC.hour, SETTLING_PASS_UTC.minute, 30);
+  await ran("settling", firstSettling);
 
   const since = await passesSince();
   assert.equal(since.firstPassAt?.toISOString(), first.toISOString());
@@ -282,9 +284,15 @@ test("passesSince says from when it speaks, how many runs kept the platform's pr
     // round the day: four seconds at the soonest, and sixty-five minutes for the 01:35 run, which is the latest of
     // them and the one the hour rule calls late. The 23:58 run is thirty-two minutes from the minute and late too,
     // which is exactly why the two questions are asked separately.
-    { plan: "counting", runs: 5, onTime: 3, soonestSeconds: 4, latestSeconds: 65 * 60 },
-    { plan: "settling", runs: 1, onTime: 1, soonestSeconds: 30, latestSeconds: 30 },
+    // Each with its own first run: a pass added later is counted over its own days (the audit of 8 Oct 2026, where
+    // "6 runs over 20 days" read as fourteen runs missing).
+    { plan: "counting", runs: 5, onTime: 3, soonestSeconds: 4, latestSeconds: 65 * 60, firstAt: first },
+    { plan: "settling", runs: 1, onTime: 1, soonestSeconds: 30, latestSeconds: 30, firstAt: firstSettling },
   ]);
+  const block = readFileSync("app/judges/JudgesReliability.tsx", "utf8");
+  assert.match(block, /\{overItsOwnDays\(plan\.firstAt\)\}/);
+  assert.match(block, /`, over \$\{days\} \$\{days === 1 \? "day" : "days"\}, since its first run on \$\{day\(firstAt\)\}`/);
+  assert.doesNotMatch(block, /`, over \$\{elapsed\}/, "never over the journal's days");
 });
 
 test("an empty journal answers with nothing, not with a number it made up", async () => {

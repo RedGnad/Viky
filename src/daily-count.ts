@@ -19,8 +19,9 @@ export async function readDailyGift(input: { giftId: string; purpose: PublicChec
   // A connected source has no plain look: asked for one, nothing is read at all, rather than a proof paid for.
   if (condition?.nature === "connected" && input.lookOnly) return { kind: "already", giftId: input.giftId, reason: "read_recently" };
   const outcome = condition?.nature === "connected" ? await runConnectedCheckIn(input) : await runPublicCheckIn(input);
-  // The month's limit of readings: the refusal says until when the day can still be counted (the founder, 3 Oct 2026).
-  if (outcome.kind === "refused" && outcome.code === "LIMIT_REACHED" && record) return { ...outcome, countableUntil: await untilOf(record) };
+  // The month's limit of readings, and a day's ceiling: the refusal says until when the day can still be counted (the
+  // founder, 3 Oct 2026; the ceiling since 8 Oct 2026, which said "Nothing is lost." of a day it does not hold).
+  if (outcome.kind === "refused" && (outcome.code === "LIMIT_REACHED" || outcome.code === "CEILING_REACHED") && record) return { ...outcome, countableUntil: await untilOf(record) };
   return outcome;
 }
 

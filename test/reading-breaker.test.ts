@@ -224,12 +224,21 @@ test("the refusal is ours in every reading: nothing is settled against it, and t
   assert.ok(MILESTONE_OURS_TO_FIX.has("CEILING_REACHED"));
   assert.match(readFileSync("src/daily-pass.ts", "utf8"), /"LIMIT_REACHED",\n[^\n]*\n[^\n]*\n\s*"CEILING_REACHED",/);
   // The sentence, and the hour in the reader's own clock, which only the browser knows.
-  assert.equal(refusalMessage("CEILING_REACHED"), "Viky has read this as often as it does in one day. It resumes tomorrow. Nothing is lost.");
-  assert.equal(CEILING.reading("tomorrow, 4 Oct, at 02:00"), "Viky has read this as often as it does in one day. It resumes tomorrow, 4 Oct, at 02:00. Nothing is lost.");
-  assert.match(dayCeilingInWords(NOON), /^Viky has read this as often as it does in one day\. It resumes (today|tomorrow), \d{1,2} [A-Z][a-z]{2}, at \d{1,2}:\d{2}\. Nothing is lost\.$/);
+  assert.equal(refusalMessage("CEILING_REACHED"), "Viky has read this as often as it does in one day. It resumes tomorrow.");
+  assert.equal(CEILING.reading("tomorrow, 4 Oct, at 02:00"), "Viky has read this as often as it does in one day. It resumes tomorrow, 4 Oct, at 02:00.");
+  assert.match(dayCeilingInWords(NOON), /^Viky has read this as often as it does in one day\. It resumes (today|tomorrow), \d{1,2} [A-Z][a-z]{2}, at \d{1,2}:\d{2}\.$/);
   const answered = withTheLimitSaid({ kind: "refused", giftId: "7", code: "CEILING_REACHED", message: "said without a clock" });
   assert.match(answered.message, /It resumes (today|tomorrow), \d{1,2} [A-Z][a-z]{2}, at \d{1,2}:\d{2}\./);
   assert.deepEqual(withTheLimitSaid({ kind: "refused", giftId: "7", code: "FETCH_FAILED", message: "left as it is" }).message, "left as it is");
+  // The ceiling holds no day (the audit of 8 Oct 2026): it said "Nothing is lost." of a day that goes back to the
+  // funder once its window closes. It says when reading resumes, and until when the open day can still be counted.
+  assert.doesNotMatch(CEILING.reading(null), /lost/i);
+  const withADayOpen = withTheLimitSaid({ kind: "refused", giftId: "7", code: "CEILING_REACHED", message: "said without a clock", countableUntil: Math.floor(NOON / 1_000) + 18 * 3_600 });
+  assert.match(withADayOpen.message, /^Viky has read this as often as it does in one day\. It resumes (today|tomorrow), \d{1,2} [A-Z][a-z]{2}, at \d{1,2}:\d{2}\. Your day can still be counted until [^.]+\.$/);
+  // With no day open there is no hour to give: the first two sentences alone.
+  assert.doesNotMatch(withTheLimitSaid({ kind: "refused", giftId: "7", code: "CEILING_REACHED", message: "x", countableUntil: null }).message, /can still be counted/);
+  // The server sends that hour with the ceiling's refusal as it does with the month's limit.
+  assert.match(readFileSync("src/daily-count.ts", "utf8"), /\(outcome\.code === "LIMIT_REACHED" \|\| outcome\.code === "CEILING_REACHED"\) && record\) return \{ \.\.\.outcome, countableUntil: await untilOf\(record\) \}/);
   // Every reading that can be refused for the month's limit can be for the day's ceiling.
   for (const file of ["attested-read", "duolingo-public", "duolingo-course-reading", "chess-reading", "codeforces-reading", "coursera-reading", "credly-reading", "det-reading", "edx-reading", "accredible-reading", "mitx-online-reading", "marathon-reading", "wca-reading", "certificate-reading"]) {
     assert.ok(readFileSync(`src/${file}.ts`, "utf8").includes('"CEILING_REACHED"'), file);
@@ -313,7 +322,7 @@ test("a page the look says can pay is proved, and judged again on what was attes
   // A day's ceiling met by the proof is said as such.
   const stopped = pasted({ attest: async () => Promise.reject(new DetReadError("CEILING_REACHED", "the day's ceiling")) });
   const ceiling = await paste(stopped);
-  assert.deepEqual(ceiling, { kind: "refused", giftId: "1000001", code: "CEILING_REACHED", message: "Viky has read this as often as it does in one day. It resumes tomorrow. Nothing is lost.", score: undefined });
+  assert.deepEqual(ceiling, { kind: "refused", giftId: "1000001", code: "CEILING_REACHED", message: "Viky has read this as often as it does in one day. It resumes tomorrow.", score: undefined });
 });
 
 test("while proofs are paused nothing is looked at and nothing is paid for: the refusal is the contract's own", async () => {

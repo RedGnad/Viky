@@ -515,7 +515,7 @@ test("one sentence in the open names the service by the gift's own source and th
   assert.equal(LIMIT.isSaid(LIMIT.said("Chess.com", "readings", "1 Nov")), true);
   assert.equal(LIMIT.isSaid(`${LIMIT.said("Duolingo", "readings", "1 Nov")} ${LIMIT.dayYours("today, 4 Oct, at 9:00")}`), true, "with the hour after it, under a press");
   assert.equal(LIMIT.isSaid(LIMIT.said("ETS", "proofs", "1 Nov")), true);
-  for (const other of ["Duolingo could not be read just now. Try again in a minute.", "Viky has read this as often as it does in one day. It resumes tomorrow. Nothing is lost.", "", null, undefined]) assert.equal(LIMIT.isSaid(other), false);
+  for (const other of ["Duolingo could not be read just now. Try again in a minute.", "Viky has read this as often as it does in one day. It resumes tomorrow.", "", null, undefined]) assert.equal(LIMIT.isSaid(other), false);
   // The day it starts again is the cycle's own first day, in UTC, written the same on the server and in every browser.
   assert.equal(startsAgainInWords(Date.UTC(2026, 9, 3, 18, 0)), "1 Nov");
   assert.equal(startsAgainInWords(Date.UTC(2026, 9, 31, 23, 59)), "1 Nov");
@@ -585,7 +585,7 @@ test("a gift's page is told of the limit only while the gift runs, with the hour
   assert.match(readFileSync("src/milestone-status.ts", "utf8"), /limit: await giftLimitFor\(!state\.settled && !state\.cancelled, \(\) => null\)/);
   // A daily reading refused for the limit carries the hour; the browser says it in the reader's clock.
   const count = readFileSync("src/daily-count.ts", "utf8");
-  assert.match(count, /if \(outcome\.kind === "refused" && outcome\.code === "LIMIT_REACHED" && record\) return \{ \.\.\.outcome, countableUntil: await untilOf\(record\) \};/);
+  assert.match(count, /if \(outcome\.kind === "refused" && \(outcome\.code === "LIMIT_REACHED" \|\| outcome\.code === "CEILING_REACHED"\) && record\) return \{ \.\.\.outcome, countableUntil: await untilOf\(record\) \};/);
 });
 
 test("the browser adds the hour of the open day in the reader's own clock, and leaves every other answer as it is", async () => {
