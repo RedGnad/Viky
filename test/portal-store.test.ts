@@ -321,7 +321,7 @@ test("a missing provider is asked for once, with its instruction, and a witness 
   // keeps the mark, and the university is not said to have been read with a student by it.
   await db.query("UPDATE viky_portals SET unverified = true WHERE portal_id = 'uni-a-br'");
   const NEW_PROVIDER = "abcdefab-0000-4000-8000-0000000000aa";
-  assert.equal(await pinProvider("uni-a-br", "enrolment", { pin: { ...pin, providerVersion: "1.0.2", ahead: true }, extract: { field: "academicYear", matches: "^2026.2027$", keeps: "whether enrolled in 2026" }, operator: OPERATOR, providerId: NEW_PROVIDER }), true);
+  assert.equal(await pinProvider("uni-a-br", "enrolment", { pin: { ...pin, providerVersion: "1.0.2", ahead: true, fixed: true }, extract: { field: "academicYear", matches: "^2026.2027$", keeps: "whether enrolled in 2026" }, operator: OPERATOR, providerId: NEW_PROVIDER }), true);
   const ahead = (await loadPortal("uni-a-br"))!;
   assert.equal(ahead.enrolment?.providerId, NEW_PROVIDER);
   assert.equal(ahead.enrolment?.pin?.ahead, true);
@@ -336,6 +336,7 @@ test("a missing provider is asked for once, with its instruction, and a witness 
   assert.equal(await confirmPin("uni-a-br", "enrolment"), false, "nothing left to take off");
   const borne = (await loadPortal("uni-a-br"))!;
   assert.equal(borne.enrolment?.pin?.ahead, undefined);
+  assert.equal(borne.enrolment?.pin?.fixed, true, "borne out, it stays a fixed rule: no agent is asked for");
   assert.equal(borne.enrolment?.pin?.specHash, pin.specHash, "the rule is the same one");
   assert.equal(borne.unverified, false);
   assert.equal(testedWithAStudent(borne), true);

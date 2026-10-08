@@ -39,6 +39,14 @@ export type WitnessPin = Readonly<{
    * fit it is read as a first proof is and held, never refused: a description of a rule is not a proof of it.
    */
   ahead?: boolean;
+  /**
+   * Set on a pin whose version runs a fixed rule with no agent of Reclaim's: the session then does not ask for the
+   * agent. Measured on 8 Oct 2026, on the first university's pinned version with nobody signed in: asked for, the
+   * agent puts Reclaim's page in a mode that waits for its instructions; not asked for, the page runs the plain fixed
+   * flow, and Reclaim opens the session all the same. A pin a first proof gave under the agent carries no such mark,
+   * and its sessions go on asking for the agent as they did when that proof was made.
+   */
+  fixed?: boolean;
 }>;
 
 export class WitnessProofError extends Error {
@@ -214,6 +222,7 @@ export function pinFromPublished(request: PublishedRequest, providerVersion: str
     responseRedactions: asAClaimHoldsIt(request.responseRedactions, ["jsonPath", "regex", "xPath"]),
     specHash: hashes[0],
     ahead: true,
+    fixed: true,
   };
 }
 

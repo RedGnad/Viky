@@ -11,7 +11,6 @@ import { PGlite } from "@electric-sql/pglite";
 import { GET as sessionOpen, POST as sessionPost } from "../app/api/proof/session/route";
 import { configureProofSessionStore, consumeAndSaveVerification, ensureProofSessionSchema, saveProofSession, type SqlExecutor } from "../src/proof-session-store";
 import { channelFor } from "../src/reclaim-channel";
-import { isAgentVersion } from "../src/witness-portal";
 import { POST as verifyPost } from "../app/api/proof/verify/route";
 
 const ORIGIN = "https://viky.test";
@@ -148,10 +147,8 @@ test("a university's session runs on the portal channel whatever the setting say
   assert.match(source, /\.\.\.\(witness && !witness\.pin && !providerVersion \? \{\} : \{ providerVersion \}\),/);
   assert.match(readFileSync(".env.example", "utf8"), /Production stays on portal/);
   // Reclaim's agent is asked for where it has the rule to write or wrote it, and nowhere else: a university pinned on a
-  // version written by hand runs that fixed rule (8 Oct 2026).
-  assert.match(source, /acceptAiProviders: Boolean\(witness\) && !\(witness\?\.pin && !isAgentVersion\(providerVersion\)\),/);
-  assert.equal(isAgentVersion("1.0.0-ai.3"), true);
-  assert.equal(isAgentVersion("1.0.1"), false);
+  // fixed rule runs it with no agent (8 Oct 2026). A pin a proof gave under the agent goes on as it was.
+  assert.match(source, /acceptAiProviders: Boolean\(witness\) && !witness\?\.pin\?\.fixed,/);
 });
 
 test("the operator pins a university ahead of the pass from Reclaim's published configuration, checked on a real pin first", () => {

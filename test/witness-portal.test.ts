@@ -179,6 +179,7 @@ test("a pin worked out from a version's published request is the pin a real clai
   // from their published request the very pin their claim gives, and production's pin was that of ai.3.
   const ahead = pinFromPublished(PUBLISHED, "1.0.1", hashOf);
   assert.equal(ahead.ahead, true, "marked as made ahead of any proof");
+  assert.equal(ahead.fixed, true, "and as a fixed rule: its sessions ask for no agent");
   assert.equal(ahead.method, "POST");
   assert.equal(ahead.responseMatches, '[{"type":"contains","value":"\\"status\\":\\"{{status}}\\""}]', "the published defaults are dropped, as a claim drops them");
   assert.equal(ahead.responseRedactions, '[{"jsonPath":"$.status"}]');
@@ -186,6 +187,7 @@ test("a pin worked out from a version's published request is the pin a real clai
   const real = pinOf(verifyWitnessProof(claim, { domain: "ucad.sn", method: null, pin: null, providerVersion: "1.0.1", witness: WITNESS.address }), "1.0.1");
   assert.equal(sameRule(ahead, real), true);
   assert.equal(real.ahead, undefined, "a pin a proof gave carries no mark");
+  assert.equal(real.fixed, undefined, "and its sessions go on asking for the agent, as when that proof was made");
   // And the claim passes under the pin made ahead, checked as the server checks any pinned proof.
   verifyWitnessProof(claim, { domain: "ucad.sn", method: ahead.method, pin: ahead, providerVersion: "1.0.1", witness: WITNESS.address });
   // Another rule is another pin.
