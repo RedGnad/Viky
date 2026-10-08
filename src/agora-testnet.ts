@@ -173,9 +173,18 @@ export type AgoraTestnetRun = Readonly<{
 
 /**
  * The run the judges page names, or nothing while there is none: no line says a transaction happened before one did.
- * Filled from what `pnpm agora:testnet run` prints, and `pnpm agora:testnet check` reads it back from the chain.
+ * Filled from what `pnpm agora:testnet run` printed on 8 Oct 2026, the one run made; `pnpm agora:testnet check` reads
+ * it back from the chain.
  */
-export const AGORA_TESTNET_RUN = null as AgoraTestnetRun | null;
+export const AGORA_TESTNET_RUN = {
+  day: "8 Oct 2026",
+  router: "0xE231C0310C4C6910f1D3A349c803AA94cdc18e3F",
+  exit: "0x854e8518cc0c1be79a90500c7f2129deec0232bd8ee1f2d8edbf14c70453b95c",
+  block: 69361763,
+  payer: "0xb6102414368c0410eD4ab16552fBab7ae4148e82",
+  ausdIn: 10000000n,
+  otherCoinOut: 10000000000000000000n,
+} as AgoraTestnetRun | null;
 
 export function testnetTransactionUrl(hash: Hex): string {
   return `${MONAD_TESTNET_EXPLORER}/tx/${hash}`;
