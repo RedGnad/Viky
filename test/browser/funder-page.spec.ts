@@ -15,6 +15,12 @@ import { DAY, gift, json, makeAnAccount, neverAskedToBeTold, now, profile } from
  * VIKY_FUNDER_CAPTURES=<folder> also photographs each state at 390 by 844: a page whole, a sheet as the screen shows it.
  */
 const shot = photographer(process.env.VIKY_FUNDER_CAPTURES);
+/** The same, of a window as wide as a computer's, once what enters the page has entered. */
+const wide = async (page: Page, name: string) => {
+  if (!process.env.VIKY_FUNDER_CAPTURES) return;
+  await page.waitForTimeout(900);
+  await page.screenshot({ path: `${process.env.VIKY_FUNDER_CAPTURES}/${name}.png` });
+};
 const controls = (page: Page) => page.locator("section.you-decide");
 const act = (page: Page, which: "messages" | "back") => page.locator(`[data-decide="${which}"]`);
 
@@ -77,15 +83,17 @@ test.describe("the funder's page", () => {
     await expect(page.getByText("Only this device kept it: the link carries the key that opens the gift.")).toHaveCount(0);
     await expect(page.getByRole("button", { name: /again/i })).toHaveCount(0);
     expect((await field.boundingBox())!.y, "the field is above its button").toBeLessThan((await copy.boundingBox())!.y);
-    // A press on the field copies, as the button does, and the button says so for a moment.
-    await field.click();
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
-    await expect(page.locator('button[data-copy-the-link][data-state="done"]')).toHaveText("Copied");
     // Two round controls under the card: being told, as it was offered under the link of a gift just made, and taking back.
     await expect(controls(page).getByRole("button")).toHaveCount(2);
     await expect(act(page, "back")).toHaveText("Take backUnopened");
     await expect(page.getByRole("button", { name: "Take this gift back" })).toHaveCount(0);
     await shot(page, "01-unopened-link-kept");
+    // A press on the field copies, as the button does, and the button says so for a moment.
+    await field.click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
+    await expect(page.locator('button[data-copy-the-link][data-state="done"]')).toHaveText("Copied");
+    await shot(page, "01b-copied");
+    await expect(page.getByRole("button", { name: "Copy the link", exact: true })).toBeVisible();
 
     // The date and the number are a line of what was agreed, and nowhere in the open.
     await page.getByText("What was agreed", { exact: true }).click();
@@ -161,12 +169,12 @@ test.describe("the funder's page", () => {
     await expect(again).toHaveCSS("background-color", "rgb(255, 197, 49)");
     await expect(page.getByRole("button", { name: /^Copy the link/ })).toHaveCount(0);
     await expect(page.getByText(/The link you had stops working the moment you do\./)).toBeHidden();
-    await shot(page, "05-first-contract-no-link");
+    await shot(page, "04b-first-contract-no-link");
     await again.click();
     const sheet = page.getByRole("dialog", { name: "Get the link again" });
     await expect(sheet.getByText("Lost the link, or sent it from another device? Get a new one. The link you had stops working the moment you do.")).toBeVisible();
     expect(asked).toEqual([]);
-    await shot(page, "05b-link-again-sheet", false);
+    await shot(page, "04c-link-again-sheet", false);
     await sheet.getByRole("button", { name: "Not now" }).click();
     await expect(sheet).toBeHidden();
     expect(asked).toEqual([]);
@@ -175,7 +183,7 @@ test.describe("the funder's page", () => {
     await expect(page.getByText("Here is the new link. The one you had before no longer opens this gift.")).toBeVisible();
     expect(asked).toEqual(["link"]);
     await expect(page.locator("[data-gift-link]")).toHaveText(/ZyXwVuTsRqPoNmLkJiHgFe/);
-    await shot(page, "05c-new-link");
+    await shot(page, "04d-new-link");
     await device.context.close();
   });
 
@@ -292,7 +300,16 @@ test.describe("the funder's page", () => {
     const copy = (await page.getByRole("button", { name: "Copy the link", exact: true }).boundingBox())!;
     expect(copy.width).toBeLessThanOrEqual(440);
     expect(copy.x).toBeGreaterThanOrEqual(box.x);
-    if (process.env.VIKY_FUNDER_CAPTURES) await page.screenshot({ path: `${process.env.VIKY_FUNDER_CAPTURES}/13-after-paying-1440.png` });
+    await wide(page, "13-after-paying-1440");
+    // And on a device that does not hold the link: the same column, with the one button no wider than the card.
+    await serve(page, "9", () => unopened("9", { version: 2 }), TERMS.daily, null);
+    await page.goto("/g/9");
+    const find = page.getByRole("button", { name: "Find the link", exact: true });
+    await expect(find).toBeVisible();
+    const other = (await page.locator("section.gift-card-placed").boundingBox())!;
+    expect(Math.round(other.width)).toBe(440);
+    expect((await find.boundingBox())!.width).toBeLessThanOrEqual(440);
+    await wide(page, "14-no-link-1440");
     await device.context.close();
   });
 
