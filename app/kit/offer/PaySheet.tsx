@@ -23,7 +23,8 @@ import { frameKeepsSignIn, rampnowFrameOn } from "@/src/rampnow-frame";
 import { noteInRampnowJournal } from "@/src/client/rampnow-journal";
 import { payAtRampnowBeside } from "@/src/client/rampnow-pending";
 import { ACCOUNT_DOOR, FUND, PAY as W, WAITS } from "@/src/sentences";
-import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, PRIMARY_BUTTON, SMALL_BUTTON } from "../../components/ui";
+import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, SMALL_BUTTON } from "../../components/ui";
+import { Button } from "../Button";
 import { AccountPanel } from "../../components/AccountPanel";
 import { Field } from "../Field";
 import { Lines } from "../Lines";
@@ -32,7 +33,7 @@ import { JudgeCode } from "./JudgeCode";
 import { FieldRefusal } from "../FieldRefusal";
 import { FoldChevron } from "../GiftLive";
 import { Sheet } from "../Sheet";
-import { ButtonWords, StepInProgress, WaitLine } from "../Waiting";
+import { WaitLine } from "../Waiting";
 
 /**
  * Paying for the gift (the founder's mockup pay-sheet-2026-10-03, validated 3 Oct 2026, which follows pay.html of
@@ -307,11 +308,9 @@ export function PaySheet({
         <>
           {/* While what the account holds is not known, the button names no way to pay and does not go (the founder,
               5 Oct 2026): it said "by card" to somebody who had the money, and a press led there. */}
-          <button type="button" className={PRIMARY_BUTTON} disabled={!ready || !settled || busy || status === "busy"} onClick={() => void pay()} data-pays={pays}>
-            <ButtonWords busy={busy} doing={W.paying}>
-              {enough ? W.payFromAccount(giftRead, recipient) : sum ? W.payByCard(say(sum.card)) : W.pay}
-            </ButtonWords>
-          </button>
+          <Button waiting={!ready || !settled || status === "busy"} doing={busy ? W.paying : null} step={WAITS.account} onPress={() => void pay()} data-pays={pays}>
+            {enough ? W.payFromAccount(giftRead, recipient) : sum ? W.payByCard(say(sum.card)) : W.pay}
+          </Button>
           {pays === "reading" ? <WaitLine>{W.readingAccount}</WaitLine> : null}
           {/* A reading that failed is said, with what reads it again. Never the card in its place. */}
           {pays === "unread" ? (
@@ -322,7 +321,6 @@ export function PaySheet({
               </button>
             </>
           ) : null}
-          <StepInProgress busy={busy} step={WAITS.account} />
           {/* One line: who takes the card, its ID the first time, and its terms (the mockup of 3 Oct 2026). */}
           {byCard ? <CardLine way={way} /> : null}
         </>
