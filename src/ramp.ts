@@ -65,7 +65,7 @@ export async function payoutAsset(symbol = "USDC", currency = "EUR"): Promise<Pa
 
   const found = list.find((asset) => asset.symbol === symbol && asset.chain === CHAIN);
   if (!found || !found.address || found.enabled !== true) {
-    throw new GiftApiError("PAYOUT_ASSET_CLOSED", "The payout service is not taking this coin right now.", 503);
+    throw new GiftApiError("PAYOUT_ASSET_CLOSED", "The payout service is not taking this right now.", 503);
   }
   const price = found.price?.[currency];
   if (typeof price !== "number" || price <= 0 || typeof found.minPurchaseAmount !== "number" || typeof found.maxPurchaseAmount !== "number") {

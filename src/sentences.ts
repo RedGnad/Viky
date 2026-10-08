@@ -2120,7 +2120,7 @@ export const CASH_OUT = {
    * What the gifts made out to this account still hold for it (D208). It is counted in the figure above and in every
    * way's figure, and it is taken into the account first, the moment a way is chosen.
    */
-  inYourGifts: (amount: string) => `${amount} of it is still in your gifts. It comes out first, with one signature per gift.`,
+  inYourGifts: (amount: string) => `${amount} of it is still in your gifts. It comes out first: you confirm once per gift.`,
   gathering: "Taking what your gifts hold into your account.",
   gatherFailed: "What your gifts hold could not be taken out just now. Nothing was lost: it is still yours, in the gift.",
   /**
