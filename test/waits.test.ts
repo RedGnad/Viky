@@ -98,7 +98,7 @@ test("done lasts long enough to be read, and then the button is there to press a
   // A copy is the plain case: it said "Copied" for good, and the link could not be seen to copy a second time.
   const link = readFileSync("app/kit/LinkAgain.tsx", "utf8");
   assert.match(link, /const \[copied, markCopied\] = useDone\(\);/);
-  assert.match(link, /<Button done=\{copied \? W\.copied : null\} onPress=\{\(\) => copy\(link\)\}>/);
+  assert.match(link, /<Button done=\{copied \? W\.copied : null\} failed=\{refusal\} failedId=\{`link-refused-\$\{giftId\}`\} onPress=\{\(\) => copy\(link\)\} data-copy-the-link="">/);
 });
 
 test("the screens of the person who pays use the one button for every press that waits", () => {

@@ -176,6 +176,8 @@ test.describe("the first payment, and the way back to it", () => {
       await answerTheChain(context, { ausd: 0n, mon: 0n });
       await neverAskedToBeTold(context);
       await serve(page, "7", justPaid, TERMS.daily, null);
+      // Whether this browser can be told is the server's own answer, as it was on the screen this page replaces.
+      await page.unroute("**/api/gift/7/notify");
       await page.goto("/");
       await page.getByRole("button", { name: /^Sign in$/ }).first().click();
       await page.getByRole("button", { name: /^Create (your|my) account$/ }).first().click();
@@ -201,6 +203,7 @@ test.describe("the first payment, and the way back to it", () => {
       const iphone = await profile(browser, baseURL, size.viewport, { userAgent: SAFARI });
       await answerTheChain(iphone.context, { ausd: 0n, mon: 0n });
       await serve(iphone.page, "7", justPaid, TERMS.daily, null);
+      await iphone.page.unroute("**/api/gift/7/notify");
       await iphone.page.goto("/");
       await iphone.page.getByRole("button", { name: /^Sign in$/ }).first().click();
       await iphone.page.getByRole("button", { name: /^Create (your|my) account$/ }).first().click();

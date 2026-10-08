@@ -380,7 +380,8 @@ test("on the sheet that pays, one fold holds what only some readers need, and th
   // The link's warning changes what a person does with the link, so it is said where the link is (the mockup of 3 Oct
   // 2026), on the screen that gives it, and no more on the sheet that pays.
   assert.doesNotMatch(sheet, /linkRisk/);
-  assert.match(readFileSync("app/components/PayGift.tsx", "utf8"), /onlyThem\(/);
+  // That screen is the gift's own page since 8 Oct 2026, and the warning is the line under its state.
+  assert.match(readFileSync("src/gift-live.ts", "utf8"), /input\.linkHere\s*\? L\.unopened\.whoeverOpens/);
   // The fold holds short lines, a label and its value, and never a paragraph (the founder, 4 Oct 2026): what comes
   // back and when, by the kind of gift, and the card's fee. It held up to eight sentences.
   const inside = sheet.slice(sheet.indexOf('<details className="said-fold" data-what-happens="">'), sheet.indexOf("</details>"));
