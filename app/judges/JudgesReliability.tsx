@@ -20,6 +20,12 @@ function after(plan: { runs: number; soonestSeconds: number; latestSeconds: numb
   return `They began between ${delay(plan.soonestSeconds)} and ${delay(plan.latestSeconds)} after that minute.`;
 }
 
+/** ", over 6 days, since its first run on 2026-10-03", or nothing for a pass whose first run was today. */
+function overItsOwnDays(firstAt: Date): string {
+  const days = daysSince(firstAt);
+  return days === 0 ? `, its first run today` : `, over ${days} ${days === 1 ? "day" : "days"}, since its first run on ${day(firstAt)}`;
+}
+
 /**
  * The reliability figures, every one of them from a query against the journal each pass writes (U2, point 3), with
  * the refusals each reading met beside them (the audit of 18 Sep, gap a: a refusal that was not ours left no trace,
@@ -78,8 +84,10 @@ export async function JudgesReliability() {
                   : "Settling pass, after the catch-up window"}
             </dt>
             <dd className={HELP}>
+              {/* Over this pass's own days, from its first recorded run: a pass added later than the journal began
+                  read as so many runs missing ("6 runs over 20 days") when none was. */}
               {plan.runs} {plan.runs === 1 ? "run" : "runs"}, {plan.onTime} inside the hour the schedule names
-              {elapsed === 0 ? "" : `, over ${elapsed} ${elapsed === 1 ? "day" : "days"}`}. {after(plan)} A run that
+              {overItsOwnDays(plan.firstAt)}. {after(plan)} A run that
               never happened writes nothing, so a missing run shows here as a run fewer, never as a late one.
             </dd>
           </div>

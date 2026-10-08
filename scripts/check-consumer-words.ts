@@ -45,6 +45,14 @@ const SURFACES = [
   "src/milestone-routes.ts",
   "app/api/chess/**/*.ts",
   "app/api/conditions/**/*.ts",
+  // The routes of a proof shown, and the card and payout services' own refusals, whose text is printed as it is sent
+  // (the audit of 8 Oct 2026). The routes of the way out are not read yet: one line of theirs, written for the
+  // operator's log, carries one of the words.
+  "app/api/proof/**/*.ts",
+  "src/shown-verification.ts",
+  "src/rails.ts",
+  "src/ramp.ts",
+  "src/mercuryo.ts",
 ];
 // The judges page is the one place addresses and the words of the chain may appear, and these two components are only on it.
 const EXCLUDED = new Set(["app/components/JudgesAccount.tsx", "app/components/MilestoneJudges.tsx"]);

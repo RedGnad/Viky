@@ -365,3 +365,28 @@ test("the Foundry version named is the one the CI installs, and nothing is said 
   assert.ok(section("Test").includes(`Foundry ${pinned[1]}`), "and the Test section names the same");
   assert.doesNotMatch(EVERYTHING, /tried the product himself on real phones/);
 });
+
+test("the README says the passes that run, what the word check reads, and what came with the port (the audit of 8 Oct 2026)", () => {
+  const text = readFileSync("README.md", "utf8");
+  // The passes: Vercel's own schedule, and the one a scheduler outside it calls, which pays a day the day it is done.
+  assert.doesNotMatch(text, /Two passes a day/);
+  assert.match(text, /CRON\[Passes: 00:30, 03:30 and 07:00 UTC, and one called every five minutes\]/);
+  assert.match(text, /A fifth address, `\/api\/cron\/milestones`, is not\non Vercel's schedule: a scheduler outside Vercel, cron-job\.org, calls it every five minutes\./);
+  const schedule = JSON.parse(readFileSync("vercel.json", "utf8")) as { crons: { path: string; schedule: string }[] };
+  assert.deepEqual(schedule.crons.map((cron) => `${cron.path} ${cron.schedule}`).sort(), ["/api/cron/daily 30 0 * * *", "/api/cron/recount 30 3 * * *", "/api/cron/settle 0 7 * * *", "/api/cron/watch 0 2 * * *"]);
+  assert.match(readFileSync("app/api/cron/milestones/route.ts", "utf8"), /called every five minutes by cron-job\.org/);
+  // The word check: its seven words, and the one place it does not read, said as it is.
+  assert.match(text, /A check looks for seven of them at every change \(wallet, gas, chain, seed, token, transaction hash, address:/);
+  assert.match(readFileSync("src/consumer-words.ts", "utf8"), /wallets\?\|gas\|chains\?\|seeds\?\|tokens\?\|transaction hash\(\?:es\)\?\|address\(\?:es\)\?/);
+  const scanned = readFileSync("scripts/check-consumer-words.ts", "utf8");
+  for (const place of ['"app/api/proof/**/*.ts"', '"src/rails.ts"', '"src/ramp.ts"', '"src/mercuryo.ts"', '"src/shown-verification.ts"']) assert.ok(scanned.includes(place), place);
+  assert.ok(!scanned.includes('"app/api/exit'), "the way out's routes are not read yet, and the README says so");
+  assert.match(text, /What it does not read: the routes of the way out, `app\/api\/exit`/);
+  // What came with the port, by name, and what has changed since.
+  assert.match(text, /three files of the build and of the checks, which came in that commit too: `foundry\.toml` and `remappings\.txt`,\n  unchanged since/);
+  assert.match(text, /`\.github\/workflows\/ci\.yml`, one job\n  then and rewritten since/);
+  // The AI that is in the product and is not Viky's.
+  assert.match(text, /A second AI is in the product itself, and is not Viky's: Reclaim's agent\./);
+  // Mobile money is not said switched off where the judges page says it is offered.
+  assert.doesNotMatch(readFileSync("docs/PAGES-AND-ROUTES.md", "utf8"), /switched off until a first real payout/);
+});

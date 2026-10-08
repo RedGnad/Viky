@@ -20,7 +20,7 @@ export function openDayLine(countableUntil: number, mine: boolean, recipientName
 }
 
 /**
- * "... It resumes tomorrow, 4 Oct, at 02:00. ..." A day's ceiling is lifted when the next UTC day begins, which is an
+ * "... It resumes tomorrow, 4 Oct, at 02:00." A day's ceiling is lifted when the next UTC day begins, which is an
  * hour of the reader's own day: the browser knows which.
  */
 export function dayCeilingInWords(nowMs: number = Date.now()): string {
@@ -34,7 +34,10 @@ export function dayCeilingInWords(nowMs: number = Date.now()): string {
 export function withTheLimitSaid<T>(data: T): T {
   const outcome = data as { kind?: unknown; code?: unknown; countableUntil?: unknown } | null;
   if (!outcome || typeof outcome !== "object" || outcome.kind !== "refused") return data;
-  if (outcome.code === "CEILING_REACHED") return { ...outcome, message: dayCeilingInWords() } as T;
+  // When reading resumes, then until when the open day can still be counted, where a day is open: the ceiling holds none.
+  if (outcome.code === "CEILING_REACHED") {
+    return { ...outcome, message: typeof outcome.countableUntil === "number" ? `${dayCeilingInWords()} ${openDayInWords(outcome.countableUntil, true, null)}` : dayCeilingInWords() } as T;
+  }
   if (outcome.code !== "LIMIT_REACHED" || typeof outcome.countableUntil !== "number") return data;
   // Under a press there is no fold: the sentence the server said, then until when the day can still be counted.
   return { ...outcome, message: `${String((outcome as { message?: unknown }).message ?? "")} ${openDayInWords(outcome.countableUntil, true, null)}`.trim() } as T;
