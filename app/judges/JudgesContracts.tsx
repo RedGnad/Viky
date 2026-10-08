@@ -79,12 +79,16 @@ export async function JudgesContracts() {
       ))}
       {secondVersion ? (
         <>
-          <p className={HELP}>What the owner of a second-version gift contract can do, read from the contract:</p>
+          <p className={HELP}>
+            What the owner of a gift contract of the second version, or of the third daily contract, can do, read from the
+            contract:
+          </p>
           <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
             <li>Pause and reopen new gifts.</li>
             <li>
               Pause readings, which pauses openings too. A pause ends by itself after seven days, and cannot be sent again
-              while it runs nor for seven days after it ended. On the daily contract it holds every open day: no day is
+              while it runs nor for seven days after it ended. On the daily contracts, the second version&apos;s and the
+              third, it holds every open day: no day is
               settled as missed from the start of a pause until one catch-up window, 30 hours, after its end. On the
               milestone contract a window that was open when the pause began keeps afterwards the time it had left, seven
               days at most, and a climb whose deadline fell inside the pause is judged on a reading taken until the pause
@@ -110,7 +114,7 @@ export async function JudgesContracts() {
             <li>Replace the key whose signature the contract accepts for a reading, at once, and register or change what a goal reads.</li>
             <li>Hand ownership over, or renounce it. Renounced while readings are paused, the gifts under way could never settle.</li>
           </ul>
-          <p className={HELP}>On every one of them, both versions:</p>
+          <p className={HELP}>On every one of them, whatever the version:</p>
         </>
       ) : (
         <p className={HELP}>What the owner of a gift contract can do, and what it cannot:</p>

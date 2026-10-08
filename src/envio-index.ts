@@ -62,6 +62,17 @@ const QUERY = `{
 
 export const INDEX_TIMEOUT_MS = 4_000;
 
+/**
+ * Whether the deployment read follows the third daily contract (8 Oct 2026). The index's address changes at every
+ * deployment and is a setting, so the page may read one made before that contract. The index does not say which
+ * contracts it follows; it does hold every gift of the ones it follows, and the third daily contract has held gift
+ * 1000 since 3 Oct 2026. So an index with a gift of the third version follows that contract, and one with none does
+ * not. The judges page says which, instead of naming a number of contracts it cannot count.
+ */
+export function followsThirdDailyContract(index: Pick<IndexRead, "gifts">): boolean {
+  return index.gifts.some((gift) => gift.version === 3);
+}
+
 /** The endpoint, or nothing while the setting is absent or is not an https address. */
 export function envioGraphqlUrl(env: Readonly<Record<string, string | undefined>> = process.env): string | null {
   const value = env.ENVIO_GRAPHQL_URL?.trim();

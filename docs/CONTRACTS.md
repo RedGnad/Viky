@@ -109,9 +109,13 @@ is served by Viky, and a server that served other code could read it there.
 
 The server side of the anchor is written too, and off until the anchor's address is set: the browser signs the short
 anchored message with the consent key it already holds, in the same gesture as the agreement, and the relayer writes
-it (`src/consent-anchoring.ts`). `pnpm verify:consent` then holds every reading that moved money on the second
-version against a yes anchored before it, checking each Ed25519 signature itself; it needs a Monad RPC and nothing
-else. Both have run on a local fork of mainnet (`pnpm rehearse:v2`) and never on mainnet.
+it (`src/consent-anchoring.ts`). `pnpm verify:consent` then holds every reading that moved money on the contracts
+opened by a link (the daily contracts of the second and third versions, and the milestone contract of the second)
+against a yes anchored before it, checking each Ed25519 signature itself; it needs a Monad RPC and nothing else: with
+no address named it reads the contracts of the table above. Both have run on a local fork of mainnet
+(`pnpm rehearse:v2`) and on mainnet. On 8 Oct 2026, in a clone with nothing set, the command printed one line for each
+of the five gifts those contracts held, three of them read under a yes anchored before the reading and two not opened
+yet, and ended on `PASSED: 5 gifts, every reading that moved money was taken under a yes anchored before it.`
 
 `forge test --network monad` runs the unit suites, the accounting fuzz, the invariant campaigns of the second version
 and the typehash parity pins; with `MONAD_RPC_URL` set it also runs the mainnet fork tests against the real AUSD. `pnpm deploy:gift-escrow` deploys

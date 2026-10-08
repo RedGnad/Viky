@@ -1,14 +1,14 @@
 import { config } from "dotenv";
 import { createPublicClient, getAddress, http, type Hex, type Log, type PublicClient } from "viem";
-import { giftsOf, logsBetween, readingsIn, verdictOf, type FoundReading, type GiftKind, type GiftVerdict, type VerifyContracts } from "../src/consent-verify";
+import { contractsToVerify, giftsOf, logsBetween, PUBLISHED_CONTRACTS, readingsIn, verdictOf, type FoundReading, type GiftKind, type GiftVerdict } from "../src/consent-verify";
 
 /**
  * Checks, from outside Viky, that every reading that moved money was taken under the recipient's own yes
  * (the audit of 1 Oct 2026, section 3.7). It needs no account, no key and no secret: a Monad RPC.
  *
- * For every gift of the second version of the two gift contracts, it reads on the anchor the consent key the
- * recipient's account bound itself, and every yes and stop anchored for the gift, and checks each Ed25519 signature
- * here. Then every reading that moved money, a day counted or a target reached, must come after a yes and before
+ * For every gift of the contracts opened by a link (the daily contracts of the second and third versions, one after
+ * the other, and the milestone contract of the second), it reads on the anchor the consent key the recipient's
+ * account bound itself, and every yes and stop anchored for the gift, and checks each Ed25519 signature here. Then every reading that moved money, a day counted or a target reached, must come after a yes and before
  * any stop that followed it. What it finds is held against what the contract counts, so a reading that was not
  * found shows.
  *
@@ -21,17 +21,20 @@ import { giftsOf, logsBetween, readingsIn, verdictOf, type FoundReading, type Gi
  *   by default       the public journal of each gift on the site (a list of transactions), each one then read back
  *                    from the chain. The site is only where to look: it cannot hide a reading without the count
  *                    the contract keeps disagreeing.
- *   --from-block N   the chain alone: every log of the two contracts from block N, in pieces of 100 blocks (the
+ *   --from-block N   the chain alone: every log of the contracts from block N, in pieces of 100 blocks (the
  *                    public RPC's limit). Slow over many days, and it asks nothing of anybody.
  *
  * Usage:
  *   pnpm verify:consent
  *   pnpm verify:consent --gift 12
  *   pnpm verify:consent --from-block 41000000 [--piece 100]
- *   pnpm verify:consent --site https://viky.cash --daily 0x... --milestone 0x... --anchor 0x...
+ *   pnpm verify:consent --site https://viky.cash --daily 0x...[,0x...] --milestone 0x... --anchor 0x...
  *
- * The three addresses default to NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS, NEXT_PUBLIC_MILESTONE_GIFT_V2_ADDRESS and
- * NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS; the RPC to MONAD_RPC_URL, then https://rpc.monad.xyz.
+ * With no address named, neither here nor in the settings, it reads the contracts published in docs/CONTRACTS.md: a
+ * clone with nothing set needs nothing else. An address named here is read in place of the settings
+ * (NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS, NEXT_PUBLIC_MILESTONE_GIFT_V2_ADDRESS, and for the daily contracts
+ * NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS then NEXT_PUBLIC_GIFT_ESCROW_V3_ADDRESS); `--daily` alone names every daily
+ * contract read. The RPC is MONAD_RPC_URL, then https://rpc.monad.xyz.
  */
 
 config({ path: [".env.local", ".env"], quiet: true });
@@ -41,11 +44,22 @@ function argument(name: string): string | undefined {
   return index >= 0 ? process.argv[index + 1] : undefined;
 }
 
+function addressFrom(value: string | undefined, name: string): Hex | null {
+  const text = value?.trim();
+  if (!text) return null;
+  if (!/^0x[0-9a-fA-F]{40}$/.test(text)) throw new Error(`${name} is not an address`);
+  return getAddress(text);
+}
+
 function addressOf(flag: string, setting: string): Hex | null {
-  const value = (argument(flag) ?? process.env[setting])?.trim();
-  if (!value) return null;
-  if (!/^0x[0-9a-fA-F]{40}$/.test(value)) throw new Error(`--${flag} is not an address`);
-  return getAddress(value);
+  return addressFrom(argument(flag), `--${flag}`) ?? addressFrom(process.env[setting], setting);
+}
+
+/** The daily contracts: the ones `--daily` names, separated by commas, or else the settings of the second and third versions. */
+function dailyContracts(): Hex[] {
+  const named = argument("daily");
+  if (named !== undefined) return named.split(",").map((one) => addressFrom(one, "--daily")).filter((one): one is Hex => one !== null);
+  return ["NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS", "NEXT_PUBLIC_GIFT_ESCROW_V3_ADDRESS"].map((setting) => addressFrom(process.env[setting], setting)).filter((one): one is Hex => one !== null);
 }
 
 /** The transactions a gift's public journal names: where to look, and nothing that is believed. */
@@ -84,19 +98,19 @@ function print(verdict: GiftVerdict): void {
 async function main() {
   const rpc = process.env.MONAD_RPC_URL?.trim() || "https://rpc.monad.xyz";
   const client = createPublicClient({ transport: http(rpc) }) as PublicClient;
-  const anchor = addressOf("anchor", "NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS");
-  const contracts: VerifyContracts | null = anchor ? { daily: addressOf("daily", "NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS"), milestone: addressOf("milestone", "NEXT_PUBLIC_MILESTONE_GIFT_V2_ADDRESS"), anchor } : null;
-  if (!contracts || (!contracts.daily && !contracts.milestone)) {
-    throw new Error("Nothing to verify: the anchor and the second version of the gift contracts are not set. Name them with --anchor, --daily and --milestone.");
+  const contracts = contractsToVerify({ anchor: addressOf("anchor", "NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS"), daily: dailyContracts(), milestone: addressOf("milestone", "NEXT_PUBLIC_MILESTONE_GIFT_V2_ADDRESS") });
+  if (!contracts) {
+    throw new Error("Nothing to verify: an address is named and the anchor, or every gift contract, is not. Name them with --anchor, --daily and --milestone, or name none to read the published contracts.");
   }
   const only = argument("gift");
   const site = argument("site") ?? "https://viky.cash";
   const fromBlock = argument("from-block");
   console.log(`info RPC ${rpc}`);
-  console.log(`info anchor ${contracts.anchor}, daily ${contracts.daily ?? "none"}, milestone ${contracts.milestone ?? "none"}`);
+  console.log(`info ${contracts === PUBLISHED_CONTRACTS ? "the contracts published in docs/CONTRACTS.md: " : ""}anchor ${contracts.anchor}, daily ${contracts.daily.join(" then ") || "none"}, milestone ${contracts.milestone ?? "none"}`);
 
   const gifts: { kind: GiftKind; giftId: string; recipient: Hex | null; counted: number }[] = [];
-  for (const [kind, contract] of [["daily", contracts.daily], ["milestone", contracts.milestone]] as const) {
+  // The daily contracts one after the other, then the milestone contract: a gift's number is on one of them only.
+  for (const [kind, contract] of [...contracts.daily.map((daily) => ["daily", daily] as const), ["milestone", contracts.milestone] as const]) {
     if (!contract) continue;
     for (const gift of await giftsOf(client, kind, contract)) if (!only || gift.giftId === only) gifts.push({ kind, ...gift });
   }
@@ -105,7 +119,7 @@ async function main() {
   let readings: FoundReading[];
   if (fromBlock !== undefined) {
     const latest = await client.getBlockNumber();
-    console.log(`info readings: every log of the two contracts from block ${fromBlock} to ${latest}`);
+    console.log(`info readings: every log of these contracts from block ${fromBlock} to ${latest}`);
     let said = 0n;
     const logs = await logsBetween(client, contracts, BigInt(fromBlock), latest, BigInt(argument("piece") ?? "100"), (done, of) => {
       if (done * 10n / of > said) console.log(`info ${(said = done * 10n / of) * 10n} %`);

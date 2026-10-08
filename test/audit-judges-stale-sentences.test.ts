@@ -4,6 +4,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { followsThirdDailyContract } from "../src/envio-index";
 import { MILESTONE_GOALS } from "../src/milestone-goals";
 
 const page = readFileSync(new URL("../app/judges/page.tsx", import.meta.url), "utf8").replace(/\s+/g, " ");
@@ -126,7 +127,7 @@ test("the second version's three contracts are on the page with the transactions
   // The addresses are the settings', never typed into the page, and nothing is said to work before a gift has run.
   assert.ok(page.includes("{escrowV2 && milestoneV2 && anchor ? ("));
   assert.doesNotMatch(page, /0xC83d8028347967Fc84D0e36Ae5876d9b29EAEc51|0x493c87A27E637bBc7179C17bE2B215fC18523CC0|0x2a15DF23fF62120700f14D1E5d5d56CA0dAd027e/);
-  assert.ok(page.includes("nothing is claimed as working on it before one has, end to end, with real amounts"));
+  assert.ok(page.includes('nothing is claimed as working on {escrowV3 ? "one of them" : "it"} before one has, end to end, with real amounts'));
   // The chain is asked about the seven, and each gift contract for the key it accepts.
   const chain = read("src/judges-chain.ts");
   for (const getter of ["giftEscrowV2Address()", "milestoneGiftV2Address()", "consentAnchorAddress()", 'getter: "evidenceSigner"', 'getter: "pendingEvidenceSigner"', 'getter: "anchorer"']) assert.ok(chain.includes(getter), getter);
@@ -142,4 +143,49 @@ test("the anchor is said to be a record, not what a reading is decided on, with 
   // What those sentences rest on: the server's own account of it, and the contract's.
   assert.match(read("src/consent-anchoring.ts"), /The anchor is a public record of the agreement, not what \* the reading is decided on: that is still the row\./);
   assert.match(read("contracts/ConsentAnchor.sol"), /`bind` takes the account's own signature \(EIP-712 \/\/\/ `ConsentKey`\) over the consent key, and keeps the first one for ever\./);
+});
+
+test("the third daily contract is everywhere the page counts or names the contracts (the audit of 8 Oct 2026)", () => {
+  // Under Network, where a daily gift is made today: its address is the setting's, its deployment is on the chain,
+  // and the second version's daily contract is said to run the gifts it holds.
+  assert.ok(page.includes("const escrowV3 = giftEscrowV3Address();"));
+  assert.ok(page.includes('<Tx hash="0xe6edce353863afaf302f3840068a5bb92300fb8380d234d8477afb5983a897f3" />), the third version of the daily contract,'));
+  assert.ok(page.includes("), runs the gifts it holds."));
+  assert.doesNotMatch(page, /0x591d76863177E70FfcA2C793212d4715A367Ec70/, "never typed into the page");
+  assert.ok(page.includes('The source of {escrowV3 ? "the four" : "the three"} is verified through'));
+  // Who owns the contracts: asked of the chain with the others, and first, since a daily gift made today is on it.
+  const owner = read("src/judges-owner.ts");
+  assert.ok(owner.indexOf('{ label: "third-version daily gifts", key: "NEXT_PUBLIC_GIFT_ESCROW_V3_ADDRESS" }') > 0);
+  assert.ok(owner.indexOf('key: "NEXT_PUBLIC_GIFT_ESCROW_V3_ADDRESS"') < owner.indexOf('key: "NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS" }'));
+  // Whether AUSD's issuer froze a contract that holds gifts' money: it holds some.
+  assert.ok(read("app/judges/JudgesAgora.tsx").includes('{ label: "third-version daily gifts", address: giftEscrowV3Address() },'));
+  // A pause of readings holds the open days on the second and third daily contracts: the third does as the second.
+  const third = read("contracts/GiftEscrowV3.sol");
+  assert.match(third, /uint256 clock = _standsStill\(\) \? checkInPauseBegan : block\.timestamp;/);
+  assert.match(read("contracts/GiftEscrowV2.sol"), /uint256 clock = _standsStill\(\) \? checkInPauseBegan : block\.timestamp;/);
+  assert.ok(page.includes("owner holds the open days, on the second and third versions of the daily contract and not on the first."));
+  assert.ok(read("app/judges/JudgesReliability.tsx").includes("pausing readings before that hour does, on those two versions and not on the first."));
+  const contracts = read("app/judges/JudgesContracts.tsx");
+  assert.ok(contracts.includes("What the owner of a gift contract of the second version, or of the third daily contract, can do, read from the"));
+  assert.ok(contracts.includes("On the daily contracts, the second version&apos;s and the"));
+  for (const stale of ["on the second version of the daily contract alone", "on the second version alone", "It follows seven contracts"]) {
+    for (const file of ["app/judges/page.tsx", "app/judges/JudgesReliability.tsx", "app/judges/JudgesContracts.tsx", "app/judges/JudgesIndex.tsx"]) assert.ok(!read(file).includes(stale), `${file}: ${stale}`);
+  }
+});
+
+test("the index block names the contracts the deployment read follows, from what it holds, and says when the third is not among them", () => {
+  // The index's address is a setting and changes at every deployment: the page read one made before the third daily
+  // contract until the founder set the new address, and said "seven contracts" with a number written in.
+  const gift = (version: 1 | 2 | 3) => ({ version }) as never;
+  assert.equal(followsThirdDailyContract({ gifts: [gift(1), gift(2)] }), false);
+  assert.equal(followsThirdDailyContract({ gifts: [gift(1), gift(3)] }), true);
+  assert.equal(followsThirdDailyContract({ gifts: [] }), false);
+  const index = read("app/judges/JudgesIndex.tsx");
+  assert.ok(index.includes('{third ? "the daily contract of the third version, " : ""}the way out and'));
+  assert.ok(index.includes("const thirdMissing = !third && giftEscrowV3Address() !== null;"));
+  assert.ok(index.includes("does not follow it: a daily gift made"));
+  // And the count of who used Viky says the same, rather than a count that looks whole.
+  const who = read("app/judges/JudgesWhoUsed.tsx");
+  assert.ok(who.includes("{giftEscrowV3Address() !== null && !followsThirdDailyContract(index) ? ("));
+  assert.ok(who.includes("The index read here does not follow the third daily contract: a daily gift made since 3 Oct 2026 is not"));
 });
