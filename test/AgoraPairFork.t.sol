@@ -10,6 +10,7 @@ interface VmAgora {
     function prank(address sender) external;
     function envOr(string calldata name, string calldata defaultValue) external returns (string memory);
     function createSelectFork(string calldata urlOrAlias) external returns (uint256);
+    function warp(uint256 newTimestamp) external;
     function skip(bool skipTest) external;
 }
 
@@ -42,6 +43,7 @@ interface IAgoraWhitelister {
 
 interface IAgoraFaucet {
     function requestFunds(address to) external;
+    function maxDripFrequency() external view returns (uint256);
 }
 
 /// @notice The way out through Agora's Instant Settlement, on a fork of Monad TESTNET (chain 10143): the same
@@ -54,10 +56,11 @@ interface IAgoraFaucet {
 ///         and the price is one for one: no floor is ever met, so no exit is refused for a rate that moved.
 ///
 ///         What it does not prove, and nothing here says otherwise: that this runs on mainnet. There the pair swaps
-///         only for an address Agora has approved after verifying the company behind it, and no address of Viky's is.
-///         On testnet a contract of Agora's gives that role to any address, which is the one step this test takes that
-///         mainnet does not offer. Only the way out is walked: the pair's other test coin takes no signed transfer,
-///         so the converter of card payments, which is this same contract set on a coin that does, has no test twin.
+///         only for an address Agora has approved, which its documentation keeps to users it has verified, and no
+///         address of Viky's is. On testnet a contract of Agora's gives that role to any address, which is the one
+///         step this test takes that mainnet does not offer. Only the way out is walked: the pair's other test coin
+///         takes no signed transfer, so the converter of card payments, which is this same contract set on a coin that
+///         does, has no test twin.
 ///
 ///           MONAD_TESTNET_RPC_URL=https://testnet-rpc.monad.xyz forge test --match-path test/AgoraPairFork.t.sol -vv
 ///
@@ -95,7 +98,9 @@ contract AgoraPairForkTest {
         // The same contract as the way out on mainnet, set on the test AUSD. This test contract is its owner.
         router = new ExitRouter(IERC20(AUSD));
         person = VM.addr(PERSON_KEY);
-        // Agora's faucet mints test AUSD to any address named.
+        // Agora's faucet hands test AUSD to any address named, once in a while for everybody together: the fork's
+        // clock steps past whoever asked last.
+        VM.warp(block.timestamp + IAgoraFaucet(FAUCET).maxDripFrequency() + 1);
         VM.prank(ANYBODY);
         IAgoraFaucet(FAUCET).requestFunds(person);
     }

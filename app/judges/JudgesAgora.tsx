@@ -4,6 +4,7 @@ import { AUSD_ADDRESS } from "@/src/monad/chain";
 import { feeSentence, waysIn } from "@/src/rails";
 import { giftEscrowV2Address, giftEscrowV3Address, milestoneGiftV2Address } from "@/src/v2";
 import { Fold, SubFold } from "./Fold";
+import { JudgesInstantSettlement } from "./JudgesInstantSettlement";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
@@ -115,6 +116,7 @@ export async function JudgesAgora() {
         </dd>
       </dl>
       </SubFold>
+      <JudgesInstantSettlement />
     </Fold>
   );
 }
