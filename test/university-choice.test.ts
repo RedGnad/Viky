@@ -71,7 +71,10 @@ test("the second group's heading counts what it holds, by the thousand once ther
   assert.equal(countInWords(312), "312");
   assert.equal(countInWords(1), "1");
   assert.equal(UNIVERSITY_CHOICE.more(countInWords(11_412)), "11,000 more, added on request within two days");
-  assert.equal(UNIVERSITY_CHOICE.moreAlone(countInWords(312)), "312, added on request within two days");
+  assert.equal(UNIVERSITY_CHOICE.moreAlone(countInWords(312)), "312 universities, added on request within two days");
+  assert.equal(UNIVERSITY_CHOICE.moreAlone(countInWords(1)), "1 university, added on request within two days");
+  // At 390 the heading of eleven thousand takes two lines: cut evenly, never one word alone on the second.
+  assert.match(readFileSync("app/kit/ChoiceList.tsx", "utf8"), /lines \? `\$\{CARD_LABEL\} mb-\[var\(--space-sm\)\] \[text-wrap:balance\]`/);
   const chooser = readFileSync("app/kit/offer/UniversityChooser.tsx", "utf8");
   assert.match(chooser, /legend=\{\(shown\.ready\.length > 0 \? W\.more : W\.moreAlone\)\(countInWords\(shown\.others\.length\)\)\}/);
   // The line that said it under the heading is gone: the heading says it.

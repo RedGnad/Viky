@@ -67,7 +67,7 @@ test("the list opens on every country with no step before it, and one field sear
   await expect(all.getByText("University of Lagos")).toBeVisible();
   await expect(tested).toHaveCount(0);
   // Nothing ready among what is shown: the heading counts, and is "more" than nothing.
-  await expect(all.locator("legend")).toHaveText("1, added on request within two days");
+  await expect(all.locator("legend")).toHaveText("1 university, added on request within two days");
   await search.fill("sorbonne");
   await expect(sheet(page).getByText("No university by that name in the list yet.")).toBeVisible();
   await search.fill("lagos");
@@ -85,7 +85,7 @@ test("the list opens on every country with no step before it, and one field sear
   await expect(sheet(page).getByRole("button", { name: /All countries/ })).toBeVisible();
   // Ready today is said of what the gift asks: for a year passed, the university read for enrolment is with the others.
   await expect(tested).toHaveCount(0);
-  await expect(all.locator("legend")).toHaveText("3, added on request within two days");
+  await expect(all.locator("legend")).toHaveText("3 universities, added on request within two days");
   await expect(all.getByText("Université Cheikh Anta Diop")).toBeVisible();
   await modes.getByText("Enrolled", { exact: true }).click();
   await expect(tested.getByText("Université Cheikh Anta Diop")).toBeVisible();

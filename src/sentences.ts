@@ -1781,7 +1781,7 @@ export const UNIVERSITY_CHOICE = {
   ready: "Ready today",
   more: (count: string) => `${count} more, added on request within two days`,
   /** The same heading where no university of the list shown is ready: there is nothing to be "more" than. */
-  moreAlone: (count: string) => `${count}, added on request within two days`,
+  moreAlone: (count: string) => `${count} ${count === "1" ? "university" : "universities"}, added on request within two days`,
   /** Beside the university chosen, which folds the list away so what comes after it is in reach. */
   change: "Change",
   /** The one line under the list: a question, and the link that answers it. */
