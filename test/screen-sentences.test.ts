@@ -35,7 +35,6 @@ const GOAL_SHEET = 'the fold "How this is checked" at the foot of a goal\'s shee
 /** Over the limit, and read in a fold or in a sheet: where. */
 const FOLDED: Readonly<Record<string, string>> = {
   "GIFT_PAGE.linkAgainWhy": 'the sheet "Get the link again"',
-  "GIFT_PAGE.linkFindWhy": 'the sheet "Find the link again"',
   "GIFT_LIVE.climbing.alertRefused": 'the sheet "Notifications"',
   "MORNING.refused": 'the sheet "Notifications"',
   "app/kit/CheckThisDay.tsx: Take the reading behind a day that count": `under "Check this day yourself", in ${HOW_CHECKED}`,

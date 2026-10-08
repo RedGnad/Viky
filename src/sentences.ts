@@ -1042,6 +1042,8 @@ export const GIFT_PAGE = {
    * A gift of the second version of the contracts (the audit of 1 Oct 2026): its link is found again, not replaced. The
    * key that opens the gift is in what was signed, so the link sent before is this one, and it still works.
    */
+  /** The browser refused the clipboard: the link is in its field, where it can be held and copied by hand. */
+  linkCopyRefused: "Your browser would not let us copy it. Press and hold the link, then choose Copy.",
   findTheLink: "Find the link",
   findingLink: "Finding the link",
   /** Under that button, on a device that does not hold the link: what the press gives, said before it. */
@@ -1156,6 +1158,7 @@ export const GIFT_LIVE = {
      * whoever has it.
      */
     sendIt: (recipient: string | null) => (recipient ? `Send it to ${recipient}.` : "Send the link."),
+    inTheirName: "In their name",
     whoeverOpens: "Whoever opens the link takes the gift.",
   },
   /** Opened, and the source it counts is not connected yet: the one moment the whole agreement is read. */

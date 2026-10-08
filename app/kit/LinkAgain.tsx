@@ -61,7 +61,7 @@ export function LinkAgain({
     navigator.clipboard
       .writeText(value)
       .then(() => markCopied())
-      .catch(() => setRefusal(W.copyRefused));
+      .catch(() => setRefusal(W.linkCopyRefused));
   };
 
   const bring = async () => {
@@ -88,15 +88,15 @@ export function LinkAgain({
   if (link) {
     return (
       <div className="flex flex-col gap-[var(--space-md)]" data-gift-link-block="">
-        {/* The link, where a press copies it: the field is the first thing somebody presses to take a link. */}
-        <button
-          type="button"
+        {/* The link, where a press copies it: the field is the first thing somebody presses to take a link. It stays
+            text, so a browser that refuses the clipboard still lets it be held and copied by hand. */}
+        <p
           onClick={() => copy(link)}
-          className="w-full break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--background)] p-[var(--space-md)] text-left text-[length:var(--type-help)] select-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]"
+          className="cursor-pointer break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--background)] p-[var(--space-md)] text-[length:var(--type-help)] select-all"
           data-gift-link=""
         >
           {link}
-        </button>
+        </p>
         {brought ? (
           <p className={BODY} role="status">
             {found ? W.linkFound : W.linkAgainDone}

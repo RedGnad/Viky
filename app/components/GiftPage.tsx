@@ -748,6 +748,12 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
    */
   const backToFunder = readerIsFunder ? W.lines.backToYou : W.lines.backTo(funderName);
   const eachDay = daily ? ((readerIsFunder || voice === "reader" ? words?.eachDayTheirs : words?.eachDayYours) ?? condition?.words.eachDay ?? "") : "";
+  // When it was made and its number, to the person who offered it (rule 5 of the UI pass of 8 Oct 2026: never in the
+  // open, here). Before the opening this page is the screen after paying, where they stood under the title: the line
+  // then comes straight after what the gift is, so the fold's four lines never cut it. It was the last line always,
+  // and a gift of today has more than four.
+  const madeRow: Row | null = readerIsFunder ? ([W.lines.made, W.lines.madeOn(dateInWords(status.createdAtChain * 1000, zone), giftId)] as const) : null;
+  const madeBeforeOpening = status.opened ? null : madeRow;
   const agreedRows: Row[] = [
     ...(milestone
       ? [
@@ -764,12 +770,13 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
           [M.lines.when, milestoneBy(milestone, zone)] as const,
           // What was not proved in time goes back two weeks later: the time left to show it (MILESTONE_LATE_PROOF_SECONDS).
           [M.lines.ifNot, hadOrNot ? M.lines.twoWeeksLater(backToFunder) : backToFunder] as const,
+          madeBeforeOpening,
           // A marathon's bib and the line read, to whoever is not at the moment of entering or reading them (D273).
           milestone.marathon && read.action !== "shareProof" ? marathonLine(milestone.marathon) : null,
           milestone.wca && read.action !== "shareProof" ? wcaLine(milestone.wca) : null,
         ]
       : daily
-        ? [[eachDay.charAt(0).toUpperCase() + eachDay.slice(1), daily.perDayDisplay] as const, [W.lines.days, agreedWhen(daily)] as const, [W.lines.missedDay, backToFunder] as const]
+        ? [[eachDay.charAt(0).toUpperCase() + eachDay.slice(1), daily.perDayDisplay] as const, [W.lines.days, agreedWhen(daily)] as const, [W.lines.missedDay, backToFunder] as const, madeBeforeOpening]
         : []),
     // The ending (the audit of 1 Oct 2026): only a gift of the second version of the contracts has one. The funder
     // reads here that it can happen; the person it is for has the gesture, under the card, in "You decide".
@@ -780,7 +787,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
     // or ended, where "Take $2.00" stood until 4 Oct 2026.
     mine && earned > 0n ? ([W.lines.yoursAlready, W.lines.fromHome] as const) : null,
     milestone && milestone.startReading !== null ? ([M.lines.startedAt, String(milestone.startReading)] as const) : null,
-    readerIsFunder ? ([W.lines.made, W.lines.madeOn(dateInWords(status.createdAtChain * 1000, zone), giftId)] as const) : null,
+    status.opened ? madeRow : null,
   ]
     .filter((row): row is Row => Boolean(row))
     .slice(0, MOST_LINES_IN_A_FOLD);
@@ -845,8 +852,9 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
   /** The gift is the reader's own and still theirs to decide about: opened, and neither over nor taken back. */
   const decides = mine && status.opened && !gift.finished && !gift.cancelled;
   /** What this gift's messages are about now: each morning for a habit, one moment for everything else. */
-  // Before it is opened, the person who offered it is the only one told anything: being told was offered on the screen
-  // after paying (the founder, 1 Oct 2026), and that screen is this page since 8 Oct 2026.
+  // Before it is opened, the person who offered it is the only one told anything. Being told was offered under the
+  // link they had just been given, on the screen after paying (the founder, 1 Oct 2026: it is how "what they miss
+  // comes back to you" reaches them without opening Viky); that screen is this page since 8 Oct 2026, so it is here.
   const unopenedForItsFunder = readerIsFunder && !status.opened;
   const about: ToldAbout | null = (!status.opened && !unopenedForItsFunder) || gift.finished || gift.cancelled
     ? null

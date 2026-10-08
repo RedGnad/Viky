@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { TERMS, daily, serve } from "./gift-fixtures";
 import { answerTheChain, json, neverAskedToBeTold, profile, shot, sizesFor, type Holdings } from "./gift-kit";
 import { signedIn } from "./virtual-passkey";
 
@@ -166,28 +167,27 @@ test.describe("the first payment, and the way back to it", () => {
       await context.close();
     });
 
-    test(`the funder is offered the messages under the link they were just given (${size.name})`, async ({ browser, baseURL }) => {
+    test(`the funder is offered the messages under the link they were just given, on the gift's own page (${size.name})`, async ({ browser, baseURL }) => {
+      // A gift nobody has opened, as its funder reads it: the screen after paying is its page since 8 Oct 2026.
+      const justPaid = () =>
+        daily("7", "funder", { opened: false, connected: false, creditedDays: 0, days: [], startDay: 0, endDay: 0, earned: "0", earnedDisplay: "$0.00", alreadyTheirs: "0", alreadyTheirsDisplay: "$0.00", claimedAtChain: 0, version: 1, end: null, goalAccount: { username: "boo_learns", source: "funder", bound: false, code: null, codeExpiresAt: null } });
       const funder = await profile(browser, baseURL, size.viewport);
       const { page, context } = funder;
       await answerTheChain(context, { ausd: 0n, mon: 0n });
       await neverAskedToBeTold(context);
+      await serve(page, "7", justPaid, TERMS.daily, null);
       await page.goto("/");
       await page.getByRole("button", { name: /^Sign in$/ }).first().click();
       await page.getByRole("button", { name: /^Create (your|my) account$/ }).first().click();
       await expect.poll(() => signedIn(context), { timeout: 30_000 }).toBe(true);
-      // The gift as this screen keeps it once made: the creation itself is the server's and the chain's, not walked here.
-      const made = (over: Record<string, unknown>) =>
-        page.evaluate(
-          (record) => window.sessionStorage.setItem("viky.giftMade", JSON.stringify(record)),
-          { giftId: "7", claimUrl: `${funder.baseURL}/g/7?t=AbCdEfGhIjKlMnOpQrStUv`, atMs: Date.now(), recipientName: "Boo", funderName: "Mom", conditionId: "duolingo-daily", amount: "30000000", days: 30, ...over },
-        );
-      await made({});
-      await page.goto("/fund?step=done");
-      await expect(page.getByRole("button", { name: "Copy the link" })).toBeVisible();
-      // A browser that can be told: a round button in the open, under the link's card, and one press in its sheet.
+      // The link the device keeps once the gift is made: the creation itself is the server's and the chain's, not walked here.
+      await page.evaluate((kept) => window.localStorage.setItem("viky.gift-link.7", kept), `${funder.baseURL}/g/7?t=AbCdEfGhIjKlMnOpQrStUv`);
+      await page.goto("/g/7");
+      await expect(page.getByRole("button", { name: "Copy the link", exact: true })).toBeVisible();
+      // A browser that can be told: a round button in the open, under the link, and one press in its sheet.
       const messages = page.locator('[data-decide="messages"]');
       await expect(messages).toHaveText("NotificationsOff");
-      const linkCard = page.getByRole("button", { name: "Copy the link" });
+      const linkCard = page.getByRole("button", { name: "Copy the link", exact: true });
       expect((await messages.boundingBox())!.y, "under the link").toBeGreaterThan((await linkCard.boundingBox())!.y);
       await messages.click();
       const told = page.locator("[data-told]");
@@ -200,15 +200,13 @@ test.describe("the first payment, and the way back to it", () => {
       const SAFARI = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.2 Mobile/15E148 Safari/604.1";
       const iphone = await profile(browser, baseURL, size.viewport, { userAgent: SAFARI });
       await answerTheChain(iphone.context, { ausd: 0n, mon: 0n });
+      await serve(iphone.page, "7", justPaid, TERMS.daily, null);
       await iphone.page.goto("/");
       await iphone.page.getByRole("button", { name: /^Sign in$/ }).first().click();
       await iphone.page.getByRole("button", { name: /^Create (your|my) account$/ }).first().click();
       await expect.poll(() => signedIn(iphone.context), { timeout: 30_000 }).toBe(true);
-      await iphone.page.evaluate(
-        (record) => window.sessionStorage.setItem("viky.giftMade", JSON.stringify(record)),
-        { giftId: "7", claimUrl: `${iphone.baseURL}/g/7?t=AbCdEfGhIjKlMnOpQrStUv`, atMs: Date.now(), recipientName: "Boo", funderName: "Mom", conditionId: "duolingo-daily", amount: "30000000", days: 30 },
-      );
-      await iphone.page.goto("/fund?step=done");
+      await iphone.page.evaluate((kept) => window.localStorage.setItem("viky.gift-link.7", kept), `${iphone.baseURL}/g/7?t=AbCdEfGhIjKlMnOpQrStUv`);
+      await iphone.page.goto("/g/7");
       await iphone.page.locator('[data-decide="messages"]').click();
       const first = iphone.page.locator("[data-told]");
       await expect(first).toHaveAttribute("data-told", "install");

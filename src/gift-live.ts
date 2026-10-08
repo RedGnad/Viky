@@ -199,7 +199,9 @@ export function liveOf(input: LiveInput): Live {
               ? L.unopened.sendIt(recipientName)
               : L.unopened.theirs(recipientName)
             : L.unopened.reading(funderName, recipientName),
-        figure: { label: promiseOf(input.shape ?? "days", yours, input.target), value: input.amountDisplay },
+        // To the person who offered it, the amount is what they put in the other's name: said under it, where the
+        // screen after paying said it as a title (the UI pass of 8 Oct 2026). The rule it pays by is in what was agreed.
+        figure: { label: voice === "funder" ? L.unopened.inTheirName : promiseOf(input.shape ?? "days", yours, input.target), value: input.amountDisplay },
         next:
           input.openBy === null
             ? null
