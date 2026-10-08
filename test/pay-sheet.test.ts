@@ -152,9 +152,10 @@ test("one way in, one action, and no button to another (D239)", () => {
   assert.doesNotMatch(sheet, /another way|SECONDARY_BUTTON|setChosen/);
   // One action in the sun, and every other button of the sheet a small key (the code's copy, D294), never a second one.
   const body = sheet.slice(sheet.indexOf("<Sheet "), sheet.indexOf("</Sheet>"));
-  const buttons = body.match(/<button[^>]*>/g) ?? [];
-  assert.equal(buttons.filter((button) => /PRIMARY_BUTTON/.test(button)).length, 1, "the one action");
-  for (const button of buttons.filter((button) => !/PRIMARY_BUTTON/.test(button))) assert.match(button, /SMALL_BUTTON/, button);
+  // The action is the one button (app/kit/Button.tsx), whose look is the sun unless it names another.
+  assert.equal((body.match(/<Button [^>]*>/g) ?? []).filter((button) => !/look="/.test(button)).length, 1, "the one action");
+  assert.doesNotMatch(body, /PRIMARY_BUTTON/);
+  for (const button of body.match(/<button[^>]*>/g) ?? []) assert.match(button, /SMALL_BUTTON/, button);
   // "Have a code?" stays (D297), last and folded (the mockup of 3 Oct 2026).
   assert.ok(body.lastIndexOf("<JudgeCode") > body.indexOf("data-what-happens"), "the code after the fold");
   assert.match(body, /<JudgeCode\s+folded/);
