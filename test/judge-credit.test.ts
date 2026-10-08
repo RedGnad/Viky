@@ -9,7 +9,7 @@ import type { SqlExecutor } from "../src/proof-session-store";
 
 /**
  * The judge credit (D291): a code typed by a signed-in judge, a fixed amount from the treasury, once per account, under
- * a ceiling, until 27 Oct 2026, one journal line per credit. The code is a Vercel variable and never in the repository.
+ * a ceiling, until 5 Nov 2026 at 00:00 UTC, one journal line per credit. The code is a Vercel variable and never in the repository.
  */
 
 let db: PGlite;
@@ -97,15 +97,19 @@ test("a send that failed can be tried again, with the same nonce, so it can only
   assert.equal(sent[0].nonce, judgeCreditNonce(A));
 });
 
-test("closed without its three variables, and after 27 Oct 2026", async () => {
+test("closed without its three variables, and from 5 Nov 2026", async () => {
   await assert.rejects(giveJudgeCredit({ account: A, code: CODE }, { config: null, nowMs: NOW, send, spendable: plenty }), refusal("JUDGE_CREDIT_CLOSED"));
   await assert.rejects(giveJudgeCredit({ account: A, code: CODE }, { config: CONFIG, nowMs: JUDGE_CREDIT_ENDS, send }), refusal("JUDGE_CREDIT_ENDED"));
-  assert.equal(JUDGE_CREDIT_ENDS, Date.parse("2026-10-28T00:00:00Z"), "the whole of 27 Oct, UTC");
+  assert.equal(JUDGE_CREDIT_ENDS, Date.parse("2026-11-05T00:00:00Z"), "the whole of 4 Nov, UTC: the judging runs to 3 Nov");
   assert.equal(judgeCreditConfig(env({ JUDGE_CODE: "short", JUDGE_CREDIT_AUSD: "25", JUDGE_CREDIT_CAP_AUSD: "100" })), null, "a code under 12 characters is no code");
   assert.equal(judgeCreditConfig(env({ JUDGE_CODE: CODE, JUDGE_CREDIT_AUSD: "25", JUDGE_CREDIT_CAP_AUSD: "10" })), null, "a ceiling under one credit");
   assert.deepEqual(judgeCreditConfig(env({ JUDGE_CODE: CODE, JUDGE_CREDIT_AUSD: "25", JUDGE_CREDIT_CAP_AUSD: "250" })), { code: CODE, units: 25_000_000n, capUnits: 250_000_000n });
   assert.equal(judgeCreditOpen(NOW, env({ JUDGE_CODE: CODE, JUDGE_CREDIT_AUSD: "25", JUDGE_CREDIT_CAP_AUSD: "250" })), true);
   assert.equal(judgeCreditOpen(NOW, env({})), false);
+  // Open to the last second of 4 Nov, and closed from the first of 5 Nov: two days after the judging ends.
+  const whole = env({ JUDGE_CODE: CODE, JUDGE_CREDIT_AUSD: "3", JUDGE_CREDIT_CAP_AUSD: "30" });
+  assert.equal(judgeCreditOpen(Date.parse("2026-11-04T23:59:59Z"), whole), true);
+  assert.equal(judgeCreditOpen(Date.parse("2026-11-05T00:00:00Z"), whole), false);
   assert.equal(sent.length, 0);
 });
 

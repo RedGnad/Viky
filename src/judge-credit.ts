@@ -28,7 +28,7 @@ import type { SqlExecutor } from "./proof-session-store";
  * - ten tries a day from one connection, whatever the account (`admitJudgeTry`, src/relay-admission.ts);
  * - an email to the operator at each credit, and once a day when a judge with the right code is refused, at the
  *   ceiling or because the treasury is short, each in its own words;
- * - nothing after the end of 27 Oct 2026, UTC;
+ * - nothing from 5 Nov 2026, 00:00 UTC: the judging runs to 3 Nov (the founder, 9 Oct 2026; it was the end of 27 Oct);
  * - five wrong codes and the account can no longer try;
  * - one line per credit in `viky_judge_credits`, which the operator reads with `pnpm judge:credits`, read back from the
  *   token wherever it could disagree with the chain (`giveJudgeCredit`).
@@ -37,7 +37,7 @@ import type { SqlExecutor } from "./proof-session-store";
  * and the relayer carries it, so the treasury needs no MON.
  */
 
-export const JUDGE_CREDIT_ENDS = Date.UTC(2026, 9, 28);
+export const JUDGE_CREDIT_ENDS = Date.UTC(2026, 10, 5);
 export const JUDGE_WRONG_CODES = 5;
 
 /**
@@ -69,7 +69,7 @@ ON CONFLICT (id) DO NOTHING
 
 export const JUDGE_REFUSALS = {
   notOpen: "Judge credits are not open on this deployment.",
-  ended: "Judge credits ended on 27 Oct 2026.",
+  ended: "Judge credits ended on 4 Nov 2026.",
   wrongCode: "That is not the judge code.",
   tooManyTries: "Too many wrong codes on this account.",
   already: "This account already received its judge credit.",

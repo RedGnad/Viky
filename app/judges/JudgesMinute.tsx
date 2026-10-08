@@ -86,7 +86,8 @@ export function JudgesMinute({
         <dd className={HELP} data-minute="universities">
           <span className="block">Toulouse: a real student showed their enrolment, and the gift paid.</span>
           {moreUniversities !== null && moreUniversities > 0 ? <span className="block">{countInWords(moreUniversities)} more: each set up within two days of a first gift.</span> : null}
-          <span className="block">Every university&apos;s first proof is reviewed by hand, within the hour.</span>
+          <span className="block">A first proof that fits a rule set ahead for its university is paid at once.</span>
+          <span className="block">Any other first proof is reviewed by hand, within the hour.</span>
         </dd>
         <dt className={MUTED}>Where it runs</dt>
         <dd className={HELP} data-minute="addresses">
