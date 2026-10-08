@@ -26,7 +26,8 @@ import type { SqlExecutor } from "./proof-session-store";
  *   the ceiling is held by one counter row, raised in the same statement that writes the account's line, so two
  *   requests at once cannot both pass under it (the audit of 1 Oct 2026);
  * - ten tries a day from one connection, whatever the account (`admitJudgeTry`, src/relay-admission.ts);
- * - an email to the operator at each credit, and once a day when a judge is refused at the ceiling;
+ * - an email to the operator at each credit, and once a day when a judge with the right code is refused, at the
+ *   ceiling or because the treasury is short, each in its own words;
  * - nothing after the end of 27 Oct 2026, UTC;
  * - five wrong codes and the account can no longer try;
  * - one line per credit in `viky_judge_credits`, which the operator reads with `pnpm judge:credits`, read back from the
@@ -278,7 +279,12 @@ export async function giveJudgeCredit(
     console.error(`judge credit: what the treasury may give could not be read for ${account}: ${why(error)}`);
     spendable = null;
   }
-  if (spendable === null || spendable < config.units) throw new GiftApiError("JUDGE_CREDIT_TREASURY", JUDGE_REFUSALS.treasuryHeld, 503);
+  if (spendable === null || spendable < config.units) {
+    // Read, and short of one credit: the operator is told, once a day, since nothing is written for this judge and the
+    // journal would never show it (the audit of 8 Oct 2026). A reading that failed says nothing of the treasury.
+    if (spendable !== null) await (deps.tell ?? tellOperator)({ kind: "treasury", account, units: config.units, spendable });
+    throw new GiftApiError("JUDGE_CREDIT_TREASURY", JUDGE_REFUSALS.treasuryHeld, 503);
+  }
 
   // Claimed in one statement, the counter first and the account's line after it (the audit of 1 Oct 2026). The
   // ceiling used to be a sum read in the statement that inserted the line: two requests at once each read the sum
@@ -313,9 +319,15 @@ export async function giveJudgeCredit(
     const again = (await sql()`SELECT state, updated_at < now() - ${SENDING_SETTLED}::interval AS settled FROM viky_judge_credits WHERE account = ${account}`)[0];
     if (again?.state === "sent") throw new GiftApiError("JUDGE_ALREADY_CREDITED", JUDGE_REFUSALS.already, 409);
     if (again?.state === "sending" && again.settled !== true) throw new GiftApiError("JUDGE_CREDIT_SENDING", JUDGE_REFUSALS.sending, 409);
-    // Told once a day, so the operator knows the day a judge was turned away.
-    await (deps.tell ?? tellOperator)({ kind: "ceiling", account });
-    throw new GiftApiError("JUDGE_CREDIT_CAP", JUDGE_REFUSALS.capReached, 409);
+    // Told once a day, so the operator knows the day a judge was turned away, and by which of the two bounds: the
+    // ceiling, or what the treasury has given plus what it may still give, with other credits counted on their way.
+    const counter = BigInt(String((await sql()`SELECT units FROM viky_judge_credit_total WHERE id = 1`)[0]?.units ?? "0").split(".")[0]);
+    if (counter + BigInt(add) > config.capUnits) {
+      await (deps.tell ?? tellOperator)({ kind: "ceiling", account });
+      throw new GiftApiError("JUDGE_CREDIT_CAP", JUDGE_REFUSALS.capReached, 409);
+    }
+    await (deps.tell ?? tellOperator)({ kind: "treasury", account, units: config.units, spendable });
+    throw new GiftApiError("JUDGE_CREDIT_TREASURY", JUDGE_REFUSALS.treasuryHeld, 503);
   }
 
   const send = deps.send ?? ((args) => refundAusd(args));
@@ -344,51 +356,97 @@ export async function giveJudgeCredit(
   } catch (error) {
     console.error(`judge credit sent, its line not written: ${account} ${hash ?? "hash unknown"}: ${why(error)}`);
   }
-  await (deps.tell ?? tellOperator)({ kind: "given", account, units: config.units, hash, standing: await judgeCreditsStanding(config).catch(() => null) });
+  await (deps.tell ?? tellOperator)({ kind: "given", account, units: config.units, hash, standing: await judgeCreditsStanding(config, { spendable: deps.spendable }).catch(() => null) });
   return { units, hash };
 }
 
-export type JudgeStanding = Readonly<{ given: number; left: number }>;
+/** `left` is what can still be given; `underCeiling` what the ceiling alone would allow, never less than `left`. */
+export type JudgeStanding = Readonly<{ given: number; left: number; underCeiling: number }>;
 
 /**
- * How many credits were given and how many are left under the ceiling, counted and never typed: the lines marked
- * sent, and what the counter row leaves. Nothing when judge credits are not open on this deployment.
+ * How many credits were given and how many can still be, counted and never typed. A credit is given under two bounds,
+ * the ceiling and what the treasury can pay (`giveJudgeCredit`), so what is left is the smaller of the two: what the
+ * counter row leaves under the ceiling, and what the treasury has given plus what it may still give, less everything
+ * counted. Counted on the ceiling alone, the page said ten were left while a judge with the right code was refused
+ * (the audit of 8 Oct 2026). Nothing when judge credits are not open on this deployment, or when what the treasury
+ * may give cannot be read: the page then says it could not be read, never a number nobody counted.
  */
-export async function judgeCreditsStanding(config: JudgeCreditConfig | null = judgeCreditConfig()): Promise<JudgeStanding | null> {
+export async function judgeCreditsStanding(config: JudgeCreditConfig | null = judgeCreditConfig(), deps: Readonly<{ spendable?: Spendable }> = {}): Promise<JudgeStanding | null> {
   if (!config) return null;
   await ensureJudgeCreditSchema();
-  const row = (await sql()`SELECT (SELECT count(*) FROM viky_judge_credits WHERE state = 'sent')::int AS given, (SELECT units FROM viky_judge_credit_total WHERE id = 1) AS counted`)[0];
-  const counted = BigInt(String(row?.counted ?? "0").split(".")[0]);
-  const left = counted >= config.capUnits ? 0n : (config.capUnits - counted) / config.units;
-  return { given: Number(row?.given ?? 0), left: Number(left) };
+  const row = (
+    await sql()`
+      SELECT (SELECT count(*) FROM viky_judge_credits WHERE state = 'sent')::int AS given,
+             (SELECT COALESCE(SUM(units), 0) FROM viky_judge_credits WHERE state = 'sent') AS given_units,
+             (SELECT units FROM viky_judge_credit_total WHERE id = 1) AS counted`
+  )[0];
+  const wholeOf = (value: unknown) => BigInt(String(value ?? "0").split(".")[0]);
+  const counted = wholeOf(row?.counted);
+  const underCeiling = counted >= config.capUnits ? 0n : (config.capUnits - counted) / config.units;
+  let spendable: bigint;
+  try {
+    spendable = await (deps.spendable ?? treasurySpendable)();
+  } catch (error) {
+    console.error(`judge credit: what the treasury may give could not be read for the standing: ${why(error)}`);
+    return null;
+  }
+  const room = wholeOf(row?.given_units) + spendable - counted;
+  const payable = room <= 0n ? 0n : room / config.units;
+  return { given: Number(row?.given ?? 0), left: Number(payable < underCeiling ? payable : underCeiling), underCeiling: Number(underCeiling) };
 }
 
 /** The standing as the judges page says it, or that it could not be read: never a number nobody counted. */
 export function standingInWords(standing: JudgeStanding | null): string {
   if (!standing) return "How many credits are left could not be read right now.";
   const given = standing.given === 1 ? "1 credit has been given so far" : `${standing.given} credits have been given so far`;
-  return `${given}, ${standing.left} ${standing.left === 1 ? "is" : "are"} left under the ceiling.`;
+  const left = `${standing.left} ${standing.left === 1 ? "is" : "are"} left`;
+  // The ceiling is the bound that holds, or the treasury is: said, since a judge is refused by whichever is smaller.
+  if (standing.left >= standing.underCeiling) return `${given}, ${left} under the ceiling.`;
+  return `${given}, ${left}: the ceiling allows ${standing.underCeiling}, and the treasury holds enough for ${standing.left} today.`;
 }
 
-export type JudgeNews = Readonly<{ kind: "given"; account: string; units: bigint; hash: Hex | null; standing: JudgeStanding | null }> | Readonly<{ kind: "ceiling"; account: string }>;
+export type JudgeNews =
+  | Readonly<{ kind: "given"; account: string; units: bigint; hash: Hex | null; standing: JudgeStanding | null }>
+  | Readonly<{ kind: "ceiling"; account: string }>
+  /** A right code refused because the treasury could not pay one credit: what a credit is, and what it may give. */
+  | Readonly<{ kind: "treasury"; account: string; units: bigint; spendable: bigint }>;
 
 const short = (account: string) => `${account.slice(0, 6)}…${account.slice(-4)}`;
 
-/** The email for each credit, and for a judge refused at the ceiling. The code is never in it. */
+const dollars = (units: bigint) => `$${(Number(units) / 1_000_000).toFixed(2)}`;
+
+/**
+ * The email for each credit, and for a judge refused at the ceiling or because the treasury is short, each with what
+ * to do about it: the ceiling's says to raise it, which is not the cause when the treasury is short. The code is never
+ * in it.
+ */
 export function judgeAlert(news: JudgeNews): { subject: string; text: string } {
+  if (news.kind === "treasury") {
+    return {
+      subject: "Judge credits: the treasury is short",
+      text: [
+        `A judge (${short(news.account)}) typed the right code and was told that credits cannot be sent right now.`,
+        "",
+        `One credit is ${dollars(news.units)}. Beyond what it holds for people's orders and for credits on their way, the treasury can give ${dollars(news.spendable < 0n ? 0n : news.spendable)}.`,
+        "Send AUSD to the treasury on Monad and credits are given again. The ceiling is not the cause: JUDGE_CREDIT_CAP_AUSD need not change.",
+        "",
+        "Nothing is written for a judge refused this way: pnpm judge:credits does not show it.",
+      ].join("\n"),
+    };
+  }
   if (news.kind === "ceiling") {
     return {
       subject: "Judge credits: the ceiling is reached",
       text: [`A judge (${short(news.account)}) typed the right code and was told that no credit is left.`, "", "Raise JUDGE_CREDIT_CAP_AUSD if more are meant to be given. The journal: pnpm judge:credits"].join("\n"),
     };
   }
-  const amount = `$${(Number(news.units) / 1_000_000).toFixed(2)}`;
+  const amount = dollars(news.units);
   return {
     subject: `Judge credit given: ${amount} to ${short(news.account)}`,
     text: [
       `A judge credit of ${amount} went to ${news.account}.`,
       news.hash ? `Transfer: ${news.hash}` : "Its transfer's hash is unknown: the token shows it went out.",
-      news.standing ? `Given so far: ${news.standing.given}. Left under the ceiling: ${news.standing.left}.` : "",
+      news.standing ? `Given so far: ${news.standing.given}. Left: ${news.standing.left}${news.standing.left < news.standing.underCeiling ? ` (the ceiling allows ${news.standing.underCeiling}, the treasury holds enough for ${news.standing.left})` : " under the ceiling"}.` : "",
       "",
       "The journal: pnpm judge:credits",
     ]
@@ -399,12 +457,13 @@ export function judgeAlert(news: JudgeNews): { subject: string; text: string } {
 
 /**
  * Tells the operator, and never fails the credit: at each credit, and once a day when a judge is refused at the
- * ceiling, however many are (one row of the relayer's counts marks the day it was said).
+ * ceiling, and once a day when one is refused because the treasury is short, however many are (one row of the
+ * relayer's counts marks the day each was said).
  */
 async function tellOperator(news: JudgeNews): Promise<void> {
   try {
-    if (news.kind === "ceiling") {
-      const row = { scope: "judge:ceiling-told", bucket: bucketOf("day", Date.now()) };
+    if (news.kind !== "given") {
+      const row = { scope: `judge:${news.kind}-told`, bucket: bucketOf("day", Date.now()) };
       if (((await countRelays([row])).get(countKey(row)) ?? 0) > 1) return;
     }
     await sendAlert(judgeAlert(news));

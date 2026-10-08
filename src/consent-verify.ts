@@ -10,8 +10,9 @@ import { consentAnchorMessage } from "./v2-protocol";
  * section 3.7): what `pnpm verify:consent` runs. It reads the chain and nothing else that it believes: no database, no
  * key, no account.
  *
- * For each gift of the second version of the two gift contracts it reads, from the anchor, the consent key the
- * gift's recipient bound and every yes and stop anchored for that gift, and checks each one's Ed25519 signature itself:
+ * For each gift of the contracts opened by a link (the two daily contracts of the second and third versions, and the
+ * milestone contract of the second) it reads, from the anchor, the consent key the gift's recipient bound and every
+ * yes and stop anchored for that gift, and checks each one's Ed25519 signature itself:
  * the chain cannot, so an entry whose signature does not verify counts for nothing here. Then each reading that moved
  * money, a day counted or a target reached, must fall after a yes and before any stop that followed it, by the time of
  * the blocks that hold them.
@@ -27,7 +28,30 @@ const ZERO_KEY = `0x${"00".repeat(32)}`;
 
 export type GiftKind = "daily" | "milestone";
 
-export type VerifyContracts = Readonly<{ daily: Hex | null; milestone: Hex | null; anchor: Hex }>;
+/** The contracts read: every daily contract opened by a link, one after the other, the milestone contract, the anchor. */
+export type VerifyContracts = Readonly<{ daily: readonly Hex[]; milestone: Hex | null; anchor: Hex }>;
+
+/**
+ * The contracts in service on Monad mainnet, as docs/CONTRACTS.md publishes them (test/consent-verify.test.ts holds the
+ * two together): what the command reads in a clone where nothing is set, so that it needs a Monad RPC and nothing
+ * else. The daily contracts are the second version, then the third, where a daily gift is made since 3 Oct 2026.
+ */
+export const PUBLISHED_CONTRACTS: VerifyContracts = {
+  anchor: "0x2a15DF23fF62120700f14D1E5d5d56CA0dAd027e",
+  milestone: "0x493c87A27E637bBc7179C17bE2B215fC18523CC0",
+  daily: ["0xC83d8028347967Fc84D0e36Ae5876d9b29EAEc51", "0x591d76863177E70FfcA2C793212d4715A367Ec70"],
+};
+
+/**
+ * Which contracts a run reads. What is named is read and nothing else: an address given on the command line, or else
+ * the deployment's own settings. Where nothing at all is named, the published contracts. A run that names one address
+ * never has a published one added to it: a rehearsal on a fork names its own, and must read those alone.
+ */
+export function contractsToVerify(named: Readonly<{ anchor: Hex | null; daily: readonly Hex[]; milestone: Hex | null }>): VerifyContracts | null {
+  if (!named.anchor && named.daily.length === 0 && !named.milestone) return PUBLISHED_CONTRACTS;
+  if (!named.anchor || (named.daily.length === 0 && !named.milestone)) return null;
+  return { anchor: named.anchor, daily: named.daily, milestone: named.milestone };
+}
 
 /** One yes or one stop, as the anchor holds it, and whether the bound key really signed it. */
 export type AnchoredEntry = Readonly<{ sequence: number; kind: "yes" | "stop" | "unknown"; anchoredAt: number; digest: Hex; stands: boolean }>;
@@ -107,19 +131,23 @@ export async function readingsIn(client: PublicClient, contracts: VerifyContract
     return times.get(blockNumber)!;
   };
   const found: FoundReading[] = [];
-  const from = (address: Hex | null) => (address ? logs.filter((log) => log.address.toLowerCase() === address.toLowerCase()) : []);
+  const from = (addresses: readonly (Hex | null)[]) => logs.filter((log) => addresses.some((address) => address !== null && log.address.toLowerCase() === address.toLowerCase()));
+  // The second and third daily contracts write a day counted in the same event, so one ABI reads both.
   for (const log of parseEventLogs({ abi: giftEscrowV2Abi, eventName: "CheckInAccepted", logs: from(contracts.daily) as Log[] })) {
     const args = log.args as { giftId: bigint; recipient: Hex; creditedDays: number };
     found.push({ kind: "daily", giftId: args.giftId.toString(), recipient: args.recipient, txHash: log.transactionHash as Hex, at: await timeOf(log.blockNumber as bigint), days: Number(args.creditedDays), reached: false });
   }
-  for (const log of parseEventLogs({ abi: milestoneGiftV2Abi, eventName: "MilestoneReached", logs: from(contracts.milestone) as Log[] })) {
+  for (const log of parseEventLogs({ abi: milestoneGiftV2Abi, eventName: "MilestoneReached", logs: from([contracts.milestone]) as Log[] })) {
     const args = log.args as { giftId: bigint; recipient: Hex };
     found.push({ kind: "milestone", giftId: args.giftId.toString(), recipient: args.recipient, txHash: log.transactionHash as Hex, at: await timeOf(log.blockNumber as bigint), days: 0, reached: true });
   }
   return found;
 }
 
-/** Every gift a contract of the second version holds, newest first: its numbers run up from its first with no gap. */
+/**
+ * Every gift a contract opened by a link holds, newest first: its numbers run up from its first with no gap. The third
+ * daily contract answers `nextGiftId` and `getGift` as the second does, so the second's ABI reads both.
+ */
 export async function giftsOf(client: PublicClient, kind: GiftKind, contract: Hex): Promise<{ giftId: string; recipient: Hex | null; counted: number }[]> {
   const abi = (kind === "daily" ? giftEscrowV2Abi : milestoneGiftV2Abi) as unknown as Abi;
   const next = (await client.readContract({ address: contract, abi, functionName: "nextGiftId" })) as bigint;
@@ -169,7 +197,7 @@ export async function verdictOf(
 
 /** Every log of the two gift contracts over a range of blocks, asked in pieces the node accepts. */
 export async function logsBetween(client: PublicClient, contracts: VerifyContracts, fromBlock: bigint, toBlock: bigint, piece = 100n, tell?: (done: bigint, of: bigint) => void): Promise<Log[]> {
-  const address = [contracts.daily, contracts.milestone].filter((one): one is Hex => one !== null);
+  const address = [...contracts.daily, contracts.milestone].filter((one): one is Hex => one !== null);
   const logs: Log[] = [];
   if (address.length === 0) return logs;
   for (let start = fromBlock; start <= toBlock; start += piece) {

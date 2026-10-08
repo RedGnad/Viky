@@ -442,10 +442,44 @@ test("two requests at once under a ceiling of one credit: one is paid, the other
 });
 
 test("two requests at once when the treasury holds one credit and the ceiling allows ten: one is paid", async () => {
-  const { sent, deps } = creditDeps({ code: CODE, units: 25_000_000n, capUnits: 250_000_000n }, { spendable: async () => 30_000_000n });
+  const { sent, told, deps } = creditDeps({ code: CODE, units: 25_000_000n, capUnits: 250_000_000n }, { spendable: async () => 30_000_000n });
   const both = await Promise.allSettled([giveJudgeCredit({ account: A, code: CODE }, deps), giveJudgeCredit({ account: B, code: CODE }, deps)]);
   assert.deepEqual(both.map((one) => one.status).sort(), ["fulfilled", "rejected"]);
   assert.equal(sent.length, 1);
+  // The one refused is refused by the treasury, not by the ceiling, and the operator is told that and not to raise it.
+  const refused = (both.find((one) => one.status === "rejected") as PromiseRejectedResult).reason;
+  assert.ok(refused instanceof GiftApiError && refused.code === "JUDGE_CREDIT_TREASURY", String(refused));
+  assert.deepEqual(told.map((news) => news.kind).sort(), ["given", "treasury"]);
+});
+
+test("a right code refused because the treasury is short is said to the operator, where nothing was (the audit of 8 Oct 2026)", async () => {
+  // The treasury may give 20 and a credit is 25: the refusal comes before the judge's line is written, so the journal
+  // shows nothing, and until now nobody was told.
+  const config = { code: CODE, units: 25_000_000n, capUnits: 250_000_000n };
+  const { sent, told, deps } = creditDeps(config, { spendable: async () => 20_000_000n });
+  await assert.rejects(giveJudgeCredit({ account: A, code: CODE }, deps), (error: unknown) => error instanceof GiftApiError && error.code === "JUDGE_CREDIT_TREASURY" && error.status === 503);
+  assert.equal(sent.length, 0);
+  assert.equal((await db.query("SELECT 1 FROM viky_judge_credits")).rows.length, 0, "nothing is written for this judge");
+  assert.deepEqual(told, [{ kind: "treasury", account: A.toLowerCase(), units: 25_000_000n, spendable: 20_000_000n }]);
+  // Its own words: what a credit is, what the treasury can give, what to do, and that the ceiling is not the cause.
+  const alert = judgeAlert(told[0]);
+  assert.equal(alert.subject, "Judge credits: the treasury is short");
+  assert.match(alert.text, /^A judge \(0x0000…00a1\) typed the right code and was told that credits cannot be sent right now\./);
+  assert.match(alert.text, /One credit is \$25\.00\. Beyond what it holds for people's orders and for credits on their way, the treasury can give \$20\.00\./);
+  assert.match(alert.text, /Send AUSD to the treasury on Monad and credits are given again\. The ceiling is not the cause: JUDGE_CREDIT_CAP_AUSD need not change\./);
+  assert.match(alert.text, /pnpm judge:credits does not show it\./);
+  assert.doesNotMatch(alert.text, new RegExp(CODE));
+  // A wrong code is never said: only a judge who was owed a credit and did not get one.
+  const wrong = creditDeps(config, { spendable: async () => 20_000_000n });
+  await assert.rejects(giveJudgeCredit({ account: B, code: "not-the-code-at-all" }, wrong.deps));
+  assert.deepEqual(wrong.told, []);
+  // A reading of the treasury that failed says nothing of it: the judge is refused, and nobody is told it is short.
+  const unread = creditDeps(config, { spendable: async () => Promise.reject(new Error("the endpoint did not answer")) });
+  await assert.rejects(giveJudgeCredit({ account: "0x00000000000000000000000000000000000000C3", code: CODE }, unread.deps), (error: unknown) => error instanceof GiftApiError && error.code === "JUDGE_CREDIT_TREASURY");
+  assert.deepEqual(unread.told, []);
+  // Once a day for each of the two refusals, by one row of the relayer's counts named after it.
+  const source = readFileSync("src/judge-credit.ts", "utf8");
+  assert.match(source, /if \(news\.kind !== "given"\) \{\n      const row = \{ scope: `judge:\$\{news\.kind\}-told`, bucket: bucketOf\("day", Date\.now\(\)\) \};/);
 });
 
 test("the same account asking twice at once is paid once", async () => {
@@ -455,27 +489,43 @@ test("the same account asking twice at once is paid once", async () => {
   assert.equal((await db.query<{ units: string }>("SELECT units::text FROM viky_judge_credit_total")).rows[0].units, "25000000");
 });
 
-test("the standing is counted: credits given, and how many the ceiling still allows", async () => {
+test("the standing is counted: credits given, and how many can still be, by the ceiling and by the treasury", async () => {
   const config = { code: CODE, units: 25_000_000n, capUnits: 60_000_000n };
-  assert.deepEqual(await judgeCreditsStanding(config), { given: 0, left: 2 });
+  const rich = { spendable: plenty };
+  assert.deepEqual(await judgeCreditsStanding(config, rich), { given: 0, left: 2, underCeiling: 2 });
   const { told, deps } = creditDeps(config);
   await giveJudgeCredit({ account: A, code: CODE }, deps);
-  assert.deepEqual(await judgeCreditsStanding(config), { given: 1, left: 1 });
+  assert.deepEqual(await judgeCreditsStanding(config, rich), { given: 1, left: 1, underCeiling: 1 });
   const given = told.find((news) => news.kind === "given");
-  assert.deepEqual(given && given.kind === "given" ? given.standing : null, { given: 1, left: 1 });
-  assert.equal(standingInWords({ given: 1, left: 1 }), "1 credit has been given so far, 1 is left under the ceiling.");
-  assert.equal(standingInWords({ given: 3, left: 0 }), "3 credits have been given so far, 0 are left under the ceiling.");
+  assert.deepEqual(given && given.kind === "given" ? given.standing : null, { given: 1, left: 1, underCeiling: 1 });
+  assert.equal(standingInWords({ given: 1, left: 1, underCeiling: 1 }), "1 credit has been given so far, 1 is left under the ceiling.");
+  assert.equal(standingInWords({ given: 3, left: 0, underCeiling: 0 }), "3 credits have been given so far, 0 are left under the ceiling.");
   assert.equal(standingInWords(null), "How many credits are left could not be read right now.");
   assert.equal(await judgeCreditsStanding(null), null);
+  // The smaller of what the ceiling leaves and what the treasury can pay (the audit of 8 Oct 2026): the page said ten
+  // were left, counted on the ceiling alone, while a judge with the right code was refused.
+  const wide = { code: CODE, units: 25_000_000n, capUnits: 275_000_000n };
+  assert.deepEqual(await judgeCreditsStanding(wide, { spendable: async () => 60_000_000n }), { given: 1, left: 2, underCeiling: 10 });
+  assert.deepEqual(await judgeCreditsStanding(wide, { spendable: async () => 20_000_000n }), { given: 1, left: 0, underCeiling: 10 });
+  assert.deepEqual(await judgeCreditsStanding(wide, { spendable: async () => -5_000_000n }), { given: 1, left: 0, underCeiling: 10 }, "orders held beyond what it has: nothing to give, never a negative count");
+  assert.equal(standingInWords({ given: 1, left: 2, underCeiling: 10 }), "1 credit has been given so far, 2 are left: the ceiling allows 10, and the treasury holds enough for 2 today.");
+  assert.equal(standingInWords({ given: 0, left: 0, underCeiling: 10 }), "0 credits have been given so far, 0 are left: the ceiling allows 10, and the treasury holds enough for 0 today.");
+  // A credit on its way, or on a failed line, is counted against both bounds: the treasury's money is not promised twice.
+  await db.query("UPDATE viky_judge_credit_total SET units = units + 25000000 WHERE id = 1");
+  assert.deepEqual(await judgeCreditsStanding(wide, { spendable: async () => 60_000_000n }), { given: 1, left: 1, underCeiling: 9 });
+  // What the treasury may give could not be read: the page says so, and no number is shown.
+  assert.equal(await judgeCreditsStanding(wide, { spendable: async () => Promise.reject(new Error("the endpoint did not answer")) }), null);
   const page = readFileSync("app/judges/page.tsx", "utf8");
   assert.match(page, /standingInWords\(judgeStanding\)/);
   assert.match(page, /judgeCreditsStanding\(judgeCredit\)\.catch\(\(\) => null\)/);
 });
 
 test("the two emails name the account and the amount, and never the code", () => {
-  const given = judgeAlert({ kind: "given", account: A, units: 25_000_000n, hash: `0x${"ab".repeat(32)}`, standing: { given: 2, left: 3 } });
+  const given = judgeAlert({ kind: "given", account: A, units: 25_000_000n, hash: `0x${"ab".repeat(32)}`, standing: { given: 2, left: 3, underCeiling: 3 } });
   assert.match(given.subject, /^Judge credit given: \$25\.00 to 0x0000…00A1$/);
-  assert.match(given.text, /Given so far: 2\. Left under the ceiling: 3\./);
+  assert.match(given.text, /Given so far: 2\. Left: 3 under the ceiling\./);
+  const short = judgeAlert({ kind: "given", account: A, units: 25_000_000n, hash: null, standing: { given: 2, left: 1, underCeiling: 8 } });
+  assert.match(short.text, /Given so far: 2\. Left: 1 \(the ceiling allows 8, the treasury holds enough for 1\)\./);
   const ceiling = judgeAlert({ kind: "ceiling", account: B });
   assert.equal(ceiling.subject, "Judge credits: the ceiling is reached");
   assert.doesNotMatch(given.text + ceiling.text, new RegExp(CODE));

@@ -2,7 +2,7 @@ import { ausdFacts } from "@/src/judges-ausd";
 import { BLOCK_TIME, creditedDayMon, dailyGiftMon, dollarsOf, FINALITY_GAP, missedDayMon, MON_PRICE, monWords, RELAYER_FEES } from "@/src/measured";
 import { AUSD_ADDRESS } from "@/src/monad/chain";
 import { feeSentence, waysIn } from "@/src/rails";
-import { giftEscrowV2Address, milestoneGiftV2Address } from "@/src/v2";
+import { giftEscrowV2Address, giftEscrowV3Address, milestoneGiftV2Address } from "@/src/v2";
 import { Fold, SubFold } from "./Fold";
 
 const HELP = "text-[length:var(--type-help)]";
@@ -11,6 +11,7 @@ const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
 /** Every contract that holds gifts' money on this deployment, by the name the page gives it. */
 function holders(): ReadonlyArray<{ label: string; address: string }> {
   const named: Array<{ label: string; address: string | null | undefined }> = [
+    { label: "third-version daily gifts", address: giftEscrowV3Address() },
     { label: "second-version gifts", address: giftEscrowV2Address() },
     { label: "second-version milestone gifts", address: milestoneGiftV2Address() },
     { label: "first-version gifts", address: process.env.NEXT_PUBLIC_GIFT_ESCROW_ADDRESS?.trim() },
@@ -99,7 +100,7 @@ export async function JudgesAgora() {
         </dd>
         <dt className={MUTED}>What Viky takes</dt>
         <dd className={HELP} data-cost="viky">
-          Nothing today. The gift contracts take no fee, in either version: every unit a funder puts into a gift goes to its
+          Nothing today. The gift contracts take no fee, in any version: every unit a funder puts into a gift goes to its
           recipient or back to its funder, and no function sends AUSD anywhere else. Viky pays the network fees above from
           its own account.
         </dd>

@@ -585,7 +585,7 @@ async function main() {
 
   console.log("STEP 6: the yes and the stop on the anchor, checked from the chain alone");
   expect((await say("stop", giftId)).sequence === 1 && (await anchored(giftId)) === 2n, "a stop takes the next place of its gift");
-  const contracts = { daily, milestone, anchor };
+  const contracts = { daily: [daily], milestone, anchor };
   const check = async () => {
     const readings = await readingsIn(publicClient, contracts, await logsBetween(publicClient, contracts, firstBlock, await publicClient.getBlockNumber(), 500n));
     const verdict = (kind: "daily" | "milestone", id: string, counted: number) => verdictOf(publicClient, anchor, { kind, giftId: id, recipient: recipient.address, counted }, readings);

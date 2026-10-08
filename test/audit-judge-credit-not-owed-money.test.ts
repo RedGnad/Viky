@@ -35,7 +35,7 @@ test("a credit the treasury could only pay out of money held for orders is refus
     return { hash: "0x01" as Hex };
   };
   // 30 AUSD in the treasury, 10 of them held for a person's order: 20 may be given, less than one credit of 25.
-  await assert.rejects(giveJudgeCredit({ account: "0x00000000000000000000000000000000000000a1", code: CODE }, { config: CONFIG, nowMs: NOW, send, spendable: async () => 20_000_000n }), refusal("JUDGE_CREDIT_TREASURY"));
+  await assert.rejects(giveJudgeCredit({ account: "0x00000000000000000000000000000000000000a1", code: CODE }, { config: CONFIG, nowMs: NOW, send, spendable: async () => 20_000_000n, tell: async () => undefined }), refusal("JUDGE_CREDIT_TREASURY"));
   // A reading that fails refuses as well: it claims nothing.
   await assert.rejects(giveJudgeCredit({ account: "0x00000000000000000000000000000000000000a2", code: CODE }, { config: CONFIG, nowMs: NOW, send, spendable: async () => { throw new Error("the endpoint did not answer"); } }), refusal("JUDGE_CREDIT_TREASURY"));
   assert.equal(sent.length, 0);

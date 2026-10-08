@@ -108,9 +108,9 @@ export async function JudgesReliability() {
           {held.lost}. This is the measured number. What the code does: a reading that fails for a reason of ours is
           tried again at 03:30 UTC, and any working reading can still credit the day until its catch-up window closes,
           30 hours after the day ends (06:00 UTC). Past that hour the day goes back to the funder, whoever was at
-          fault: the settling pass of 07:00 UTC sends it, and on the second version of the daily contract the next
-          check-in settles it by itself. A failure of ours does not hold a day past its window. Only the owner pausing
-          readings before that hour does, on the second version alone.
+          fault: the settling pass of 07:00 UTC sends it, and on the second and third versions of the daily contract
+          the next check-in settles it by itself. A failure of ours does not hold a day past its window. Only the owner
+          pausing readings before that hour does, on those two versions and not on the first.
         </dd>
       </dl>
     </Fold>

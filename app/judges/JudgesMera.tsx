@@ -76,7 +76,7 @@ export function JudgesMera({ index }: Readonly<{ index: IndexRead | null }>) {
           </p>
           </SubFold>
           <p className={HELP}>
-            The command reads, for every gift of the second version, the key
+            The command reads, for every gift of the second version and of the third daily contract, the key
             the account bound and every yes and stop anchored, checks each Ed25519 signature itself, and checks that every
             reading that moved money came after a yes and before any stop:
           </p>

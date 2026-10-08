@@ -114,7 +114,8 @@ export default async function JudgesPage() {
   const anchor = consentAnchorAddress();
   const secondVersionSet = escrowV2 !== null && milestoneV2 !== null;
   // The third daily contract, where a day is paid the day it is read: said only once it is set, like the second.
-  const thirdVersionSet = giftEscrowV3Address() !== null;
+  const escrowV3 = giftEscrowV3Address();
+  const thirdVersionSet = escrowV3 !== null;
   // The index of the contracts' events, read once for the two blocks that show it. It answers nothing rather than an
   // error (src/envio-index.ts), and each block then says so in a sentence.
   const index = await readIndex();
@@ -262,13 +263,30 @@ export default async function JudgesPage() {
             <>
               <dt className="text-[var(--muted)]">Where a gift is made today</dt>
               <dd className="[overflow-wrap:anywhere]" data-second-version>
-                The second version of the contracts, deployed on 2 Oct 2026. A habit, day by day: {escrowV2} (<a className="underline" href={`https://monadvision.com/address/${escrowV2}`}>MonadVision</a>, deployed in{" "}
-                <Tx hash="0x8be062b29a506c17b581587f2ba0b2f8d1460cd5fc2705e0aa191a2f9c8ac409" />). One thing reached: {milestoneV2} (
+                {escrowV3 ? (
+                  // The address is the setting's, never one written here: the page says where a daily gift is made as the
+                  // app makes it (src/v2.ts, `newDailyGiftsContract`).
+                  <span data-third-version>
+                    A habit, day by day: {escrowV3} (<a className="underline" href={`https://monadvision.com/address/${escrowV3}`}>MonadVision</a>, deployed in{" "}
+                    <Tx hash="0xe6edce353863afaf302f3840068a5bb92300fb8380d234d8477afb5983a897f3" />), the third version of the daily contract,
+                    deployed on 3 Oct 2026 by 0x65F9c9225A646423878f0405f750a209c3648335; who owns it is read from the chain with the
+                    others, below. The second version&apos;s daily contract, {escrowV2} (
+                    <a className="underline" href={`https://monadvision.com/address/${escrowV2}`}>MonadVision</a>, deployed in{" "}
+                    <Tx hash="0x8be062b29a506c17b581587f2ba0b2f8d1460cd5fc2705e0aa191a2f9c8ac409" />), runs the gifts it holds.
+                  </span>
+                ) : (
+                  <>
+                    The second version of the contracts, deployed on 2 Oct 2026. A habit, day by day: {escrowV2} (
+                    <a className="underline" href={`https://monadvision.com/address/${escrowV2}`}>MonadVision</a>, deployed in{" "}
+                    <Tx hash="0x8be062b29a506c17b581587f2ba0b2f8d1460cd5fc2705e0aa191a2f9c8ac409" />).
+                  </>
+                )}{" "}
+                One thing reached: {milestoneV2} (
                 <a className="underline" href={`https://monadvision.com/address/${milestoneV2}`}>MonadVision</a>, deployed in{" "}
                 <Tx hash="0x15c355472e145a6d70e3d25af7bcee2bcc1c1560e80e0940e3a460bd7678bd4c" />). The anchor of agreements, which holds no
                 money: {anchor} (<a className="underline" href={`https://monadvision.com/address/${anchor}`}>MonadVision</a>, deployed in{" "}
-                <Tx hash="0xe0a2b4127067d5c24282254886a8e32da9667e835c24dd98461e4e4a3c90d412" />). The source of the three is verified through
-                Sourcify, an exact match. They were deployed by a key made for that day alone,
+                <Tx hash="0xe0a2b4127067d5c24282254886a8e32da9667e835c24dd98461e4e4a3c90d412" />). The source of {escrowV3 ? "the four" : "the three"} is verified through
+                Sourcify, an exact match. {escrowV3 ? "The three of the second version were deployed on 2 Oct 2026" : "They were deployed"} by a key made for that day alone,
                 0xEFc6820AA6EFafb824f6e9c102079c8f81845840, which handed each to the Safe; the Safe accepted them in{" "}
                 <Tx hash="0x5a8dca52982b71dba715feb187e33f0494f4412c3cbb984147d97d4bf63aeae9" />,{" "}
                 <Tx hash="0xb5b8b17b735fffb5a0323ee52b3eccbe0ee58c24ecf2703bdf6bee0c1222921e" /> and{" "}
@@ -277,8 +295,8 @@ export default async function JudgesPage() {
                 <Tx hash="0x0c2e70edd97c91d010527ef930d60c2e12fd25578109a3e4cd94e0f57cec5397" />,{" "}
                 <Tx hash="0x10e8d50ec6c88d9492cbcc7d826b6afc5b7753cb046c033ae4898411131457b5" /> and{" "}
                 <Tx hash="0x32ec292bd099897081bac962f95efacc40fdfbb87e0092cd58f8d75537ab181a" />: they go on running the gifts they hold, to
-                the end. Whether a gift has run on the second version yet is counted from the index under &quot;Who has used
-                Viky&quot;: nothing is claimed as working on it before one has, end to end, with real amounts.
+                the end. Whether a gift has run on {escrowV3 ? "each of these" : "the second version"} yet is counted from the index under &quot;Who has used
+                Viky&quot;: nothing is claimed as working on {escrowV3 ? "one of them" : "it"} before one has, end to end, with real amounts.
               </dd>
             </>
           ) : null}
@@ -524,7 +542,7 @@ export default async function JudgesPage() {
             the tests, like any other source that could drift, and if it changes or closes, the reading fails on our
             side. The day then stays open until its catch-up window closes, 30 hours after it ends, and goes back to
             the funder like a missed day: a failure of ours does not hold it longer. Only a pause of readings by the
-            owner holds the open days, and on the second version of the daily contract alone.
+            owner holds the open days, on the second and third versions of the daily contract and not on the first.
           </li>
           <li>
             <strong>University portals&apos; terms.</strong> A proof of enrolment is shown by the person from their own

@@ -169,7 +169,7 @@ test("what was agreed says only what is guaranteed, and the judges page says the
   assert.match(page, /daily && paysTheSameDay\(status\.version\) && words\?\.asItGoes \? words\.asItGoes\.agreed : null,/, "in what was agreed, for a gift on the third contract and for no other");
   const judges = readFileSync("app/judges/page.tsx", "utf8");
   // Said only once the third contract is set: until then no gift is on it.
-  assert.match(judges, /const thirdVersionSet = giftEscrowV3Address\(\) !== null;/);
+  assert.match(judges, /const escrowV3 = giftEscrowV3Address\(\);\n  const thirdVersionSet = escrowV3 !== null;/);
   assert.match(judges, /\{thirdVersionSet \? \(\n\s*<p className=\{HELP\} data-third-version-rule>/);
   assert.ok(judges.includes("A lesson taken after the day was paid is counted"), "the exact rule, first half");
   assert.ok(judges.includes("by the first reading of the next day; taken before, it is not kept."), "the exact rule, second half");

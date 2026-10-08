@@ -1,7 +1,8 @@
 import { operatorAccounts } from "@/src/dev-access";
-import type { IndexRead } from "@/src/envio-index";
+import { followsThirdDailyContract, type IndexRead } from "@/src/envio-index";
 import { formatAusd } from "@/src/gift-reader";
 import { between, founderAccounts, shortOf, usageOf, type GiftBetween } from "@/src/pilot-accounts";
+import { giftEscrowV3Address } from "@/src/v2";
 import { Fold, SubFold } from "./Fold";
 
 const HELP = "text-[length:var(--type-help)]";
@@ -72,6 +73,14 @@ export function JudgesWhoUsed({ index }: Readonly<{ index: IndexRead | null }>) 
               ]
                 .filter(Boolean)
                 .join(", and ") + "."}
+          {/* An index made before the third daily contract counts none of its gifts: said, rather than a count that looks whole. */}
+          {giftEscrowV3Address() !== null && !followsThirdDailyContract(index) ? (
+            <span data-who-used="third-missing">
+              {" "}
+              The index read here does not follow the third daily contract: a daily gift made since 3 Oct 2026 is not
+              counted here.
+            </span>
+          ) : null}
         </dd>
         <dt className={MUTED}>Who funded them</dt>
         <dd className={HELP} data-who-used="funders">
