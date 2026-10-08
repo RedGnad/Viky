@@ -3,11 +3,12 @@ import { ReclaimProofRequest } from "@reclaimprotocol/js-sdk";
 import { accountAuthErrorStatus, accountAuthOriginFromRequest, accountAuthPublicMessage, readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
 import { DUOLINGO_MAX_DAY_INDEX } from "@/src/duolingo-proof-policy";
-import { resolvePublicDuolingoProfile } from "@/src/duolingo-profile";
+import { DuolingoProfileError, resolvePublicDuolingoProfile } from "@/src/duolingo-profile";
 import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
 import { isReclaimQuotaRefusal, limitsNow, noteAttestedCall, REAL_READINGS_OFF, realReadingsOff, ReclaimLimitReached, startsAgainInWords } from "@/src/attested-calls";
 import { conditionById } from "@/src/conditions";
-import { LIMIT } from "@/src/sentences";
+import { RequestError } from "@/src/request-error";
+import { LIMIT, SHOW_PROOF } from "@/src/sentences";
 import { loadLatestEvidence, loadOpenShownSession, PROOF_SESSION_TTL_SECONDS, pruneExpiredProofSessions, saveProofSession, type ProofSessionPhase } from "@/src/proof-session-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { channelFor, reclaimChannelInitOptions, reclaimChannelLaunchOptions } from "@/src/reclaim-channel";
@@ -21,6 +22,9 @@ import { ruleAsked } from "@/src/witness-portal";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
+
+/** A refusal of this route, written for the person who reads it. Whatever else is thrown here is not. */
+class SessionRefusal extends Error {}
 
 /**
  * The session this account has open for a gift's one proof, or nothing (7 Oct 2026). The gift's page asks when it
@@ -73,24 +77,24 @@ export async function POST(request: Request) {
     void pruneExpiredProofSessions().catch(() => {});
 
     const giftId = String(body.giftId ?? "").trim();
-    if (!/^\d{1,78}$/.test(giftId)) throw new Error("Unknown gift");
+    if (!/^\d{1,78}$/.test(giftId)) throw new SessionRefusal("Unknown gift");
     // What the request itself gets wrong is refused before anything is looked up: a day that is none, and a daily
     // gift's proof with no account named.
     const asked = String(body.phase ?? "");
     const askedDay = asked === "check-in" ? Number(body.dayIndex) : 0;
     if (asked === "check-in" && (!Number.isInteger(askedDay) || askedDay < 0 || askedDay > DUOLINGO_MAX_DAY_INDEX)) {
-      throw new Error("A check-in needs a valid day");
+      throw new SessionRefusal("A check-in needs a valid day");
     }
     const username = String(body.username ?? "").trim();
-    if (!isMilestoneGiftId(giftId) && !username) throw new Error("Enter your Duolingo username");
+    if (!isMilestoneGiftId(giftId) && !username) throw new SessionRefusal("Enter your Duolingo username");
 
     // The condition is the gift's own, read off its record, never the one the browser names (the audit of 8 Oct 2026):
     // a session opened on another condition spent one of the month's proofs on a proof the contract refuses.
     const gift = await loadGift(giftId);
-    if (!gift) throw new Error("Unknown gift");
+    if (!gift) throw new SessionRefusal("Unknown gift");
     const record = isMilestoneGiftId(giftId) ? await loadMilestoneGift(giftId) : null;
     const entry = shownConditionOfGift(gift, record);
-    if (!entry) throw new Error("Unknown condition");
+    if (!entry) throw new SessionRefusal("Unknown condition");
     source = conditionById(entry.condition.conditionId)?.source ?? source;
 
     const phase: ProofSessionPhase = entry.kind === "milestone" ? "reach" : asked === "check-in" ? "check-in" : "baseline";
@@ -100,20 +104,20 @@ export async function POST(request: Request) {
     // is read back from the stored evidence, never from the request.
     let bound: { username: string; profileId: string } | undefined;
     if (entry.kind === "daily") {
-      if (!username) throw new Error("Enter your Duolingo username");
+      if (!username) throw new SessionRefusal("Enter your Duolingo username");
       const previous = phase === "check-in" ? await loadLatestEvidence(giftId, account) : null;
-      if (phase === "check-in" && !previous) throw new Error("Connect your Duolingo account before checking in");
+      if (phase === "check-in" && !previous) throw new SessionRefusal("Connect your Duolingo account before checking in");
       const profile = await resolvePublicDuolingoProfile(username);
-      if (previous && previous.profileId !== profile.id) throw new Error("This is a different Duolingo account than the one connected to this gift");
+      if (previous && previous.profileId !== profile.id) throw new SessionRefusal("This is a different Duolingo account than the one connected to this gift");
       bound = { username: profile.username, profileId: profile.id };
     }
 
     // Only the person the gift is for opens a proof for it (the review of 23 Sep 2026, finding 5): a session is a
     // Reclaim verification, counted against the account's quota, and a proof is only ever theirs to show.
-    if (gift.recipient?.toLowerCase() !== account.toLowerCase()) throw new Error("This gift is not yours to prove");
+    if (gift.recipient?.toLowerCase() !== account.toLowerCase()) throw new SessionRefusal("This gift is not yours to prove");
     const appId = process.env.RECLAIM_APP_ID?.trim();
     const appSecret = process.env.RECLAIM_APP_SECRET?.trim();
-    if (!appId || !appSecret) throw new Error("The Reclaim application is not configured");
+    if (!appId || !appSecret) throw new SessionRefusal(SHOW_PROOF.refusals.notConfigured);
 
     // The provider this gift's proof comes from: the condition's own, or read off the gift (a university gift's
     // portal, D165).
@@ -121,7 +125,7 @@ export async function POST(request: Request) {
     const providerId = provider?.providerId ?? entry.condition.providerId;
     const providerVersion = provider?.providerVersion ?? entry.condition.providerVersion;
     // A university whose provider of this sense is being built (D313): said as such, never as "no portal".
-    if (!providerId) throw new Error(provider?.missing?.message ?? "This gift names no portal a proof could come from");
+    if (!providerId) throw new SessionRefusal(provider?.missing?.message ?? "This gift names no portal a proof could come from");
 
     // A university read through a Reclaim AI provider (D312): the one case AI is accepted, verified by the pinned
     // witness on the portal's domain. Before its pin, whichever version the agent writes, unless the operator set the
@@ -133,7 +137,7 @@ export async function POST(request: Request) {
     // Reclaim. The same when Reclaim itself refuses the session for its quota.
     if ((await limitsNow()).proofs) throw new ReclaimLimitReached("proofs");
     // A developer's machine opens no proof at Reclaim (src/attested-calls.ts).
-    if (realReadingsOff()) throw new Error(REAL_READINGS_OFF);
+    if (realReadingsOff()) throw new SessionRefusal(REAL_READINGS_OFF);
     // The version asked and whether the agent's proofs are taken, from the provider alone (`ruleAsked`): under a pin,
     // the pinned rule at every press, whatever an earlier session of this gift came to (9 Oct 2026).
     const proofRequest = await ReclaimProofRequest.init(appId, appSecret, providerId, {
@@ -179,9 +183,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ code: error.code, error: LIMIT.said(source, "proofs", startsAgainInWords(), true) }, { status: 409, headers: { "Cache-Control": "no-store" } });
     }
     const authStatus = accountAuthErrorStatus(error);
-    return NextResponse.json(
-      { error: authStatus ? accountAuthPublicMessage(error) : error instanceof Error ? error.message : "Could not start the proof" },
-      { status: authStatus || 400, headers: { "Cache-Control": "no-store" } },
-    );
+    if (authStatus) return NextResponse.json({ error: accountAuthPublicMessage(error) }, { status: authStatus, headers: { "Cache-Control": "no-store" } });
+    // What this route refuses is said as written. Anything else is a library's or the network's text: for our logs,
+    // never for the person, who reads that nothing was opened (the audit of 8 Oct 2026).
+    const ours = error instanceof SessionRefusal || error instanceof DuolingoProfileError || error instanceof RequestError;
+    if (!ours) console.error("proof session not opened:", error);
+    return NextResponse.json({ error: ours ? error.message : SHOW_PROOF.refusals.notOpened }, { status: 400, headers: { "Cache-Control": "no-store" } });
   }
 }
