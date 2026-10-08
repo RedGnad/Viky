@@ -44,6 +44,8 @@ test("every line of the session's log that told what happened is still written",
     "'pressed Inscriptions'",
     "'Inscriptions never pressable ('",
     "'press on Inscriptions threw'",
+    "'veil drawn (' + where + ')'",
+    "'veil taken off (' + why + ')'",
   ]) {
     assert.ok(SCRIPT.includes(line), line);
   }
@@ -52,21 +54,29 @@ test("every line of the session's log that told what happened is still written",
   assert.doesNotMatch(SCRIPT, /log\([^)]*(innerText|textContent|labelOf|document\.title|location\.href)/);
 });
 
-test("the wait is asked of Reclaim as soon as the student is signed in, in a try, and the log says what came of it", () => {
-  // The founder's rule (8 Oct 2026): a portal that stands still after the sign-in reads as broken in a second and a
-  // half, so the wait comes back at the sign-in and nobody watches their own file move.
-  const signedIn = SCRIPT.indexOf("log('signed in on the ENT, leaving for the file');");
-  const asked = SCRIPT.indexOf("userHasToAct(false, 'signed in on the ENT');");
-  const leaves = SCRIPT.indexOf("location.assign(TARGET_URL);");
-  assert.ok(signedIn > 0 && asked > signedIn && leaves > asked, "asked after the line that says signed in, and before the page leaves");
-  const helper = SCRIPT.slice(SCRIPT.indexOf("function userHasToAct(needed, where) {"), SCRIPT.indexOf("// A press as a finger makes it"));
-  assert.match(helper, /try \{\s+known = !!window\.Reclaim && typeof window\.Reclaim\.requiresUserInteraction === 'function';\s+if \(known\) \{\s+window\.Reclaim\.requiresUserInteraction\(needed\);/);
-  for (const outcome of ["said + 'told'", "said + 'the call threw'", "said + 'no such function on the bridge'"]) assert.ok(helper.includes(`log(${outcome});`), outcome);
-  // Asked again once the file is ready, and the page is given back if the file asks for a sign-in after all.
-  assert.ok(SCRIPT.includes("userHasToAct(false, 'file ready');"));
-  assert.ok(SCRIPT.includes("userHasToAct(true, 'sign-in form on the file');"));
-  // The bridge is called for this and for the log, and for nothing else that acts.
-  assert.deepEqual([...new Set([...SCRIPT.matchAll(/window\.Reclaim\.(\w+)\(/g)].map((found) => found[1]))].sort(), ["log", "reportUserLoggedIn", "requiresUserInteraction"]);
+test("a veil covers the page from the sign-in to the end, drawn with the page's own means, and the press is a plain click", () => {
+  // The founder's rule (8 and 9 Oct 2026): a portal that stands still after the sign-in reads as broken in a second
+  // and a half, so nobody watches their own file move. The values are his.
+  const veil = SCRIPT.slice(SCRIPT.indexOf("function drawVeil(where) {"), SCRIPT.indexOf("function liftVeil(why) {"));
+  for (const said of ["position:fixed;inset:0;", "z-index:2147483647;", "background:#DDD6EB;", "color:#1E1633;", "font-family:-apple-system, Helvetica, sans-serif;", "font-size:20px;", "text-align:center;", "width:12px;height:12px;", "@keyframes viky-veil-turn"]) {
+    assert.ok(veil.includes(said), said);
+  }
+  assert.ok(veil.includes("'Reading your enrolment.', 'Nothing to do.'"));
+  // On the root, so the file redrawing its body does not take it away; and nothing is fetched to draw it.
+  assert.ok(veil.includes("document.documentElement.appendChild(veil);"));
+  assert.doesNotMatch(veil, /url\(|@font-face|@import|<img|new Image|createElement\('(img|link|svg|canvas)'\)/);
+  // Drawn as soon as the page has a root, on the two hosts, and not on the ENT once the script has left it.
+  assert.ok(SCRIPT.includes("if (onTheFile || (onTheEnt && !state.applicationNavigationAttempted)) veilAtOnce('at the start');"));
+  assert.ok(SCRIPT.indexOf("veilAtOnce('at the start');") < SCRIPT.indexOf("await until(() => document.readyState !== 'loading', 15000, 100);"), "before the page is waited for");
+  // It comes off for a sign-in form, which needs the person, and when the script gives up: never on a press made.
+  assert.deepEqual([...SCRIPT.matchAll(/liftVeil\('([^']+)'\)/g)].map((found) => found[1]).sort(), ["gave up", "gave up", "gave up", "sign-in form on the ENT", "sign-in form on the file"]);
+  // The press is the entry's own click, which a veil over it does not stop.
+  assert.ok(SCRIPT.includes("target.click();"));
+  assert.doesNotMatch(SCRIPT, /MouseEvent|dispatchEvent/);
+  // The call to Reclaim's bridge that did nothing on the web page is gone: the bridge is asked for the log, and for
+  // the logged-in signal where it offers one.
+  assert.doesNotMatch(SCRIPT, /requiresUserInteraction/);
+  assert.deepEqual([...new Set([...SCRIPT.matchAll(/window\.Reclaim\.(\w+)\(/g)].map((found) => found[1]))].sort(), ["log", "reportUserLoggedIn"]);
   // It reads one university's two hosts and goes to no other address.
   const addresses = [...SCRIPT.matchAll(/https?:\/\/[^\s'"]+/g)].map((found) => found[0]);
   assert.deepEqual(addresses, ["https://mondossierweb.univ-tlse3.fr/"]);

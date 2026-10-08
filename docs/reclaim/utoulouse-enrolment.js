@@ -148,36 +148,81 @@
     log('no logged-in function on the bridge');
   }
 
-  // Tells Reclaim's page whether the person still has to act on what is shown. Said as soon as they are signed in, so
-  // the wait comes back and nobody watches their own file move and stop: a page that stands still after the sign-in
-  // reads as broken within two seconds. Each call is in its own try, and says in the log whether the bridge had the
-  // function and whether the call went through: at worst it does nothing, and the log says so.
-  function userHasToAct(needed, where) {
-    const said = 'user interaction ' + (needed ? 'required' : 'not required') + ' (' + where + '): ';
-    let known = false;
-    try {
-      known = !!window.Reclaim && typeof window.Reclaim.requiresUserInteraction === 'function';
-      if (known) {
-        window.Reclaim.requiresUserInteraction(needed);
-        log(said + 'told');
-        return;
-      }
-    } catch {
-      log(said + 'the call threw');
-      return;
-    }
-    log(said + 'no such function on the bridge');
+  // The veil: one plain screen over the page from the moment the student is signed in, so nobody watches their own
+  // file move and stand still (a portal that stands still after the sign-in reads as broken in a second and a half).
+  // It covers everything, takes every touch, and stays to the end. The press below goes to the entry itself, under it.
+  // Drawn with the page's own means and nothing fetched: no image, no font, no stylesheet of ours but one rule that
+  // turns the dot. It comes off only when the person is needed again (a sign-in form) or when this script gives up.
+  const VEIL_ID = '__viky_reading_veil';
+
+  function veilDrawn() {
+    return !!document.getElementById(VEIL_ID);
   }
 
-  // A press as a finger makes it: one click in the middle of the entry, so the file sends what it sends for a person.
-  function press(el) {
-    const rect = el.getBoundingClientRect();
-    const x = Math.round(rect.left + rect.width / 2);
-    const y = Math.round(rect.top + rect.height / 2);
+  function drawVeil(where) {
     try {
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, button: 0, clientX: x, clientY: y, screenX: x, screenY: y }));
+      if (veilDrawn() || !document.documentElement) return;
+      const veil = document.createElement('div');
+      veil.id = VEIL_ID;
+      veil.setAttribute('role', 'status');
+      veil.style.cssText = 'position:fixed;inset:0;top:0;right:0;bottom:0;left:0;z-index:2147483647;margin:0;padding:24px;box-sizing:border-box;' +
+        'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+        'background:#DDD6EB;color:#1E1633;font-family:-apple-system, Helvetica, sans-serif;font-size:20px;line-height:1.4;text-align:center;' +
+        'touch-action:none;cursor:default;';
+      // One sentence each, so a narrow screen breaks the line between the two and never inside one.
+      const words = document.createElement('p');
+      words.style.cssText = 'margin:0;font-size:20px;font-weight:400;color:#1E1633;';
+      ['Reading your enrolment.', 'Nothing to do.'].forEach((sentence, at) => {
+        if (at > 0) words.appendChild(document.createTextNode(' '));
+        const part = document.createElement('span');
+        part.textContent = sentence;
+        part.style.cssText = 'display:inline-block;';
+        words.appendChild(part);
+      });
+      const turn = document.createElement('div');
+      turn.style.cssText = 'margin-top:24px;width:36px;height:36px;animation:viky-veil-turn 1s linear infinite;';
+      const dot = document.createElement('div');
+      dot.style.cssText = 'width:12px;height:12px;margin:0 auto;border-radius:50%;background:#1E1633;';
+      turn.appendChild(dot);
+      const rule = document.createElement('style');
+      rule.textContent = '@keyframes viky-veil-turn{to{transform:rotate(360deg)}}';
+      veil.appendChild(rule);
+      veil.appendChild(words);
+      veil.appendChild(turn);
+      // On the root and not in the body: the file redraws its body, and the veil must outlast that.
+      document.documentElement.appendChild(veil);
+      log('veil drawn (' + where + ')');
     } catch {
-      el.click();
+      log('veil not drawn (' + where + ')');
+    }
+  }
+
+  function liftVeil(why) {
+    try {
+      const veil = document.getElementById(VEIL_ID);
+      if (!veil) return;
+      veil.remove();
+      log('veil taken off (' + why + ')');
+    } catch {
+      log('veil not taken off (' + why + ')');
+    }
+  }
+
+  // As early as the page has a root, which is before it draws anything of its own.
+  function veilAtOnce(where) {
+    if (document.documentElement) {
+      drawVeil(where);
+      return;
+    }
+    try {
+      const seen = new MutationObserver(() => {
+        if (!document.documentElement) return;
+        seen.disconnect();
+        drawVeil(where);
+      });
+      seen.observe(document, { childList: true });
+    } catch {
+      setTimeout(() => drawVeil(where), 0);
     }
   }
 
@@ -191,14 +236,16 @@
     }, 60000, 300);
     if (!target) {
       log('Inscriptions never pressable (' + whatIsThere() + ')');
+      liftVeil('gave up');
       return;
     }
     writeState({ enrollmentTabClickAttempted: true, enrollmentTabClickAt: Date.now() });
     try {
-      press(target);
+      target.click();
       log('pressed Inscriptions');
     } catch {
       log('press on Inscriptions threw');
+      liftVeil('gave up');
       return;
     }
     const shown = await until(() => /#!inscriptionsView$/.test(location.href), 20000, 300);
@@ -206,30 +253,42 @@
   }
 
   async function main() {
+    // The ENT's own pages exist only behind the sign-in, and the file is reached from there: on either host the veil
+    // is drawn before the page draws itself, and comes off if a sign-in form is found after all. Not on the ENT once
+    // this script has left it: somebody who comes back there is acting, and nothing would follow.
+    const onTheEnt = location.hostname === 'ent.utoulouse.fr';
+    const onTheFile = location.hostname === 'mondossierweb.univ-tlse3.fr';
+    if (onTheFile || (onTheEnt && !state.applicationNavigationAttempted)) veilAtOnce('at the start');
     await until(() => document.readyState !== 'loading', 15000, 100);
     log('loaded on ' + location.hostname + ' (bridge: ' + bridgeMembers() + ')');
 
     // The ENT's own pages exist only behind the sign-in (its root sends to the CAS, on another host), so being on
     // this host with no sign-in form is being signed in: leave at once for the file, whatever the home page shows.
-    if (location.hostname === 'ent.utoulouse.fr') {
-      if (hasLoginNegativeSignal() || state.applicationNavigationAttempted) return;
+    if (onTheEnt) {
+      if (hasLoginNegativeSignal()) {
+        liftVeil('sign-in form on the ENT');
+        return;
+      }
+      if (state.applicationNavigationAttempted) return;
+      drawVeil('signed in on the ENT');
       log('signed in on the ENT, leaving for the file');
-      userHasToAct(false, 'signed in on the ENT');
       writeState({ applicationNavigationAttempted: true, applicationNavigationAt: Date.now() });
       location.assign(TARGET_URL);
       return;
     }
 
-    if (location.hostname === 'mondossierweb.univ-tlse3.fr') {
+    if (onTheFile) {
       let givenBack = false;
       const authenticated = await untilStable(
         () => {
-          // A sign-in form here, after the wait was asked for on the ENT, needs the person: the page is theirs again.
-          if (!givenBack && hasLoginNegativeSignal()) {
+          // A sign-in form here needs the person: the page is theirs again, and the veil comes back once it is gone.
+          const form = hasLoginNegativeSignal();
+          if (form && !givenBack) {
             givenBack = true;
-            userHasToAct(true, 'sign-in form on the file');
+            liftVeil('sign-in form on the file');
           }
-          return appAuthenticated() && !hasLoginNegativeSignal();
+          if (!form && givenBack && !veilDrawn()) drawVeil('signed in on the file');
+          return appAuthenticated() && !form;
         },
         120000,
         400,
@@ -237,10 +296,11 @@
       );
       if (!authenticated) {
         log('file never ready (' + whatIsThere() + ')');
+        liftVeil('gave up');
         return;
       }
       log('file ready');
-      userHasToAct(false, 'file ready');
+      drawVeil('file ready');
       reportLoggedIn();
       await pressEnrolments();
     }
