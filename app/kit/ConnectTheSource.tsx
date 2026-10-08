@@ -1,11 +1,11 @@
 "use client";
 import { useState } from "react";
 import { GIFT_PAGE as W } from "@/src/sentences";
-import { BODY, FIELD, HELP, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
+import { BODY, FIELD, HELP, MONEY, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { FieldRefusal } from "./FieldRefusal";
 import { FoldChevron } from "./GiftLive";
 import { Step, Steps } from "./Steps";
-import { ButtonWords, StepInProgress } from "./Waiting";
+import { Button } from "./Button";
 
 /**
  * Connecting the source a gift counts: the one gesture of the one moment where a person has something to do
@@ -97,12 +97,9 @@ export function ConnectTheSource({
         {words.named ? <p className={BODY}>{words.named}</p> : null}
         {/* One line where there were three: what connecting costs is said once, before the gesture (4 Oct 2026). */}
         {words.connectNow ? <p className={HELP}>{words.connectNow}</p> : null}
-        <button type="button" onClick={onStart} disabled={working} className={PRIMARY_BUTTON}>
-          <ButtonWords busy={busy === "starting"} doing={W.reading}>
-            {words.start}
-          </ButtonWords>
-        </button>
-        <StepInProgress busy={busy === "starting"} step={step} />
+        <Button doing={busy === "starting" ? W.reading : null} step={step} waiting={working && busy !== "starting"} onPress={onStart}>
+          {words.start}
+        </Button>
         {refusalAt("start")}
         {words.notYours ? (
           // A fold, not a button (the founder, 4 Oct 2026): pressing it does nothing but open a sentence, so it is named
@@ -132,12 +129,9 @@ export function ConnectTheSource({
             {/* The code's validity is said when it runs out, and not before: that is when it serves. */}
             {account.codeExpired ? <p className={BODY}>{W.expired}</p> : null}
             {words.connectNow ? <p className={HELP}>{words.connectNow}</p> : null}
-            <button type="button" onClick={onAskCode} disabled={working} className={PRIMARY_BUTTON}>
-              <ButtonWords busy={busy === "naming"} doing={W.checking}>
-                {account.codeExpired ? words.newCode : words.getCode}
-              </ButtonWords>
-            </button>
-            <StepInProgress busy={busy === "naming"} step={step} />
+            <Button doing={busy === "naming" ? W.checking : null} step={step} waiting={working && busy !== "naming"} onPress={onAskCode}>
+              {account.codeExpired ? words.newCode : words.getCode}
+            </Button>
             {refusalAt("name")}
           </>
         ) : (
@@ -168,12 +162,9 @@ export function ConnectTheSource({
               <Step says={words.codeStep} />
               <Step says={W.steps.back}>
                 {words.connectNow ? <p className={HELP}>{words.connectNow}</p> : null}
-                <button type="button" onClick={onStart} disabled={working} className={PRIMARY_BUTTON}>
-                  <ButtonWords busy={busy === "starting"} doing={W.reading}>
-                    {words.added}
-                  </ButtonWords>
-                </button>
-                <StepInProgress busy={busy === "starting"} step={step} />
+                <Button doing={busy === "starting" ? W.reading : null} step={step} waiting={working && busy !== "starting"} onPress={onStart}>
+                  {words.added}
+                </Button>
                 {refusalAt("start")}
                 {refusal?.where === "start" && words.slowToShow ? <p className={HELP}>{words.slowToShow}</p> : null}
               </Step>
@@ -225,12 +216,9 @@ export function ConnectTheSource({
               />
               {refusal?.where === "name" ? refusalAt("name") : typed.trim() === "" ? <p className={HELP}>{field.typeToContinue}</p> : null}
             </div>
-            <button type="submit" disabled={working || typed.trim() === ""} className={PRIMARY_BUTTON}>
-              <ButtonWords busy={busy === "naming"} doing={W.checking}>
-                {W.continue}
-              </ButtonWords>
-            </button>
-            <StepInProgress busy={busy === "naming"} step={step} />
+            <Button submits doing={busy === "naming" ? W.checking : null} step={step} waiting={(working && busy !== "naming") || typed.trim() === ""}>
+              {W.continue}
+            </Button>
           </form>
           <p className={HELP}>{field.noPassword}</p>
           {renaming ? (
