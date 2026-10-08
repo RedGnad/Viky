@@ -156,8 +156,8 @@ test("with a run, the three lines: the market's cost, the pair one for one with 
   assert.ok(html.includes(`href="https://monadvision.com/tx/${MARKET_PATH_MEASURE.transaction}"`));
   assert.match(html, /On 8 Oct 2026, on Monad testnet, the same ExitRouter set on Agora's test AUSD/);
   assert.match(html, /sent 10\.00 test AUSD through Agora's Instant Settlement pair and handed back 10\.00 CTK/);
-  assert.ok(html.includes(`href="https://testnet.monadvision.com/tx/${A_RUN.exit}"`));
-  assert.ok(html.includes(`href="https://testnet.monadvision.com/address/${ROUTER}"`));
+  assert.ok(html.includes(`href="https://testnet.monadscan.com/tx/${A_RUN.exit}"`));
+  assert.ok(html.includes(`href="https://testnet.monadscan.com/address/${ROUTER}"`));
   assert.match(html, /on mainnet the pair\s+swaps only for an address Agora approved, and none of Viky's is/);
   assert.match(html, /No money\s+of a gift has gone through Instant Settlement/);
   // A test coin is a count of a coin, never a sum of dollars, and nothing says it ran where it did not.

@@ -23,8 +23,12 @@ import { AUSD } from "./coins";
 
 export const MONAD_TESTNET_CHAIN_ID = 10143;
 export const MONAD_TESTNET_RPC_URL = "https://testnet-rpc.monad.xyz";
-/** Where Monad's documentation sends a reader for a testnet transaction (docs.monad.xyz, "Network Information - Testnet"). */
-export const MONAD_TESTNET_EXPLORER = "https://testnet.monadvision.com";
+/**
+ * One of the two explorers Monad's documentation names for the testnet (docs.monad.xyz, "Network Information -
+ * Testnet"). Opened on 8 Oct 2026 for the run below: it shows the transaction, its success and its four transfers to
+ * a plain reader, where the other one held its pages behind a check of the browser.
+ */
+export const MONAD_TESTNET_EXPLORER = "https://testnet.monadscan.com";
 
 export const AGORA_TESTNET = {
   /** The Instant Settlement pair: the other coin as its token0, the test AUSD as its token1. */
