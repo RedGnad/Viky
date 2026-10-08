@@ -5,7 +5,7 @@ import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
 import { attestedRead, AttestedReadError, reclaimAttestedReadDeps, type AttestedReadDeps } from "./attested-read";
 import { attestedSource, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES } from "./attested-sources";
 import { conditionOfGoal } from "./conditions";
-import { noDayToCredit } from "./daily-look";
+import { noDayForYesterdaysPage } from "./daily-look";
 import { openSecret, sealSecret, vaultConfigured } from "./connect-vault";
 import { eraseConnection, loadConnection, saveRefreshedTokens, type Connection } from "./connection-store";
 import type { PublicCheckInOutcome, PublicCheckInPurpose } from "./duolingo-public-checkin";
@@ -31,6 +31,13 @@ import { distanceOfDay, refreshStravaTokens, stravaConfigured, stravaDayMet, STR
  * not, so the chain and the journal ever hold a yes or a no and never a number of the person's (rule 2). `bind` is
  * the first reading, right after the connection: it proves the key opens the source's page, binds the account's
  * pseudonym, and opens the window at zero; `count` is every morning after.
+ *
+ * A day is paid by its own page and by nothing else (8 Oct 2026), on every version of the daily contract. The page
+ * read is yesterday's, so a count goes only when yesterday is a day of the gift not settled yet, and one counted
+ * reading is taken for a gift in a day, whoever asks, a press on "Count now" included. The third daily contract
+ * credits through the day of the reading: without these two rules the day of the connection was paid by the day
+ * before it, and one day's activity, read twice, paid two days. The contract's own tests hold what a verdict read the
+ * next morning pays, the oldest open day (test/GiftEscrowV3Rule.t.sol, `test_oldestOpenDayIsPaidFirst`).
  *
  * Each source is one line below: what it is called, which page, how a day is judged, how a key is refreshed. The
  * reading itself is the same for all of them. Every refusal is typed. Ours to fix (the worker, the attestor, a
@@ -113,6 +120,8 @@ export type ConnectedCheckInDeps = {
   configured: (line: ConnectedLine) => boolean;
   /** Whether the recipient's agreement lets this gift be read (src/consent-guard.ts); a test that omits it reads. */
   leave?: (giftId: string, fundedAt: number) => Promise<ReadingLeave>;
+  /** The gift as its contract holds it; the chain's own answer when absent (src/gift-reader.ts). */
+  gift?: typeof readGift;
 };
 
 const defaultDeps: ConnectedCheckInDeps = {
@@ -173,17 +182,20 @@ async function readConnected(input: { giftId: string; purpose: PublicCheckInPurp
   const connection = await loadConnection(giftId);
   if (!connection || connection.source !== line.service) return { kind: "already", giftId, reason: "no_account" };
   const escrow = escrowOf(record);
-  const onChain = await readGift(escrow, giftId);
+  const onChain = await (deps.gift ?? readGift)(escrow, giftId);
   if (onChain.cancelled) return { kind: "already", giftId, reason: "cancelled" };
   if (onChain.finalised) return { kind: "already", giftId, reason: "finished" };
   // No reading that moves money without the recipient's yes, and none after their stop (the founder, 29 Sep 2026).
   const leave = deps.leave ? await deps.leave(giftId, onChain.fundedAt) : null;
   if (leave && !leave.allowed) return { kind: "refused", giftId, code: NO_AGREEMENT.code, message: NO_AGREEMENT.message };
   const now = deps.now();
-  if (purpose === "count" && !input.force && (await countedToday(giftId, now))) return { kind: "already", giftId, reason: "counted_today" };
-  // No proof for a morning that has no day to credit, by the contract's own rule on its own figures (src/daily-look.ts):
-  // the morning after the connection, and every morning once the last day is settled.
-  const noDay = purpose === "count" ? contractRefusal(noDayToCredit(onChain, now) ?? undefined) : null;
+  // One counted reading for a gift in a day, a press on "Count now" included: the page read is yesterday's whoever
+  // asks, and read again it could only pay another open day with the same activity.
+  if (purpose === "count" && (await countedToday(giftId, now))) return { kind: "already", giftId, reason: "counted_today" };
+  // No proof for a morning that has no day to credit: yesterday, whose page is read, must be a day of the gift not
+  // settled yet, on every version (src/daily-look.ts). Nothing is read the day of the connection, nor once the last
+  // day is settled.
+  const noDay = purpose === "count" ? contractRefusal(noDayForYesterdaysPage(onChain, now) ?? undefined) : null;
   if (noDay) return { kind: "refused", giftId, code: noDay.code, message: noDay.message, looked: true };
 
   let tokens: ConnectedTokens;
