@@ -748,12 +748,14 @@ export async function portalsIn(country: string): Promise<readonly Portal[]> {
 /**
  * A university as the list gives it: its name alone, its country, the country's code to group and order by, and the
  * grading scale its results provider pins, when it pins one, so a grade is typed on it (the founder, 28 Sep 2026).
+ * Whether a student can show something today is said per sense beside it (src/university-ready.ts), and no more as
+ * one `tested` mark for the university, which no screen read since 8 Oct 2026.
  */
 export function portalListed(
   portal: Pick<Portal, "portalId" | "university" | "country"> & Partial<Pick<Portal, "enrolment" | "results">>,
-): Readonly<{ pair: string; title: string; issuer: string; country: string; scale: string | null; tested: boolean }> {
+): Readonly<{ pair: string; title: string; issuer: string; country: string; scale: string | null }> {
   const scale = resultsExtractOf(portal.results ?? null)?.grade.scale;
-  return { pair: portal.portalId, title: portal.university, issuer: countryInWords(portal.country), country: portal.country, scale: scale ? scaleKey(scale) : null, tested: testedWithAStudent(portal) };
+  return { pair: portal.portalId, title: portal.university, issuer: countryInWords(portal.country), country: portal.country, scale: scale ? scaleKey(scale) : null };
 }
 
 /**

@@ -49,6 +49,8 @@ const SURFACES = [
   // (the audit of 8 Oct 2026). The routes of the way out are not read yet: one line of theirs, written for the
   // operator's log, carries one of the words.
   "app/api/proof/**/*.ts",
+  // The way out's own routes: what they answer is read on the cash-out screen.
+  "app/api/exit/**/*.ts",
   "src/shown-verification.ts",
   "src/rails.ts",
   "src/ramp.ts",

@@ -195,8 +195,8 @@ before anything is distributed. An association that declines because "it is cryp
 A check looks for seven of them at every change (wallet, gas, chain, seed, token, transaction hash, address:
 `src/consumer-words.ts`), in the source of the screens, of the sentences they print and of the routes that answer
 them (`pnpm check:words`, whose list of files is `scripts/check-consumer-words.ts`), and in what a browser renders
-(`test/browser/screens.spec.ts`). What it does not read: the routes of the way out, `app/api/exit`, where one line
-written for the operator's log carries one of those words.
+(`test/browser/screens.spec.ts`). The routes of the way out, `app/api/exit`, are read too: the one line there that
+carries one of those words is written for the operator's log, and is marked as that.
 
 **What is not claimed.** No market size, no conversion rate, no viral loop. One recipient who earned a gift used that
 money to offer one to someone else: it has happened once.

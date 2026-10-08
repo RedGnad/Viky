@@ -114,7 +114,7 @@ test("a proved portal is read back by its id, by the request its proofs make, an
   assert.equal((await searchPortals("SN"))[0]?.portalId, "ucad-sn", "by country too");
   assert.deepEqual(await searchPortals("sorbonne"), []);
   assert.equal(await countPortals(), 1);
-  assert.deepEqual(portalListed(back!), { pair: "ucad-sn", title: "Université Cheikh Anta Diop", issuer: "Senegal", country: "SN", scale: null, tested: false }, "what the chooser lists, and no sign-in address");
+  assert.deepEqual(portalListed(back!), { pair: "ucad-sn", title: "Université Cheikh Anta Diop", issuer: "Senegal", country: "SN", scale: null }, "what the chooser lists, and no sign-in address");
 });
 
 test("proving a portal again replaces its row and its provider rather than adding a second one", async () => {
@@ -287,10 +287,12 @@ test("a missing provider is asked for once, with its instruction, and a witness 
   assert.equal(pinned?.enrolment?.pin?.specHash, pin.specHash);
   assert.equal(pinned?.enrolment?.requestHash, pin.specHash);
   assert.equal(pinned?.enrolment && awaitingPin(pinned.enrolment), false);
-  // Pinned from a reviewed first proof: tested with a student, which the chooser lists first (the founder, 29 Sep 2026).
-  assert.equal(portalListed(pinned!).tested, true);
-  assert.equal(portalListed((await loadPortal("uni-b-br"))!).tested, false);
-  assert.equal(portalListed((await loadPortal("ucad-sn"))!).tested, false, "a classic provider was not tested with a student here");
+  // Pinned from a reviewed first proof: tested with a student (the founder, 29 Sep 2026). The list no longer carries
+  // it as one mark for the university: what is ready today is said per sense (src/university-ready.ts).
+  assert.equal(testedWithAStudent(pinned!), true);
+  assert.equal(testedWithAStudent((await loadPortal("uni-b-br"))!), false);
+  assert.equal(testedWithAStudent((await loadPortal("ucad-sn"))!), false, "a classic provider was not tested with a student here");
+  assert.equal("tested" in portalListed(pinned!), false);
   // Asked again for the same sense once built: the request stays built.
   assert.notEqual((await requestProvider({ portalId: "uni-a-br", sense: "enrolment", instruction, giftId: null })).builtAt, null);
   assert.deepEqual((await witnessProviders())?.map((one) => [one.portalId, one.sense, one.domain]), [["uni-a-br", "enrolment", "a.br"]]);

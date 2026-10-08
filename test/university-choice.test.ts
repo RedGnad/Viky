@@ -106,7 +106,7 @@ test("the list route gives the countries with their counts, then one country's u
     assert.deepEqual(countries.countries, [{ code: "NG", count: 1 }, { code: "SN", count: 2 }]);
     const senegal = (await (await listGet(new Request("https://viky.test/api/portals?country=sn"))).json()) as { results: ListedUniversity[] };
     assert.deepEqual(senegal.results.map((u) => u.pair), ["ucad-sn", "ugb-sn"]);
-    assert.deepEqual(Object.keys(senegal.results[0]).sort(), ["country", "issuer", "pair", "ready", "scale", "tested", "title"], "no sign-in address, no provider; the scale a grade is typed on, and what it is ready for, for grouping");
+    assert.deepEqual(Object.keys(senegal.results[0]).sort(), ["country", "issuer", "pair", "ready", "scale", "title"], "no sign-in address, no provider; the scale a grade is typed on, and what it is ready for, for grouping");
     assert.deepEqual(senegal.results[0].ready, []);
     assert.equal(senegal.results[0].scale, null);
     assert.equal(senegal.results[0].issuer, "Senegal");
@@ -206,7 +206,7 @@ test("the whole list comes in one answer kept five minutes at the edge, and the 
     assert.match(String(whole.headers.get("cache-control")), /public, max-age=0, s-maxage=300/);
     const everything = ((await whole.json()) as { results: ListedUniversity[] }).results;
     assert.deepEqual(everything.map((u) => u.pair).sort(), ["ucad-sn", "ucam-gb", "ut1-fr", "ut3-fr", "uwr-pl"], "every country, every university");
-    assert.deepEqual(Object.keys(everything[0]).sort(), ["country", "issuer", "pair", "ready", "scale", "tested", "title"], "the shape of a country's list");
+    assert.deepEqual(Object.keys(everything[0]).sort(), ["country", "issuer", "pair", "ready", "scale", "title"], "the shape of a country's list");
 
     const search = async (query: string) => (await (await searchGet(new Request(`https://viky.test/api/portals/search?${query}`))).json()) as { results: ListedUniversity[]; more: boolean };
     const pairs = async (query: string) => (await search(query)).results.map((u) => u.pair);
@@ -218,7 +218,7 @@ test("the whole list comes in one answer kept five minutes at the edge, and the 
     assert.deepEqual(await pairs("q=cambridge&except=FR"), ["ucam-gb"]);
     assert.deepEqual(await pairs("q=sn"), ["ucad-sn"], "a country's two letters");
     const answer = await search("q=cambridge");
-    assert.deepEqual(Object.keys(answer.results[0]).sort(), ["country", "issuer", "pair", "ready", "scale", "tested", "title"], "the shape of a country's list");
+    assert.deepEqual(Object.keys(answer.results[0]).sort(), ["country", "issuer", "pair", "ready", "scale", "title"], "the shape of a country's list");
     assert.equal(answer.more, false);
     assert.equal((await searchGet(new Request("https://viky.test/api/portals/search?q=%25"))).status, 400);
   } finally {
