@@ -47,10 +47,11 @@ export function chainOwnerReader(): OwnerReader {
 
 /** The contracts the product runs on, by the names the page uses; one not configured is left out. */
 export function ownedContracts(env: NodeJS.ProcessEnv = process.env): ReadonlyArray<{ label: string; address: Hex }> {
-  // The second version is asked first, since a gift made today is on it; its three settings are set together or not
-  // at all (src/v2.ts), and the first version's contracts are then named as such.
+  // The contracts a gift is made on today are asked first: the third daily contract, then the second version, whose
+  // three settings are set together or not at all (src/v2.ts); the first version's contracts are then named as such.
   const second = Boolean(env.NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS?.trim());
   const named: Array<{ label: string; key: string }> = [
+    { label: "third-version daily gifts", key: "NEXT_PUBLIC_GIFT_ESCROW_V3_ADDRESS" },
     { label: "second-version gifts", key: "NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS" },
     { label: "second-version milestone gifts", key: "NEXT_PUBLIC_MILESTONE_GIFT_V2_ADDRESS" },
     { label: "the anchor of agreements", key: "NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS" },

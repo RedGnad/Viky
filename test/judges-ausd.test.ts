@@ -44,7 +44,7 @@ test("the block names the issuer, what its roles can do to a gift, and what Viky
   for (const said of ["A freezer role can freeze an account, which can then neither send nor receive AUSD.", "A pauser role can suspend every transfer, or the signed transfers alone", "A burner role can burn AUSD from an account.", "The contract&apos;s admin can replace its code.", "Nobody else gains by any of these: the money stays where it is."]) {
     assert.ok(block.includes(said), said);
   }
-  assert.ok(block.includes("Nothing today. The gift contracts take no fee, in either version"));
+  assert.ok(block.includes("Nothing today. The gift contracts take no fee, in any version"));
   // No fee in the contracts: no function of either version sends AUSD to anybody but a gift's two people.
   for (const file of ["contracts/GiftEscrowV2.sol", "contracts/MilestoneGiftV2.sol", "contracts/GiftEscrow.sol", "contracts/MilestoneGift.sol"]) {
     assert.doesNotMatch(readFileSync(file, "utf8"), /\bfee\b|\bFee\b|treasury/, file);

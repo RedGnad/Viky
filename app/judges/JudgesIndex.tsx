@@ -1,7 +1,8 @@
-import { heldPerContract, type IndexRead } from "@/src/envio-index";
+import { followsThirdDailyContract, heldPerContract, type IndexRead } from "@/src/envio-index";
 import { formatAusd, formatAusdExact } from "@/src/gift-reader";
 import { AUSD_ADDRESS, createMonadPublicClient } from "@/src/monad/chain";
 import { dateInWords } from "@/src/moments";
+import { giftEscrowV3Address } from "@/src/v2";
 import { Fold } from "./Fold";
 
 const HELP = "text-[length:var(--type-help)]";
@@ -53,13 +54,24 @@ export async function JudgesIndex({ index }: Readonly<{ index: IndexRead | null 
   }
   const chain = await chainBeside(index);
   const held = heldPerContract(index.gifts);
+  // Which contracts the deployment read follows is said from what it holds, never from a number written here.
+  const third = followsThirdDailyContract(index);
+  const thirdMissing = !third && giftEscrowV3Address() !== null;
   return (
     <Fold id="index" title="The index of the contracts' events">
       <p className={HELP}>
         The contracts&apos; events are indexed with Envio HyperIndex, in the repository RedGnad/Viky-index, and read here
         as this page is served. No movement of money depends on it: it is a second reading of the same events, set
-        beside the chain so that anybody can see whether the two agree. It follows seven contracts: the two gift
-        contracts of each version, the earlier gift contract, the way out and the anchor of agreements.
+        beside the chain so that anybody can see whether the two agree. It follows the two gift contracts of each of
+        the first two versions, the earlier gift contract, {third ? "the daily contract of the third version, " : ""}the way out and
+        the anchor of agreements.
+        {thirdMissing ? (
+          <span data-index="third-missing">
+            {" "}
+            The deployment read here was made before the third daily contract and does not follow it: a daily gift made
+            since 3 Oct 2026 is not in it.
+          </span>
+        ) : null}
       </p>
       <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] [@media(min-width:600px)]:grid-cols-[14rem_1fr]">
         <dt className={MUTED}>Where the index stands</dt>
