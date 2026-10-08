@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { TERMS, aWindow, climb, daily, endedDaily, photographer, serve } from "./gift-fixtures";
-import { DAY, gift, json, makeAnAccount, neverAskedToBeTold, now } from "./gift-kit";
+import { DAY, gift, json, makeAnAccount, neverAskedToBeTold, now, profile } from "./gift-kit";
 
 /**
  * The page of the person who offered a gift, which is also the screen of a gift just made, with its link (the
@@ -271,6 +271,29 @@ test.describe("the funder's page", () => {
     await running.page.getByText("What was agreed", { exact: true }).click();
     await expect(running.page.locator("dl.said-lines > div").filter({ hasText: "Boo can end it" })).toHaveText("Boo can end itthe rest comes back to you");
     await running.context.close();
+  });
+
+  test("on a computer the gift's card is 440 wide, in the middle of the window", async ({ browser, baseURL }) => {
+    test.setTimeout(120_000);
+    const device = await profile(browser, baseURL, { width: 1440, height: 900 });
+    const { page } = device;
+    await neverAskedToBeTold(device.context);
+    await serve(page, "8", () => unopened("8"), TERMS.daily, null);
+    await makeAnAccount(device);
+    const link = `${device.baseURL}/g/8?t=AbCdEfGhIjKlMnOpQrStUv`;
+    await page.evaluate((kept) => window.localStorage.setItem("viky.gift-link.8", kept), link);
+    await page.goto("/g/8");
+    const card = page.locator("section.gift-card-width");
+    await expect(card).toBeVisible();
+    const box = (await card.boundingBox())!;
+    expect(Math.round(box.width), "the card's own width: it stood at 432 in a task's column").toBe(440);
+    expect(Math.abs(box.x + box.width / 2 - 720), "in the middle of a window of 1440").toBeLessThanOrEqual(1);
+    // What is in the card is as wide as the card allows, and no wider: the button never runs across the window.
+    const copy = (await page.getByRole("button", { name: "Copy the link", exact: true }).boundingBox())!;
+    expect(copy.width).toBeLessThanOrEqual(440);
+    expect(copy.x).toBeGreaterThanOrEqual(box.x);
+    if (process.env.VIKY_FUNDER_CAPTURES) await page.screenshot({ path: `${process.env.VIKY_FUNDER_CAPTURES}/13-after-paying-1440.png` });
+    await device.context.close();
   });
 
   test("the screen of a gift just made is the gift's own page, and an address kept from before leads there", async ({ browser, baseURL }) => {

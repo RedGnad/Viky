@@ -745,7 +745,10 @@ test("the rail begins where Material's expanded breakpoint begins, and the colum
   // The three destinations share one column, the gift card's with the page's margins (the founder, 4 Oct 2026).
   assert.ok(NAV.railWidth + GIFT_CARD_WIDTH + PAGE_MARGIN.medium * 2 < TWO_PANE_FROM, "the column and the rail fit at the breakpoint");
   const shell = readFileSync("app/kit/Shell.tsx", "utf8");
-  assert.match(shell, /const column = props\.kind === "task" \? "var\(--app-column-max\)" : props\.kind === "document" \? "var\(--prose-max\)" : "calc\(var\(--gift-card-width\) \+ 2 \* var\(--page-margin\)\)";/);
+  assert.match(shell, /const cardColumn = "calc\(var\(--gift-card-width\) \+ 2 \* var\(--page-margin\)\)";\n\s*const column = props\.kind === "task" \? \(props\.card \? cardColumn : "var\(--app-column-max\)"\) : props\.kind === "document" \? "var\(--prose-max\)" : cardColumn;/);
+  // A gift's own page is a card's page (the UI pass of 8 Oct 2026, screen 4): its card is 440 on a computer, not 432.
+  assert.equal(GIFT_CARD_WIDTH, 440);
+  assert.equal((readFileSync("app/components/GiftPage.tsx", "utf8").match(/<Shell\s+kind="task"\s+card\b/g) ?? []).length, 4, "every state of the gift's page stands in the same column");
   assert.doesNotMatch(readFileSync("app/globals.css", "utf8"), /--destination-max/, "the wider column of Gifts and Me is gone");
   // No rail drawn, no room kept: the room is the rail's own condition, an account.
   assert.match(shell, /const rail = props\.kind === "destination" && !props\.bare && Boolean\(address\);/);

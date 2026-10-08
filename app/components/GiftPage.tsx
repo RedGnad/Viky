@@ -168,14 +168,14 @@ export function GiftPage({
 
   if (loadError) {
     return (
-      <Shell kind="task" back="/" backLabel={W.aboutViky} backFollows>
+      <Shell kind="task" card back="/" backLabel={W.aboutViky} backFollows>
         <p className={BODY}>{loadError}</p>
       </Shell>
     );
   }
   if (!status) {
     return (
-      <Shell kind="task" back="/gifts" backLabel={W.backToGifts}>
+      <Shell kind="task" card back="/gifts" backLabel={W.backToGifts}>
         <WaitLine>{W.loading}</WaitLine>
       </Shell>
     );
@@ -589,7 +589,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
   // The session closed while they were here: nothing is lost and the door is the whole page (D74, D80).
   if (!address && hadAccount) {
     return (
-      <Shell kind="task" back="/" backLabel={W.aboutViky} backFollows step={W.closedTitle}>
+      <Shell kind="task" card back="/" backLabel={W.aboutViky} backFollows step={W.closedTitle}>
         <p className={BODY}>{W.closedBody}</p>
         <AccountPanel returning signInOnly />
       </Shell>
@@ -894,6 +894,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
     >
       <Shell
         kind="task"
+        card
         /* No hero on a gift in progress (the founder, 29 Sep 2026): its one character is the drawing's, the climb or the days. */
         character={
           justMade ? (
