@@ -82,10 +82,9 @@ test.describe("the one button, four states", () => {
     await expect(done).toHaveAttribute("aria-disabled", "true");
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
     await shot(page, "2-done");
-    // And then it is the button again, there to copy a second time: "Copied" stayed for good before.
-    await page.clock.runFor(2_000);
-    await expect(done).toHaveCount(1);
-    await page.clock.runFor(400);
+    // And then it is the button again, there to copy a second time: "Copied" stayed for good before. (The clock runs
+    // on while it is installed, so the moment itself is held by test/waits.test.ts: 2.2 s.)
+    await page.clock.runFor(2_500);
     await expect(done).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Copy the link again" })).toHaveCSS("background-color", SUN);
 
