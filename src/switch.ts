@@ -45,7 +45,14 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * of 7 Oct 2026, 1.1177): the way in costs a payer in CFA francs 5.2 % over parity. 131.575626 shillings in Kenya,
  * 628.526544 francs in Cameroon, 12.316584 cedis in Ghana. No `fee` in an answer; a quote holds about five minutes.
  * GET /beneficiary/requirement answers 404 for ONRAMP: the fields of a payer are published nowhere but in the API
- * description. What the payer then does on their phone is not documented at all, and no collection has been opened.
+ * description. What the payer then does on their phone is not documented at all.
+ *
+ * In Switch's sandbox the same day, 21:38 to 21:42 UTC, with a sandbox key: an opening by mobile money was refused in
+ * Ivory Coast (Orange), Kenya (M-Pesa) and Ghana (MTN) alike, 404 "No ONRAMP requirements found for CI MOBILEMONEY",
+ * the very answer GET /beneficiary/requirement gives for each of the eighteen countries, with the sandbox key and with
+ * the live one. The one corridor that has requirements, a bank transfer in Nigeria, did open there (a one-use account
+ * at "Sandbox Bank", thirty minutes). So the coverage and the quotes are not a sign that a collection can be opened:
+ * the requirements are (`payInFields`), and by them the way in by mobile money is open nowhere yet.
  */
 
 export const SWITCH_API = "https://api.onswitch.xyz";
@@ -283,6 +290,24 @@ export async function mobileMoneyOperators(country: string, deps: SwitchDeps = {
   const rows = await switchCall<unknown[]>(`/institution?country=${encodeURIComponent(country)}&channel=${SWITCH_CHANNEL}`, deps);
   if (!Array.isArray(rows)) throw new SwitchError("BAD_ANSWER", "The mobile money service answered something unexpected");
   return rows.map((row) => ({ code: text((row as { code?: unknown }).code), name: text((row as { name?: unknown }).name) }));
+}
+
+/**
+ * The fields Switch asks for to open a collection by mobile money in a country, or nothing when it publishes none:
+ * GET /beneficiary/requirement for ONRAMP. Nothing is the answer for a country it cannot collect in, whatever its
+ * coverage lists (8 Oct 2026: 404 "No ONRAMP requirements found" for every country, and an opening refused with the
+ * same words). Any other refusal is thrown as it is: it is not a "no".
+ */
+export async function payInFields(country: string, deps: SwitchDeps = {}): Promise<readonly string[] | null> {
+  let rows: unknown[];
+  try {
+    rows = await switchCall<unknown[]>(`/beneficiary/requirement?direction=ONRAMP&country=${encodeURIComponent(country)}&channel=${SWITCH_CHANNEL}&type=INDIVIDUAL`, deps);
+  } catch (error) {
+    if (error instanceof SwitchError && error.code === "REFUSED" && /\(404\): No ONRAMP requirements found/.test(error.message)) return null;
+    throw error;
+  }
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  return rows.map((row) => text((row as { path?: unknown }).path));
 }
 
 export type PayInQuote = Readonly<{

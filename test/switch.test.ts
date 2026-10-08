@@ -8,6 +8,7 @@ import {
   mobileMoneyInCoverage,
   mobileMoneyOperators,
   openPayout,
+  payInFields,
   payInRates,
   payoutFields,
   payoutRates,
@@ -268,6 +269,23 @@ test("a quote in another currency, or for a dollar that is not the one on Monad,
   // A fee, the day an answer carries one, is kept in the payer's money as Switch counts it.
   const withFee = { ...QUOTE_IN_LOCAL, data: { ...QUOTE_IN_LOCAL.data, fee: { total: 150, platform: 150, developer: 0, currency: "XOF" } } };
   assert.equal((await quotePayIn({ country: "CI", currency: "XOF", local: 10_000 }, { fetchLike: answering(withFee).fetchLike, env: ENV })).feeLocal, 150);
+});
+
+test("a country Switch publishes no on-ramp requirements for is one it cannot collect in, whatever its coverage lists", async () => {
+  // Its answer for Ivory Coast on 8 Oct 2026, with the live key and with the sandbox key alike; an opening in the
+  // sandbox was refused with the same words.
+  const none = answering({ success: false, message: "No ONRAMP requirements found for CI MOBILEMONEY", timestamp: "2026-10-08T21:39:33.512Z", data: null }, 404);
+  assert.equal(await payInFields("CI", { fetchLike: none.fetchLike, env: ENV }), null);
+  assert.equal(none.calls[0].url, "https://api.onswitch.xyz/beneficiary/requirement?direction=ONRAMP&country=CI&channel=MOBILEMONEY&type=INDIVIDUAL");
+  assert.equal(none.calls[0].init?.method, "GET");
+  // The shape of the one corridor that has them that day, a bank transfer in Nigeria: its fields, by their paths.
+  const some = answering({ success: true, message: "Requirement fetched successfully", data: [{ path: "holder_type" }, { path: "holder_name" }, { path: "channel" }, { path: "wallet_address" }] });
+  assert.deepEqual(await payInFields("NG", { fetchLike: some.fetchLike, env: ENV }), ["holder_type", "holder_name", "channel", "wallet_address"]);
+  assert.equal(await payInFields("NG", { fetchLike: answering({ success: true, message: "ok", data: [] }).fetchLike, env: ENV }), null);
+  // Any other refusal is not a "no": a pause asked, a failure, another 404.
+  await assert.rejects(payInFields("CI", { fetchLike: answering({ success: false, message: "slow down" }, 429).fetchLike, env: ENV }), (error: unknown) => error instanceof SwitchError && error.code === "RATE_LIMITED");
+  await assert.rejects(payInFields("CI", { fetchLike: answering({ success: false, message: "boom" }, 500).fetchLike, env: ENV }), (error: unknown) => error instanceof SwitchError && error.code === "UNAVAILABLE");
+  await assert.rejects(payInFields("CI", { fetchLike: answering({ success: false, message: "Not found" }, 404).fetchLike, env: ENV }), (error: unknown) => error instanceof SwitchError && error.code === "REFUSED");
 });
 
 test("no collection is opened anywhere in this code yet", async () => {
