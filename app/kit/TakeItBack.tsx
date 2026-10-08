@@ -4,10 +4,9 @@ import { useAccount } from "@/src/account/provider";
 import { ApiError, postJson } from "@/src/client/api";
 import { sendWithExplicitGas } from "@/src/client/onchain";
 import { GIFT_PAGE as W } from "@/src/sentences";
-import { BODY, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../components/ui";
-import { FieldRefusal } from "./FieldRefusal";
+import { BODY, SECONDARY_BUTTON } from "../components/ui";
+import { Button } from "./Button";
 import { Sheet } from "./Sheet";
-import { ButtonWords, StepInProgress } from "./Waiting";
 import { WAITS } from "@/src/sentences";
 
 /**
@@ -63,16 +62,12 @@ export function TakeItBackSheet({
       }}
       footer={
         <>
-          <button type="button" onClick={() => void takeItBack()} disabled={working} className={PRIMARY_BUTTON}>
-            <ButtonWords busy={busy} doing={W.takingBack}>
-              {W.takeBackConfirm(amountDisplay)}
-            </ButtonWords>
-          </button>
-          <StepInProgress busy={busy} step={WAITS.takingBack} />
+          <Button doing={busy ? W.takingBack : null} step={WAITS.takingBack} waiting={working} failed={refusal} failedId={`take-back-${giftId}`} onPress={() => void takeItBack()}>
+            {W.takeBackConfirm(amountDisplay)}
+          </Button>
           <button type="button" onClick={onClose} disabled={working} className={SECONDARY_BUTTON}>
             {W.notNow}
           </button>
-          {refusal ? <FieldRefusal id={`take-back-${giftId}`}>{refusal}</FieldRefusal> : null}
         </>
       }
     >

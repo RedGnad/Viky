@@ -70,7 +70,7 @@ test("the sheet: one reading that fails whole, a button that does not go while n
   assert.match(sheet, /\.catch\(\(\) => \{\n\s*if \(live\) setHeld\(\{ state: "unread" \}\);\n\s*\}\);/);
   assert.doesNotMatch(sheet, /held \?\? 0n/);
   // The button does not go, and the press does nothing, while what pays is not settled.
-  assert.match(sheet, /disabled=\{!ready \|\| !settled \|\| busy \|\| status === "busy"\}/);
+  assert.match(sheet, /<Button waiting=\{!ready \|\| !settled \|\| status === "busy"\} doing=\{busy \? W\.paying : null\}/);
   assert.match(sheet, /if \(!ready \|\| units === undefined \|\| !settled\) return;/);
   // The card's lines, its figure and its line of terms are drawn for the card alone.
   assert.match(sheet, /const byCard = pays === "card" && !cardClosed;/);

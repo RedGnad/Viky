@@ -601,14 +601,38 @@ video {
   box-shadow: none;
 }
 
+/*
+ * A button whose press is being answered, and one that has just done what it says (the UI pass of 8 Oct 2026, rule 3,
+ * app/kit/Button.tsx): it stays down where the press put it, in its own colour, the wheel or the mark beside its
+ * words, and comes back up when it can be pressed again. Done, the one action gives its sun back and takes the tone
+ * of every other key, with the page's ink on it.
+ */
+.control-relief[data-state],
+.action-relief[data-state] {
+  transform: translateY(var(--control-relief-depth));
+  box-shadow: none;
+  cursor: default;
+}
+
+.small-button[data-state] {
+  transform: translateY(3px);
+  box-shadow: none;
+  cursor: default;
+}
+
+.action-relief[data-state="done"] {
+  background: var(--tonal);
+  color: var(--text);
+}
+
 @media (hover: hover) and (pointer: fine) {
-  .control-relief:hover:not(:active):not(:disabled) {
+  .control-relief:hover:not(:active):not(:disabled):not([data-state]) {
     transform: translateY(calc(-1 * var(--hover-lift)));
     box-shadow: 0 calc(var(--control-relief-depth) + var(--hover-lift)) 0 var(--control-relief-colour);
     transition-duration: var(--hover-duration);
   }
 
-  .small-button:hover:not(:active):not(:disabled) {
+  .small-button:hover:not(:active):not(:disabled):not([data-state]) {
     transform: translateY(calc(-1 * var(--hover-lift)));
     box-shadow: 0 calc(3px + var(--hover-lift)) 0 var(--control-relief-colour);
     transition-duration: var(--hover-duration);
@@ -627,7 +651,7 @@ video {
   }
 
   /* The one action answers a pointer the same way, on its own relief: the sun with its light taken out. */
-  .action-relief:hover:not(:active):not(:disabled) {
+  .action-relief:hover:not(:active):not(:disabled):not([data-state]) {
     transform: translateY(calc(-1 * var(--hover-lift)));
     box-shadow: 0 calc(var(--action-relief-depth) + var(--hover-lift)) 0 var(--control-relief-colour);
     transition:

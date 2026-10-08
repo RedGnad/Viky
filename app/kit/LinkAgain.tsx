@@ -6,9 +6,9 @@ import { giftLinkAgain, giftLinkFound } from "@/src/client/gift";
 import { giftLinkOnThisDevice, rememberGiftLink } from "@/src/gift-link-memory";
 import { GIFT_PAGE as W } from "@/src/sentences";
 import { BODY, CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE } from "../components/ui";
+import { Button, useDone } from "./Button";
 import { FieldRefusal } from "./FieldRefusal";
 import { Sheet } from "./Sheet";
-import { ButtonWords, StepInProgress } from "./Waiting";
 import { WAITS } from "@/src/sentences";
 
 /**
@@ -40,7 +40,8 @@ export function LinkAgain({
   const browser = useSyncExternalStore(never, inBrowser, onServer);
   const [made, setMade] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
+  /** "Copied", for the moment the button says it, then it copies again (app/kit/Button.tsx). */
+  const [copied, markCopied] = useDone();
   const [refusal, setRefusal] = useState<string | null>(null);
   /** The sheet that says what the gesture does to the link already sent, before it is made. */
   const [asking, setAsking] = useState(false);
@@ -52,14 +53,13 @@ export function LinkAgain({
     setRefusal(null);
     navigator.clipboard
       .writeText(value)
-      .then(() => setCopied(true))
+      .then(() => markCopied())
       .catch(() => setRefusal(W.copyRefused));
   };
 
   const askAgain = async () => {
     setBusy(true);
     setRefusal(null);
-    setCopied(false);
     try {
       // Found again by the funder's own account, which is opened here if it is not: the passkey makes the link.
       const { claimUrl } = found ? await giftLinkFound(await ensureSigner(), giftId) : await giftLinkAgain(giftId);
@@ -88,9 +88,9 @@ export function LinkAgain({
       {kept && !made ? <p className={HELP}>{W.linkOnlyHere}</p> : null}
       {/* Sending the link is the one action of this moment: the sun, once the link is here. */}
       {link ? (
-        <button type="button" onClick={() => copy(link)} className={PRIMARY_BUTTON}>
-          {copied ? W.copied : made ? W.copyLink : W.copyLinkAgain}
-        </button>
+        <Button done={copied ? W.copied : null} onPress={() => copy(link)}>
+          {made ? W.copyLink : W.copyLinkAgain}
+        </Button>
       ) : null}
       {link && sharing ? (
         <button
@@ -117,16 +117,12 @@ export function LinkAgain({
         }}
         footer={
           <>
-            <button type="button" onClick={() => void askAgain()} disabled={busy} className={PRIMARY_BUTTON}>
-              <ButtonWords busy={busy} doing={W.gettingLink}>
-                {again}
-              </ButtonWords>
-            </button>
-            <StepInProgress busy={busy} step={WAITS.newLink} />
+            <Button doing={busy ? W.gettingLink : null} step={WAITS.newLink} failed={refusal} failedId={`link-again-sheet-${giftId}`} onPress={() => void askAgain()}>
+              {again}
+            </Button>
             <button type="button" onClick={() => setAsking(false)} disabled={busy} className={SECONDARY_BUTTON}>
               {W.notNow}
             </button>
-            {refusal ? <FieldRefusal id={`link-again-sheet-${giftId}`}>{refusal}</FieldRefusal> : null}
           </>
         }
       >

@@ -5,10 +5,9 @@ import { getJson, postJson } from "@/src/client/api";
 import { formatAusd } from "@/src/gift-reader";
 import { PAY as W } from "@/src/sentences";
 import { HELP, SMALL_BUTTON } from "../../components/ui";
+import { Button } from "../Button";
 import { FoldChevron } from "../GiftLive";
 import { Field } from "../Field";
-import { FieldRefusal } from "../FieldRefusal";
-import { ButtonWords, StepInProgress } from "../Waiting";
 import { WAITS } from "@/src/sentences";
 
 /** A balance as whole cents, rounded down, as the card's amount field takes it: 25.004999 is "25.00". */
@@ -105,13 +104,9 @@ export function JudgeCode({
   const field = (
     <div className="flex flex-col gap-[var(--space-xs)]">
       <Field id="gift-code" label={W.code.label} value={code} onChange={setCode} autoComplete="off" spellCheck={false} />
-      {problem ? <FieldRefusal id="gift-code-refused">{problem}</FieldRefusal> : null}
-      <button type="button" className={`${SMALL_BUTTON} self-start`} disabled={busy || code.trim().length === 0} onClick={() => void redeem()}>
-        <ButtonWords busy={busy} doing={W.code.using}>
-          {W.code.use}
-        </ButtonWords>
-      </button>
-      <StepInProgress busy={busy} step={WAITS.code} />
+      <Button look="small" className="self-start" doing={busy ? W.code.using : null} step={WAITS.code} waiting={code.trim().length === 0} failed={problem} failedId="gift-code-refused" onPress={() => void redeem()}>
+        {W.code.use}
+      </Button>
     </div>
   );
   if (folded) {
