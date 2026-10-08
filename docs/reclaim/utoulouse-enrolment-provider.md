@@ -4,7 +4,7 @@ The portal `utoulouse-fr` is read through a Reclaim provider of ours (`c560dffd-
 Its first versions were written by Reclaim's agent, one rule per pass, each different. Since 8 Oct 2026 it carries a
 rule written by hand: the same request and the same pattern at every pass, and a script that takes the student from the
 sign-in to the page the rule reads. The script is [`utoulouse-enrolment.js`](utoulouse-enrolment.js), kept here byte
-for byte as it is pasted at Reclaim (sha256 `a07d33d736c3c78a04db55afec3d0a622b4301c1359fd8050364c66beefc215e`).
+for byte as it is pasted at Reclaim (sha256 `d8cceb860f46c19e3ac6856b421231f14b43f953b109fbf8732119f142196bb7`).
 
 ## The record at Reclaim
 
@@ -29,14 +29,18 @@ The field a proof carries is `academicYear`, with the answer's own escaped slash
 ## What the script does
 
 1. On `ent.utoulouse.fr` with no sign-in form on the page, the student is signed in (the ENT's root sends anybody else
-   to the sign-in, on another host): it leaves at once for `https://mondossierweb.univ-tlse3.fr/`.
+   to the sign-in, on another host): it tells Reclaim's page that the person no longer has to act
+   (`window.Reclaim.requiresUserInteraction(false)`), so the wait comes back and nobody watches their own file move
+   and stop, and it leaves at once for `https://mondossierweb.univ-tlse3.fr/`.
 2. On the file, it waits for the menu entry "Inscriptions" to be shown, with no sign-in form, for up to two minutes.
+   A sign-in form there gives the page back to the person; once the file is ready the wait is asked for again.
 3. It presses "Inscriptions", once, in the middle of the entry. The file then asks its server for the registrations
    table, which is the request the rule reads.
 
 It writes one line per step to the session's log, each starting with `[utoulouse-enrolment]`: `loaded on <host>`,
-`signed in on the ENT, leaving for the file`, `file ready`, `logged-in signal sent` or `no logged-in function on the
-bridge`, `pressed Inscriptions`, `on the Inscriptions view`; and when a step fails, `file never ready`,
+`signed in on the ENT, leaving for the file`, `user interaction not required (signed in on the ENT): told` (or
+`the call threw`, or `no such function on the bridge`), `file ready`, `logged-in signal sent` or `no logged-in
+function on the bridge`, `pressed Inscriptions`, `on the Inscriptions view`; and when a step fails, `file never ready`,
 `Inscriptions never pressable`, `press on Inscriptions threw`, `the view did not change after the press`. The two
 "never" lines end with counts of what the page held (buttons, menu entries, whether "Inscriptions" was found and
 shown, whether a sign-in form was there). Nothing of the page's content is written.
@@ -57,6 +61,8 @@ Version 3.0.1:
   without the icon's glyph;
 - asks for "Inscriptions" alone, the entry every student's file has, preferring the entry that says exactly that;
 - presses with a click that carries the entry's own position, as a person's press does;
+- asks Reclaim for its wait as soon as the student is signed in (the founder, 8 Oct 2026: a portal that stands still
+  after the sign-in reads as broken in a second and a half), each call in its own try, with its line in the log;
 - says one more line after the press, whether the view changed, and counts what it found when it gives up.
 
 ## Not verified
@@ -65,8 +71,10 @@ Version 3.0.1:
   `test/browser/utoulouse-provider-script.spec.ts` are drawn from Vaadin's and esup-mdw's sources, not from a student's
   session: that the real menu is found, and that a press made by the script sends the body the rule expects, will be
   known at the next student's pass, from the log's lines.
-- `window.Reclaim.requiresUserInteraction(false)` is not called. Reclaim's typings say it tells the verification page
-  that the person no longer has to act; what the web page then shows has not been seen in a session of ours.
+- What Reclaim's web page does when `requiresUserInteraction(false)` is called. Its typings say the call tells the
+  verification page that the person no longer has to act; no session of ours has shown the page after it. At worst it
+  does nothing, and the log's line says whether the bridge had the function and whether the call went through. If
+  the university asked for a second sign-in on a third host after the ENT, the person would be behind the wait.
 - Reclaim has not approved the provider since a version was saved by hand on 8 Oct 2026 (`isApproved: false` on every
   version). The script of 3.0.0 ran all the same.
 

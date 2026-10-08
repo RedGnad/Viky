@@ -52,9 +52,21 @@ test("every line of the session's log that told what happened is still written",
   assert.doesNotMatch(SCRIPT, /log\([^)]*(innerText|textContent|labelOf|document\.title|location\.href)/);
 });
 
-test("the script calls nothing on the bridge that no session of ours has seen act", () => {
-  assert.doesNotMatch(SCRIPT, /requiresUserInteraction/);
-  assert.ok(NOTES.includes("`window.Reclaim.requiresUserInteraction(false)` is not called."));
+test("the wait is asked of Reclaim as soon as the student is signed in, in a try, and the log says what came of it", () => {
+  // The founder's rule (8 Oct 2026): a portal that stands still after the sign-in reads as broken in a second and a
+  // half, so the wait comes back at the sign-in and nobody watches their own file move.
+  const signedIn = SCRIPT.indexOf("log('signed in on the ENT, leaving for the file');");
+  const asked = SCRIPT.indexOf("userHasToAct(false, 'signed in on the ENT');");
+  const leaves = SCRIPT.indexOf("location.assign(TARGET_URL);");
+  assert.ok(signedIn > 0 && asked > signedIn && leaves > asked, "asked after the line that says signed in, and before the page leaves");
+  const helper = SCRIPT.slice(SCRIPT.indexOf("function userHasToAct(needed, where) {"), SCRIPT.indexOf("// A press as a finger makes it"));
+  assert.match(helper, /try \{\s+known = !!window\.Reclaim && typeof window\.Reclaim\.requiresUserInteraction === 'function';\s+if \(known\) \{\s+window\.Reclaim\.requiresUserInteraction\(needed\);/);
+  for (const outcome of ["said + 'told'", "said + 'the call threw'", "said + 'no such function on the bridge'"]) assert.ok(helper.includes(`log(${outcome});`), outcome);
+  // Asked again once the file is ready, and the page is given back if the file asks for a sign-in after all.
+  assert.ok(SCRIPT.includes("userHasToAct(false, 'file ready');"));
+  assert.ok(SCRIPT.includes("userHasToAct(true, 'sign-in form on the file');"));
+  // The bridge is called for this and for the log, and for nothing else that acts.
+  assert.deepEqual([...new Set([...SCRIPT.matchAll(/window\.Reclaim\.(\w+)\(/g)].map((found) => found[1]))].sort(), ["log", "reportUserLoggedIn", "requiresUserInteraction"]);
   // It reads one university's two hosts and goes to no other address.
   const addresses = [...SCRIPT.matchAll(/https?:\/\/[^\s'"]+/g)].map((found) => found[0]);
   assert.deepEqual(addresses, ["https://mondossierweb.univ-tlse3.fr/"]);

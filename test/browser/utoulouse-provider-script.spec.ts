@@ -26,14 +26,20 @@ const SIGN_IN_FORM = `<!doctype html><html><body><form action="/cas/login"><inpu
 const FULL_MENU = entry("Etat-civil", "&#xf007;") + entry("Inscriptions", "&#xf15c;", "insc") + entry("Calendrier des épreuves", "&#xf073;");
 const NO_CALENDAR = entry("Etat-civil", "&#xf007;") + entry("Adresses", "&#xf015;") + entry("Inscriptions aux examens", "&#xf15c;") + entry("Inscriptions", "&#xf15c;", "insc");
 
-async function run(context: BrowserContext, input: { start: string; file: string; ent?: string; seconds: number }): Promise<{ lines: string[]; url: string }> {
+const BRIDGE = {
+  whole: "window.Reclaim = { log: function (type, message) { window.__line(String(message)); }, requestClaim: function () {}, requiresUserInteraction: function (needed) { window.__line('BRIDGE told ' + needed); } };",
+  withoutTheFunction: "window.Reclaim = { log: function (type, message) { window.__line(String(message)); }, requestClaim: function () {} };",
+  whoseFunctionThrows: "window.Reclaim = { log: function (type, message) { window.__line(String(message)); }, requestClaim: function () {}, requiresUserInteraction: function () { throw new Error('not here'); } };",
+} as const;
+
+async function run(context: BrowserContext, input: { start: string; file: string; ent?: string; seconds: number; bridge?: keyof typeof BRIDGE }): Promise<{ lines: string[]; url: string }> {
   const page = await context.newPage();
   const lines: string[] = [];
   await page.exposeFunction("__line", (line: string) => void lines.push(line.replace("[utoulouse-enrolment] ", "")));
   await context.route(`${FILE}**`, (route) => route.fulfill({ contentType: "text/html", body: input.file }));
   await context.route(`${ENT}**`, (route) => route.fulfill({ contentType: "text/html", body: input.ent ?? SIGNED_IN_ENT }));
   await page.clock.install();
-  await context.addInitScript({ content: "window.Reclaim = { log: function (type, message) { window.__line(String(message)); }, requestClaim: function () {}, requiresUserInteraction: function () {} };" });
+  await context.addInitScript({ content: BRIDGE[input.bridge ?? "whole"] });
   await context.addInitScript({ content: SCRIPT });
   await page.goto(input.start);
   for (let spent = 0; spent < input.seconds; spent += 1) await page.clock.runFor(1000);
@@ -48,6 +54,8 @@ test.describe("the Toulouse enrolment script", () => {
     expect(lines).toEqual([
       "loaded on mondossierweb.univ-tlse3.fr (bridge: log,requestClaim,requiresUserInteraction)",
       "file ready",
+      "BRIDGE told false",
+      "user interaction not required (file ready): told",
       "no logged-in function on the bridge",
       "PAGE pressed at its own place",
       "pressed Inscriptions",
@@ -58,12 +66,19 @@ test.describe("the Toulouse enrolment script", () => {
 
   test("needs no other entry, and prefers the one that says exactly Inscriptions", async ({ context }) => {
     const { lines } = await run(context, { start: FILE, file: file(NO_CALENDAR), seconds: 30 });
-    expect(lines.slice(1)).toEqual(["file ready", "no logged-in function on the bridge", "PAGE pressed at its own place", "pressed Inscriptions", "on the Inscriptions view"]);
+    expect(lines.slice(-3)).toEqual(["PAGE pressed at its own place", "pressed Inscriptions", "on the Inscriptions view"]);
   });
 
   test("from the ENT, signed in, it leaves for the file and goes on there", async ({ context }) => {
     const { lines, url } = await run(context, { start: ENT, file: file(FULL_MENU), seconds: 30 });
-    expect(lines.slice(0, 3)).toEqual(["loaded on ent.utoulouse.fr (bridge: log,requestClaim,requiresUserInteraction)", "signed in on the ENT, leaving for the file", "loaded on mondossierweb.univ-tlse3.fr (bridge: log,requestClaim,requiresUserInteraction)"]);
+    // The wait is asked for as soon as the student is signed in, before the page leaves for the file.
+    expect(lines.slice(0, 5)).toEqual([
+      "loaded on ent.utoulouse.fr (bridge: log,requestClaim,requiresUserInteraction)",
+      "signed in on the ENT, leaving for the file",
+      "BRIDGE told false",
+      "user interaction not required (signed in on the ENT): told",
+      "loaded on mondossierweb.univ-tlse3.fr (bridge: log,requestClaim,requiresUserInteraction)",
+    ]);
     expect(lines.at(-1)).toBe("on the Inscriptions view");
     expect(url).toBe(`${FILE}#!inscriptionsView`);
   });
@@ -72,6 +87,22 @@ test.describe("the Toulouse enrolment script", () => {
     const ent = await run(context, { start: ENT, file: file(FULL_MENU), ent: SIGN_IN_FORM, seconds: 10 });
     expect(ent.lines).toEqual(["loaded on ent.utoulouse.fr (bridge: log,requestClaim,requiresUserInteraction)"]);
     expect(ent.url).toBe(ENT);
+  });
+
+  test("a bridge without the function, or whose function throws, is said in the log and stops nothing", async ({ context }) => {
+    const without = await run(context, { start: ENT, file: file(FULL_MENU), seconds: 30, bridge: "withoutTheFunction" });
+    expect(without.lines).toContain("user interaction not required (signed in on the ENT): no such function on the bridge");
+    expect(without.lines.at(-1)).toBe("on the Inscriptions view");
+    const throwing = await run(context, { start: ENT, file: file(FULL_MENU), seconds: 30, bridge: "whoseFunctionThrows" });
+    expect(throwing.lines).toContain("user interaction not required (signed in on the ENT): the call threw");
+    expect(throwing.lines).toContain("user interaction not required (file ready): the call threw");
+    expect(throwing.lines.at(-1)).toBe("on the Inscriptions view");
+  });
+
+  test("a sign-in form on the file, after the wait was asked for, gives the page back to the person", async ({ context }) => {
+    const form = `<!doctype html><html><body><form action="/cas/login"><input type="password"></form></body></html>`;
+    const { lines } = await run(context, { start: FILE, file: form, seconds: 10 });
+    expect(lines).toEqual(["loaded on mondossierweb.univ-tlse3.fr (bridge: log,requestClaim,requiresUserInteraction)", "BRIDGE told true", "user interaction required (sign-in form on the file): told"]);
   });
 
   test("a menu that is there and not shown is never pressed, and the last line counts what was found", async ({ context }) => {

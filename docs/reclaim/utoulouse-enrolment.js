@@ -148,6 +148,27 @@
     log('no logged-in function on the bridge');
   }
 
+  // Tells Reclaim's page whether the person still has to act on what is shown. Said as soon as they are signed in, so
+  // the wait comes back and nobody watches their own file move and stop: a page that stands still after the sign-in
+  // reads as broken within two seconds. Each call is in its own try, and says in the log whether the bridge had the
+  // function and whether the call went through: at worst it does nothing, and the log says so.
+  function userHasToAct(needed, where) {
+    const said = 'user interaction ' + (needed ? 'required' : 'not required') + ' (' + where + '): ';
+    let known = false;
+    try {
+      known = !!window.Reclaim && typeof window.Reclaim.requiresUserInteraction === 'function';
+      if (known) {
+        window.Reclaim.requiresUserInteraction(needed);
+        log(said + 'told');
+        return;
+      }
+    } catch {
+      log(said + 'the call threw');
+      return;
+    }
+    log(said + 'no such function on the bridge');
+  }
+
   // A press as a finger makes it: one click in the middle of the entry, so the file sends what it sends for a person.
   function press(el) {
     const rect = el.getBoundingClientRect();
@@ -193,14 +214,23 @@
     if (location.hostname === 'ent.utoulouse.fr') {
       if (hasLoginNegativeSignal() || state.applicationNavigationAttempted) return;
       log('signed in on the ENT, leaving for the file');
+      userHasToAct(false, 'signed in on the ENT');
       writeState({ applicationNavigationAttempted: true, applicationNavigationAt: Date.now() });
       location.assign(TARGET_URL);
       return;
     }
 
     if (location.hostname === 'mondossierweb.univ-tlse3.fr') {
+      let givenBack = false;
       const authenticated = await untilStable(
-        () => appAuthenticated() && !hasLoginNegativeSignal(),
+        () => {
+          // A sign-in form here, after the wait was asked for on the ENT, needs the person: the page is theirs again.
+          if (!givenBack && hasLoginNegativeSignal()) {
+            givenBack = true;
+            userHasToAct(true, 'sign-in form on the file');
+          }
+          return appAuthenticated() && !hasLoginNegativeSignal();
+        },
         120000,
         400,
         3
@@ -210,6 +240,7 @@
         return;
       }
       log('file ready');
+      userHasToAct(false, 'file ready');
       reportLoggedIn();
       await pressEnrolments();
     }
