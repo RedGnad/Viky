@@ -33,8 +33,9 @@ export function JudgesMera({ index }: Readonly<{ index: IndexRead | null }>) {
       <p className={HELP} data-arrival="seconds">
         Counted and timed on {ARRIVAL.measuredOn} by the capture tool (<code>test/browser/arrival-measure.spec.ts</code>), at 390 by
         844, {ARRIVAL.runs.length} runs: {ARRIVAL.runs.map(seconds).join(", ")} in all. The slowest, moment by moment:{" "}
-        {seconds(linkShown)} for the link to show the gift, {seconds(accountMade - linkShown)} from the first press to the
-        account made, {seconds(giftOpened - accountMade)} from the second press to the gift opened.
+        {seconds(linkShown)} for the link to show the gift, {seconds(accountMade - linkShown)} from the press to the account
+        made, and the gift opened {giftOpened > accountMade ? `${seconds(giftOpened - accountMade)} later` : "within the same tenth of a second"}, with
+        no second press.
         What those seconds are, exactly: the screens of a production build served on the measuring machine, with a virtual
         passkey that answers at once and the gift&apos;s answers stood in. So neither a person&apos;s own time nor Monad&apos;s is
         in them: on Monad the opening is one relayed transaction, final one or two blocks after the block that carries it (the
