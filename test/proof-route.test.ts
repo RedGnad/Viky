@@ -11,6 +11,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { GET as sessionOpen, POST as sessionPost } from "../app/api/proof/session/route";
 import { configureProofSessionStore, consumeAndSaveVerification, ensureProofSessionSchema, saveProofSession, type SqlExecutor } from "../src/proof-session-store";
 import { channelFor } from "../src/reclaim-channel";
+import { isAgentVersion } from "../src/witness-portal";
 import { POST as verifyPost } from "../app/api/proof/verify/route";
 
 const ORIGIN = "https://viky.test";
@@ -146,4 +147,25 @@ test("a university's session runs on the portal channel whatever the setting say
   // Before a pin: no version, so Reclaim's agent writes one, unless the operator set the one to run on.
   assert.match(source, /\.\.\.\(witness && !witness\.pin && !providerVersion \? \{\} : \{ providerVersion \}\),/);
   assert.match(readFileSync(".env.example", "utf8"), /Production stays on portal/);
+  // Reclaim's agent is asked for where it has the rule to write or wrote it, and nowhere else: a university pinned on a
+  // version written by hand runs that fixed rule (8 Oct 2026).
+  assert.match(source, /acceptAiProviders: Boolean\(witness\) && !\(witness\?\.pin && !isAgentVersion\(providerVersion\)\),/);
+  assert.equal(isAgentVersion("1.0.0-ai.3"), true);
+  assert.equal(isAgentVersion("1.0.1"), false);
+});
+
+test("the operator pins a university ahead of the pass from Reclaim's published configuration, checked on a real pin first", () => {
+  const script = readFileSync("scripts/portal-pin.ts", "utf8");
+  // Only a version that runs a fixed rule, with one request.
+  assert.match(script, /if \(published\.verificationType !== "WITNESS"\) throw new Error\(/);
+  assert.match(script, /if \(published\.requests !== 1\) throw new Error\(/);
+  // The pattern is tried on the value a proof will carry before anything is written.
+  assert.match(script, /if \(!enrolledBy\(extract, \{ \[extract\.field\]: sample \}\)\) throw new Error\(/);
+  // The working-out is checked on the pin a real proof gave, and nothing is written when it does not give it back.
+  assert.match(script, /if \(!sameRule\(again, provider\.pin\)\) throw new Error\(/);
+  assert.ok(script.indexOf("if (!sameRule(again, provider.pin))") < script.indexOf("pinProvider(portalId, sense, { pin, extract, operator, providerId })"));
+  // Refused while a proof is held, and a proof held under a pin made ahead is pinned from, not settled on it.
+  assert.match(script, /if \(provider\.pin && provider\.extract && !provider\.pin\.ahead\) \{/);
+  // The route takes the mark off when the first proof fits.
+  assert.match(readFileSync("app/api/proof/verify/route.ts", "utf8"), /\n        confirmPin,\n/);
 });

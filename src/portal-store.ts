@@ -435,19 +435,40 @@ export async function loadPortal(portalId: string): Promise<Portal | null> {
   return (await withProviders(rows))[0] ?? null;
 }
 
-/** Pins a witness provider from its first proof, with the field or fields the operator read it by (D312). */
-export async function pinProvider(portalId: string, sense: PortalSense, input: { pin: WitnessPin; extract: PortalExtract | ResultsFields; operator: string }): Promise<boolean> {
+/**
+ * Pins a witness provider from its first proof, with the field or fields the operator read it by (D312). A pin made
+ * ahead of any proof (`pin.ahead`, src/witness-portal.ts) is written the same way, and may name the Reclaim provider
+ * the university is read with from now on, when that is a new one: it says nothing of a student having been read, so
+ * the university is not marked as read by it.
+ */
+export async function pinProvider(portalId: string, sense: PortalSense, input: { pin: WitnessPin; extract: PortalExtract | ResultsFields; operator: string; providerId?: string }): Promise<boolean> {
   const portal = await loadPortal(portalId);
   const provider = portal?.[sense];
   if (!provider || provider.verification !== "witness") return false;
-  const next = { ...provider, pin: input.pin, extract: input.extract, providerVersion: input.pin.providerVersion, requestHash: input.pin.specHash.toLowerCase() } as PortalProvider;
+  const providerId = input.providerId ?? provider.providerId;
+  const next = { ...provider, providerId, pin: input.pin, extract: input.extract, providerVersion: input.pin.providerVersion, requestHash: input.pin.specHash.toLowerCase() } as PortalProvider;
   const problem = providerProblem(next);
   if (problem) throw new Error(`A pinned provider needs ${problem}`);
   await sql()`
     UPDATE viky_portal_providers
-       SET pin = ${JSON.stringify(input.pin)}::jsonb, extract = ${JSON.stringify(input.extract)}::jsonb,
+       SET provider_id = ${providerId}, pin = ${JSON.stringify(input.pin)}::jsonb, extract = ${JSON.stringify(input.extract)}::jsonb,
            provider_version = ${input.pin.providerVersion}, request_hash = ${input.pin.specHash.toLowerCase()}, pinned_at = now(), added_by = ${input.operator.toLowerCase()}
      WHERE portal_id = ${portalId} AND sense = ${sense}`;
+  if (!input.pin.ahead) await sql()`UPDATE viky_portals SET unverified = false WHERE portal_id = ${portalId}`;
+  return true;
+}
+
+/**
+ * Takes the mark off a pin made ahead, once a first proof has fitted it and been paid (src/shown-verification.ts):
+ * from then on it is a pin like any other, and the university is one that was read with a student. True when a mark
+ * was there to take off.
+ */
+export async function confirmPin(portalId: string, sense: PortalSense): Promise<boolean> {
+  const rows = await sql()`
+    UPDATE viky_portal_providers SET pin = pin - 'ahead'
+     WHERE portal_id = ${portalId} AND sense = ${sense} AND pin IS NOT NULL AND pin ? 'ahead'
+     RETURNING portal_id`;
+  if (rows.length === 0) return false;
   await sql()`UPDATE viky_portals SET unverified = false WHERE portal_id = ${portalId}`;
   return true;
 }
@@ -740,7 +761,8 @@ export function portalListed(
  * reviewed and pinned. The chooser lists these first; nothing is written on the line itself.
  */
 export function testedWithAStudent(portal: Partial<Pick<Portal, "enrolment" | "results">>): boolean {
-  return [portal.enrolment, portal.results].some((provider) => provider?.verification === "witness" && provider.pin !== null);
+  // A pin made ahead of any proof is a rule nobody has shown a proof on yet.
+  return [portal.enrolment, portal.results].some((provider) => provider?.verification === "witness" && provider.pin !== null && !provider.pin.ahead);
 }
 
 /**

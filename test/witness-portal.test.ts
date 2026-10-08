@@ -4,7 +4,7 @@ process.env.EVIDENCE_SIGNER_PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944ba
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { getHashFromProof, getIdentifierFromClaimInfo, type Proof } from "@reclaimprotocol/js-sdk";
+import { getHashFromProof, getIdentifierFromClaimInfo, hashProofClaimParams, type Proof } from "@reclaimprotocol/js-sdk";
 import type { Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { VerificationError } from "../src/duolingo-verification";
@@ -15,7 +15,7 @@ import type { ProofSession } from "../src/proof-session-store";
 import { portalProviderFor, SHOWN_CONDITIONS, UNIVERSITY_SHOWN, type ShownEntry } from "../src/shown-conditions";
 import { settleHeldReview, verifyShownSession, type ShownVerificationDeps } from "../src/shown-verification";
 import { UNIVERSITY_ENROLLED, universitySubject } from "../src/university-shown";
-import { canonical, onAnyDomain, onDomain, pinInWords, pinOf, READING_METHODS, verifyWitnessProof, WitnessProofError, type WitnessPin } from "../src/witness-portal";
+import { canonical, onAnyDomain, onDomain, pinFromPublished, pinInWords, pinOf, PublishedRuleError, READING_METHODS, sameRule, verifyWitnessProof, WitnessProofError, type PublishedRequest, type WitnessPin } from "../src/witness-portal";
 
 /**
  * A university read through a Reclaim AI provider (D312): the proof carries no enclave, so it is verified by the
@@ -33,13 +33,15 @@ const GIFT = "1000009";
 const NOW = 1_784_000_100;
 const AGENT_VERSION = "1.0.0-ai.1";
 
-type Page = { url?: string; method?: string; matches?: unknown[]; redactions?: unknown[]; fields?: Record<string, string>; session?: string; message?: string; spec?: string };
+type Page = { url?: string; method?: string; matches?: unknown[]; redactions?: unknown[]; fields?: Record<string, string>; session?: string; message?: string; spec?: string; body?: string };
 
 /** One claim as Reclaim's witness signs it: the request and patterns in `parameters`, the binding and the fields in `context`. */
 async function witnessProof(page: Page = {}, signer = WITNESS, timestampS = NOW - 30): Promise<Proof> {
   const parameters = JSON.stringify({
     url: page.url ?? "https://studentcenter.ucad.sn/api/me",
     method: page.method ?? "GET",
+    // The body a version sniffs is signed as its template, the values it fills in left out.
+    ...(page.body === undefined ? {} : { body: page.body }),
     responseMatches: page.matches ?? [{ type: "contains", value: "\"status\":\"{{status}}\"" }],
     responseRedactions: page.redactions ?? [{ jsonPath: "$.status" }],
   });
@@ -158,6 +160,46 @@ test("the judges' page prints what a pinned provider reads from the pin itself, 
   assert.match(pinInWords({ ...toulouse, responseRedactions: JSON.stringify([{ jsonPath: "$.status" }, { regex: "x".repeat(400) }]) }, null), /"x{200}…", "\$\.status"$/);
   assert.equal(pinInWords({ ...toulouse, responseRedactions: "not json" }, null), "version 1.0.0-ai.3 reads POST mondossierweb.univ-tlse3.fr/UIDL/");
   assert.match(readFileSync("app/judges/page.tsx", "utf8"), /line\.pin \? `pinned: \$\{pinInWords\(line\.pin, line\.sense === "enrolment" && line\.extract \? line\.extract : null\)\}` : "first proof awaited"/);
+});
+
+/** A version as Reclaim publishes it: the rule of the test claims, with the defaults a published request carries. */
+const BODY_TEMPLATE = '{"csrfToken":"{{BODY_PARAM_SECRET_1}}","rpc":[["{{BODY_PARAM_1}}","click"]],"syncId":{{BODY_PARAM_2}}}';
+const PUBLISHED: PublishedRequest = {
+  url: "https://studentcenter.ucad.sn/api/me",
+  urlType: "CONSTANT",
+  method: "POST",
+  responseMatches: [{ value: '"status":"{{status}}"', type: "contains", invert: false, isOptional: false }],
+  responseRedactions: [{ jsonPath: "$.status", xPath: null, regex: null, hash: null, order: 0 }],
+  bodySniff: { enabled: true, template: BODY_TEMPLATE },
+};
+const hashOf = (request: PublishedRequest & { body: string }) => hashProofClaimParams(request as never) as string | string[];
+
+test("a pin worked out from a version's published request is the pin a real claim under it gives", async () => {
+  // Measured on the first university's real proofs (8 Oct 2026): versions ai.1 and ai.3, which sniff the body, give
+  // from their published request the very pin their claim gives, and production's pin was that of ai.3.
+  const ahead = pinFromPublished(PUBLISHED, "1.0.1", hashOf);
+  assert.equal(ahead.ahead, true, "marked as made ahead of any proof");
+  assert.equal(ahead.method, "POST");
+  assert.equal(ahead.responseMatches, '[{"type":"contains","value":"\\"status\\":\\"{{status}}\\""}]', "the published defaults are dropped, as a claim drops them");
+  assert.equal(ahead.responseRedactions, '[{"jsonPath":"$.status"}]');
+  const claim = await witnessProof({ method: "POST", body: BODY_TEMPLATE });
+  const real = pinOf(verifyWitnessProof(claim, { domain: "ucad.sn", method: null, pin: null, providerVersion: "1.0.1", witness: WITNESS.address }), "1.0.1");
+  assert.equal(sameRule(ahead, real), true);
+  assert.equal(real.ahead, undefined, "a pin a proof gave carries no mark");
+  // And the claim passes under the pin made ahead, checked as the server checks any pinned proof.
+  verifyWitnessProof(claim, { domain: "ucad.sn", method: ahead.method, pin: ahead, providerVersion: "1.0.1", witness: WITNESS.address });
+  // Another rule is another pin.
+  assert.equal(sameRule(ahead, pinFromPublished({ ...PUBLISHED, responseRedactions: [{ regex: "x" }] }, "1.0.1", hashOf)), false);
+  assert.equal(sameRule(ahead, { ...real, providerVersion: "1.0.2" }), false);
+
+  // A version that sniffs no body signs the body each person sends, session token included: a new hash at every
+  // proof (the first university's ai.2). It can never be pinned, and is refused by name.
+  assert.throws(() => pinFromPublished({ ...PUBLISHED, bodySniff: { enabled: false, template: "" } }, "1.0.1", hashOf), (error: unknown) => error instanceof PublishedRuleError && /sniffs no body/.test(error.message));
+  // An address that is a pattern, and a request with several hashes: neither is one rule.
+  assert.throws(() => pinFromPublished({ ...PUBLISHED, urlType: "REGEX" }, "1.0.1", hashOf), (error: unknown) => error instanceof PublishedRuleError && /pattern/.test(error.message));
+  assert.throws(() => pinFromPublished(PUBLISHED, "1.0.1", () => ["0x" + "11".repeat(32), "0x" + "22".repeat(32)]), (error: unknown) => error instanceof PublishedRuleError && /not one hash/.test(error.message));
+  // Said on the judges' page for what it is.
+  assert.match(pinInWords(ahead, { field: "status", matches: "^Inscrit 2026" }), /^version 1\.0\.1, no proof shown on it yet, reads POST studentcenter\.ucad\.sn\/api\/me /);
 });
 
 test("once pinned, another pattern, another request or another version of the provider is refused", async () => {
@@ -289,6 +331,52 @@ test("after the pin, a proof is verified on the pin alone, read by its field, an
   const notEnrolled = deps([await witnessProof({ fields: { status: "Ancien étudiant" } })]);
   await assert.rejects(verifyShownSession(notEnrolled.deps, { sessionId: SESSION_ID, account: ACCOUNT }), refusedAs("NOT_ENROLLED"));
   assert.equal(notEnrolled.proved.length, 0);
+});
+
+test("a pin made ahead of any proof is believed by the first proof that fits it, and holds one that does not", async () => {
+  // The first pass on a rule written by hand is paid with no review when everything is as described, and is never
+  // lost when something is not (8 Oct 2026): a description of a rule is not a proof of it.
+  const real = (await pinned()).enrolment!;
+  const madeAhead: Portal = { ...UCAD, unverified: false, enrolment: { ...real, pin: { ...real.pin!, ahead: true } } };
+  portal = madeAhead;
+  const confirmed: string[] = [];
+  const confirm: Partial<ShownVerificationDeps> = { confirmPin: async (portalId, sense) => (confirmed.push(`${portalId}:${sense}`), true) };
+
+  // It fits: paid at once, nothing held, and the mark comes off.
+  const fits = deps([proofSync.good], AGENT_VERSION, confirm);
+  const paid = await verifyShownSession(fits.deps, { sessionId: SESSION_ID, account: ACCOUNT });
+  assert.equal(paid.kind, "reached");
+  assert.equal(fits.proved.length, 1);
+  assert.equal(fits.held.length, 0, "no review");
+  assert.deepEqual(confirmed, ["ucad-sn:enrolment"]);
+
+  // It does not: another rule, another version, or a field that does not say it. Held as a first proof is, nothing
+  // paid, the mark left where it is. Under a pin a proof gave, each of these is a refusal.
+  const unfit: Array<[string, Proof[], string]> = [
+    ["read with another rule", [proofSync.otherPattern], AGENT_VERSION],
+    ["made on another version", [proofSync.good], "1.0.0-ai.2"],
+    ["a field that does not say enrolled", [await witnessProof({ fields: { status: "Ancien étudiant" } })], AGENT_VERSION],
+  ];
+  for (const [what, proofs, version] of unfit) {
+    const run = deps(proofs, version, confirm);
+    const outcome = await verifyShownSession(run.deps, { sessionId: SESSION_ID, account: ACCOUNT });
+    assert.equal(outcome.kind, "held", what);
+    assert.equal(run.proved.length, 0, what);
+    assert.equal(run.held.length, 1, what);
+    assert.equal(run.held[0].providerVersion, version, "the operator reads the version the proof was really made on");
+  }
+  assert.deepEqual(confirmed, ["ucad-sn:enrolment"], "a proof that does not fit confirms nothing");
+
+  // What no rule excuses is refused as ever, held by nobody.
+  await assert.rejects(verifyShownSession(deps([proofSync.stranger], AGENT_VERSION, confirm).deps, { sessionId: SESSION_ID, account: ACCOUNT }), refusedAs("WITNESS_OTHER_SIGNER"));
+  await assert.rejects(verifyShownSession(deps([proofSync.otherDomain], AGENT_VERSION, confirm).deps, { sessionId: SESSION_ID, account: ACCOUNT }), refusedAs("WITNESS_OTHER_DOMAIN"));
+  await assert.rejects(verifyShownSession(deps([await witnessProof({}, WITNESS, NOW - 3_600)], AGENT_VERSION, confirm).deps, { sessionId: SESSION_ID, account: ACCOUNT }), refusedAs("PROOF_TOO_OLD"));
+  await assert.rejects(verifyShownSession(deps([proofSync.good], "latest", confirm).deps, { sessionId: SESSION_ID, account: ACCOUNT }), refusedAs("PROOF_REJECTED"));
+
+  // A proof held under a pin made ahead did not fit it: it is not settled on it, the provider is pinned from it.
+  const review: PortalReview = { sessionId: SESSION_ID, portalId: "ucad-sn", sense: "enrolment", giftId: GIFT, account: ACCOUNT, providerVersion: AGENT_VERSION, reading: {}, proofs: JSON.parse(JSON.stringify([proofSync.otherPattern])), observedAt: NOW - 30, status: "pending", reason: null };
+  await assert.rejects(settleHeldReview(deps([]).deps, { review, portal: madeAhead }), refusedAs("NOT_CONFIGURED"));
+  portal = UCAD;
 });
 
 test("a held proof is settled once its portal is pinned, and only on that pin", async () => {

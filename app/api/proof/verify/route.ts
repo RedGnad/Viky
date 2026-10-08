@@ -24,7 +24,7 @@ import { giftReadingLeave } from "@/src/consent-guard";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { admitRelay, countedIfSent } from "@/src/relay-admission";
 import { escrowOf, RelayerError } from "@/src/relayer";
-import { holdForReview, loadPortal } from "@/src/portal-store";
+import { confirmPin, holdForReview, loadPortal } from "@/src/portal-store";
 import { sendReviewAlert } from "@/src/provider-alert";
 import { shownConditionById } from "@/src/shown-conditions";
 import { verifyShownSession } from "@/src/shown-verification";
@@ -121,6 +121,7 @@ export async function POST(request: Request) {
           if (held) await sendReviewAlert(review, (await loadPortal(review.portalId).catch(() => null))?.university ?? null);
           return held;
         },
+        confirmPin,
         milestoneOf: async (giftId) => {
           if (!isMilestoneGiftId(giftId)) return null;
           const state = await readMilestoneGift(giftEscrow, giftId);
