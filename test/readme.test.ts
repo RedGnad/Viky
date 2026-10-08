@@ -380,8 +380,10 @@ test("the README says the passes that run, what the word check reads, and what c
   assert.match(readFileSync("src/consumer-words.ts", "utf8"), /wallets\?\|gas\|chains\?\|seeds\?\|tokens\?\|transaction hash\(\?:es\)\?\|address\(\?:es\)\?/);
   const scanned = readFileSync("scripts/check-consumer-words.ts", "utf8");
   for (const place of ['"app/api/proof/**/*.ts"', '"src/rails.ts"', '"src/ramp.ts"', '"src/mercuryo.ts"', '"src/shown-verification.ts"']) assert.ok(scanned.includes(place), place);
-  assert.ok(!scanned.includes('"app/api/exit'), "the way out's routes are not read yet, and the README says so");
-  assert.match(text, /What it does not read: the routes of the way out, `app\/api\/exit`/);
+  // The way out's routes are read since the leftovers of the audit of 8 Oct 2026, and the README says so.
+  assert.ok(scanned.includes('"app/api/exit/**/*.ts"'));
+  assert.match(text, /The routes of the way out, `app\/api\/exit`, are read too: the one line there that\ncarries one of those words is written for the operator's log, and is marked as that\./);
+  assert.match(readFileSync("app/api/exit/relay/route.ts", "utf8"), /\/\/ consumer-words: allow a line of the operator's log, never sent to the person\n\s*if \(!landed\?\.txHash\) console\.error\(/);
   // What came with the port, by name, and what has changed since.
   assert.match(text, /three files of the build and of the checks, which came in that commit too: `foundry\.toml` and `remappings\.txt`,\n  unchanged since/);
   assert.match(text, /`\.github\/workflows\/ci\.yml`, one job\n  then and rewritten since/);

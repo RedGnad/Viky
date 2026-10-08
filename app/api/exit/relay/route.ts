@@ -62,6 +62,7 @@ export async function POST(request: Request) {
     if (await alreadySpent(record.account, record.nonce)) {
       await markExitSent(id, null);
       const landed = await loadExit(id, account);
+      // consumer-words: allow a line of the operator's log, never sent to the person
       if (!landed?.txHash) console.error(`the way out ${id} was spent on chain with no hash written down`);
       return NextResponse.json({ paid: true, hash: landed?.txHash ?? null }, { headers: NO_STORE });
     }
