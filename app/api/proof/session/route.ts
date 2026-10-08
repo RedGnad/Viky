@@ -128,8 +128,10 @@ export async function POST(request: Request) {
     const proofRequest = await ReclaimProofRequest.init(appId, appSecret, providerId, {
       ...(witness && !witness.pin && !providerVersion ? {} : { providerVersion }),
       // Everywhere else the portal can substitute AI-witnessed proofs while still reporting success. We refuse AI
-      // there, and the verify route refuses anything without a verified TEE attestation anyway.
-      acceptAiProviders: Boolean(witness),
+      // there, and the verify route refuses anything without a verified TEE attestation anyway. A university takes
+      // it where Reclaim's agent has the rule to write or wrote it: with no pin, or under a pin its proof gave. A pin
+      // on a fixed rule runs no agent (8 Oct 2026, `fixed` in src/witness-portal.ts).
+      acceptAiProviders: Boolean(witness) && !witness?.pin?.fixed,
       ...reclaimChannelInitOptions(channel),
     }).catch((error: unknown) => {
       if (isReclaimQuotaRefusal(error)) throw new ReclaimLimitReached("proofs", { cause: error });
