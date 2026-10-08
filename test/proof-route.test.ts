@@ -144,11 +144,12 @@ test("a university's session runs on the portal channel whatever the setting say
   const source = readFileSync("app/api/proof/session/route.ts", "utf8");
   assert.match(source, /const channel = channelFor\(\{ witness: Boolean\(witness\) \}\);/);
   // Before a pin: no version, so Reclaim's agent writes one, unless the operator set the one to run on.
-  assert.match(source, /\.\.\.\(witness && !witness\.pin && !providerVersion \? \{\} : \{ providerVersion \}\),/);
+  assert.match(source, /\.\.\.\(witness && !witness\.pin && !providerVersion \? \{\} : \{ providerVersion: withTheAgent \? AGENT_FIRST_VERSION : providerVersion \}\),/);
   assert.match(readFileSync(".env.example", "utf8"), /Production stays on portal/);
   // Reclaim's agent is asked for where it has the rule to write or wrote it, and nowhere else: a university pinned on a
-  // fixed rule runs it with no agent (8 Oct 2026). A pin a proof gave under the agent goes on as it was.
-  assert.match(source, /acceptAiProviders: Boolean\(witness\) && !witness\?\.pin\?\.fixed,/);
+  // fixed rule runs it with no agent (8 Oct 2026), but for the second pass of a pin made ahead
+  // (test/second-pass.test.ts). A pin a proof gave under the agent goes on as it was.
+  assert.match(source, /acceptAiProviders: Boolean\(witness\) && \(withTheAgent \|\| !witness\?\.pin\?\.fixed\),/);
 });
 
 test("the operator pins a university ahead of the pass from Reclaim's published configuration, checked on a real pin first", () => {

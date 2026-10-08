@@ -13,6 +13,7 @@ import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { channelFor, reclaimChannelInitOptions, reclaimChannelLaunchOptions } from "@/src/reclaim-channel";
 import { loadGift } from "@/src/gift-store";
 import { loadMilestoneGift } from "@/src/milestone-store";
+import { AGENT_FIRST_VERSION, earlierPassGaveNoProof } from "@/src/second-pass";
 import { shownConditionById, type ShownProvider } from "@/src/shown-conditions";
 import { shownContextMessage } from "@/src/shown-proof";
 
@@ -125,13 +126,16 @@ export async function POST(request: Request) {
     if ((await limitsNow()).proofs) throw new ReclaimLimitReached("proofs");
     // A developer's machine opens no proof at Reclaim (src/attested-calls.ts).
     if (realReadingsOff()) throw new Error(REAL_READINGS_OFF);
+    // Under a pin made ahead of any proof, a first pass that came back with none is followed by one with Reclaim's
+    // agent, from the version it builds from, as on 7 Oct 2026 (src/second-pass.ts): its proof is held for review.
+    const withTheAgent = Boolean(witness?.pin?.ahead) && (await earlierPassGaveNoProof({ giftId, account, conditionId: entry.condition.conditionId }));
     const proofRequest = await ReclaimProofRequest.init(appId, appSecret, providerId, {
-      ...(witness && !witness.pin && !providerVersion ? {} : { providerVersion }),
+      ...(witness && !witness.pin && !providerVersion ? {} : { providerVersion: withTheAgent ? AGENT_FIRST_VERSION : providerVersion }),
       // Everywhere else the portal can substitute AI-witnessed proofs while still reporting success. We refuse AI
       // there, and the verify route refuses anything without a verified TEE attestation anyway. A university takes
       // it where Reclaim's agent has the rule to write or wrote it: with no pin, or under a pin its proof gave. A pin
-      // on a fixed rule runs no agent (8 Oct 2026, `fixed` in src/witness-portal.ts).
-      acceptAiProviders: Boolean(witness) && !witness?.pin?.fixed,
+      // on a fixed rule runs no agent (8 Oct 2026, `fixed` in src/witness-portal.ts), but for that second pass.
+      acceptAiProviders: Boolean(witness) && (withTheAgent || !witness?.pin?.fixed),
       ...reclaimChannelInitOptions(channel),
     }).catch((error: unknown) => {
       if (isReclaimQuotaRefusal(error)) throw new ReclaimLimitReached("proofs", { cause: error });
