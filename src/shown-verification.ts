@@ -57,6 +57,8 @@ export type ShownVerificationDeps = VerificationDeps & {
   milestoneRecordOf(giftId: string): Promise<MilestoneRecord | null>;
   /** Holds the first proof of a witness portal with no pin for the operator's review (D312); false when already held. */
   holdForReview?(review: Omit<PortalReview, "status" | "reason">): Promise<boolean>;
+  /** Takes the mark off a pin made ahead, once the first proof that fits it has been paid. */
+  confirmPin?(portalId: string, sense: PortalReview["sense"]): Promise<boolean>;
   /** Whether the recipient's agreement lets this gift be read (src/consent-guard.ts); a test that omits it reads. */
   leave?(giftId: string): Promise<ReadingLeave>;
   /** Tests only: the witness a test key stands for. Production never sets it, and the pinned witness is required. */
@@ -173,7 +175,13 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
   // version Reclaim's agent wrote for it, and nothing else.
   const witness = provider.witness;
   const agentVersion = String(status.session?.providerVersionString ?? "");
-  const providerVersion = witness && !witness.pin ? (isWitnessVersion(agentVersion) ? agentVersion : "a witness version") : provider.providerVersion;
+  // A pin made ahead of any proof, from the version's published configuration (8 Oct 2026). It is believed when this
+  // proof fits it whole: the version, the rule, the field. Then the proof is paid at once, as under any pin, and the
+  // mark comes off. When it does not fit, the pin is set aside for this proof, which is read as a first proof is and
+  // held: a person's one pass is not lost because a description of the rule was off.
+  const ahead = Boolean(witness?.pin?.ahead);
+  const pin = witness?.pin && (!ahead || fitsThePinMadeAhead(candidates, { pin: witness.pin, domain: witness.domain, version: agentVersion, read: provider.read, proofCount: entry.condition.proofCount, witness: deps.witnessAddress })) ? witness.pin : null;
+  const providerVersion = witness && !pin ? (isWitnessVersion(agentVersion) ? agentVersion : "a witness version") : provider.providerVersion;
   let proofs: Proof[];
   try {
     // Provenance first (pinned provider and version, our app, PROOF_SUBMITTED and never AI_PROOF_SUBMITTED), then
@@ -191,7 +199,7 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
   let data: ReclaimTrustedData[];
   let witnessed: WitnessReading[] = [];
   if (witness) {
-    witnessed = witnessReadings(proofs, { domain: witness.domain, pin: witness.pin, providerVersion, witness: deps.witnessAddress });
+    witnessed = witnessReadings(proofs, { domain: witness.domain, pin, providerVersion, witness: deps.witnessAddress });
     data = witnessed.map((reading) => reading.data);
   } else {
     const verified: SdkVerification = await deps.verifyProofs(proofs);
@@ -204,7 +212,7 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
   assertFresh(timestamps, now);
 
   // Before a pin nothing is read by a field: there is none yet. The binding to this account, gift and session is.
-  const held = Boolean(witness && !witness.pin);
+  const held = Boolean(witness && !pin);
   const evidence = await evidenceOf(deps, {
     condition: {
       ...entry.condition,
@@ -240,7 +248,31 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
     await deps.consumeShownSession({ sessionId: session.sessionId, evidence: { held: witness.portalId }, attestation: { message: {}, signature: "0x" }, proofs: null });
     return { kind: "held", sessionId: session.sessionId, giftId: session.giftId, message: SHOW_PROOF.held };
   }
-  return settleShown(deps, { entry, subject, sessionId: session.sessionId, giftId: session.giftId, gift, evidence, proofs, now, consume: true });
+  const outcome = await settleShown(deps, { entry, subject, sessionId: session.sessionId, giftId: session.giftId, gift, evidence, proofs, now, consume: true });
+  // The first proof under a pin made ahead fitted it and is paid: the pin is one a real proof has borne out.
+  if (witness && ahead && deps.confirmPin) await deps.confirmPin(witness.portalId, witness.sense).catch(() => false);
+  return outcome;
+}
+
+/**
+ * Whether a proof fits, whole, a pin made ahead of any proof: the session ran the pinned version, each claim is signed
+ * by the witness and reads the pinned request and rule, and the fields say what the pin's field must. Anything short of
+ * that is no refusal here: the proof is then read as a first proof is.
+ */
+function fitsThePinMadeAhead(
+  candidates: readonly unknown[],
+  expected: Readonly<{ pin: WitnessPin; domain: string; version: string; read: ShownProvider["read"]; proofCount: number; witness?: string }>,
+): boolean {
+  if (expected.version !== expected.pin.providerVersion) return false;
+  try {
+    const proofs = assertSdkProofSet([...candidates], { expectedCount: expected.proofCount, maxSignedJsonBytes: SHOWN_MAX_SIGNED_JSON_BYTES, witnessOnly: true });
+    const fields: Record<string, string> = {};
+    for (const proof of proofs) Object.assign(fields, verifyWitnessProof(proof, { domain: expected.domain, method: expected.pin.method, pin: expected.pin, providerVersion: expected.version, witness: expected.witness }).data.extractedParameters);
+    expected.read(fields);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Each proof of a witness portal, verified on the pinned witness, the portal's domain and, once pinned, its pattern. */
@@ -378,7 +410,8 @@ export async function settleHeldReview(deps: SettleDeps, input: { review: Portal
   const entry = shownConditionById(record.conditionId);
   const provider = entry ? portalProviderFor(record.conditionId, portal, record.gradeScale) : null;
   const witness = provider?.witness;
-  if (!entry || !provider || !witness || witness.sense !== review.sense || !witness.pin) throw new VerificationError("NOT_CONFIGURED", "The provider is not pinned yet", 503);
+  // Settled on a pin a real proof gave: one made ahead says nothing yet of the proof held here.
+  if (!entry || !provider || !witness || witness.sense !== review.sense || !witness.pin || witness.pin.ahead) throw new VerificationError("NOT_CONFIGURED", "The provider is not pinned yet", 503);
   const open = entry.subjectOf?.(record) ?? entry.subject;
   const subject = open ? signedSubjectOf(open, record.subjectKey) : open;
   if (!subject) throw new VerificationError("NOT_CONFIGURED", "This condition has no subject to sign", 503);

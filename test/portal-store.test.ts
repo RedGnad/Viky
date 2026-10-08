@@ -27,8 +27,10 @@ import {
   providerProblem,
   removePortal,
   requestProvider,
+  confirmPin,
   resultsExtractOf,
   runProviderOn,
+  testedWithAStudent,
   savePortal,
   savePortalRows,
   saveProvider,
@@ -314,6 +316,30 @@ test("a missing provider is asked for once, with its instruction, and a witness 
   assert.equal(await pinProvider("uni-a-br", "enrolment", { pin: { ...pin, providerVersion: "1.0.1" }, extract: { field: "academicYear", matches: "^2026.2027$", keeps: "whether enrolled in 2026" }, operator: OPERATOR }), true);
   assert.equal((await loadPortal("uni-a-br"))?.enrolment?.pin?.providerVersion, "1.0.1");
   assert.deepEqual(await providerCounts(), { listed: 4, enrolment: 3, results: 1, witness: 1, pinned: 1, requested: 0 });
+
+  // Pinned ahead of any proof (8 Oct 2026), on a version of another Reclaim provider: the row names that provider and
+  // keeps the mark, and the university is not said to have been read with a student by it.
+  await db.query("UPDATE viky_portals SET unverified = true WHERE portal_id = 'uni-a-br'");
+  const NEW_PROVIDER = "abcdefab-0000-4000-8000-0000000000aa";
+  assert.equal(await pinProvider("uni-a-br", "enrolment", { pin: { ...pin, providerVersion: "1.0.2", ahead: true, fixed: true }, extract: { field: "academicYear", matches: "^2026.2027$", keeps: "whether enrolled in 2026" }, operator: OPERATOR, providerId: NEW_PROVIDER }), true);
+  const ahead = (await loadPortal("uni-a-br"))!;
+  assert.equal(ahead.enrolment?.providerId, NEW_PROVIDER);
+  assert.equal(ahead.enrolment?.pin?.ahead, true);
+  assert.equal(ahead.enrolment?.providerVersion, "1.0.2");
+  assert.equal(ahead.unverified, true, "nobody has shown a proof on it");
+  assert.equal(testedWithAStudent(ahead), false);
+  assert.equal(awaitingPin(ahead.enrolment!), false, "its sessions run the pinned version");
+  assert.equal(portalProviderFor("university-enrollment-shown", ahead)?.witness?.pin?.ahead, true, "the verification is told the pin was made ahead");
+  // The first proof that fits takes the mark off, once, and the university is one that was read.
+  assert.equal(await confirmPin("uni-a-br", "results"), false);
+  assert.equal(await confirmPin("uni-a-br", "enrolment"), true);
+  assert.equal(await confirmPin("uni-a-br", "enrolment"), false, "nothing left to take off");
+  const borne = (await loadPortal("uni-a-br"))!;
+  assert.equal(borne.enrolment?.pin?.ahead, undefined);
+  assert.equal(borne.enrolment?.pin?.fixed, true, "borne out, it stays a fixed rule: no agent is asked for");
+  assert.equal(borne.enrolment?.pin?.specHash, pin.specHash, "the rule is the same one");
+  assert.equal(borne.unverified, false);
+  assert.equal(testedWithAStudent(borne), true);
 });
 
 test("a held proof is held once, by its sense, and a decision drops its proofs; a university a gift names is never removed", async () => {

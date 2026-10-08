@@ -33,6 +33,20 @@ export type WitnessPin = Readonly<{
   responseRedactions: string;
   /** The hash of the signed request spec, the claim context's `providerHash`. */
   specHash: string;
+  /**
+   * Set on a pin made ahead of any proof, from the provider's published configuration (`pinFromPublished`). It is
+   * believed when the first proof fits it: that proof is paid at once and the mark is taken off. A proof that does not
+   * fit it is read as a first proof is and held, never refused: a description of a rule is not a proof of it.
+   */
+  ahead?: boolean;
+  /**
+   * Set on a pin whose version runs a fixed rule with no agent of Reclaim's: the session then does not ask for the
+   * agent. Measured on 8 Oct 2026, on the first university's pinned version with nobody signed in: asked for, the
+   * agent puts Reclaim's page in a mode that waits for its instructions; not asked for, the page runs the plain fixed
+   * flow, and Reclaim opens the session all the same. A pin a first proof gave under the agent carries no such mark,
+   * and its sessions go on asking for the agent as they did when that proof was made.
+   */
+  fixed?: boolean;
 }>;
 
 export class WitnessProofError extends Error {
@@ -162,6 +176,61 @@ export function pinOf(reading: WitnessReading, providerVersion: string): Witness
   return { providerVersion, url: reading.url, method: reading.method, responseMatches: reading.responseMatches, responseRedactions: reading.responseRedactions, specHash: reading.specHash };
 }
 
+/** One request of a provider's version as Reclaim publishes it (`/api/providers/<id>/configs`), as far as a pin reads it. */
+export type PublishedRequest = Readonly<{
+  url: string;
+  urlType?: string;
+  method: string;
+  responseMatches?: readonly Readonly<Record<string, unknown>>[];
+  responseRedactions?: readonly Readonly<Record<string, unknown>>[];
+  bodySniff?: Readonly<{ enabled?: boolean; template?: string }>;
+}>;
+
+export class PublishedRuleError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PublishedRuleError";
+  }
+}
+
+/** What a claim keeps of a published match or redaction: the keys that say something, and none of the defaults. */
+function asAClaimHoldsIt(entries: readonly Readonly<Record<string, unknown>>[] | undefined, keys: readonly string[]): string {
+  return canonical((entries ?? []).map((entry) => Object.fromEntries(keys.filter((key) => typeof entry[key] === "string" && entry[key] !== "").map((key) => [key, entry[key]]))));
+}
+
+/**
+ * The pin a version's published request stands for, before any proof was read on it (8 Oct 2026): what a claim made
+ * under that request will sign, worked out from the configuration alone. `hashOf` is the SDK's own hash of a request
+ * (`hashRequestSpec`), handed in so this file stays free of it.
+ *
+ * Measured on the three real proofs of the first university: where a version sniffs the request's body, the hash of
+ * its published request is the hash its claim signs, and its matches and redactions are the claim's once the
+ * published defaults are dropped (versions ai.1 and ai.3). Where it does not, the claim signs the body as it was
+ * sent, session token included, and the hash is another one at every pass (ai.2): such a rule can never be pinned,
+ * and is refused here. So is an address that is a pattern: a claim then signs the address it read, not the pattern.
+ */
+export function pinFromPublished(request: PublishedRequest, providerVersion: string, hashOf: (request: PublishedRequest & { body: string }) => string | readonly string[]): WitnessPin {
+  if (request.urlType && request.urlType !== "CONSTANT") throw new PublishedRuleError("the request's address is a pattern: a pin holds one address");
+  if (!request.bodySniff?.enabled || !request.bodySniff.template) throw new PublishedRuleError("the request sniffs no body: its hash would cover the body each person sends, and change at every proof");
+  const hashes = [hashOf({ ...request, body: request.bodySniff.template })].flat().map((hash) => String(hash).toLowerCase());
+  if (hashes.length !== 1 || !/^0x[0-9a-f]{64}$/.test(hashes[0])) throw new PublishedRuleError("the request has not one hash: an optional match makes several, and a pin holds one");
+  return {
+    providerVersion,
+    url: request.url,
+    method: String(request.method).toUpperCase(),
+    responseMatches: asAClaimHoldsIt(request.responseMatches, ["type", "value"]),
+    responseRedactions: asAClaimHoldsIt(request.responseRedactions, ["jsonPath", "regex", "xPath"]),
+    specHash: hashes[0],
+    ahead: true,
+    fixed: true,
+  };
+}
+
+/** Whether two pins hold the same rule, whatever marks they carry. */
+export function sameRule(one: WitnessPin, other: WitnessPin): boolean {
+  return one.providerVersion === other.providerVersion && one.url === other.url && one.method.toUpperCase() === other.method.toUpperCase() && one.responseMatches === other.responseMatches && one.responseRedactions === other.responseRedactions && one.specHash.toLowerCase() === other.specHash.toLowerCase();
+}
+
 /** An agent-written version of an AI provider: its base and "-ai.N". */
 export function isAgentVersion(version: string): boolean {
   return /^\d+\.\d+\.\d+-ai\.\d+$/.test(version);
@@ -205,7 +274,8 @@ export function pinInWords(pin: WitnessPin, compared: Readonly<{ field: string; 
     // A pin always holds an address a proof read; printed as it is if it ever does not parse.
   }
   const kept = [...held(pin.responseRedactions, "regex"), ...held(pin.responseRedactions, "jsonPath"), ...held(pin.responseRedactions, "xPath")];
-  const reads = `version ${pin.providerVersion} reads ${pin.method} ${where}`;
+  // A pin made ahead of any proof says so: nobody has shown a proof on this version yet.
+  const reads = `version ${pin.providerVersion}${pin.ahead ? ", no proof shown on it yet," : ""} reads ${pin.method} ${where}`;
   const keeps = kept.length > 0 ? ` and keeps of the answer what matches ${kept.map((one) => `"${printed(one)}"`).join(", ")}` : "";
   const counts = compared ? `; Viky counts it when ${compared.field} matches "${printed(compared.matches)}"` : "";
   return `${reads}${keeps}${counts}`;
