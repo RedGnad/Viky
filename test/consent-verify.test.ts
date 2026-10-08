@@ -69,10 +69,10 @@ test("what is named is read alone: no published contract is added to a run that 
 test("a gift made today, on the third daily contract, is read: the daily contracts are passed one after the other", () => {
   const script = readFileSync("scripts/verify-consent.ts", "utf8");
   assert.match(script, /for \(const \[kind, contract\] of \[\.\.\.contracts\.daily\.map\(\(daily\) => \["daily", daily\] as const\), \["milestone", contracts\.milestone\] as const\]\)/);
-  const module = readFileSync("src/consent-verify.ts", "utf8");
+  const reads = readFileSync("src/consent-verify.ts", "utf8");
   // Every log of every daily contract is looked at, and the logs asked of the chain are those of all of them.
-  assert.match(module, /logs: from\(contracts\.daily\) as Log\[\]/);
-  assert.match(module, /const address = \[\.\.\.contracts\.daily, contracts\.milestone\]/);
+  assert.match(reads, /logs: from\(contracts\.daily\) as Log\[\]/);
+  assert.match(reads, /const address = \[\.\.\.contracts\.daily, contracts\.milestone\]/);
   // The page of the judges says which gifts the line it gives covers.
   assert.match(readFileSync("app/judges/JudgesMera.tsx", "utf8"), /for every gift of the second version and of the third daily contract, the key/);
 });
