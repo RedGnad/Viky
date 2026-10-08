@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import test, { after, before, beforeEach } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import { configureProofSessionStore, consumeAndSaveVerification, ensureProofSessionSchema, PROOF_SESSION_TTL_SECONDS, saveProofSession, type SqlExecutor } from "../src/proof-session-store";
-import { AGENT_FIRST_VERSION, configureSecondPass, earlierPassGaveNoProof, passGaveNoProof, type ReclaimRecord } from "../src/second-pass";
+import { AGENT_FIRST_VERSION, configureSecondPass, earlierPassGaveNoProof, passGaveNoProof, versionAsked, type ReclaimRecord } from "../src/second-pass";
 import { isWitnessVersion } from "../src/witness-portal";
 
 let db: PGlite;
@@ -42,6 +42,16 @@ after(async () => {
 /** A session as the session route writes it. */
 async function opened(sessionId: string, of: Readonly<{ giftId?: string; account?: string }> = {}): Promise<void> {
   await saveProofSession({ sessionId, account: of.account ?? STUDENT, giftId: of.giftId ?? GIFT, conditionId: CONDITION, goalType: 14, phase: "reach", dayIndex: 0, requestUrl: "https://portal.reclaimprotocol.org/?sessionId=s" });
+}
+
+/** The link a session's row keeps, as Reclaim's SDK builds it: one `template` field, JSON, with the version asked. */
+function linkAsking(version: string, agent: boolean): string {
+  return `https://portal.reclaimprotocol.org/?template=${encodeURIComponent(JSON.stringify({ sessionId: "s", providerId: "c560dffd-5f37-4b8a-94ed-106ce9e9ee27", providerVersion: version, resolvedProviderVersion: version, acceptAiProviders: agent }))}`;
+}
+
+/** A session opened on one version of the provider. */
+async function openedOn(sessionId: string, version: string, agent = false): Promise<void> {
+  await saveProofSession({ sessionId, account: STUDENT, giftId: GIFT, conditionId: CONDITION, goalType: 14, phase: "reach", dayIndex: 0, requestUrl: linkAsking(version, agent) });
 }
 
 /** Reclaim's public record of each session, and which ones were asked for. */
@@ -95,6 +105,42 @@ test("a page nobody opened, a proof on its way and a record Reclaim does not giv
   assert.equal(await earlierPassGaveNoProof(PASS, { recordOf: async () => Promise.reject(new Error("Reclaim did not answer")) }), false, "Reclaim does not answer");
 });
 
+test("a pass counts against the rule pinned now, and no other", async () => {
+  // The student's two passes of 8 Oct 2026, both cancelled at Reclaim with no proof: the rule 3.0.0, then the agent.
+  await openedOn("on-3-0-0", "3.0.0");
+  await openedOn("with-the-agent", AGENT_FIRST_VERSION, true);
+  const cancelled = { state: "SESSION_CANCELLED", proofs: 0 };
+  const record = reclaim({ "on-3-0-0": cancelled, "with-the-agent": cancelled, "on-3-0-1": cancelled });
+  // Under the pin they ran, the next press goes to the agent, as it did.
+  assert.equal(await earlierPassGaveNoProof({ ...PASS, version: "3.0.0" }, record.deps), true);
+  // The rule corrected and pinned again as 3.0.1: neither pass was its own, so its first pass runs it, and Reclaim is
+  // asked nothing about sessions that are not its own.
+  record.asked.length = 0;
+  assert.equal(await earlierPassGaveNoProof({ ...PASS, version: "3.0.1" }, record.deps), false);
+  assert.deepEqual(record.asked, []);
+  // Once 3.0.1 has had its pass and given nothing, the next one goes to the agent.
+  await openedOn("on-3-0-1", "3.0.1");
+  assert.equal(await earlierPassGaveNoProof({ ...PASS, version: "3.0.1" }, record.deps), true);
+  // A session Reclaim ended, closed on its own row, is held to the same question.
+  await db.query("DELETE FROM viky_proof_sessions");
+  await openedOn("ended-on-3-0-0", "3.0.0");
+  await consumeAndSaveVerification({ sessionId: "ended-on-3-0-0", evidence: { stopped: "SESSION_CANCELLED" }, attestation: { message: {}, signature: "0x" }, proofs: null });
+  assert.equal(await earlierPassGaveNoProof({ ...PASS, version: "3.0.1" }, record.deps), false);
+  assert.equal(await earlierPassGaveNoProof({ ...PASS, version: "3.0.0" }, record.deps), true);
+});
+
+test("the version asked is read from the link, and a link that does not say counts as it did", async () => {
+  assert.equal(versionAsked(linkAsking("3.0.1", false)), "3.0.1");
+  assert.equal(versionAsked(linkAsking(AGENT_FIRST_VERSION, true)), "1.0.0");
+  for (const silent of ["https://portal.reclaimprotocol.org/?sessionId=s", "https://portal.reclaimprotocol.org/?template=not-json", "not a link", "", null, undefined]) {
+    assert.equal(versionAsked(silent), null, String(silent));
+  }
+  // A row whose link names no version: counted whatever is pinned, which is what every pass before this did.
+  await opened("no-version-on-its-link");
+  const left = reclaim({ "no-version-on-its-link": { state: "USER_STARTED_VERIFICATION", proofs: 0 } });
+  assert.equal(await earlierPassGaveNoProof({ ...PASS, version: "3.0.1" }, left.deps), true);
+});
+
 test("a pass held for review or paid, another person's and another gift's are not this gift's empty pass", async () => {
   await opened("held");
   await consumeAndSaveVerification({ sessionId: "held", evidence: { held: "utoulouse-fr" }, attestation: { message: {}, signature: "0x" }, proofs: null });
@@ -128,7 +174,7 @@ test("what an empty pass is, state by state", () => {
 test("the session route asks for the agent on that second pass only, under a pin made ahead, from the version it builds from", () => {
   const source = readFileSync("app/api/proof/session/route.ts", "utf8");
   // Only under a pin no proof has borne out, and only after a pass that gave none: a first press never asks.
-  assert.match(source, /const withTheAgent = Boolean\(witness\?\.pin\?\.ahead\) && \(await earlierPassGaveNoProof\(\{ giftId, account, conditionId: entry\.condition\.conditionId \}\)\);/);
+  assert.match(source, /const withTheAgent = Boolean\(witness\?\.pin\?\.ahead\) && \(await earlierPassGaveNoProof\(\{ giftId, account, conditionId: entry\.condition\.conditionId, version: witness\?\.pin\?\.providerVersion \}\)\);/);
   assert.match(source, /providerVersion: withTheAgent \? AGENT_FIRST_VERSION : providerVersion \}/);
   assert.match(source, /acceptAiProviders: Boolean\(witness\) && \(withTheAgent \|\| !witness\?\.pin\?\.fixed\),/);
   // Decided before the session is opened at Reclaim, with the gift and the account the cookie and the row gave.

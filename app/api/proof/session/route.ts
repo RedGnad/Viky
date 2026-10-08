@@ -128,7 +128,8 @@ export async function POST(request: Request) {
     if (realReadingsOff()) throw new Error(REAL_READINGS_OFF);
     // Under a pin made ahead of any proof, a first pass that came back with none is followed by one with Reclaim's
     // agent, from the version it builds from, as on 7 Oct 2026 (src/second-pass.ts): its proof is held for review.
-    const withTheAgent = Boolean(witness?.pin?.ahead) && (await earlierPassGaveNoProof({ giftId, account, conditionId: entry.condition.conditionId }));
+    // A pass counts against the version pinned now alone: a rule corrected and pinned again starts with its own pass.
+    const withTheAgent = Boolean(witness?.pin?.ahead) && (await earlierPassGaveNoProof({ giftId, account, conditionId: entry.condition.conditionId, version: witness?.pin?.providerVersion }));
     const proofRequest = await ReclaimProofRequest.init(appId, appSecret, providerId, {
       ...(witness && !witness.pin && !providerVersion ? {} : { providerVersion: withTheAgent ? AGENT_FIRST_VERSION : providerVersion }),
       // Everywhere else the portal can substitute AI-witnessed proofs while still reporting success. We refuse AI
