@@ -21,8 +21,11 @@ today (`PROOF_VERIFIER` unset):
    sessions run on (`pnpm portal:pin --portal <id> --run <version>`), which takes the pin off, and the next proof is
    held and read as a first one is. A provider can also be pinned ahead of any proof, from the request its version
    publishes at Reclaim (`--ahead <version>`): the first proof that fits that pin is paid at once and bears it out;
-   one that does not is held, never refused. The judges page prints what each pinned provider reads, from the pin
-   itself, and says of a pin made ahead that no proof has been shown on it yet.
+   one that does not is held, never refused. While a pin made ahead has no proof behind it, a person whose first
+   pass came back with none gets a second one with Reclaim's agent, from the provider's first version, as before any
+   pin (`src/second-pass.ts`): that proof does not fit the pin, so it is held and read by the operator. The judges
+   page prints what each pinned provider reads, from the pin itself, and says of a pin made ahead that no proof has
+   been shown on it yet.
 3. **A reading Viky makes itself** (zkFetch: the daily Duolingo lesson, the Chess.com ratings, the certificates, a race,
    and a connected source's reading with the person's key). It is fetched through Reclaim's TEE client and verified
    server side by the attestor's signature only: js-sdk `verifyProof` checks it against the attestor list it fetches
