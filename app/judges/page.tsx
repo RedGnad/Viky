@@ -245,8 +245,8 @@ export default async function JudgesPage() {
           </li>
           <li>
             To see the other side on this device: copy the link, press Me, then Other account, open the link and
-            press Create my account. Press Open my gift, then connect the source. With one account you only ever see
-            the funder&apos;s side of your own gift.
+            press Open my gift, which creates a second account. Then connect the source. With one account you only
+            ever see the funder&apos;s side of your own gift.
           </li>
           <li data-try-paths>
             What to offer. Each path asks something of you: Duolingo, an account there, and a lesson done after you

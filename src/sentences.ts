@@ -589,6 +589,16 @@ export const ACCOUNT_DOOR = {
   linkLabel: "The link",
   how: "Your face or your fingerprint, and nothing to remember.",
   /**
+   * Under "Open my gift", on the link of a gift (the UI pass of 8 Oct 2026, screen 1): what the press does, how, and
+   * for whom, in the one line the three used to take. True of the press: it makes the account with a passkey, then
+   * opens the gift.
+   */
+  opensIt: "It creates your account with your fingerprint, face or screen lock. 18 or older.",
+  /** The quiet way in beside it, for somebody who has an account on another device, or made one before. */
+  alreadyHave: "I already have an account",
+  /** The same, on a device that remembers a passkey: the press signs in, and this makes a new account instead. */
+  newAccount: "Create a new account",
+  /**
    * Said wherever an account is made, to the person who offers and to the person a gift is for (the founder, 4 Oct
    * 2026): Viky is for adults, on both sides. It was said at the card payment alone.
    */
@@ -1020,9 +1030,12 @@ export const GIFT_PAGE = {
     olderDays: "Days settled before the record",
     fromTotals: "drawn from the totals",
   },
-  openBy: (date: string, funder: string | null) => `Open it by ${date}: after 14 days unopened, it goes back to ${funder ?? "the person who offered it"}.`,
+  /**
+   * Under the state of a gift nobody has opened, on the model of every other card (the UI pass of 8 Oct 2026): the
+   * day, and where it goes then. True of both contracts: unopened fourteen days after it was funded, it goes back.
+   */
+  openBy: (date: string, funder: string | null) => `By ${date}, or it goes back to ${funder ?? "the person who offered it"}.`,
 
-  createToOpen: "Create your account to open it. Nothing to install.",
   /** An opened gift, read by somebody with no account: it may be theirs, and it may not, so it says "if". */
   signInToSee: "Sign in if this gift is yours.",
   openMyGift: "Open my gift",
