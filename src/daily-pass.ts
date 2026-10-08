@@ -41,7 +41,7 @@ import { watchAtPassStart, type RelayerAtStart, type WatchLine } from "./watch";
  * gift whose oldest open day closes at 06:00 that morning: its last chance, once.
  */
 
-export type DailyPassLine = { giftId: string; step: "create" | "count" | "drain" | "finalise" | "refund" | "read" | "expire" | "retire" | "erase"; result: string; hash?: string };
+export type DailyPassLine = { giftId: string; step: "create" | "count" | "drain" | "finalise" | "refund" | "read" | "expire" | "review" | "retire" | "erase"; result: string; hash?: string };
 
 /**
  * Refusals that say something broke on our side rather than something the person did. A reading refused for

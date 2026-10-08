@@ -49,5 +49,6 @@ test("the route answers at once with nothing about any gift, and the pass reads 
   assert.equal(FREQUENT_PASS_RECENT_SECONDS, 4 * 60, "a gift read by the last pass, five minutes ago, is read again by this one");
   const milestones = readFileSync("src/milestone-pass.ts", "utf8");
   assert.match(milestones, /for \(const record of await deps\.gifts\(\)\) \{\n\s*try \{\n\s*lines\.push\(\.\.\.\(await passOne/, "one gift after another");
-  assert.match(milestones, /if \(outcome\.kind === "reached"\) \{\n\s*await tellAboutMilestone\(giftId, "reached"/, "told when reached");
+  assert.match(milestones, /if \(outcome\.kind === "reached"\) \{\n\s*await tell\(giftId, "reached"\);/, "told when reached");
+  assert.match(milestones, /const tell = deps\.tell \?\? liveTell;/);
 });

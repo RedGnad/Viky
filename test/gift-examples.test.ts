@@ -22,11 +22,13 @@ const EXPECTED: Record<ExampleMoment, readonly Moment[]> = {
   building: ["awaitingProof"],
   held: ["awaitingProof"],
   reviewRefused: ["awaitingProof"],
+  // Never reviewed before the contract stopped taking it (the audit of 8 Oct 2026): the gift is over, gone back.
+  neverReviewed: ["over"],
 };
 
 test("every example on the board is the moment its name says, read by the page's own functions", () => {
   const examples = allExamples(Date.UTC(2026, 8, 23, 12));
-  assert.equal(examples.length, 112, "five shapes, their moments (7, 7, 5, 5, 4), four readers");
+  assert.equal(examples.length, 116, "five shapes, their moments (7, 7, 5, 5, 5), four readers");
   for (const example of examples) {
     const status = example.status;
     const gift = status.kind === "milestone" ? giftOfMilestone(status) : giftOfSummary(status);

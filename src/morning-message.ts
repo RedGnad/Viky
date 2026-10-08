@@ -21,8 +21,11 @@ export type MorningNews =
   | Readonly<{ kind: "day"; outcome: DayOutcome; amount: string; today?: boolean }>
   | Readonly<{ kind: "reached"; amount: string }>
   | Readonly<{ kind: "expired"; amount: string }>
-  /** A first proof's review, decided without reaching the gift: refused, or read and not there yet. */
-  | Readonly<{ kind: "reviewed"; verdict: "refused" | "notYet"; amount: string }>;
+  /**
+   * A first proof's review, closed without reaching the gift: refused, read and not there yet, or never made before
+   * the contract stopped taking the proof (`unread`, the audit of 8 Oct 2026), which sends the whole gift back.
+   */
+  | Readonly<{ kind: "reviewed"; verdict: "refused" | "notYet" | "unread"; amount: string }>;
 
 export type MorningWords = Readonly<{ yesterday?: string; today?: string }>;
 
@@ -31,6 +34,10 @@ export function morningSentence(side: MorningSide, news: MorningNews, names: Gif
   const them = names.recipientName?.trim() || null;
   const funder = names.funderName?.trim() || null;
   if (news.kind === "reviewed") {
+    if (news.verdict === "unread") {
+      if (side === "recipient") return funder ? MORNING.recipient.reviewUnreadTo(news.amount, funder) : MORNING.recipient.reviewUnread(news.amount);
+      return them ? MORNING.funder.reviewUnreadNamed(them, news.amount) : MORNING.funder.reviewUnread(news.amount);
+    }
     if (side === "recipient") return news.verdict === "refused" ? MORNING.recipient.reviewRefused : MORNING.recipient.reviewNotYet;
     if (news.verdict === "refused") return them ? MORNING.funder.reviewRefusedNamed(them) : MORNING.funder.reviewRefused;
     return them ? MORNING.funder.reviewNotYetNamed(them) : MORNING.funder.reviewNotYet;
