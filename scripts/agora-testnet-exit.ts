@@ -57,7 +57,7 @@ import { canonicalSignature } from "../src/signature";
  * What `run` does, in order: refuses any chain but 10143; refuses a build that is not the code of the way out on
  * mainnet; deploys that code set on Agora's test AUSD; allows the pair, with no pin since the pair forwards to
  * nothing; asks Agora's testnet contract for the swapper's role, which it gives to any address there; has Agora's
- * faucet mint test AUSD to a person's account made for this run; and sends that person's way out: one signature of
+ * faucet hand test AUSD to a person's account made for this run; and sends that person's way out: one signature of
  * theirs, the same authorization the app's account signs, carried and paid for by the test account. The person holds
  * none of the chain's coin before or after, and never sends a transaction.
  *
@@ -279,7 +279,7 @@ async function run(): Promise<void> {
   // The person: an account made for this run, which never holds the chain's coin and never sends anything.
   const person = privateKeyToAccount(generatePrivateKey());
   await waitForTheFaucet();
-  await send("Agora's faucet minted test AUSD to the person", AGORA_TESTNET.faucet, encodeFunctionData({ abi: AGORA_FAUCET_ABI, functionName: "requestFunds", args: [person.address] }));
+  await send("Agora's faucet handed test AUSD to the person", AGORA_TESTNET.faucet, encodeFunctionData({ abi: AGORA_FAUCET_ABI, functionName: "requestFunds", args: [person.address] }));
   const balanceOf = (coin: Hex, who: Hex) => testnet.readContract({ address: coin, abi: erc20Abi, functionName: "balanceOf", args: [who] });
   const heldBefore = await balanceOf(AGORA_TESTNET.ausd, person.address);
   if (heldBefore < AMOUNT) throw new Error(`The faucet gave the person ${heldBefore} units of test AUSD, fewer than the ${AMOUNT} of this run`);
