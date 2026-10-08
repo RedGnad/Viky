@@ -931,33 +931,6 @@ export const FUND = {
     staysInAccount: "Whatever you paid stays in your account.",
   },
 
-  made: {
-    title: (amount: string, recipient: string) => `${amount} is in ${their(recipient)} name.`,
-    /**
-     * The day's share and the days are two figures side by side, each with a label (the founder's rule 5 of 1 Oct
-     * 2026); the whole amount is the title's. One sentence said the three, and when the first day counts.
-     */
-    about: "about ",
-    aDay: "A day",
-    days: (count: number) => (count === 1 ? "Day" : "Days"),
-    firstDay: (source: string, sameDay = false) => `First day counted the day ${sameDay ? "" : "after "}they connect ${source}.`,
-    reference: (when: string, giftId: string) => `Made ${when}. Reference: gift ${giftId}.`,
-    linkTitle: "The link",
-    copy: "Copy the link",
-    copied: "Copied",
-    share: "Share",
-    copyRefused: "Your browser would not let us copy it. Press and hold the link above, then choose Copy.",
-    onlyThem: (recipient: string) => `Whoever opens this link takes the gift, so send it only to ${onlyTo(recipient)}.`,
-    nextTitle: "What happens next",
-    /**
-     * Because the link is lost the moment this tab closes, and only the gift's page can make another (gift 1000001).
-     * A line of the fold, after the pay sheet's own lines about a missed day and a link nobody opens (the founder,
-     * 4 Oct 2026: a fold holds lines, never paragraphs).
-     */
-    lostLink: ["A lost link", "this gift's page makes a new one"] as readonly [string, string],
-    seeIt: "See this gift",
-  },
-
   failures: {
     other: "That did not go through, and nothing was taken. Try again.",
     /** A gift that could not be made once the money is in the account: true of somebody whose card was charged. */
@@ -1050,16 +1023,16 @@ export const GIFT_PAGE = {
   checking: "Checking the name",
   copyCode: "Copy the code",
   copied: "Copied",
-  /** Only on the device that made the gift, which is the only one holding the link (it carries the key). */
-  copyLinkAgain: "Copy the link again",
-  linkOnlyHere: "Only this device kept it: the link carries the key that opens the gift.",
   /**
-   * From any device, for the account that made the gift. Only the key's fingerprint was kept, so the lost link cannot
-   * be handed back: a new one is made and the old one stops opening the gift. Said before the gesture, never after.
+   * The link, on the gift's own page (the UI pass of 8 Oct 2026, screen 3): one field, one button. A press on either
+   * copies, and nothing is "again", nothing is titled, and nothing says where the link is kept.
    */
-  linkAgainTitle: "The link",
-  /** A link just made is copied for the first time, so nothing about it is "again" (ui review, 19 Sep 2026). */
   copyLink: "Copy the link",
+  /**
+   * From any device, for the account that made a gift of the first contract. Only the key's fingerprint was kept, so
+   * the lost link cannot be handed back: a new one is made and the old one stops opening the gift. Said before the
+   * gesture, never after.
+   */
   linkAgainWhy: "Lost the link, or sent it from another device? Get a new one. The link you had stops working the moment you do.",
   getLinkAgain: "Get the link again",
   gettingLink: "Making a new link",
@@ -1069,8 +1042,10 @@ export const GIFT_PAGE = {
    * A gift of the second version of the contracts (the audit of 1 Oct 2026): its link is found again, not replaced. The
    * key that opens the gift is in what was signed, so the link sent before is this one, and it still works.
    */
-  linkFindWhy: "Lost the link, or sent it from another device? Find it again here. It is the same link: the one you sent still works.",
-  linkFind: "Find the link again",
+  findTheLink: "Find the link",
+  findingLink: "Finding the link",
+  /** Under that button, on a device that does not hold the link: what the press gives, said before it. */
+  sameLink: "The same link you sent. It still works.",
   linkFound: "Here is the link. It is the one you had: it still opens this gift.",
   linkFindFailed: "The link could not be found just now. Nothing was changed: the link you sent still works.",
 
@@ -1174,7 +1149,14 @@ export const GIFT_LIVE = {
       theirs: { days: "Theirs day by day", climb: (target: number) => `Theirs at ${target}`, stamp: "Theirs with the proof" },
     },
     /** To the funder: the day it comes back to them if nobody opens it (14 days after funding, both contracts). */
-    openByTheirs: (date: string) => `If not by ${date}, it comes back to you.`,
+    openByTheirs: (date: string) => `By ${date}, or it comes back to you.`,
+    /**
+     * To the funder on the device that holds the link (the UI pass of 8 Oct 2026, screen 3): the gift's page is the
+     * screen after paying, and what there is to do is send it. True of both contracts: the link opens the gift for
+     * whoever has it.
+     */
+    sendIt: (recipient: string | null) => (recipient ? `Send it to ${recipient}.` : "Send the link."),
+    whoeverOpens: "Whoever opens the link takes the gift.",
   },
   /** Opened, and the source it counts is not connected yet: the one moment the whole agreement is read. */
   notConnected: {
@@ -1428,15 +1410,6 @@ export const MILESTONE_FUND = {
       ifNot: "If they do not reach it",
     },
     allBack: "All of it comes back to you",
-  },
-  made: {
-    terms: (amount: string, goal: string, days: number, source: string) => `${amount} when they reach ${goal}, within ${days} ${days === 1 ? "day" : "days"} of connecting ${source}.`,
-    allOrNothing: "All of it, at once, or all of it back to you.",
-    /**
-     * What the recipient is asked for depends on who named the account (D27, D104 bis): one the funder named binds on its
-     * first reading and asks nothing of the profile, and only an account they name themselves carries a code. This
-     * screen promised a code either way until 19 Sep 2026, which was false for every gift made with a name.
-     */
   },
   failures: {
     standingMoved: "Choose the rating again",

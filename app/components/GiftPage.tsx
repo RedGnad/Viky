@@ -32,6 +32,8 @@ import { MarkNotice } from "../kit/MarkNotice";
 import { dayNow, lessonWouldPay } from "@/src/day-now";
 import { stripFromRecord } from "@/src/day-states";
 import { spokenAmount } from "@/src/display-currency";
+import { followGiftLinks, giftLinkOnThisDevice } from "@/src/gift-link-memory";
+import { forgetJustMade, wasJustMade } from "@/src/just-made";
 import { giftOfMilestone, giftOfSummary, funderMayTakeItBack, readAs } from "@/src/gift-moment";
 import { asItGoesNow, eyebrowOf, liveOf, titleOf } from "@/src/gift-live";
 import { notTheirs, voiceOf, type Voice } from "@/src/gift-voice";
@@ -73,7 +75,8 @@ import type { ToldAbout } from "../kit/MorningMessage";
 import { LiveLine, useLiveReading } from "../kit/LiveReading";
 import { openDayLine } from "@/src/client/limit";
 import { contactEmail } from "@/src/contact";
-import { Arrival, ArrivalAmount, Reacts, useLastSeen } from "../kit/Motion";
+import { Figure } from "../kit/Figure";
+import { Arrival, ArrivalAmount, Reacts, Success, useLastSeen } from "../kit/Motion";
 import { Shell } from "../kit/Shell";
 import { ButtonWords, StepInProgress, WaitLine } from "../kit/Waiting";
 import { YouDecide } from "../kit/YouDecide";
@@ -229,6 +232,13 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
   const milestone = status.kind === "milestone" ? status : null;
   const daily = status.kind === "milestone" ? null : status;
   const giftId = status.giftId;
+  /** Whether the reader arrives from the payment that made this gift: read once, as the page is first drawn in the browser. */
+  const [justMade] = useState(() => typeof window !== "undefined" && wasJustMade(status.giftId));
+  useEffect(() => {
+    if (justMade) forgetJustMade();
+  }, [justMade]);
+  // Whether this device holds the gift's link, read in the browser and followed: the funder's card says "Send it" then.
+  const linkHere = useSyncExternalStore(followGiftLinks, () => giftLinkOnThisDevice(giftId) !== null, () => false);
   const names = status.names ?? null;
   const funderName = names?.funderName ?? null;
 
@@ -379,6 +389,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
     shown: condition?.nature === "shown",
     shape: milestone ? (milestone.shape === "certificate" ? "stamp" : "climb") : "days",
     openBy,
+    linkHere,
     connectBy,
     endedOnInWords: milestone?.reachedAtMs ? dateInWords(milestone.reachedAtMs, zone) : daily && daily.finished && daily.endDay > 0 ? contractDayInWords(daily.endDay) : null,
     deadlineInWords: milestone?.deadlineMs ? dateInWords(milestone.deadlineMs, zone) : null,
@@ -834,7 +845,10 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
   /** The gift is the reader's own and still theirs to decide about: opened, and neither over nor taken back. */
   const decides = mine && status.opened && !gift.finished && !gift.cancelled;
   /** What this gift's messages are about now: each morning for a habit, one moment for everything else. */
-  const about: ToldAbout | null = !status.opened || gift.finished || gift.cancelled
+  // Before it is opened, the person who offered it is the only one told anything: being told was offered on the screen
+  // after paying (the founder, 1 Oct 2026), and that screen is this page since 8 Oct 2026.
+  const unopenedForItsFunder = readerIsFunder && !status.opened;
+  const about: ToldAbout | null = (!status.opened && !unopenedForItsFunder) || gift.finished || gift.cancelled
     ? null
     : daily
       ? { kind: "morning" }
@@ -842,7 +856,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
         ? { kind: "review" }
         : hadOrNot
           ? { kind: "hadOrNot" }
-          : readsLive && milestone
+          : milestone && (readsLive || unopenedForItsFunder)
             ? { kind: "reach", target: String(milestone.targetWords ?? milestone.target) }
             : null;
   // The funder's page as the funder reads it now, for the sheet that says what they see: the same moment in their
@@ -874,7 +888,15 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
         kind="task"
         /* No hero on a gift in progress (the founder, 29 Sep 2026): its one character is the drawing's, the climb or the days. */
         character={
-          moment === "counting" || moment === "climbing" || moment === "awaitingProof" ? null : (
+          justMade ? (
+            // Arriving from the payment that made it: the app's own character, waving, on the expressive spring, once,
+            // and no confetti (V4, decision B). It stood on a screen of its own until 8 Oct 2026.
+            <Success>
+              <span className="block w-[72px] shrink-0">
+                <Figure id="made" arms="wave" mouth="soft" halftone />
+              </span>
+            </Success>
+          ) : moment === "counting" || moment === "climbing" || moment === "awaitingProof" ? null : (
             // The opening, made on this page: the gift's own character answers it, once. The days do not move.
             <Reacts gesture={openings}>
               <HeadCharacter />
