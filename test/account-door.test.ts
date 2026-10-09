@@ -171,7 +171,7 @@ test("never 'computer' on a phone, never the site's name in place of the gift's 
     assert.equal(ownBrowserOf(handset, app), wayOut("https://viky.cash/g/7?t=k", handset, app)?.browser ?? null, `${handset}: the line and the button name one browser`);
   }
   const gift = readFileSync("app/components/GiftPage.tsx", "utf8");
-  assert.match(gift, /\{door\.kind === "elsewhere" \? ACCOUNT_DOOR\.continueIn\(ownBrowserOf\(door\.handset, door\.app\)\) : W\.createToOpen\}/, "in that state only");
+  assert.match(gift, /\{door\.kind === "elsewhere" \? <p className="font-medium">\{ACCOUNT_DOOR\.continueIn\(ownBrowserOf\(door\.handset, door\.app\)\)\}<\/p> : null\}/, "in that state only");
   assert.equal(W.copy(true), "Copy this gift's link");
   assert.equal(W.openIn("browser"), "Open in your browser");
   // Two lines: what the computer lacks, then what to do, each short enough to stand in the open.

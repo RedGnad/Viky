@@ -38,7 +38,8 @@ const read = (file: string) => readFileSync(new URL(`../${file}`, import.meta.ur
 test("the judge's path leads to the recipient's side, and promises nothing a single judge alone could use", () => {
   assert.doesNotMatch(page, /shown in the video/);
   assert.doesNotMatch(page, /open the gift the founder made for you from the operator account/);
-  assert.ok(page.includes("To see the other side on this device: copy the link, press Me, then Other account, open the link and press Create my account. Press Open my gift, then connect the source."));
+  // One press since the UI pass of 8 Oct 2026: "Open my gift" makes the account and opens the gift.
+  assert.ok(page.includes("To see the other side on this device: copy the link, press Me, then Other account, open the link and press Open my gift, which creates a second account. Then connect the source."));
   // The words are the screens' own.
   const sentences = read("src/sentences.ts");
   for (const label of ['me: "Me"', 'anotherAccount: "Use another account"', 'openMyGift: "Open my gift"']) assert.ok(sentences.includes(label), label);
@@ -229,7 +230,7 @@ test("the card services are said in the order the pay sheet tries them", () => {
 });
 
 test("the judges' path names the button as Me draws it, and says what each path asks of them", () => {
-  assert.ok(page.includes("press Me, then Other account, open the link and press Create my account"));
+  assert.ok(page.includes("press Me, then Other account, open the link and press Open my gift, which creates a second account"));
   assert.doesNotMatch(page, /then Use another account/);
   assert.equal(ME.otherAccount, "Other account");
   assert.ok(read("app/kit/Me.tsx").includes("name={W.otherAccount}"));

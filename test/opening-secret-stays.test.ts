@@ -63,7 +63,7 @@ test("an answer that names another contract, none, or no account is refused, and
 
 test("the page never hands the secret after the # to the function that posts a key", () => {
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
-  assert.match(page, /if \(linkOpened\) await openWithTheLinkSecret\(\{ giftId, linkSecret: openingKey, contract, recipient: address \}\);\n\s*else await claimGift\(giftId, openingKey\);/);
+  assert.match(page, /if \(linkOpened\) await openWithTheLinkSecret\(\{ giftId, linkSecret: openingKey, contract, recipient \}\);\n\s*else await claimGift\(giftId, openingKey\);/);
   assert.equal(page.match(/claimGift\(/g)?.length, 1, "one call, on the first version's branch");
   // The function that posts a key takes a key and nothing that could send it down the other road.
   const client = readFileSync("src/client/gift.ts", "utf8");

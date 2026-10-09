@@ -54,12 +54,15 @@ test("what a gift costs is the sum of its measured steps, and a fraction of a ce
   assert.equal(dollarsOf(1_000_000n, 2), "$2.0000");
 });
 
-test("the path from a link to a first transaction is three gestures, held by the browser test that counts them", () => {
-  assert.equal(ARRIVAL.gestures.length, 3);
+test("the path from a link to a first transaction is two gestures, held by the browser test that counts them", () => {
+  // One press and the device's prompt since 8 Oct 2026: "Open my gift" makes the account, then opens the gift.
+  assert.deepEqual(ARRIVAL.gestures, ["Press Open my gift", "Answer the device's passkey prompt, a face or a fingerprint"]);
   const spec = readFileSync("test/browser/arrival-measure.spec.ts", "utf8");
-  assert.match(spec, /expect\(gestures\.length, [^)]*\)\.toBe\(3\);/);
+  assert.match(spec, /expect\(gestures\.length, [^)]*\)\.toBe\(2\);/);
   const { linkShown, accountMade, giftOpened } = ARRIVAL.seconds;
-  assert.ok(linkShown > 0 && accountMade > linkShown && giftOpened > accountMade, "the three moments were measured, in order");
+  // The opening follows the account with nothing pressed: on these screens, inside the same tenth of a second.
+  assert.ok(linkShown > 0 && accountMade > linkShown && giftOpened >= accountMade, "the three moments were measured, in order");
+  assert.match(readFileSync("app/judges/JudgesMera.tsx", "utf8").replace(/\s+/g, " "), /from the press to the account made, and the gift opened \{giftOpened > accountMade \? `\$\{seconds\(giftOpened - accountMade\)\} later` : "within the same tenth of a second"\}, with no second press\./);
   assert.equal(Math.max(...ARRIVAL.runs), giftOpened, "the run given moment by moment is the slowest of them");
   // The page says what those seconds are, and what is not in them.
   const block = readFileSync("app/judges/JudgesMera.tsx", "utf8").replace(/\s+/g, " ");

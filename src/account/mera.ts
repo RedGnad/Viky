@@ -9,6 +9,7 @@ import { toViemAccount } from "@category-labs/mera/viem";
 import type { Address, LocalAccount } from "viem";
 import { ceremonyClient, endConsentKey, takeKeyKept } from "../client/consent-key";
 import { deriveEvmPrivateKey } from "./derive";
+import { defaultPasskeyLabel } from "./passkey-label";
 import { accountError, passkeyEnvironmentProblem, toAccountError } from "./errors";
 import { readRecord, recordOf, type KeptRecord } from "./key-kept";
 import { accountsAreMadeOn } from "./passkey-support";
@@ -202,17 +203,17 @@ function openSession(prfOutput: Uint8Array, only?: Address): Address {
   return account.address;
 }
 
-/** Creates a new passkey and opens a session. One biometric prompt, sometimes two on older authenticators. */
-/** Label shown by the passkey provider when the person leaves the optional name empty. */
-export const DEFAULT_PASSKEY_LABEL = "Viky account";
+/** Label shown by the passkey provider when no name is given: said with when it was made (src/account/passkey-label.ts). */
+export { DEFAULT_PASSKEY_LABEL } from "./passkey-label";
 
+/** Creates a new passkey and opens a session. One biometric prompt, sometimes two on older authenticators. */
 export async function createAccount(displayName: string): Promise<Address> {
   requirePasskeyCapableBrowser();
   // Whatever screen asks: no passkey is made on an address that is not Viky's own (src/account/passkey-support.ts).
   if (!accountsAreMadeOn(window.location.hostname)) throw accountError("MADE_ELSEWHERE");
   // The label only lives in the passkey provider (iCloud Keychain, Google Password Manager); it is
   // never sent to Viky's server, never stored by the app and never written on chain.
-  const name = displayName.trim() || DEFAULT_PASSKEY_LABEL;
+  const name = displayName.trim() || defaultPasskeyLabel();
   try {
     const created = await createPasskeyWithPrfOutput({
       rp: { id: relyingPartyId(), name: RELYING_PARTY_NAME },

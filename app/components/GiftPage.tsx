@@ -10,6 +10,7 @@ import { useMoneySession } from "@/src/account/money-session";
 import { isAccountError } from "@/src/account/errors";
 import { useDoor } from "@/src/account/door";
 import { ownBrowserOf } from "@/src/account/passkey-support";
+import * as mera from "@/src/account/mera";
 import { useAccount } from "@/src/account/provider";
 import { catchUpDay } from "@/src/catch-up";
 import { ApiError } from "@/src/client/api";
@@ -44,6 +45,7 @@ import { COUNTING_PASS_UTC, settlingTimeInWords } from "@/src/pass-schedule";
 import { reserveOf } from "@/src/reserves";
 import { ACCOUNT_DOOR, CONSENT as C, GIFT_LIVE as L, GIFT_PAGE as W, LIMIT, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M, WAITS } from "@/src/sentences";
 import { AskAgain } from "../kit/AskAgain";
+import { Button } from "../kit/Button";
 import { CertificateProof } from "../kit/CertificateProof";
 import { MarathonProof, marathonLine } from "../kit/MarathonProof";
 import { WcaProof, wcaLine } from "../kit/WcaProof";
@@ -193,7 +195,7 @@ function useOpeningSecret(): string | null {
 }
 
 function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ status: GiftStatus | MilestoneStatus; linkKey: string | null; reload: () => Promise<void>; refresh: () => Promise<void>; openProof: OpenShown | null }>) {
-  const { address, hasCredential, ensureSigner, status: accountStatus } = useAccount();
+  const { address, hasCredential, ensureSigner, status: accountStatus, createAccount, signIn } = useAccount();
   const openingSecret = useOpeningSecret();
   const door = useDoor();
   useMoneySession();
@@ -207,6 +209,8 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
   const [answer, setAnswer] = useState<{ at: Where; text: string; failed: boolean } | null>(null);
   /** A signed-out reader of an opened gift asked to sign in: the quiet line opens the door, it is not the moment's action. */
   const [signingIn, setSigningIn] = useState(false);
+  /** "Open my gift" pressed with nobody signed in: the account comes first, then the gift is opened, on that one press. */
+  const [comingIn, setComingIn] = useState(false);
   // Whether an account was signed in on this page before it went: then the session closed while they were here,
   // rather than a page opened again with nobody signed in (D74, D80).
   const [hadAccount, setHadAccount] = useState(false);
@@ -476,7 +480,8 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
   // second the secret after the link's `#`, which no server is sent and which signs the opening here.
   const linkOpened = opensByItsLink(status.version);
   const openingKey = linkOpened ? openingSecret : linkKey;
-  const open = () =>
+  /** Opens the gift for an account: the one signed in on this page, or the one a press just brought in. */
+  const openFor = (recipient: typeof address) =>
     run(
       "opening",
       "open",
@@ -486,12 +491,38 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
         // the contract the gift is on and that account are what it needs (src/client/v2.ts).
         const contract = milestone ? milestone.escrow : daily?.escrow;
         // The secret after the `#` signs here or goes nowhere: it is never handed to the function that posts a key.
-        if (linkOpened) await openWithTheLinkSecret({ giftId, linkSecret: openingKey, contract, recipient: address });
+        if (linkOpened) await openWithTheLinkSecret({ giftId, linkSecret: openingKey, contract, recipient });
         else await claimGift(giftId, openingKey);
         return null;
       },
       WAITS.opening,
     );
+  const open = () => openFor(address);
+  /**
+   * One press opens a gift from its link (the UI pass of 8 Oct 2026, screen 1 and rule 4): the account is made, or
+   * signed in to, and then the gift is opened, with no second button to find. Making an account asks no decision the
+   * press did not already carry, so it is a state of that button, which says "Opening" from the press to the end.
+   *
+   * The gift is read again for the account that just came in before anything is opened: who they are to it decides.
+   * The person who paid for it, signing in on their own link, opens nothing, and neither does anybody on a gift
+   * opened meanwhile; the page then draws what it is to them.
+   */
+  const openFromTheLink = async (how: "make" | "signIn") => {
+    setComingIn(true);
+    try {
+      await (how === "make" ? createAccount("") : signIn());
+      const cameIn = mera.currentAddress();
+      // The passkey was closed or refused: the panel says what to do, and nothing was opened.
+      if (!cameIn) return;
+      const theirs = (await loadGiftStatus(giftId, linkKey)) as GiftStatus | MilestoneStatus;
+      if (theirs.opened || theirs.youAreTheFunder) return;
+      await openFor(cameIn);
+    } catch {
+      // The gift could not be read for them: the page reads it again as the account arrives, and offers the button.
+    } finally {
+      setComingIn(false);
+    }
+  };
   const name = (username: string) =>
     run(
       "naming",
@@ -599,10 +630,11 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
         return (
           <div className="flex flex-col gap-[var(--space-md)]">
             {/* Inside another app's page no account is made here: the line says where to go, as the button under it
-                does, rather than asking for what the box then refuses (the founder, 1 Oct 2026). */}
-            <p className="font-medium">{door.kind === "elsewhere" ? ACCOUNT_DOOR.continueIn(ownBrowserOf(door.handset, door.app)) : W.createToOpen}</p>
-            {/* A device that remembers a passkey is somebody coming back: signing in leads, so no second account is made. */}
-            <AccountPanel returning={hasCredential} />
+                does, rather than asking for what the box then refuses (the founder, 1 Oct 2026). Anywhere else the
+                button says it all: "Open my gift" (the UI pass of 8 Oct 2026). */}
+            {door.kind === "elsewhere" ? <p className="font-medium">{ACCOUNT_DOOR.continueIn(ownBrowserOf(door.handset, door.app))}</p> : null}
+            {/* A device that remembers a passkey is somebody coming back: the press signs in, so no second account is made. */}
+            <AccountPanel returning={hasCredential} opening={{ pressed: (how) => void openFromTheLink(how), busy: comingIn }} />
           </div>
         );
       }
@@ -629,12 +661,10 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
       case "open":
         return (
           <>
-            <button type="button" onClick={open} disabled={working || !openingKey} className={PRIMARY_BUTTON}>
-              <ButtonWords busy={busy === "opening"} doing={W.opening}>
-                {W.openMyGift}
-              </ButtonWords>
-            </button>
-            <StepInProgress busy={busy === "opening"} step={step} />
+            {/* The same button as before the account, in the same state: a press made signed out goes on here. */}
+            <Button doing={busy === "opening" || comingIn ? W.opening : null} step={step} waiting={(working && busy !== "opening") || !openingKey} onPress={() => void open()} data-open-my-gift="">
+              {W.openMyGift}
+            </Button>
             {openingKey ? answerAt("open") : <FieldRefusal id="gift-no-key">{W.missingKey}</FieldRefusal>}
           </>
         );

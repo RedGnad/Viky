@@ -22,7 +22,7 @@ const GIFT = "1999996";
 test.describe("from the link to the first transaction", () => {
   test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: the test opens its own window, at 390 by 844");
 
-  test("a newcomer opens their gift in two presses and one passkey prompt", async ({ browser, baseURL }) => {
+  test("a newcomer opens their gift in one press and one passkey prompt", async ({ browser, baseURL }) => {
     test.setTimeout(120_000);
     const device = await profile(browser, baseURL, { width: 390, height: 844 });
     const { page, context } = device;
@@ -45,27 +45,23 @@ test.describe("from the link to the first transaction", () => {
 
     // The link, as a message carries it.
     await page.goto(`/g/${GIFT}?t=${KEY}`);
-    const create = page.getByRole("button", { name: "Create my account" });
-    await expect(create).toBeVisible();
+    const open = page.getByRole("button", { name: "Open my gift", exact: true });
+    await expect(open).toBeVisible();
     const linkShown = at();
 
-    // The account: one press, and the device's own prompt, which the virtual authenticator answers.
-    await create.click();
-    gestures.push("press: Create my account");
-    gestures.push("the device's passkey prompt: a face or a fingerprint");
-    await expect.poll(() => signedIn(context), { timeout: 30_000 }).toBe(true);
-    const open = page.getByRole("button", { name: "Open my gift" });
-    await expect(open).toBeVisible();
-    const accountMade = at();
-
-    // The opening: one press, and the first transaction is sent for them.
+    // The one press, and the device's own prompt, which the virtual authenticator answers: the account is made.
     await open.click();
     gestures.push("press: Open my gift");
+    gestures.push("the device's passkey prompt: a face or a fingerprint");
+    await expect.poll(() => signedIn(context), { timeout: 30_000 }).toBe(true);
+    const accountMade = at();
+
+    // The opening follows by itself, since 8 Oct 2026: the first transaction is sent for them with no second press.
     await expect.poll(() => openings, { timeout: 30_000 }).toBe(1);
-    await expect(open).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Open my gift" })).toHaveCount(0);
     const giftOpened = at();
 
-    expect(gestures.length, "the link to the first transaction is three gestures, two presses and a passkey prompt").toBe(3);
+    expect(gestures.length, "the link to the first transaction is two gestures, one press and a passkey prompt").toBe(2);
     if (OUT) writeFileSync(OUT, `${JSON.stringify({ measuredAt: new Date().toISOString(), viewport: "390x844", gestures, seconds: { linkShown, accountMade, giftOpened } }, null, 2)}\n`);
     await context.close();
   });

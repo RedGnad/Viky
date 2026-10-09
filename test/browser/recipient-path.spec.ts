@@ -161,6 +161,56 @@ test.describe("the path of the person a gift is for", () => {
       await device.context.close();
     });
 
+    test(`the link of a gift: one button makes the account and opens the gift, on one press (${size.name})`, async ({ browser, baseURL }) => {
+      test.setTimeout(120_000);
+      const GIFT = "1999993";
+      const device = await profile(browser, baseURL, size.viewport);
+      const { page, context } = device;
+      let opened = false;
+      let openings = 0;
+      let answer: (() => void) | undefined;
+      await page.route(new RegExp(`/api/gift/${GIFT}(\\?.*)?$`), (route) =>
+        route.fulfill(json(opened ? gift(GIFT, "recipient", { connected: false, phase: "opened" }) : gift(GIFT, "link", { opened: false, connected: false, claimedAtChain: 0, phase: "unopened", deadlineMs: null }))),
+      );
+      await page.route(`**/api/gift/${GIFT}/journal`, (route) => route.fulfill(json({ giftId: GIFT, kind: "milestone", readings: [] })));
+      await page.route(`**/api/gift/${GIFT}/consent`, (route) => route.fulfill(json({ giftId: GIFT, agreement: null })));
+      await page.route("**/api/gift/claim", async (route) => {
+        openings += 1;
+        // Held, so the button's state is seen while the opening is sent.
+        await new Promise<void>((resolve) => (answer = resolve));
+        opened = true;
+        return route.fulfill(json({ giftId: GIFT, opened: true }));
+      });
+
+      await page.goto(`/g/${GIFT}?t=${KEY}`);
+      // One button, one line, one quiet link: no frame of its own, no second big button, nothing to name.
+      const openIt = page.getByRole("button", { name: "Open my gift", exact: true });
+      await expect(openIt).toBeVisible();
+      await expect(page.getByText("It creates your account with your fingerprint, face or screen lock. 18 or older.", { exact: true })).toBeVisible();
+      const other = page.getByRole("button", { name: "I already have an account", exact: true });
+      await expect(other).toBeVisible();
+      await expect(page.getByText(/^By .+, or it goes back to Mom\.$/)).toBeVisible();
+      await expect(page.getByText("Create your account to open it. Nothing to install.")).toHaveCount(0);
+      await expect(page.getByText(/Name this device/)).toHaveCount(0);
+      await expect(page.locator("main").getByRole("button", { name: /^(Sign in|Create my account)$/ })).toHaveCount(0);
+      expect((await openIt.boundingBox())!.y, "the quiet link is under the button").toBeLessThan((await other.boundingBox())!.y);
+      await shot(page, size.name, "7a-the-link-opened");
+
+      // The press: the device's prompt, which the virtual authenticator answers, then the opening, with no second press.
+      await openIt.click();
+      await expect.poll(() => signedIn(context), { timeout: 30_000 }).toBe(true);
+      await expect.poll(() => openings, { timeout: 30_000, message: "the gift is opened by the same press" }).toBe(1);
+      const doing = page.locator('button[data-open-my-gift][data-state="doing"]');
+      await expect(doing).toHaveText("Opening");
+      await expect(doing.locator("[data-waiting] .working-ring")).toBeVisible();
+      await shot(page, size.name, "7b-opening");
+      answer?.();
+      await expect(page.getByRole("button", { name: "Open my gift" })).toHaveCount(0);
+      expect(openings, "opened once").toBe(1);
+      await shot(page, size.name, "7c-opened");
+      await device.context.close();
+    });
+
     test(`a funder who signs in on their own gift's link is shown their gift, not "Open my gift" (${size.name})`, async ({ browser, baseURL }) => {
       test.setTimeout(120_000);
       const GIFT = "1999995";
@@ -175,20 +225,31 @@ test.describe("the path of the person a gift is for", () => {
       });
       await page.route(`**/api/gift/${GIFT}/consent`, (route) => route.fulfill(json({ error: "Not yours" }, 403)));
       await page.route(`**/api/gift/${GIFT}/journal`, (route) => route.fulfill(json({ giftId: GIFT, kind: "milestone", readings: [] })));
+      let openings = 0;
+      await page.route("**/api/gift/claim", (route) => {
+        openings += 1;
+        return route.fulfill(json({ giftId: GIFT, opened: true }));
+      });
 
       await makeAnAccount(device);
       await context.clearCookies();
       await page.goto(`/g/${GIFT}?t=${KEY}`);
-      // The device remembers a passkey, so signing in leads: no second account is made by somebody coming back.
-      await expect(page.getByText("Create your account to open it. Nothing to install.")).toBeVisible();
-      const signIn = page.getByRole("button", { name: /^Sign in$/ }).last();
-      await expect(signIn).toBeVisible();
+      // The device remembers a passkey, so the one button signs in: no second account is made by somebody coming back.
+      await expect(page.getByText("Create your account to open it. Nothing to install.")).toHaveCount(0);
+      const openIt = page.getByRole("button", { name: "Open my gift", exact: true });
+      await expect(openIt).toBeVisible();
+      await expect(page.getByText("The same passkey you made your account with.", { exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Create a new account", exact: true })).toBeVisible();
+      // No second big button in the card: the header's door is the only "Sign in" on the page.
+      await expect(page.locator("main").getByRole("button", { name: /^Sign in$/ })).toHaveCount(0);
       await shot(page, size.name, "5a-own-link-signed-out");
       const before = reads;
-      await signIn.click();
+      await openIt.click();
       await expect.poll(() => signedIn(context), { timeout: 30_000 }).toBe(true);
       await expect.poll(() => reads, { message: "the gift is read again for the account that signed in" }).toBeGreaterThan(before);
+      // The press signed them in, the gift was read for them, and it is theirs to offer, not to open: nothing was opened.
       await expect(page.getByRole("button", { name: "Open my gift" })).toHaveCount(0);
+      expect(openings, "the person who paid opens nothing by signing in on their own link").toBe(0);
       await expect(page.locator("dl.said-lines > div").filter({ hasText: /^Made/ })).toHaveText(/^Made.+, gift 1999995$/);
       await shot(page, size.name, "5b-own-link-signed-in");
       await device.context.close();
@@ -227,7 +288,7 @@ test.describe("the path of the person a gift is for", () => {
       // The line above the box says where to go, never to create here what the box says cannot be created here.
       await expect(instagram.page.getByText("To open it, continue in Safari. Nothing to install.")).toBeVisible();
       await expect(instagram.page.getByText("Create your account to open it. Nothing to install.")).toHaveCount(0);
-      await expect(instagram.page.getByRole("button", { name: /Create my account|I already have an account|^Sign in$/ })).toHaveCount(0);
+      await expect(instagram.page.getByRole("button", { name: /Create my account|Open my gift|I already have an account|^Sign in$/ })).toHaveCount(0);
       await expect(instagram.page.getByRole("button", { name: "Copy this gift's link" })).toBeVisible();
       await expect(instagram.page.getByText(/computer|viky\.cash/i)).toHaveCount(0);
       await shot(instagram.page, size.name, "6a-inside-instagram");
@@ -263,7 +324,7 @@ test.describe("the path of the person a gift is for", () => {
       await unopened(old.page);
       await old.page.goto(`/g/${GIFT}?t=${KEY}`);
       await expect(old.page.getByText("Update your iPhone to create your account. Viky needs iOS 18 or later.")).toBeVisible();
-      await expect(old.page.getByRole("button", { name: /Create my account/ })).toHaveCount(0);
+      await expect(old.page.getByRole("button", { name: /Create my account|Open my gift/ })).toHaveCount(0);
       await shot(old.page, size.name, "6e-iphone-below-ios-18");
       await old.context.close();
 
@@ -278,11 +339,16 @@ test.describe("the path of the person a gift is for", () => {
       })();`);
       await unopened(chrome.page);
       await chrome.page.goto(`/g/${GIFT}?t=${KEY}`);
-      const create = chrome.page.getByRole("button", { name: "Create my account" });
+      const create = chrome.page.getByRole("button", { name: "Open my gift", exact: true });
       await expect(create).toBeEnabled();
       await expect(chrome.page.getByText(/computer/i)).toHaveCount(0);
+      // Nothing of the rescue before a try has failed (rule 6 of the pass of 8 Oct 2026).
+      await expect(chrome.page.getByRole("button", { name: "Copy this gift's link" })).toHaveCount(0);
       await shot(chrome.page, size.name, "6f-a-phone-that-says-no");
       await create.click();
+      // Failed: the button is back at rest, with one line under it, and then what to change on the phone.
+      await expect(chrome.page.locator("#open-my-gift-refused")).toBeVisible();
+      await expect(create).not.toHaveAttribute("data-state");
       await expect(chrome.page.getByText("If it keeps failing on this iPhone: in Settings, turn on AutoFill Passwords and Passkeys, and open this gift's link in Safari.")).toBeVisible();
       await expect(chrome.page.getByRole("button", { name: "Copy this gift's link" })).toBeVisible();
       await chrome.page.getByRole("button", { name: "Copy this gift's link" }).scrollIntoViewIfNeeded();
@@ -299,7 +365,8 @@ test.describe("the path of the person a gift is for", () => {
       await unopened(computer.page);
       await computer.page.goto(`/g/${GIFT}?t=${KEY}`);
       await expect(computer.page.getByText("This computer did not find a fingerprint reader or Windows Hello.", { exact: true })).toBeVisible();
-      await expect(computer.page.getByRole("button", { name: "Create my account" })).toBeEnabled();
+      await expect(computer.page.getByRole("button", { name: "Open my gift", exact: true })).toBeEnabled();
+      await expect(computer.page.getByText("By creating an account you confirm you are 18 or older.", { exact: true })).toBeVisible();
       await shot(computer.page, size.name, "6h-a-computer-with-no-sensor");
       await computer.context.close();
     });
