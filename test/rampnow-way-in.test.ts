@@ -54,7 +54,9 @@ test("the page arrives filled in and locked: the amount, the euro, the card, USD
     rampnowPage({ account: ACCOUNT, euros: 30 }),
     `https://app.rampnow.io/order/quote?orderType=buy&srcChain=fiat&srcCurrency=EUR&srcAmount=30&paymentMode=card&dstCurrency=USDC&dstChain=monad&walletAddress=${ACCOUNT}&lockFields=srcAsset,srcAmount,dstAsset,paymentMode,walletAddress&prefill=true`,
   );
-  assert.equal(wayInPage(WAY_IN_USDC, { account: ACCOUNT, euros: 29.2 }), rampnowPage({ account: ACCOUNT, euros: 30 }), "a whole euro, rounded up");
+  // To the cent since 9 Oct 2026, and up: its page was read taking 9.12 and showing 9.06 USDC for it.
+  assert.match(wayInPage(WAY_IN_USDC, { account: ACCOUNT, euros: 29.123 }), /srcAmount=29\.13&/);
+  assert.equal(wayInPage(WAY_IN_USDC, { account: ACCOUNT, euros: 30 }), rampnowPage({ account: ACCOUNT, euros: 30 }));
   // Nothing is locked empty: without an account or an amount, that field stays the person's.
   assert.match(rampnowPage({}), /lockFields=srcAsset,dstAsset,paymentMode&prefill=true$/);
   assert.doesNotMatch(rampnowPage({}), /walletAddress=|srcAmount=|apiKey/);
@@ -71,8 +73,9 @@ test("the fee is the one measured, and the amount asked covers it so the gift is
   }
   assert.equal(feeSentence(WAY_IN_USDC), "Rampnow keeps 7 % plus 0.40 EUR with a minimum of 1.00 EUR");
   assert.equal(DOLLAR_COIN_ALLOWANCE, 0.01);
-  // Thirty dollars at the European Central Bank's 1.1355: 26.42 EUR, 26.69 with the allowance, 29.13 with the fee, so 30.
-  assert.equal(eurosNeededOn(30_000_000n, WAY_IN_USDC, 1.1355), 30);
+  // Thirty dollars at the European Central Bank's 1.1355: 26.42 EUR, 26.69 with the allowance, 29.13 with the fee.
+  // It asked 30 until 9 Oct 2026: the rest of a whole euro, which was neither the gift nor the fee.
+  assert.equal(eurosNeededOn(30_000_000n, WAY_IN_USDC, 1.1355), 29.13);
   // Every whole gift from 5 to 1,000 dollars: what Rampnow delivered that day for the euros asked covers the gift.
   for (let dollars = 5; dollars <= 1_000; dollars += 1) {
     const euros = eurosNeededOn(BigInt(dollars) * 1_000_000n, WAY_IN_USDC, 1.1355)!;
@@ -93,7 +96,7 @@ test("it is offered where Rampnow says it fully serves, and gives way by one sen
     const ways = waysIn();
     const france = wayInFor(30_000_000n, ways, 1.1355, cardReach("fr"));
     assert.equal(france.way, WAY_IN_USDC);
-    assert.equal(france.euros, 30);
+    assert.equal(france.euros, 29.13);
     assert.equal(cardReach("sn").Rampnow, "does-not");
     const dakar = wayInFor(30_000_000n, ways, 1.1355, cardReach("sn"));
     assert.equal(dakar.way, WAY_IN_CHAIN_COIN, "Senegal is under Restricted at Rampnow, and Ramp does not sell there");

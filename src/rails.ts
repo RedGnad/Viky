@@ -1,3 +1,4 @@
+import { upToTheCent } from "./euro-cents";
 import type { Hex } from "viem";
 import { NATIVE_OUT } from "./exit-terms";
 import { USDC_ADDRESS } from "./monad/chain";
@@ -120,6 +121,11 @@ export type WayIn = Readonly<{
   delivers: Readonly<{ coin: string; network: string }>;
   /** Their smallest purchase, in euros, as they publish it. */
   smallestEur: number;
+  /**
+   * Whether its page takes an amount with cents, as read on that page. A service that does not is asked for whole
+   * euros, and what a whole euro brings beyond the gift and the fee stays in the account.
+   */
+  cents?: boolean;
   /** How long they say a payment takes, in their own words, when they say it. Absent rather than guessed. */
   takes?: string;
   /** What they keep, as they publish it. */
@@ -322,6 +328,9 @@ export const RAMPNOW_OPEN_IN: readonly string[] = [
  *   answered exactly that (20 EUR: 1.80; 30 EUR: 2.50; 100 EUR: 7.40), with 0.004 EUR for the network. 30 EUR bought
  *   31.13 USDC. Its rate was 1.1323 dollars a euro when the European Central Bank's was 1.1355, 0.3 % under.
  * - The smallest card payment is 5 EUR (`paymentModeConfigs.card.minAmount`).
+ * - Its page takes an amount with cents (read 9 Oct 2026, without paying): the address this page is opened by, with
+ *   `srcAmount=9.12` locked, shows "€9.12" and "9.06 USDC", and 9 EUR shows 8.93 USDC. Whether its payment step keeps
+ *   the cents is known only once a real payment of such an amount has run.
  * - Its page locks five fields by its address (`lockFields`, read in its script): what is paid, how much, what is
  *   bought, how, and to whom. Its documentation names the others (`https://docs.rampnow.io/api-reference/widget-mode`).
  * - It has no AUSD on Monad, and no franc CFA.
@@ -338,6 +347,7 @@ export const WAY_IN_USDC: WayIn = {
   arrives: "usdc",
   delivers: { coin: "USDC", network: "Monad" },
   smallestEur: 5,
+  cents: true,
   fee: { percent: 7, upTo: false, plus: 0.4, minimum: 1, currency: "EUR" },
   conditions: ["The first time: your details, a code by text, and your ID.", "A card in your name."],
   // Two readings. Its documentation, "Onramp Flow" (docs.rampnow.io, read 5 Oct 2026): the person enters an e-mail and
@@ -446,7 +456,8 @@ export function rampnowPage(fill: Readonly<{ account?: string; euros?: number }>
   set("orderType", "buy");
   set("srcChain", "fiat");
   set("srcCurrency", "EUR");
-  if (fill.euros && fill.euros > 0) set("srcAmount", String(Math.ceil(fill.euros)));
+  // To the cent, and never under what was worked out: its page takes cents (`WAY_IN_USDC.cents`).
+  if (fill.euros && fill.euros > 0) set("srcAmount", String(upToTheCent(fill.euros)));
   set("paymentMode", "card");
   set("dstCurrency", "USDC");
   set("dstChain", "monad");

@@ -237,9 +237,6 @@ export const PAY = {
     gift: (recipient: string) => (recipient.trim() ? `${recipient}'s gift` : "The gift"),
     fromAccount: "From your Viky money",
     fee: "Card fee",
-    // What the card brings beyond the gift and its fee: "Stays in your Viky money" was not understood (the founder,
-    // 4 Oct 2026). The line stays, so the sum adds up.
-    stays: "Change, kept in your account",
     viky: "Viky takes",
   },
   nothing: "nothing",
@@ -337,6 +334,26 @@ export const PAY = {
   accountUnread: "What your account holds could not be read.",
   readAgain: "Read it again",
   payByCard: (amount: string) => `Pay ${amount} by card`,
+  /**
+   * One line under the card's button, which adds up to the cent to what the button says (the founder, 9 Oct 2026):
+   * the gift, or the part of it the card pays when the account pays the rest; the card service's fee; and what the
+   * card brings beyond the two, which stays in the person's account. "€8.00 gift, €1.04 card fee, €0.08 stays yours."
+   * It replaced three lines of the sum, one of them "Change, kept in your account", which read as a cost.
+   */
+  cardSum: (parts: Readonly<{ gift: string; part: boolean; fee: string; stays: string | null }>) =>
+    `${parts.gift} ${parts.part ? "of the gift" : "gift"}, ${parts.fee} card fee${parts.stays ? `, ${parts.stays} stays yours` : ""}.`,
+  /**
+   * Where the gift needs less of a card than the card service's smallest payment (9 Oct 2026): no card is offered,
+   * the floor is said, and the one action brings the gift to the smallest round amount a card can pay for.
+   */
+  /**
+   * Under the card's button where the sheet counts in another money than the euro (the audit of 9 Oct 2026): every
+   * card service is opened in euros, so the euros are what the card is charged, and the figures above are their
+   * conversion at the day's rate.
+   */
+  cardCharged: (euros: string) => `Your card is charged ${euros}.`,
+  cardStartsAt: (amount: string) => `Card payments start at ${amount}.`,
+  makeTheGift: (amount: string) => `Make the gift ${amount}`,
   payFromAccount: (amount: string, recipient: string) => `Put ${amount} in ${their(recipient)} name`,
   /**
    * Above that action, for an account the judge code credited and only for it (D295). It says how a funder pays by

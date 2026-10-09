@@ -1,4 +1,5 @@
 import type { RailReach } from "./rail-country";
+import { upToTheCent } from "./euro-cents";
 import type { PublishedFee, WayIn } from "./rails";
 
 /**
@@ -161,7 +162,9 @@ export function eurosToCover(shortfallUnits: bigint, usdPerEur?: number): number
 }
 
 /**
- * How many whole euros a way in needs for this shortfall, before its floor: what the person is asking of it (D125).
+ * How many euros a way in needs for this shortfall, before its floor: what the person is asking of it (D125). Whole
+ * euros, or to the cent where the service's page takes cents (`WayIn.cents`, the founder's decision of 9 Oct 2026):
+ * a whole euro asked for a gift of 8 was 10, and 0.90 of it was neither the gift nor the fee.
  *
  * The rail that sells the chain's coin keeps the model above: its coin moves daily, and the tenth added for the rate
  * is what stops a payment falling short. The rail that sells what a gift holds needs no such margin, because what it
@@ -182,18 +185,22 @@ export function eurosNeededOn(shortfallUnits: bigint, way: WayIn, usdPerEur: num
   // the fixed part they take on every payment when they take one.
   const withShare = (euros + (way.fee.plus ?? 0)) / (1 - way.fee.percent / 100);
   const withMinimum = euros + way.fee.minimum;
-  return Math.ceil(Math.max(withShare, withMinimum));
+  const needed = Math.max(withShare, withMinimum);
+  return way.cents ? upToTheCent(needed) : Math.ceil(needed);
 }
 
 /**
- * How many whole euros to pay on the way in the funder chose (D101): what it needs, and never under their floor.
+ * How many euros to pay on the way in the funder chose (D101): what it needs, and never under their floor.
  * Whatever a payment leaves over stays in the person's own account for the next gift.
  */
 export function eurosToBuyOn(shortfallUnits: bigint, way: WayIn, usdPerEur: number | undefined): number | undefined {
   const needed = eurosNeededOn(shortfallUnits, way, usdPerEur);
   if (needed === undefined) return undefined;
-  // Whole euros, as the sheet says them: a floor that is not a whole number is paid at the next one.
-  return needed === 0 ? 0 : Math.ceil(Math.max(way.smallestEur, needed));
+  // Whole euros, as the sheet says them: a floor that is not a whole number is paid at the next one. To the cent
+  // where the service takes cents.
+  if (needed === 0) return 0;
+  const atLeast = Math.max(way.smallestEur, needed);
+  return way.cents ? upToTheCent(atLeast) : Math.ceil(atLeast);
 }
 
 /** Why a way in refused this gift: its own answer about the country, its published floor, or its own asset list. */
@@ -204,7 +211,10 @@ export type WayInOffer = Readonly<{
   way: WayIn;
   /** The whole euros to pay on it, or nothing when no rate was read and this rail's figure needs one. */
   euros: number | undefined;
-  /** True when the gift needs less than this rail's floor and the floor is what is paid, the rest staying yours. */
+  /**
+   * True when the gift needs less than every rail's floor. `euros` is then that floor, which the wait still pays when a
+   * payment landed short; the pay sheet offers no card under it and proposes a gift the card can pay (9 Oct 2026).
+   */
   atFloor: boolean;
   /** The way the register puts first and why it refused, when this is the next one. Absent while the first stands. */
   insteadOf?: Readonly<{ way: WayIn; because: WayInRefusal }>;
@@ -227,9 +237,13 @@ function refusalOf(way: WayIn, needed: number | undefined, reach: Readonly<Recor
  * whose place it took and why, so the sheet can say so in our words. A silence ("unknown") is not a refusal.
  *
  * When every way refuses on its floor, the gift's own minimum does not move (D125): of the ways a country or a pause
- * has not shut, the one with the lowest floor is paid at its floor, and what is left over stays in the account. When
- * a country has shut every way, the first stands with no sentence: a country is a guess, and a guess never leaves the
- * sheet with nothing to pay on; the rail's own identity check decides.
+ * has not shut, the one with the lowest floor stands `atFloor`, and the pay sheet proposes a gift a card can pay for
+ * (9 Oct 2026). When a country has shut every way, the first stands with no sentence: a country is a guess, and a
+ * guess never leaves the sheet with nothing to pay on; the rail's own identity check decides.
+ *
+ * A way that refuses on its floor gives its place only to one that asks less than that floor (the founder's rule of
+ * 9 Oct 2026, under a service's smallest payment no card is offered): with Rampnow first, a gift of three euros went
+ * to the next service, which took it only because its own fee is larger, and asked seven.
  */
 export function wayInFor(
   shortfallUnits: bigint,
@@ -242,7 +256,7 @@ export function wayInFor(
   const first = priced[0];
   if (first.because === undefined) return { way: first.way, euros: first.needed, atFloor: false };
   const insteadOf = { way: first.way, because: first.because };
-  const next = priced.slice(1).find((entry) => entry.because === undefined);
+  const next = priced.slice(1).find((entry) => entry.because === undefined && (first.because !== "floor" || (entry.needed !== undefined && entry.needed <= first.way.smallestEur)));
   if (next) return { way: next.way, euros: next.needed, atFloor: false, insteadOf };
   const lowest = priced.filter((entry) => entry.because === "floor").sort((left, right) => left.way.smallestEur - right.way.smallestEur)[0];
   if (!lowest) return { way: first.way, euros: first.needed, atFloor: false };
