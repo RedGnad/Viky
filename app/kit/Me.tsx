@@ -204,8 +204,8 @@ export function Me() {
             <path d="M18 12H10" />
           </svg>
         </Act>
-        {/* The same way out, to the same door: this account's session closes, the passkey this device remembered is let
-            go of, and the landing opens the door, where another account is signed in to or made. */}
+        {/* The same way out, and then the door: this account's session closes, the passkey this device remembered is
+            let go of, and the landing opens the door, where another account is signed in to or made. */}
         <Act
           name={W.otherAccount}
           disabled={leaving !== null}

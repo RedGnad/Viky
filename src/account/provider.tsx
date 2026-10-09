@@ -289,8 +289,8 @@ export function AccountProvider({ initialAccount, children }: { initialAccount?:
         } catch {
           // A browser that refuses the cookie keeps the moment as played, which is what it had.
         }
-        // Straight to the account's door (the founder, 4 Oct 2026): the landing opens it as it arrives.
-        askForTheDoor();
+        // The landing, and nothing opened on it (the founder, 9 Oct 2026): the door is what "Other account" asks for,
+        // and the two did the same thing on the screen.
         // A document load on purpose, not a client navigation: the browser keeps painting this page until the landing
         // is ready (paint holding), where a client navigation redrew this page for nobody while it waited (D258).
         // eslint-disable-next-line @next/next/no-location-assign-relative-destination
@@ -301,8 +301,8 @@ export function AccountProvider({ initialAccount, children }: { initialAccount?:
         await signOutOfServer();
         tellOtherTabsSignedOut();
         mera.forgetCredential();
-        // The same way out as signing out, and the same door: it used to leave the page of an account drawn for
-        // nobody, where "Sign in" had to be pressed again (the founder, 4 Oct 2026).
+        // Straight to the account's door, which the landing opens as it arrives: it used to leave the page of an
+        // account drawn for nobody, where "Sign in" had to be pressed again (the founder, 4 Oct 2026).
         askForTheDoor();
         // eslint-disable-next-line @next/next/no-location-assign-relative-destination
         window.location.assign("/");
