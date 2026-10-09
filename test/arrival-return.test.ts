@@ -11,7 +11,8 @@ import { MOTION } from "../src/design-tokens";
  */
 test("what this device last saw comes from the cookie the server read, the same in the browser's first render (the fix to #154)", () => {
   const seen = readFileSync("app/kit/seen.tsx", "utf8");
-  assert.match(seen, /useSyncExternalStore\(neverChanges, \(\) => snapshot\(key, initial\), \(\) => initial\[seenKey\(key\)\]\)/, "the server's answer and the hydration's are the cookie's");
+  // Each screen freezes its own reading of a key since 9 Oct 2026; the server's answer is the cookie's, as before.
+  assert.match(seen, /useSyncExternalStore\(neverChanges, \(\) => snapshot\(key, initial, screen\), \(\) => initial\[seenKey\(key\)\]\)/, "the server's answer and the hydration's are the cookie's");
   assert.match(seen, /const onThisScreen = new Map/, "frozen for as long as the screen stands");
   assert.match(seen, /export function forgetOnThisScreen/, "and forgotten when it goes");
   assert.doesNotMatch(readFileSync("app/kit/Motion.tsx", "utf8"), /localStorage/, "nothing the server cannot read decides the first image");
