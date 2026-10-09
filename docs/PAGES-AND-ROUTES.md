@@ -12,7 +12,7 @@
 | `/add-your-university` | how a student adds their university's portal |
 | `/help`, `/privacy`, `/legal` | five questions; what is kept and who processes it; who publishes and hosts the site |
 | `/judges` | the only page with contract addresses |
-| `/dev/*` | dev pages, answered only with `VIKY_DEV_PAGES=1` to an operator's account; a 404 in production |
+| `/dev/*` | dev pages, answered only with `VIKY_DEV_PAGES=1` to an operator's account; a 404 in production. One exception, `/dev/rampnow`, opens to anybody, in production too: it reads nothing from the server, only what that browser itself wrote down of a card payment, and nothing on the product links to it |
 
 Every route is a file under `app/api` (`find app/api -name "route.ts*"` lists them), grouped by what they serve:
 `account` (the passkey session and preferences), `gift` and `gifts` (create, claim, connect, count, withdraw, consent,
