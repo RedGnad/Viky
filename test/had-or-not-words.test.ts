@@ -119,7 +119,7 @@ test("the title says where the proof stands, to each of the two people", () => {
   assert.deepEqual(liveOf({ ...WAITING, proof: "pending" }).figure, { label: "In your name", value: "$25.00" });
   // The page hands it what the contract and the review say, and the late window is the contract's.
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
-  assert.match(page, /hadOrNot\.review\?\.status \?\? \(pastTheLastDay \? \(condition\?\.nature === "shown" \? "ended" : "late"\) : null\)/);
+  assert.match(page, /hadOrNot\.review\?\.status \?\? \(pastTheLastDay \? \(condition\?\.nature === "shown" \|\| datedTheDayItIsRead\(hadOrNot\.conditionId\) \? "ended" : "late"\) : null\)/);
   // The contract compares days, so the whole last day counts; and what is shown is dated the day it is shown.
   assert.match(page, /Math\.floor\(nowMs \/ 86_400_000\) > Math\.floor\(hadOrNot\.deadlineMs \/ 86_400_000\)/);
   assert.match(readFileSync("src/shown-verification.ts", "utf8"), /eventAt: BigInt\(evidence\.reading\.eventAt \?\? evidence\.observedAt\)/);

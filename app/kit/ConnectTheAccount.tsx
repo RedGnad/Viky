@@ -5,6 +5,7 @@ import { agreeFirst, signConsent } from "@/src/client/consent";
 import { ApiError, getJson, postJson } from "@/src/client/api";
 import { withTheStartSigned, type StartAsked } from "@/src/client/v2";
 import { conditionById } from "@/src/conditions";
+import { connectReturnInWords } from "@/src/connect-return";
 import { GIFT_PAGE as W } from "@/src/sentences";
 import { BODY, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../components/ui";
 import { FieldRefusal } from "./FieldRefusal";
@@ -34,11 +35,11 @@ export function ConnectTheAccount({ giftId, conditionId, yours, onChanged }: Rea
   const { ensureSigner } = useAccount();
   const [status, setStatus] = useState<Status | null>(null);
   const [busy, setBusy] = useState<Busy>("loading");
-  // Fitbit sends the person back with `?connect=done`, or a reason: read once, when the screen is first drawn.
+  // The source sends the person back with `?connect=done`, or a reason: read once, when the screen is first drawn,
+  // and said as that reason (src/connect-return.ts).
   const [refusal, setRefusal] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
-    const answer = new URLSearchParams(window.location.search).get("connect");
-    return answer && answer !== "done" ? W.connectFailed : null;
+    return connectReturnInWords(new URLSearchParams(window.location.search).get("connect"), condition?.source ?? "");
   });
   const [said, setSaid] = useState<string | null>(() => {
     if (typeof window === "undefined" || link?.kind !== "connect") return null;

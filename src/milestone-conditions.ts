@@ -313,6 +313,16 @@ export function milestoneOf(condition: Condition | undefined): MilestoneConditio
   return MILESTONES.find((entry) => entry.condition.id === condition.id);
 }
 
+/**
+ * Whether what a gift asks is dated by the day Viky reads it, and not by a day its source prints (D273): a race's
+ * result and a competition's. Past the last day nothing read can pay, exactly as for a proof shown from an account,
+ * so the page says the last day passed and offers no reading (the audit of 8 Oct 2026: it said the result could
+ * still be proved for two weeks, and the reading then answered that it was granted too late).
+ */
+export function datedTheDayItIsRead(conditionId: string): boolean {
+  return conditionId === "marathon-finish" || conditionId === "wca-time";
+}
+
 export function milestoneById(conditionId: string): MilestoneCondition | undefined {
   return milestoneOf(conditionById(conditionId));
 }
@@ -770,6 +780,9 @@ export const MARATHON_MILESTONE: CertificateCondition = {
       notPublic: "The timing company's page could not be read.",
       expired: "The timing company has no finish time for that bib.",
       notFound: "No runner answers to that bib in that race. Check the number on your bib.",
+      // A race's result is dated the day it is read (D273), so "granted after the last day" would be said of a race
+      // run in time: its own words (the audit of 8 Oct 2026).
+      afterTheDeadline: "This gift's last day has passed, and a result read after it cannot pay.",
       anotherName: "That line is in another name than the one this gift is for, so it cannot pay.",
       below: (target, metric) => (metric === 0 ? "The results page has no finish time for that bib." : `That time is not under the hours this gift is for: it has to ${marathonTargetInWords(target)}.`),
     },
@@ -834,6 +847,8 @@ export const WCA_MILESTONE: CertificateCondition = {
       nameShape: "Type their name as the WCA prints it, first name and family name.",
       linkShape: "A WCA ID is four figures, four letters and two figures, like 2019SCHO04; otherwise your name as on the competitors list.",
       notPublic: "The WCA's results could not be read.",
+      // Dated the day it is read, as a race's is.
+      afterTheDeadline: "This gift's last day has passed, and a result read after it cannot pay.",
     },
   },
 };

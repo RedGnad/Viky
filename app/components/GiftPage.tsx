@@ -34,7 +34,7 @@ import { spokenAmount } from "@/src/display-currency";
 import { giftOfMilestone, giftOfSummary, funderMayTakeItBack, readAs } from "@/src/gift-moment";
 import { asItGoesNow, eyebrowOf, liveOf, titleOf } from "@/src/gift-live";
 import { notTheirs, voiceOf, type Voice } from "@/src/gift-voice";
-import { milestoneById } from "@/src/milestone-conditions";
+import { datedTheDayItIsRead, milestoneById } from "@/src/milestone-conditions";
 import { previewLine, sharedWith } from "@/src/preview-line";
 import { MILESTONE_LATE_PROOF_SECONDS } from "@/src/milestone-protocol";
 import type { AnyGiftStatus } from "@/src/gift-status";
@@ -353,7 +353,8 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
   // nothing shown after the last day can pay (src/shown-verification.ts: the day shown is the day sent to the contract).
   // A proof nobody reviewed in time is said for good, on the gift over as on the gift about to go back.
   const unread = hadOrNot?.review?.status === "unread";
-  const proofStands = !hadOrNot || !hadOrNot.opened ? null : unread ? "unread" : gift.finished ? null : (hadOrNot.review?.status ?? (pastTheLastDay ? (condition?.nature === "shown" ? "ended" : "late") : null));
+  // A race and a competition are dated the day their result is read, so they stand with what is shown.
+  const proofStands = !hadOrNot || !hadOrNot.opened ? null : unread ? "unread" : gift.finished ? null : (hadOrNot.review?.status ?? (pastTheLastDay ? (condition?.nature === "shown" || datedTheDayItIsRead(hadOrNot.conditionId) ? "ended" : "late") : null));
   /** The target as a sentence may name it: a climb's number, a grade's words, and nothing for something had or not. */
   const targetToName = !milestone ? null : hadOrNot ? (milestone.targetWords ?? null) : (milestone.targetWords ?? (milestone.target === null ? null : String(milestone.target)));
 
@@ -765,7 +766,8 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
           rest of how a gift is checked. Being told is offered in the open, under the card (the founder, 1 Oct 2026). */}
       {/* A milestone is read as its page opens, so it has no button for it (the founder, 29 Sep 2026). */}
       {/* Neither has a habit read as its page opens (the founder, 3 Oct 2026): opening the page is the gesture. */}
-      {(mine || readerIsFunder) && !milestone && !gift.finished && gift.connected && !gift.sourceClosed && !readingsStopped && !asItGoes ? (
+      {/* Only the person the gift is for: the route answers anybody else "Open the gift first." (the audit of 8 Oct 2026). */}
+      {mine && !milestone && !gift.finished && gift.connected && !gift.sourceClosed && !readingsStopped && !asItGoes ? (
         <>
           <button type="button" onClick={countToday} disabled={working} className={`${SMALL_BUTTON} self-start`}>
             <ButtonWords busy={busy === "counting"} doing={W.reading}>

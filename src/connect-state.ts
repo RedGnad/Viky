@@ -27,6 +27,8 @@ export class ConnectStateError extends Error {
   constructor(
     readonly code: "NOT_CONFIGURED" | "INVALID" | "EXPIRED",
     message: string,
+    /** The gift a state of ours named, when the state is only too old: where the person is sent back to, to read why. */
+    readonly giftId: string | null = null,
   ) {
     super(message);
     this.name = "ConnectStateError";
@@ -68,7 +70,7 @@ export function openConnectState(value: string, nowSeconds: number, env: NodeJS.
     throw new ConnectStateError("INVALID", "The connect state is malformed");
   }
   if (state.source !== "fitbit" && state.source !== "strava") throw new ConnectStateError("INVALID", "The connect state names no source");
-  if (nowSeconds - state.issuedAt > CONNECT_STATE_TTL_SECONDS || state.issuedAt > nowSeconds + 60) throw new ConnectStateError("EXPIRED", "The connection took too long. Start again.");
+  if (nowSeconds - state.issuedAt > CONNECT_STATE_TTL_SECONDS || state.issuedAt > nowSeconds + 60) throw new ConnectStateError("EXPIRED", "The connection took too long. Start again.", /^\d{1,78}$/.test(state.giftId) ? state.giftId : null);
   return state;
 }
 
