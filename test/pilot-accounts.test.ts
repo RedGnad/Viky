@@ -51,9 +51,9 @@ test("a gift is between two others, from the founder to another, from another to
   assert.equal(between({ funder: FOUNDER, recipient: ANNA }, founders), "founder to another");
   assert.equal(between({ funder: ANNA, recipient: FOUNDER_TWO.toUpperCase().replace("0X", "0x") }, founders), "another to founder");
   assert.equal(between({ funder: FOUNDER, recipient: FOUNDER_TWO }, founders), "the founder's own try");
-  // Nobody opened it yet: it is judged by who funded it, and never counted as somebody else's use.
-  assert.equal(between({ funder: FOUNDER, recipient: null }, founders), "the founder's own try");
-  assert.equal(between({ funder: ANNA, recipient: null }, founders), "two others");
+  // Nobody opened it yet: a class of its own, whoever funded it. It is nobody's use of a gift, and never "between two".
+  assert.equal(between({ funder: FOUNDER, recipient: null }, founders), "not opened yet");
+  assert.equal(between({ funder: ANNA, recipient: null }, founders), "not opened yet");
 });
 
 test("the count: gifts, who funded and who opened them, what was earned and what went back, and the founder's tries apart", () => {
@@ -73,7 +73,8 @@ test("the count: gifts, who funded and who opened them, what was earned and what
   assert.equal(usage.sentBack, 17_142_858n);
   assert.deepEqual(usage.funders, { all: 3, founders: 2 });
   assert.deepEqual(usage.recipients, { all: 3, founders: 1 });
-  assert.deepEqual(usage.between, { "two others": 1, "founder to another": 1, "another to founder": 0, "the founder's own try": 2 });
+  // The gift nobody opened is counted apart: it was one of the founder's own tries, by its funder alone.
+  assert.deepEqual(usage.between, { "two others": 1, "founder to another": 1, "another to founder": 0, "the founder's own try": 1, "not opened yet": 1 });
   assert.equal(usage.onSecondVersion, 1);
   assert.equal(usage.onThirdVersion, 0);
   // A gift on the third daily contract is counted there, and with neither the first version's nor the second's (the
