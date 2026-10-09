@@ -9,12 +9,12 @@ differ by one line:
 | File | Bytes | What it holds |
 | --- | --- | --- |
 | [`utoulouse-enrolment.js`](utoulouse-enrolment.js) | 23,233 | the script with the character on its veil (sha256 `207b721a671513c486d830529776d7449f146e328dc7d7484641656c319e3edd`) |
-| [`utoulouse-enrolment-no-character.js`](utoulouse-enrolment-no-character.js) | 15,456 | the same script with `var FIGURE = null;`, for the day Reclaim's field refuses the length of the first (sha256 `f1c091f387c309f79ef8cbde901ceaaf21bd4a1e1f5c29e4d55aa18c5d8bdff0`) |
+| [`utoulouse-enrolment-no-character.js`](utoulouse-enrolment-no-character.js) | 15,456 | the same script with `var FIGURE = null;`, kept in case Reclaim's field refuses the length of the first, which it took on 9 Oct 2026 (sha256 `f1c091f387c309f79ef8cbde901ceaaf21bd4a1e1f5c29e4d55aa18c5d8bdff0`) |
 
 ## The record at Reclaim
 
-Everything but the script is what version 3.0.0 held, and what version 4.0.0 holds, read from Reclaim's public record
-on 8 Oct 2026.
+Everything but the script is what version 3.0.0 held, and what versions 4.0.0 and 5.0.0 hold, read from Reclaim's public
+record on 8 and 9 Oct 2026.
 
 | Field | Value |
 | --- | --- |
@@ -93,7 +93,9 @@ address, request and rule are those of 3.0.0):
 - asks Reclaim for its wait as soon as the student is signed in, each call in its own try, with its line in the log;
 - says one more line after the press, whether the view changed, and counts what it found when it gives up.
 
-The version after it (9 Oct 2026, to be saved at Reclaim by the founder; Reclaim gives it its number) adds the veil
+Version 5.0.0, saved at Reclaim by the founder on 9 Oct 2026 from the first file above and pinned in production the
+same day, ahead of any proof (the script in Reclaim's public record is that file to the last character, read that day),
+adds the veil
 (the founder: a portal that stands still after the sign-in reads as broken in a second and a half), presses with the
 entry's own `click()`, which a veil over the entry does not stop, and takes out the call to
 `window.Reclaim.requiresUserInteraction(false)` that 4.0.0 made, which does nothing on the web page. The rest of the
@@ -109,10 +111,11 @@ path is 4.0.0's.
   Reclaim's window runs the script before the university's page draws, and shows the veil rather than its own wait,
   will be seen at the next student's pass (`veil drawn (readyState=loading)` in the log says the first). A second
   sign-in asked on a third host after the ENT is not under the veil: the script does nothing there.
-- How long a proof takes after the press. Nobody has measured it, since no proof was ever made on this path. The veil
-  says "That did not work." 60 seconds after the press if the page is still there: a proof that takes longer than
-  that, on a page Reclaim leaves open meanwhile, would be told to a student as a failure while it succeeds.
-- Whether Reclaim's field takes the 23,233 bytes of the first file: hence the second.
+- How long a proof takes after the press, on this path. On the three real proofs of 7 Oct 2026, made on the agent's
+  path, the founder read two to three seconds from the start of a proof to its sending in Reclaim's own logs, which is
+  why the veil waits 60 seconds after the press before it says "That did not work.". No proof has been made on this
+  path yet: one that took longer than that, on a page Reclaim leaves open meanwhile, would be told as a failure while
+  it succeeds.
 - A finger on a real phone. The touches are taken from a browser that is told its screen is touched, not from a hand.
 - Reclaim has not approved the provider since a version was saved by hand on 8 Oct 2026 (`isApproved: false` on every
   version). The script of 3.0.0 ran all the same.
