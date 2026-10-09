@@ -858,8 +858,9 @@ async function sceneJudge(w: Walk): Promise<void> {
   await openPaySheet(w);
   await sheetTo(w, "bottom");
   await shot(w, "90 pay sheet, have a code", "Signed in, nothing in the account, credits open: Send, the sheet scrolled to its end");
-  // A fold since the mockup of 3 Oct 2026, not a button: its name is what is pressed.
-  const have = sheet(w).locator("details[data-have-a-code] summary");
+  // A small key under the card's button since 9 Oct 2026, where it was a fold: its press puts the code's field in the
+  // card's place.
+  const have = sheet(w).locator("button[data-have-a-code]");
   await have.scrollIntoViewIfNeeded();
   await press(w, have);
   await sheet(w).getByLabel("Code").fill("JUDGE-CODE");

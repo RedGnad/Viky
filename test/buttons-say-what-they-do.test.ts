@@ -15,7 +15,7 @@ test("the buttons that declared a state say what their press does", () => {
   assert.doesNotMatch(readFileSync("app/components/AccountPanel.tsx", "utf8"), /I already have an account/);
 });
 
-test("what only opens a sentence is a fold named by a question, drawn as the fold of 'Have a code?'", () => {
+test("what only opens a sentence is a fold named by a question, with its chevron", () => {
   const words = conditionById("duolingo-daily")?.recipient;
   assert.ok(words);
   assert.equal(words.notYours, "Not your Duolingo name?");
@@ -42,8 +42,13 @@ test("what only opens a sentence is a fold named by a question, drawn as the fol
   assert.ok(fold.indexOf("{field.notYetHow.open}") > 0 && fold.indexOf("{field.notYetHow.open}") < fold.indexOf("{field.notYetHow.says}"), "the button, then the line");
   assert.equal((fold.match(/<p /g) ?? []).length, 1, "one line, and no paragraph beside it");
   assert.match(fold, /<a href=\{field\.notYetHow\.href\} target="_blank" rel="noopener noreferrer" className=\{`\$\{SMALL_BUTTON\} self-start`\} data-open-the-source="">\n\s*\{field\.notYetHow\.open\}/);
-  // The same component as the pay sheet's "Have a code?".
-  assert.match(readFileSync("app/kit/offer/JudgeCode.tsx", "utf8"), /<details className="said-fold" data-have-a-code="">\n\s*<summary className="said-fold-name">/);
+  // "Have a code?" is no fold any more (the founder, 9 Oct 2026): its press opens a field and a button, so it is a
+  // small key, under the card's button. Nothing leads back from it: the card's button never left.
+  const code = readFileSync("app/kit/offer/JudgeCode.tsx", "utf8");
+  assert.match(code, /onClick=\{\(\) => setShown\(true\)\} data-have-a-code="">\n\s*\{W\.code\.have\}/);
+  assert.doesNotMatch(code, /<details/);
+  assert.ok(!("without" in PAY.code));
+  assert.doesNotMatch(readFileSync("app/kit/offer/PaySheet.tsx", "utf8"), /without a code/i);
   assert.doesNotMatch(connect, /notMineOpen|notYetOpen/, "nothing of the page's own opens them");
   // Where the person typed the name themselves, the button under the code opens the username's field again, and says
   // so: on that screen "name" is already the Duolingo name the code goes into.

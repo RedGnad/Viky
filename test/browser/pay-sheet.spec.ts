@@ -12,6 +12,7 @@ import { answerTheChain, json, makeAnAccount, profile, type Holdings, type Profi
  */
 const SHOTS = process.env.VIKY_PAY_SHEET_CAPTURES;
 const card = (page: Page) => page.locator('section[aria-labelledby="offer-card"]');
+const sheetCard = card;
 const sheet = (page: Page) => page.locator("dialog.sheet[open]").last();
 
 type Setup = Readonly<{
@@ -28,10 +29,14 @@ type Setup = Readonly<{
   amount?: string | null;
   /** Done on Home, signed in, just before the press that opens the sheet. */
   beforeTheSheet?: (funder: Profile) => Promise<void>;
+  /** The address the person arrives by: Home's own unless said, or the link of the portal's instructions with its code. */
+  at?: string;
+  /** The window: a phone of 390 by 844 unless said. */
+  size?: Readonly<{ width: number; height: number }>;
 }>;
 
 async function toTheSheet(browser: Parameters<typeof profile>[0], baseURL: string | undefined, setup: Setup): Promise<Profile> {
-  const funder = await profile(browser, baseURL, { width: 390, height: 844 });
+  const funder = await profile(browser, baseURL, setup.size ?? { width: 390, height: 844 });
   const { page, context } = funder;
   const holdings: Holdings = setup.holdings ?? { ausd: setup.ausd, mon: 0n, usdc: 0n };
   await answerTheChain(context, holdings);
@@ -44,7 +49,7 @@ async function toTheSheet(browser: Parameters<typeof profile>[0], baseURL: strin
   );
   if (setup.gifts) await page.route("**/api/gifts/mine", (route) => route.fulfill(json({ account: "", gifts: setup.gifts })));
   if (setup.signedIn) await makeAnAccount(funder);
-  await page.goto("/");
+  await page.goto(setup.at ?? "/");
   if (!setup.signedIn) await page.getByRole("link", { name: "Offer a gift" }).first().click();
   await card(page).getByLabel("Their first name").fill("Boo");
   if (setup.amount !== null) await card(page).getByLabel("how much").fill(setup.amount ?? "19");
@@ -294,5 +299,177 @@ test.describe("the pay sheet of 3 Oct 2026", () => {
     await expect(sheet(page).getByRole("button", { name: /by card$/ })).toHaveCount(0);
     await shot(page, "6-card-not-offered");
     await funder.context.close();
+  });
+});
+
+/**
+ * A judge's code on the pay sheet (the founder, 9 Oct 2026): visible, and never put forward in the card's place. The
+ * card stays the sheet's one action. When the link carried a code, its field comes first, above what the card is
+ * asked, small; otherwise a small "Have a code?" under the card's button opens the field there.
+ *
+ * The judge credit is answered here as the server would: open, one code, three dollars, once, and the account's
+ * balance changed by it. Everything else is the built app: the account is made by the code's press, with a passkey
+ * the browser holds for the test.
+ *
+ * VIKY_PAY_SHEET_CAPTURES=<folder> photographs each state at 390 by 844 and at 1440 by 900.
+ */
+const THE_CODE = "JUDGE-TEST";
+const SIZES = [
+  { width: 390, height: 844 },
+  { width: 1440, height: 900 },
+] as const;
+
+async function answerTheCode(funder: Profile, holdings: Holdings, over: Readonly<{ open?: boolean; credited?: boolean }> = {}): Promise<string[]> {
+  let credited = over.credited ?? false;
+  const sent: string[] = [];
+  await funder.page.route("**/api/judge/credit", async (route) => {
+    if (route.request().method() === "GET") return route.fulfill(json({ open: over.open ?? true, credited, untouchedCredit: credited ? "3000000" : null }));
+    const code = (JSON.parse(route.request().postData() ?? "{}") as { code?: string }).code ?? "";
+    sent.push(code);
+    if (code !== THE_CODE) return route.fulfill(json({ error: "That is not the judge code.", code: "JUDGE_CODE_WRONG" }, 403));
+    credited = true;
+    holdings.ausd += 3_000_000n;
+    return route.fulfill(json({ units: "3000000" }));
+  });
+  return sent;
+}
+
+async function shotAt(page: Page, name: string): Promise<void> {
+  if (!SHOTS) return;
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: `${SHOTS}/${name}-${page.viewportSize()?.width}.png` });
+}
+
+/**
+ * Keeps whether the sheet ever offered a card once the credit was said to be in the account: the second between the
+ * credit and the reading that shows it used to say "Pay … by card" to somebody who had just been given the money.
+ */
+const WATCH_FOR_A_CARD_AFTER_THE_CREDIT = `(() => {
+  const look = () => {
+    const open = document.querySelector("dialog.sheet[open]");
+    if (!open || !open.innerText.includes("is in your account")) return;
+    const button = open.querySelector('[data-pays="card"]');
+    if (button) sessionStorage.setItem("test.cardAfterTheCredit", button.textContent || "a card button");
+  };
+  new MutationObserver(look).observe(document, { subtree: true, childList: true, characterData: true, attributes: true });
+})();`;
+
+/** How tall and how wide a thing is drawn, and where: to say which of two is the larger call. */
+const drawn = async (page: Page, name: string | RegExp) => (await sheet(page).getByRole("button", { name, exact: typeof name === "string" }).boundingBox())!;
+
+test.describe("a judge's code on the pay sheet: visible, and small beside the card (9 Oct 2026)", () => {
+  test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each case opens its own window");
+  test.setTimeout(150_000);
+
+  // The phone always; the computer when the states are photographed.
+  for (const size of SHOTS ? SIZES : SIZES.slice(0, 1)) {
+    test(`a judge by the portal's link, with no account: the code first and small, the card still the one action, and one press of the code makes the account and the credit pay (${size.width})`, async ({ browser, baseURL }) => {
+      const holdings: Holdings = { ausd: 0n, mon: 0n, usdc: 0n };
+      let sent: string[] = [];
+      const funder = await toTheSheet(browser, baseURL, {
+        ausd: 0n,
+        holdings,
+        signedIn: false,
+        currency: "USD",
+        amount: "10",
+        at: `/?code=${THE_CODE}`,
+        size,
+        beforeTheSheet: async (judge) => {
+          sent = await answerTheCode(judge, holdings);
+          await judge.page.evaluate(WATCH_FOR_A_CARD_AFTER_THE_CREDIT);
+        },
+      });
+      const { page } = funder;
+      // The code is there from the first image, in its field, under the question as its name.
+      const field = sheet(page).getByLabel("Have a code?", { exact: true });
+      await expect(field).toHaveValue(THE_CODE);
+      // The card is still the sheet's one action, with its figure, its line and its total.
+      const card = sheet(page).locator('[data-pays="card"]');
+      await expect(card).toHaveText(/^Pay \$\d+\.\d{2} by card$/);
+      await expect(sheet(page).locator("[data-pay-total]")).toBeVisible();
+      await expect(sheet(page).getByText(/takes your card/)).toBeVisible();
+      // First, and small: the code's field and its button stand above the card's button, and the button is the
+      // smaller of the two, in height and in width.
+      const use = await drawn(page, "Use the code");
+      const pay = (await card.boundingBox())!;
+      expect((await field.boundingBox())!.y).toBeLessThan(pay.y);
+      expect(use.y).toBeLessThan(pay.y);
+      expect(use.height).toBeLessThan(pay.height);
+      expect(use.width).toBeLessThan(pay.width / 2);
+      // Nothing leads back to the card: it never left.
+      await expect(sheet(page).getByText(/without a code/i)).toHaveCount(0);
+      // What either press makes is said before it: the account, and that it is an adult's.
+      await expect(sheet(page).getByText("Your face or your fingerprint creates your account when you press pay or use the code.")).toBeVisible();
+      await shotAt(page, "B1-the-code-from-the-link");
+
+      await sheet(page).getByRole("button", { name: "Use the code", exact: true }).click();
+      // The account is made, the code sent as the link carried it, and the credit said; the gift, more than the
+      // credit, is brought to it.
+      await expect(sheet(page).getByText("$3.00 from your judge credit is in your account.")).toBeVisible({ timeout: 60_000 });
+      expect(sent).toEqual([THE_CODE]);
+      await expect(sheet(page).getByText("Your gift is now $3.00, what your account holds.")).toBeVisible();
+      const withCredit = sheet(page).getByRole("button", { name: "Pay $3.00 with your credit", exact: true });
+      await expect(withCredit).toBeVisible({ timeout: 30_000 });
+      await expect(sheet(page).getByText(/^Paid from your judge credit\./)).toBeVisible();
+      await expect(field).toHaveCount(0);
+      await expect(sheet(page).locator("[data-pay-total]")).toHaveText("$3.00");
+      // The card under the sheet says the gift as it now is, and no longer the 10 that was typed.
+      await expect(sheetCard(page).getByLabel("how much")).toHaveValue("3.00");
+      // Once the credit was said, the sheet never offered a card again; and the code is not kept once it is used.
+      expect(await page.evaluate(() => sessionStorage.getItem("test.cardAfterTheCredit"))).toBeNull();
+      expect(await page.evaluate(() => sessionStorage.getItem("viky.judge-code"))).toBeNull();
+      await shotAt(page, "B2-the-credit-pays");
+
+      await withCredit.click();
+      await expect(page).toHaveURL(/\/fund\?step=paying/, { timeout: 30_000 });
+      await funder.context.close();
+    });
+
+    test(`without the link: the card, and a small 'Have a code?' under its button that opens the code's field there, the card's button still above it (${size.width})`, async ({ browser, baseURL }) => {
+      const holdings: Holdings = { ausd: 0n, mon: 0n, usdc: 0n };
+      let sent: string[] = [];
+      const funder = await toTheSheet(browser, baseURL, { ausd: 0n, holdings, signedIn: true, gifts: [], size, beforeTheSheet: async (judge) => void (sent = await answerTheCode(judge, holdings)) });
+      const { page } = funder;
+      const card = sheet(page).locator('[data-pays="card"]');
+      await expect(card).toHaveText(/^Pay €\d+\.\d{2} by card$/);
+      // The key is small, and under the card's button and its line.
+      const key = sheet(page).locator("[data-have-a-code]");
+      await expect(key).toHaveText("Have a code?");
+      const terms = sheet(page).getByText(/takes your card/);
+      expect((await key.boundingBox())!.y).toBeGreaterThan((await terms.boundingBox())!.y);
+      expect((await key.boundingBox())!.height).toBeLessThan((await card.boundingBox())!.height);
+      await shotAt(page, "C-the-key-under-the-card");
+
+      await key.click();
+      // The field opens where the key stood, under the card's button, which has not moved and is still the one action.
+      const field = sheet(page).getByLabel("Code", { exact: true });
+      await expect(field).toHaveValue("");
+      await expect(card).toHaveText(/^Pay €\d+\.\d{2} by card$/);
+      expect((await field.boundingBox())!.y).toBeGreaterThan((await card.boundingBox())!.y);
+      expect((await drawn(page, "Use the code")).height).toBeLessThan((await card.boundingBox())!.height);
+      await expect(sheet(page).getByText(/without a code/i)).toHaveCount(0);
+      await shotAt(page, "B3-opened-by-the-key");
+      // A code that is not the one: the server's own sentence under its button, and the field stays.
+      await field.fill("NOT-THE-CODE");
+      await sheet(page).getByRole("button", { name: "Use the code", exact: true }).click();
+      await expect(sheet(page).getByText("That is not the judge code.")).toBeVisible();
+      expect(sent).toEqual(["NOT-THE-CODE"]);
+      await expect(field).toHaveValue("NOT-THE-CODE");
+      await expect(card).toBeVisible();
+      await shotAt(page, "B4-a-code-refused");
+      await funder.context.close();
+    });
+  }
+
+  test("no code is offered once credits are closed or the account has had one, whatever the link carried", async ({ browser, baseURL }) => {
+    for (const over of [{ open: false }, { credited: true }]) {
+      const holdings: Holdings = { ausd: 0n, mon: 0n, usdc: 0n };
+      const funder = await toTheSheet(browser, baseURL, { ausd: 0n, holdings, signedIn: true, gifts: [], at: `/?code=${THE_CODE}`, beforeTheSheet: async (judge) => void (await answerTheCode(judge, holdings, over)) });
+      const { page } = funder;
+      await expect(sheet(page).locator('[data-pays="card"]')).toHaveText(/^Pay €\d+\.\d{2} by card$/);
+      await expect(sheet(page).locator("#gift-code")).toHaveCount(0);
+      await expect(sheet(page).locator("[data-have-a-code]")).toHaveCount(0);
+      await funder.context.close();
+    }
   });
 });

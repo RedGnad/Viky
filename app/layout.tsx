@@ -1,6 +1,7 @@
 import { SerwistProvider } from "@serwist/turbopack/react";
 import { Trace } from "./kit/Trace";
 import { VisitCounts } from "./kit/VisitCounts";
+import { JudgeLink } from "./kit/JudgeLink";
 import { InsideSteps } from "./kit/InsideSteps";
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
@@ -185,6 +186,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <Trace />
           {/* Anonymous visit counts, with every address cleaned of its key and its gift number before it leaves. */}
           <VisitCounts />
+          {/* The judge code a link carried, kept for the pay sheet (the founder, 9 Oct 2026). */}
+          <JudgeLink />
           {/* The pages Viky itself showed, for the back key (src/client/inside-steps.ts). It reads the query, which a
               page built ahead of time does not have yet: hence the boundary, which holds nothing back. */}
           <Suspense fallback={null}>
