@@ -1,4 +1,5 @@
 import { BEFORE_THE_JOURNAL, cycleInWords, cycleUse, dailyCeilings, JUDGING, leftOf, limitsOf, LOST_ON_30_SEP_2026, RECLAIM_ALERT_LEFT, RECLAIM_ALLOWANCE, SEPTEMBER_2026, startsAgainInWords, utcDayInWords, type CycleUse } from "@/src/attested-calls";
+import { RACE_RESULT_RACES } from "@/src/race-result-races";
 import { LIMIT } from "@/src/sentences";
 import { PROOF_EVERY_SECONDS } from "@/src/milestone-reading";
 import { formatAusd } from "@/src/gift-reader";
@@ -62,6 +63,9 @@ function Tx({ hash }: Readonly<{ hash: string }>) {
 function lastDayOfTheCode(): string {
   return new Date(JUDGE_CREDIT_ENDS - 1).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
+
+/** How many of race result's races the register keeps, and in how many countries, counted from the register itself. */
+const RACE_RESULT_KEPT = { races: RACE_RESULT_RACES.length, countries: new Set(RACE_RESULT_RACES.map((race) => race.country)).size } as const;
 
 /** The mobile money ceilings in words, from the constants the routes check (src/mobile-money.ts). */
 const MOBILE_CEILINGS_WORDS = `$${MOBILE_CEILINGS.usdPerPayout}.00 at most per payout and $${MOBILE_CEILINGS.usdPerAccountPerDay}.00 a day per account`;
@@ -253,7 +257,8 @@ export default async function JudgesPage() {
               <li>
                 A climb on Chess.com: four readings, started and reached. Each reading is two fetches, the profile and
                 the ratings: two at the start, two at the target. It settles in one sitting: offer a rating one point
-                above the account&apos;s own, and once it is reached ask for the reading from the gift&apos;s page. On
+                above the account&apos;s own, and once it is reached open the gift&apos;s page: a climb is read as its page
+                opens, and has no button for it. On
                 Codeforces a reading is one fetch: two, started and reached.
               </li>
               <li>
@@ -783,8 +788,8 @@ export default async function JudgesPage() {
             and a round that fails is made unrated. Open since goal 33 was signed on 26 Sep 2026.
           </li>
           <li>
-            <strong>race result&apos;s lists.</strong> The same marathon line reads the events race result times (2,126 coming
-            events in 76 countries on 26 Sep 2026, Lusaka and Francistown among them) from the event&apos;s own results
+            <strong>race result&apos;s lists.</strong> The same marathon line reads the races race result times that Viky&apos;s
+            register keeps ({RACE_RESULT_KEPT.races} races in {RACE_RESULT_KEPT.countries} countries) from the event&apos;s own results
             list, the bib&apos;s row alone: the name and the time at the columns the register fixed for that race, after
             checking the list still names those columns as it did. Read on 26 Sep 2026: my race result&apos;s terms of
             use say organisers publish results with the athlete&apos;s permission and nothing about reading a page; its
@@ -880,8 +885,7 @@ export default async function JudgesPage() {
             It runs on Bitrefill&apos;s Personal API, whose documentation names the Business API for an app that sells
             its products; its terms say customers are end users and a buyer for resale may be frozen until verified
             as a company (section 18), and an Agent acts for the customer who pays (section 29). The founder chose the
-            Personal API for the pilot, the risk assumed and written here, and is to ask Bitrefill for its agreement, or
-            for its Business API when the time comes.
+            Personal API for the pilot, the risk assumed and written here.
             The pilot&apos;s limits, within the account&apos;s own: five orders and 500 USD a day for everybody together, top-ups
             and gift cards alike, and 50 USD a person a day, checked when the price is given and again when the person pays. Open to everybody since its code was complete (the founder, 26 Sep 2026);
             what is missing is said at the moment it is missing, and nothing is taken. Credit: {used(uses?.phone)} Mobile
