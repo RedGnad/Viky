@@ -15,7 +15,7 @@ test("a climb is read live while its page is open, by either of its two people, 
   // And not while the month's limit of readings is reached: no reading could go (test/attested-calls.test.ts).
   assert.match(PAGE, /const readsLive = Boolean\(milestone && milestone\.shape !== "certificate" && moment === "climbing" && \(voice === "recipient" \|\| voice === "funder"\) && !readingsStopped\)/);
   assert.match(PAGE, /useLiveReading\(\s*readsLive,\s*\(\) => checkMilestone\(giftId\)/);
-  assert.match(PAGE, /\(mine \|\| readerIsFunder\) && !milestone && !gift\.finished/, "the button stays for a habit only");
+  assert.match(PAGE, /\{mine && !milestone && !gift\.finished/, "the button stays for a habit only, and for its person alone (the audit of 8 Oct 2026)");
   const routes = readFileSync("src/milestone-routes.ts", "utf8");
   assert.match(routes, /record\.funder\.toLowerCase\(\) !== auth\.account\.toLowerCase\(\)\) recipientRecord/, "the funder may start one too");
   assert.match(routes, /if \(outcome\.kind === "reached"\) await tellAboutMilestone\(giftId, "reached"/, "a reach found on opening is told at once");

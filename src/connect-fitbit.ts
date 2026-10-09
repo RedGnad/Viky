@@ -46,7 +46,8 @@ export function startFitbitConnection(input: { giftId: string; account: string; 
   const nonce = newConnectNonce();
   const state = sealConnectState({ giftId: input.giftId, account: getAddress(input.account).toLowerCase(), source: "fitbit", verifier, nonce, issuedAt: input.nowSeconds });
   const url = fitbitAuthorizeUrl({ clientId: fitbitCredentials().clientId, redirectUri: fitbitRedirectUri(input.requestUrl), challenge: pkceChallenge(verifier), state: nonce });
-  return { url, cookie: connectCookie(state, CONNECT_STATE_TTL_SECONDS) };
+  // The cookie outlives the state it carries, so a round trip that took too long is still read, and refused as that.
+  return { url, cookie: connectCookie(state, 2 * CONNECT_STATE_TTL_SECONDS) };
 }
 
 export type CallbackOutcome = Readonly<{ giftId: string; ok: true }> | Readonly<{ giftId: string | null; ok: false; code: string }>;
@@ -59,7 +60,8 @@ export async function finishFitbitConnection(input: { code: string | null; state
   try {
     state = openConnectState(sealed, input.nowSeconds);
   } catch (error) {
-    return { giftId: null, ok: false, code: error instanceof ConnectStateError ? error.code : "INVALID" };
+    // A state of ours that is only too old still names its gift: the person lands there and reads why.
+    return { giftId: error instanceof ConnectStateError ? error.giftId : null, ok: false, code: error instanceof ConnectStateError ? error.code : "INVALID" };
   }
   if (state.source !== "fitbit" || !input.state || state.nonce !== input.state) return { giftId: state.giftId, ok: false, code: "STATE_MISMATCH" };
   if (state.account !== getAddress(input.account).toLowerCase()) return { giftId: state.giftId, ok: false, code: "OTHER_ACCOUNT" };

@@ -173,7 +173,8 @@ test("the round trip: a state only this server reads back, refused before any ex
     assert.deepEqual(await finishFitbitConnection({ ...base, state: "another" }), { giftId: "42", ok: false, code: "STATE_MISMATCH" });
     assert.deepEqual(await finishFitbitConnection({ ...base, state: nonce, account: "0x000000000000000000000000000000000000b0b0" }), { giftId: "42", ok: false, code: "OTHER_ACCOUNT" });
     assert.deepEqual(await finishFitbitConnection({ ...base, state: nonce, code: null }), { giftId: "42", ok: false, code: "REFUSED_AT_FITBIT" });
-    assert.deepEqual(await finishFitbitConnection({ ...base, state: nonce, nowSeconds: 1_790_000_000 + 700 }), { giftId: null, ok: false, code: "EXPIRED" });
+    // Too old, and still ours: it names its gift, so the person lands there and reads why (the audit of 8 Oct 2026).
+    assert.deepEqual(await finishFitbitConnection({ ...base, state: nonce, nowSeconds: 1_790_000_000 + 700 }), { giftId: "42", ok: false, code: "EXPIRED" });
     delete process.env.GOOGLE_HEALTH_CLIENT_ID;
     assert.throws(() => startFitbitConnection({ giftId: "42", account: ACCOUNT, requestUrl: "https://viky.cash/x", nowSeconds: 1 }), (error: unknown) => error instanceof GiftApiError && error.code === "NOT_CONFIGURED");
   } finally {
