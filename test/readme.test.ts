@@ -118,6 +118,10 @@ test("what the rules ask of a README is all there (section 4.1), and the licence
   const fresh = section("What is new");
   assert.match(fresh, /Beeminder, StickK, Forfeit/);
   assert.doesNotMatch(README, /Two things Viky does not claim|What is not claimed/);
+  // The table's right column says what Viky does, in every row: beside the effect that stops with the money, a gift's
+  // own length and the funder's next choice.
+  assert.doesNotMatch(README, /does not claim/);
+  assert.match(README, /\| A gift covers a set number of days\. After it, the funder chooses whether to offer another\. \|/);
   // Members, and no segment by age: "adults" is a rule of the product, never a pitch.
   assert.match(README, /A club officer, to members and the relatives who back them/);
   assert.doesNotMatch(README, /adult members/);
