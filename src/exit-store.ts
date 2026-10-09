@@ -291,6 +291,33 @@ export async function conversionsSent(): Promise<Readonly<{ count: number; first
   }
 }
 
+export type SentExchange = Readonly<{ at: Date; amount: bigint; minOut: bigint; txHash: string | null }>;
+
+/**
+ * The exchanges sent for a way out, for the judges page (the audit of 9 Oct 2026): the dollars of an account changed
+ * into the coin its payout service buys, USDC for the bank and the chain's coin for the card, how many, and the first.
+ * An exchange that made the dollars of a mobile money payout is that way's own, and is not counted here. Null when the
+ * journal cannot be read.
+ */
+export async function exchangesSentInto(tokenOut: string): Promise<Readonly<{ count: number; first: SentExchange | null }> | null> {
+  try {
+    const rows = await sql()`
+      SELECT amount, min_out, tx_hash, sent_at FROM viky_exits
+       WHERE state = 'sent' AND sent_at IS NOT NULL AND lower(token_out) = ${tokenOut.toLowerCase()} ORDER BY sent_at ASC LIMIT 500`;
+    // The mobile money ledger exists only where that way was ever used: without it, no exchange is its own.
+    const mobile = await sql()`SELECT exit_tx FROM viky_mobile_payouts`.then(
+      (payouts) => new Set(payouts.map((payout) => String(payout.exit_tx).toLowerCase())),
+      () => new Set<string>(),
+    );
+    const own = rows.filter((row) => row.tx_hash === null || row.tx_hash === undefined || !mobile.has(String(row.tx_hash).toLowerCase()));
+    const row = own[0];
+    if (!row) return { count: 0, first: null };
+    return { count: own.length, first: { at: new Date(String(row.sent_at)), amount: BigInt(String(row.amount)), minOut: BigInt(String(row.min_out)), txHash: row.tx_hash === null || row.tx_hash === undefined ? null : String(row.tx_hash) } };
+  } catch {
+    return null;
+  }
+}
+
 /** What the planner needs and nothing more. */
 export function asOpenExit(record: ExitRecord): OpenExit {
   return { id: record.id, amount: record.amount, tokenOut: record.tokenOut, minOut: record.minOut, signature: record.signature };
