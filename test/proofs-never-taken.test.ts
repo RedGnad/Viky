@@ -50,17 +50,17 @@ const verifications = async () => (await db.query<{ ref: string; ok: boolean; co
 
 test("the day of the first university proof, as Reclaim's record had it: three proofs counted, where the journal showed none", async () => {
   // Eight sessions opened; Reclaim made a proof in three, ended one on an error, and four went nowhere.
-  const states: Record<string, string> = { "6453ec3401": "PROOF_SUBMITTED", ffa7b928d5: "PROOF_SUBMITTED", "46cf3440d0": "PROOF_SUBMITTED", "53800accd7": "ERROR_SUBMITTED", "6d723cbfa3": "SESSION_STARTED" };
-  await opened("6d723cbfa3", "12:15:25");
-  await opened("d08c8f4cea", "12:44:08");
-  await opened("6453ec3401", "13:12:46");
-  await opened("ffa7b928d5", "13:27:03");
-  await opened("53800accd7", "14:33:01");
-  await opened("46cf3440d0", "14:51:58");
+  const states: Record<string, string> = { "c3e5a7b9d1": "PROOF_SUBMITTED", f6b8d0e2a4: "PROOF_SUBMITTED", "a1c3e5f7b9": "PROOF_SUBMITTED", "b2d4f6a8c0": "ERROR_SUBMITTED", "d4f6b8c0e2": "SESSION_STARTED" };
+  await opened("d4f6b8c0e2", "12:15:25");
+  await opened("e5a7c9d1f3", "12:44:08");
+  await opened("c3e5a7b9d1", "13:12:46");
+  await opened("f6b8d0e2a4", "13:27:03");
+  await opened("b2d4f6a8c0", "14:33:01");
+  await opened("a1c3e5f7b9", "14:51:58");
   // The third proof was taken and held for review; the first two were never asked for.
-  await consumeAndSaveVerification({ sessionId: "46cf3440d0", evidence: { held: "utoulouse-fr" }, attestation: { message: {}, signature: "0x" }, proofs: null });
+  await consumeAndSaveVerification({ sessionId: "a1c3e5f7b9", evidence: { held: "utoulouse-fr" }, attestation: { message: {}, signature: "0x" }, proofs: null });
   // A session Reclaim ended was closed by a look, with no proof.
-  await consumeAndSaveVerification({ sessionId: "53800accd7", evidence: { stopped: "ERROR_SUBMITTED" }, attestation: { message: {}, signature: "0x" }, proofs: null });
+  await consumeAndSaveVerification({ sessionId: "b2d4f6a8c0", evidence: { stopped: "ERROR_SUBMITTED" }, attestation: { message: {}, signature: "0x" }, proofs: null });
 
   assert.equal((await cycleUse(NOW)).verifications.shown, 0, "what the journal said that afternoon");
   const looked: string[] = [];
@@ -68,19 +68,19 @@ test("the day of the first university proof, as Reclaim's record had it: three p
     stateOf: async (sessionId) => {
       looked.push(sessionId);
       // One session Reclaim does not answer for: nothing is written for it, and nothing stops.
-      if (sessionId === "d08c8f4cea") throw new Error("Reclaim did not answer");
+      if (sessionId === "e5a7c9d1f3") throw new Error("Reclaim did not answer");
       return states[sessionId] ?? null;
     },
   });
   assert.equal(written, 3);
-  assert.deepEqual(looked.sort(), ["46cf3440d0", "53800accd7", "6453ec3401", "6d723cbfa3", "d08c8f4cea", "ffa7b928d5"].sort(), "each session opened and not counted is looked up once");
+  assert.deepEqual(looked.sort(), ["a1c3e5f7b9", "b2d4f6a8c0", "c3e5a7b9d1", "d4f6b8c0e2", "e5a7c9d1f3", "f6b8d0e2a4"].sort(), "each session opened and not counted is looked up once");
   const rows = await verifications();
   assert.deepEqual(
     rows.map((row) => [row.ref, row.ok, row.code]),
     [
-      ["46cf3440d0", true, null],
-      ["6453ec3401", false, "NEVER_TAKEN"],
-      ["ffa7b928d5", false, "NEVER_TAKEN"],
+      ["a1c3e5f7b9", true, null],
+      ["c3e5a7b9d1", false, "NEVER_TAKEN"],
+      ["f6b8d0e2a4", false, "NEVER_TAKEN"],
     ],
   );
   // Written at the time the session was opened: the cycle and the day it belongs to.

@@ -75,7 +75,7 @@ test("a first press has no pass behind it: the pinned rule runs", async () => {
 });
 
 test("a pass the person made that gave no proof opens the next one with the agent", async () => {
-  // The record of a verification page left with nothing made, as Reclaim kept it on 8 Oct 2026 (session e6286e05c7).
+  // The record of a verification page left with nothing made, as Reclaim kept it on 8 Oct 2026.
   await opened("first-pass");
   const left = reclaim({ "first-pass": { state: "USER_STARTED_VERIFICATION", proofs: 0 } });
   assert.equal(await earlierPassGaveNoProof(PASS, left.deps), true);

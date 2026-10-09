@@ -25,7 +25,7 @@ import type { SqlExecutor } from "./proof-session-store";
 
 /**
  * The version Reclaim's agent builds from: the provider's first, of type AI. Read on Toulouse's record, where every
- * pass of 7 Oct 2026 opened on it (session 53800accd7 kept it) and the agent's own versions are 1.0.0-ai.N. Named
+ * pass of 7 Oct 2026 opened on it and the agent's own versions are 1.0.0-ai.N. Named
  * here because a request with no version now opens the provider's latest, which is the rule written by hand.
  */
 export const AGENT_FIRST_VERSION = "1.0.0";

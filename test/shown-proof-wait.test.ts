@@ -63,7 +63,7 @@ const signal = () => new AbortController().signal;
 test("a wait taken up again by a page loaded anew looks at once, and takes the proof that was already there", async () => {
   answers = [HELD];
   const phases: string[] = [];
-  const outcome = await awaitShownProof({ sessionId: "ffa7b928d5", signal: signal(), secondsLeft: 1_300, resumed: true, onPhase: (phase) => phases.push(phase), stillOpen: async () => assert.fail("a page just loaded is not asked twice") });
+  const outcome = await awaitShownProof({ sessionId: "f6b8d0e2a4", signal: signal(), secondsLeft: 1_300, resumed: true, onPhase: (phase) => phases.push(phase), stillOpen: async () => assert.fail("a page just loaded is not asked twice") });
   assert.equal(outcome.kind, "held");
   assert.deepEqual(asked, [{ url: "/api/proof/verify", method: "POST" }]);
   assert.deepEqual(phases, ["checking"], "no link is offered before the answer");
@@ -214,8 +214,8 @@ test("a refusal with a reason ends the wait with that reason, and a stop ends it
 });
 
 test("the page asks the server for the open session by the gift alone", async () => {
-  answers = [{ status: 200, body: { open: { sessionId: "ffa7b928d5", requestUrl: "https://share.reclaimprotocol.org/verify/?template=t", secondsLeft: 1_290, conditionId: "university-enrollment-shown" } } }, { status: 200, body: { open: null } }];
-  assert.equal((await openShownSessionOf("1000006"))?.sessionId, "ffa7b928d5");
+  answers = [{ status: 200, body: { open: { sessionId: "f6b8d0e2a4", requestUrl: "https://share.reclaimprotocol.org/verify/?template=t", secondsLeft: 1_290, conditionId: "university-enrollment-shown" } } }, { status: 200, body: { open: null } }];
+  assert.equal((await openShownSessionOf("1000006"))?.sessionId, "f6b8d0e2a4");
   assert.equal(await openShownSessionOf("1000006"), null);
   assert.deepEqual(asked[0], { url: "/api/proof/session?giftId=1000006", method: "GET" });
 });

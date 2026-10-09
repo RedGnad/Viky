@@ -124,7 +124,7 @@ test("a milestone's proof is fresh for as long as its session lives, and the ses
 });
 
 test("a session Reclaim ended with no proof is said as stopped and closed, so no page takes it up again", async () => {
-  // Seen once for real (7 Oct 2026, session 53800accd7): signed in, then nothing, then ERROR_SUBMITTED a quarter of an
+  // Seen once for real (7 Oct 2026): signed in, then nothing, then ERROR_SUBMITTED a quarter of an
   // hour later. The page went on waiting, and its link led to a verification Reclaim had closed.
   assert.deepEqual(RECLAIM_STOPPED, ["ERROR_SUBMITTED", "ERROR_SUBMISSION_FAILED", "PROOF_SUBMISSION_FAILED", "SESSION_CANCELLED"]);
   const ended = (statusV2: string) => async () => ({ session: { sessionId: SESSION_ID, appId: APP_ID, providerId: "provider-test", providerVersionString: "1.0.0", statusV2, proofs: [], error: { type: "ReclaimVerificationAbortedException", message: "Connection lost. The session was disconnected." } } as never });
