@@ -264,9 +264,9 @@ export default async function JudgesPage() {
             credit, and the sheet says so.
           </li>
           <li>
-            To see the other side on this device: copy the link, press Me, then Other account, open the link and
-            press Open my gift, which creates a second account. Then connect the source. With one account you only
-            ever see the funder&apos;s side of your own gift.
+            To see the other side on this device: copy the link, press Me, then Other account, then Create a new
+            account. This browser is then signed in to a second account: open the link and press Open my gift. Then
+            connect the source. With one account you only ever see the funder&apos;s side of your own gift.
           </li>
           <li data-try-paths>
             What to offer. Each path asks something of you: Duolingo, an account there, and a lesson done after you
