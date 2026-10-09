@@ -121,6 +121,9 @@ test("the code is never in the repository, the route reads the signed-in account
   assert.doesNotMatch(page, /judgeCredit\.code|JUDGE_CODE/);
   assert.match(page, /a judge\s+credit\s+from\s+Viky&apos;s\s+treasury,\s+once\s+per\s+account\.\s+A\s+real\s+funder\s+pays\s+by\s+card\s+instead,\s+on\s+the\s+page\s+of\s+the\s+card\s+service/);
   assert.match(page, /press &quot;Have a code\?&quot;/, "the page points to the pay sheet, where the code is typed (D297)");
+  // And first to the link that carries it, and to the press that uses it (9 Oct 2026).
+  assert.match(page, /Open Viky by the link in the submission portal&apos;s instructions, which carries the judge code/);
+  assert.match(page, /The pay sheet opens on the code, already filled in\. Press &quot;Use the code&quot;/);
   assert.match(page, /Mera&apos;s stateless test runs on this same account/);
 });
 
@@ -133,15 +136,19 @@ test("an account is a judge's once its credit is sent, and not for a wrong code 
   assert.equal(await isJudgeCredited(B), false);
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   // Drawn only when it is true (the money path audit): test/audit-judge-line-when-credit-pays.test.ts.
-  assert.match(sheet, /\{judgeLineIsTrue\(\{ gift: units, held: held\.state === "read" \? held\.parts\.ausd : null, untouchedCredit \}\) \? <p className=\{HELP\}>\{W\.fromJudgeCredit\(cardPaidHow\(\), way\.name\)\}<\/p> : null\}/);
+  assert.match(sheet, /const paidFromCredit = judgeLineIsTrue\(\{ gift: units, held: held\.state === "read" \? held\.parts\.ausd : null, untouchedCredit \}\);/);
+  assert.match(sheet, /\{paidFromCredit \? <p className=\{HELP\}>\{W\.fromJudgeCredit\(cardPaidHow\(\), way\.name\)\}<\/p> : null\}/);
   assert.match(sheet, /getJson<\{ open\?: boolean; credited\?: boolean; untouchedCredit\?: string \| null \}>\("\/api\/judge\/credit"\)/);
   assert.ok(sheet.indexOf("W.fromJudgeCredit") < sheet.indexOf("W.payFromAccount"), "above the action");
   assert.match(readFileSync("app/api/judge/credit/route.ts", "utf8"), /account = readAccountAuthSession\(request\)\.account;[\s\S]*isJudgeCredited\(account\)/);
 });
 
-test("the code is asked where a signed-in person is about to pay: the pay sheet and the waiting screen (D297, D299)", () => {
+test("the code is asked where a person is about to pay: the pay sheet and the waiting screen (D297, D299)", () => {
   const code = readFileSync("app/kit/offer/JudgeCode.tsx", "utf8");
-  assert.match(code, /if \(covered \|\| !open \|\| credited\) return null;/, "only while credits are open, the gift not covered, the account not yet credited");
+  // Only while credits are open, the gift not covered, the account not yet credited: asked of the server here, or
+  // said by the pay sheet, which has asked it already.
+  assert.match(code, /if \(covered \|\| !\(offered \?\? \(open && !credited\)\)\) return null;/);
+  assert.match(code, /if \(offered !== undefined\) return;\s+let live = true;\s+getJson<\{ open\?: boolean; credited\?: boolean \}>\("\/api\/judge\/credit"\)/);
   assert.match(code, /const covered = needed !== null && held !== null && held >= needed;/);
   assert.match(code, /postJson<\{ units: string \}>\("\/api\/judge\/credit", \{ code \}\)/);
   assert.match(code, /onCredited\(\);/, "the balance is read again once the credit is sent");
@@ -150,7 +157,9 @@ test("the code is asked where a signed-in person is about to pay: the pay sheet 
   assert.match(code, /onMakeIt\(dollars\);/);
   assert.match(code, /W\.code\.adjusted\(formatAusd\(adjustedTo\)\)/);
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
-  assert.match(sheet, /\{address \? \(\s*<JudgeCode/, "on the sheet, for a signed-in account");
+  // On the sheet since 9 Oct 2026, for somebody with no account too: the code's press makes it, then sends the code.
+  assert.match(sheet, /\{codeWay \|\| codeGiven \? \(\s*<JudgeCode\s+first\s+offered=\{onTheCode\}\s+startWith=\{linkCode\}\s+before=\{accountForTheCode\}/);
+  assert.match(code, /if \(before && !\(await before\(\)\)\) return;\s+const answer = await postJson/, "the account first, then the code");
   // Marked as chosen, or the card would go back to its starting figure (D158).
   assert.match(sheet, /onMakeIt=\{\(dollars\) => onChange\(\{ \.\.\.draft, dollars, typedAmount: dollars, typedIn: "USD" \}\)\}/);
   assert.match(sheet, /\[open, address, balanceRead\]/);

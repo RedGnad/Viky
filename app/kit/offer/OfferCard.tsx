@@ -136,6 +136,15 @@ export function OfferCard({
     money.readIn(next);
     setReading(false);
   };
+  /**
+   * The pay sheet changed the gift's amount (a judge's credit brings a gift above it down to it, D300): what was typed
+   * in the card's field is no longer the amount, so the field reads the gift again. It kept "10" under a sheet that
+   * said $3.00 (seen 9 Oct 2026).
+   */
+  const changeFromTheSheet = (next: typeof draft) => {
+    if (next.dollars !== draft.dollars) setTypedAmount(null);
+    change(next);
+  };
   const typeAmount = (value: string) => {
     setTypedAmount(value);
     // Typed, so it is this person's amount from now on and no longer the one the card came with (D158).
@@ -356,7 +365,7 @@ export function OfferCard({
       />
       {/* The sheet says the gift as the card does: a figure the card started on, which nobody typed, is given to it
           as the figure typed, or a round 20,000 francs came back from its dollars as 19,997 (the founder, 4 Oct 2026). */}
-      <PaySheet open={paying} draft={starting ? { ...draft, typedAmount: starting.typed, typedIn: money.currency } : draft} onChange={change} onClose={() => setPaying(false)} onMaking={onMaking} />
+      <PaySheet open={paying} draft={starting ? { ...draft, typedAmount: starting.typed, typedIn: money.currency } : draft} onChange={changeFromTheSheet} onClose={() => setPaying(false)} onMaking={onMaking} />
     </>
   );
 }

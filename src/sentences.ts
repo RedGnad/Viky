@@ -254,6 +254,8 @@ export const PAY = {
   atTheRate: (day: string) => `At the European Central Bank's rate of ${day}. It sets one each working day.`,
   /** Said before the action, because it is what pressing it does: nothing was asked of this person until now. */
   passkeyMakesTheAccount: "Your face or your fingerprint creates your account when you press pay. Nothing was asked of you until now.",
+  /** The same, where the sheet's one action is the code (9 Oct 2026): that press is the one that makes the account. */
+  passkeyMakesTheAccountOnTheCode: "Your face or your fingerprint creates your account when you use the code.",
   /**
    * For a passkey made on another device, which this one does not know of: pay would make a second account. It said
    * "I already have an account", which declares a state: a button says what its press does (the founder, 4 Oct 2026).
@@ -348,9 +350,17 @@ export const PAY = {
       : how === "sheet"
         ? `Paid from your judge credit. A funder pays by card through ${service}, in a sheet inside Viky.`
         : `Paid from your judge credit. A funder pays by card on ${service}'s page, in a tab of its own.`,
-  /** The judge code in the pay sheet, as a code is asked at a checkout (D297, the founder's choice A of 28 Sep 2026). */
+  /**
+   * The judge code in the pay sheet, as a code is asked at a checkout (D297, the founder's choice A of 28 Sep 2026).
+   * Since 9 Oct 2026 it is the sheet's first choice for an account that cannot pay: the field open, in place of the
+   * card, when the link that brought the person carried a code or when they pressed "Have a code?" under the card's
+   * button. `without` goes back to paying without one, whatever then pays, a card or money sent to the account.
+   */
   code: {
     have: "Have a code?",
+    without: "Pay without a code",
+    /** The action once the credit is all the account holds and it covers the gift: what pays is said on the button. */
+    payWithCredit: (amount: string) => `Pay ${amount} with your credit`,
     label: "Code",
     use: "Use the code",
     using: "Checking the code",

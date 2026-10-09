@@ -107,7 +107,9 @@ test("the account is made at the press, and the sheet says so before it happens"
   // Said only where it is true: a device that remembers a passkey opens it, and makes nothing.
   // And only where it can happen: on another address of the app an account is not made, and the sheet says where it is.
   // Signed in, the phone's own prompt says it, and the sheet says nothing more (the mockup of 3 Oct 2026).
-  assert.match(sheet, /\{address \|\| hasCredential \? null : <p className=\{HELP\}>\{madeHere \? W\.passkeyMakesTheAccount : ACCOUNT_DOOR\.madeOnTheMainSite\}<\/p>\}/);
+  // Where the code is the sheet's action (9 Oct 2026), that press is the one that makes the account, and is the one named.
+  assert.match(sheet, /\{address \|\| hasCredential \? null : <p className=\{HELP\}>\{madeHere \? \(onTheCode \? W\.passkeyMakesTheAccountOnTheCode : W\.passkeyMakesTheAccount\) : ACCOUNT_DOOR\.madeOnTheMainSite\}<\/p>\}/);
+  assert.equal(PAY.passkeyMakesTheAccountOnTheCode, "Your face or your fingerprint creates your account when you use the code.");
   // The passkey opens inside the press, then the terms are written, then the service's page opens: that order.
   const press = sheet.slice(sheet.indexOf("const pay = async"), sheet.indexOf("const signInFirst ="));
   assert.ok(press.indexOf("await ensureAccount()") > 0 && press.indexOf("await ensureAccount()") < press.indexOf("savePendingGift("), "the account comes before the terms are kept");
@@ -147,6 +149,64 @@ test("Home keeps the pay sheet across the account being made, and the page it is
   assert.match(press, /catch \{\s+onMaking\(false\);/, "and taken back when the account was not made");
 });
 
+/**
+ * Three cases, and one of them drawn (the founder, 9 Oct 2026). The account can pay: one button. It cannot and there
+ * is a code, the judges' path: the code in the card's place. It cannot and there is no code: the card, with a small
+ * key to the code under its button. test/browser/pay-sheet.spec.ts walks them; this pins what decides between them.
+ */
+test("the code is the first choice of an account that cannot pay: in the card's place, never beside it", () => {
+  // A link that carried a code opens the sheet on it, from the sheet's first image; the person's own press outranks it.
+  assert.match(sheet, /const linkCode = open \? judgeCodeFromTheLink\(\) : "";/);
+  assert.match(sheet, /const codeWay = codeChosen \?\? linkCode !== "";/);
+  // Offered while credits are open and the account has had none, as the server says; shown before it has said, when
+  // the link carried a code, so the sheet does not open on a card and change its mind.
+  assert.match(sheet, /const codeOffered = credits === null \? null : credits\.open && !credits\.credited;/);
+  assert.match(sheet, /const onTheCode = codeWay && codeOffered !== false && !codeGiven && !enough;/);
+  assert.match(sheet, /setCredits\(\{ open: answer\.open === true, credited: answer\.credited === true \}\);/);
+  const body = sheet.slice(sheet.indexOf("<Sheet "), sheet.indexOf("</Sheet>"));
+  // On the code: the gift and what Viky takes, the field and its button, and the key back. No card figure, fee, line
+  // of terms, total or code to copy: each of them hangs on the card, which does not stand beside a code.
+  assert.match(body, /\{onTheCode \|\| creditArriving \? null : \(\s+<>\s+\{pays !== "card" \? null : cardClosed \? \(/);
+  assert.match(sheet, /const total = enough \? \{ label: W\.rows\.fromAccount, amount: giftRead \} : sum \? \{ label: W\.youPay, amount: say\(sum\.card\) \} : undefined;/);
+  assert.match(sheet, /const sum = byCard && euros && gift !== undefined \?/);
+  const action = body.slice(body.indexOf("{onTheCode ? ("), body.indexOf("data-have-a-code"));
+  assert.ok(action.indexOf("W.code.without") < action.indexOf("<Button "), "on the code the pay button is not drawn: the code's is the one action");
+  assert.ok(body.indexOf("<JudgeCode") < body.indexOf("{onTheCode ? ("), "the field and its button, then the key back");
+  // The first drawing of the code: its field open, and the sheet's own button, not a small one.
+  const code = readFileSync("app/kit/offer/JudgeCode.tsx", "utf8");
+  const first = code.slice(code.indexOf("if (first) {"), code.indexOf("const field = ("));
+  assert.match(first, /<Field id="gift-code" label=\{W\.code\.label\} value=\{code\} onChange=\{setCode\}/);
+  assert.match(first, /<Button doing=\{busy \? W\.code\.using : null\} step=\{WAITS\.code\} waiting=\{code\.trim\(\)\.length === 0\} failed=\{problem\} failedId="gift-code-refused" onPress=\{\(\) => void redeem\(\)\} data-uses-the-code="">/);
+  assert.match(code, /const \[code, setCode\] = useState\(startWith\);/, "what the link carried is already in it");
+  // Without a code in the link, the card stands, and the small key under its button opens the code in its place.
+  assert.match(body, /\{pays === "card" && codeOffered === true && !codeWay && !creditArriving \? \(\s+<button type="button" className=\{`\$\{SMALL_BUTTON\} self-start`\} onClick=\{\(\) => setCodeChosen\(true\)\} data-have-a-code="">/);
+  assert.ok(body.indexOf("<CardLine way={way} />") < body.indexOf("data-have-a-code"), "under the card's button and its line");
+});
+
+test("the code's press makes the account of somebody who has none, and the credit then pays, said on the button", () => {
+  const made = sheet.slice(sheet.indexOf("const accountForTheCode = async"), sheet.indexOf("const close = () =>"));
+  assert.match(made, /if \(address\) return true;/);
+  assert.ok(made.indexOf("onMaking(true);") < made.indexOf("await ensureAccount();"), "Home is told before the passkey opens, as for pay");
+  assert.match(made, /catch \{\s+madeForTheCode\.current = false;\s+onMaking\(false\);\s+setProblem\(W\.notMade\);\s+return false;/);
+  // Closed without paying, Home draws that account's page again; and the next opening starts from what is true then.
+  const close = sheet.slice(sheet.indexOf("const close = () =>"), sheet.indexOf("const signInFirst ="));
+  assert.match(close, /if \(madeForTheCode\.current\) \{\s+madeForTheCode\.current = false;\s+onMaking\(false\);\s+\}/);
+  assert.match(close, /setCodeChosen\(null\);\s+setCodeGiven\(false\);\s+onClose\(\);/);
+  assert.match(sheet, /<Sheet open=\{open\} title=\{W\.title\(recipient\)\} onClose=\{close\} tall>/);
+  // Once the credit is in, no card is named while the account is read again, and the reading is asked again until it
+  // shows the credit: the sheet said "by card" for a second to somebody who had just been given the money.
+  assert.match(sheet, /const creditArriving = codeGiven && pays === "card";/);
+  assert.match(sheet, /\) : creditArriving \? \(\s+<WaitLine>\{W\.readingAccount\}<\/WaitLine>/);
+  assert.match(sheet, /if \(!creditArriving\) return;\s+const again = setTimeout\(\(\) => setBalanceRead\(\(n\) => n \+ 1\), 3000\);\s+return \(\) => clearTimeout\(again\);/);
+  // The card under the sheet reads the gift again when the sheet changed its amount: it kept the figure typed.
+  const offer = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
+  assert.match(offer, /const changeFromTheSheet = \(next: typeof draft\) => \{\s+if \(next\.dollars !== draft\.dollars\) setTypedAmount\(null\);\s+change\(next\);/);
+  assert.match(offer, /onChange=\{changeFromTheSheet\} onClose=\{\(\) => setPaying\(false\)\}/);
+  // Then the button says what pays, when the credit is all the account holds (D295), and what it pays.
+  assert.equal(PAY.code.payWithCredit("$3.00"), "Pay $3.00 with your credit");
+  assert.match(sheet, /\{enough \? \(paidFromCredit \? W\.code\.payWithCredit\(giftRead\) : W\.payFromAccount\(giftRead, recipient\)\) : sum \? W\.payByCard\(say\(sum\.card\)\) : W\.pay\}/);
+});
+
 test("one way in, one action, and no button to another (D239)", () => {
   assert.ok(!("another" in PAY), "the second way is not a choice any more");
   assert.doesNotMatch(sheet, /another way|SECONDARY_BUTTON|setChosen/);
@@ -156,9 +216,9 @@ test("one way in, one action, and no button to another (D239)", () => {
   assert.equal((body.match(/<Button [^>]*>/g) ?? []).filter((button) => !/look="/.test(button)).length, 1, "the one action");
   assert.doesNotMatch(body, /PRIMARY_BUTTON/);
   for (const button of body.match(/<button[^>]*>/g) ?? []) assert.match(button, /SMALL_BUTTON/, button);
-  // "Have a code?" stays (D297), last and folded (the mockup of 3 Oct 2026).
-  assert.ok(body.lastIndexOf("<JudgeCode") > body.indexOf("data-what-happens"), "the code after the fold");
-  assert.match(body, /<JudgeCode\s+folded/);
+  // "Have a code?" stays (D297): since 9 Oct 2026 a small key under the card's button, where it was last and folded.
+  assert.ok(body.indexOf("data-have-a-code") < body.indexOf("data-what-happens"), "the key before the fold");
+  assert.equal((body.match(/<JudgeCode/g) ?? []).length, 1);
   // Which way refused and why is no longer said: the fold holds short lines, and the way that stands is named under the button.
   assert.doesNotMatch(sheet, /insteadSentence|W\.instead/);
   // The device's language goes with the call itself; the sheet passes nothing as if it were an answer from the person.

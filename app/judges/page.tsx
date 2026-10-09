@@ -201,24 +201,27 @@ export default async function JudgesPage() {
 
       <JudgesContents />
 
-      {/* The judges' own path (D291): two gestures, no account kept by Viky, the judge keeps their passkey. The code
+      {/* The judges' own path (D291, and the code first on the pay sheet since 9 Oct 2026): a link, a gift, one press
+          that makes the account and uses the code. No account kept by Viky, the judge keeps their passkey. The code
           itself is only in the submission portal's instructions, never on this page. */}
       <Fold id="try" title="For judges, how to try it" open>
         <ol className={`${HELP} list-decimal space-y-[var(--space-xs)] pl-[var(--space-lg)]`}>
           <li>
-            On the home page, press Sign in and create your account: your face or your fingerprint makes a passkey on
-            your device. Viky keeps no account for you, and you keep the passkey.
+            Open Viky by the link in the submission portal&apos;s instructions, which carries the judge code, and offer a
+            gift from the home page.
           </li>
           <li>
-            Offer a gift from the home page. On the pay sheet, press &quot;Have a code?&quot; and type the judge code from the
-            submission portal&apos;s instructions. Your account receives {judgeCredit ? formatAusd(judgeCredit.units) : "a set amount"}: a judge credit from
+            The pay sheet opens on the code, already filled in. Press &quot;Use the code&quot;: your face or your fingerprint
+            makes a passkey on your device, which is your account. Viky keeps no account for you, and you keep the
+            passkey. Your account receives {judgeCredit ? formatAusd(judgeCredit.units) : "a set amount"}: a judge credit from
             Viky&apos;s treasury, once per account. A real funder pays by card instead, on the page of the card service
-            their country is served by (&quot;How money comes in&quot;, below).
+            their country is served by (&quot;How money comes in&quot;, below). Without the link, press &quot;Have a code?&quot; under
+            the card&apos;s button and type the code from those instructions.
             {judgeCredit ? <span data-judge-standing> {standingInWords(judgeStanding)}</span> : null}
           </li>
           <li>
-            The sheet then pays from your account and opens no card service; if the gift is more than the credit, it
-            offers to make the gift that amount.
+            The sheet then pays with your credit and opens no card service; a gift above the credit is brought to the
+            credit, and the sheet says so.
           </li>
           <li>
             To see the other side on this device: copy the link, press Me, then Other account, open the link and

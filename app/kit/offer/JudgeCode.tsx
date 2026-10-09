@@ -6,7 +6,6 @@ import { formatAusd } from "@/src/gift-reader";
 import { PAY as W } from "@/src/sentences";
 import { HELP, SMALL_BUTTON } from "../../components/ui";
 import { Button } from "../Button";
-import { FoldChevron } from "../GiftLive";
 import { Field } from "../Field";
 import { WAITS } from "@/src/sentences";
 
@@ -17,37 +16,53 @@ export function centsDown(units: bigint): string {
 }
 
 /**
- * The judge code, asked as a checkout asks one (D297), wherever a signed-in person is about to pay: the pay sheet, and
- * the waiting screen a first funder lands on once pay has made their account (D299). Folded behind a small key while
- * credits are open and the account has not had its credit; the server credits the session's account and no other.
- * Once it is sent, `onCredited` reads the balance again, and when the gift is more than the account holds, the gift is
- * brought to what it holds, rounded down to the cent, and a line says so (choice B, D300).
+ * The judge code, asked as a checkout asks one (D297), wherever a person is about to pay: the pay sheet, and the
+ * waiting screen a first funder lands on once pay has made their account (D299). Offered while credits are open and
+ * the account has not had its credit; the server credits the session's account and no other. Once it is sent,
+ * `onCredited` reads the balance again, and when the gift is more than the account holds, the gift is brought to what
+ * it holds, rounded down to the cent, and a line says so (choice B, D300).
+ *
+ * Two drawings. On the waiting screen it stays behind a small key. On the pay sheet it is `first` (the founder, 9 Oct
+ * 2026: the judges' path): the field open, with what the link carried already in it, and its button the sheet's one
+ * action. The sheet says when it is drawn (`offered`), having asked the server itself, and makes the account of
+ * somebody who has none before the code is sent (`before`).
  */
 export function JudgeCode({
   needed,
   held,
   onCredited,
   onMakeIt,
-  folded = false,
+  first = false,
+  offered,
+  startWith = "",
+  before,
 }: Readonly<{
   needed: bigint | null;
   held: bigint | null;
   onCredited: () => void;
   onMakeIt: (dollars: string) => void;
-  /** Closed as a fold under its own title, last on the pay sheet (the mockup of 3 Oct 2026), rather than behind a small key. */
-  folded?: boolean;
+  /** The pay sheet's first choice: the field open and its button the one action, rather than behind a small key. */
+  first?: boolean;
+  /** Whether a code can be used here now, when whoever draws this has asked the server already; asked here otherwise. */
+  offered?: boolean;
+  /** The code the link carried: the field starts on it. */
+  startWith?: string;
+  /** Done before the code is sent. False stops there, and whoever gave it has said why. */
+  before?: () => Promise<boolean>;
 }>) {
   const covered = needed !== null && held !== null && held >= needed;
   const [open, setOpen] = useState(false);
   const [credited, setCredited] = useState(false);
   const [shown, setShown] = useState(false);
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(startWith);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [given, setGiven] = useState<bigint | null>(null);
   const [adjustedTo, setAdjustedTo] = useState<bigint | null>(null);
 
   useEffect(() => {
+    // The pay sheet has asked already, and says what it was told.
+    if (offered !== undefined) return;
     let live = true;
     getJson<{ open?: boolean; credited?: boolean }>("/api/judge/credit").then(
       (answer) => {
@@ -60,12 +75,13 @@ export function JudgeCode({
     return () => {
       live = false;
     };
-  }, []);
+  }, [offered]);
 
   const redeem = async () => {
     setBusy(true);
     setProblem(null);
     try {
+      if (before && !(await before())) return;
       const answer = await postJson<{ units: string }>("/api/judge/credit", { code });
       const credit = BigInt(answer.units);
       setGiven(credit);
@@ -100,7 +116,17 @@ export function JudgeCode({
       </div>
     );
   }
-  if (covered || !open || credited) return null;
+  if (covered || !(offered ?? (open && !credited))) return null;
+  if (first) {
+    return (
+      <>
+        <Field id="gift-code" label={W.code.label} value={code} onChange={setCode} autoComplete="off" spellCheck={false} />
+        <Button doing={busy ? W.code.using : null} step={WAITS.code} waiting={code.trim().length === 0} failed={problem} failedId="gift-code-refused" onPress={() => void redeem()} data-uses-the-code="">
+          {W.code.use}
+        </Button>
+      </>
+    );
+  }
   const field = (
     <div className="flex flex-col gap-[var(--space-xs)]">
       <Field id="gift-code" label={W.code.label} value={code} onChange={setCode} autoComplete="off" spellCheck={false} />
@@ -109,17 +135,6 @@ export function JudgeCode({
       </Button>
     </div>
   );
-  if (folded) {
-    return (
-      <details className="said-fold" data-have-a-code="">
-        <summary className="said-fold-name">
-          {W.code.have}
-          <FoldChevron />
-        </summary>
-        <div className="said-fold-body">{field}</div>
-      </details>
-    );
-  }
   if (!shown) {
     return (
       <button type="button" className={`${SMALL_BUTTON} self-start`} onClick={() => setShown(true)}>
