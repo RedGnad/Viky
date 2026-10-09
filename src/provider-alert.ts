@@ -100,6 +100,57 @@ export async function sendPinnedRuleAlert(
   return sendAlert(pinnedRuleAlert(stop, university), env);
 }
 
+/** A first proof still held, as the morning's reminder says it: where it is from, since when, and until when it can be paid. */
+export type HeldProofLine = Readonly<{
+  sessionId: string;
+  portalId: string;
+  university: string | null;
+  sense: string;
+  giftId: string;
+  /** When it was shown, in seconds. */
+  shownAt: number;
+  /** The last moment the contract takes it, in seconds; nothing when its gift is over and no proof can pay it. */
+  closesAt: number | null;
+}>;
+
+/** "3 days" of a wait, in whole days: under one, "less than a day", so no line says a proof has a day it has not. */
+export function wholeDays(seconds: number): string {
+  const days = Math.floor(Math.max(0, seconds) / 86_400);
+  return days === 0 ? "less than a day" : `${days} ${days === 1 ? "day" : "days"}`;
+}
+
+/**
+ * The reminder of every first proof still held, sent each morning from the day after it was held (the audit of
+ * 8 Oct 2026): the person read that it is checked within an hour, one email left when it was held, and nothing after.
+ * Each line says how long the contract can still pay the proof, because past that moment no review can: the pass then
+ * closes the review as never made and sends the gift back (src/milestone-pass.ts).
+ */
+export function heldProofsReminder(held: readonly HeldProofLine[], nowSeconds: number): { subject: string; text: string } {
+  const payable = held.filter((proof) => proof.closesAt !== null).sort((a, b) => Number(a.closesAt) - Number(b.closesAt));
+  const over = held.filter((proof) => proof.closesAt === null);
+  const utc = (seconds: number) => `${new Date(seconds * 1_000).toISOString().slice(0, 16).replace("T", " ")} UTC`;
+  const where = (proof: HeldProofLine) => (proof.university ? `${proof.university} (${proof.portalId})` : proof.portalId);
+  const first = payable[0];
+  return {
+    subject: first
+      ? `First proofs still held: ${held.length}. The contract stops paying the nearest in ${wholeDays(Number(first.closesAt) - nowSeconds)}`
+      : `First proofs still held: ${held.length}, of gifts that are over`,
+    text: [
+      ...payable.map(
+        (proof) =>
+          `${where(proof)}, ${proof.sense}, gift ${proof.giftId}, session ${proof.sessionId}: held for ${wholeDays(nowSeconds - proof.shownAt)}. The contract can pay it for ${wholeDays(Number(proof.closesAt) - nowSeconds)} more, until ${utc(Number(proof.closesAt))}.`,
+      ),
+      ...(payable.length > 0 ? ["", "Past that moment the pass closes the review as never made, the person reads that Viky did not check the proof in time, and the gift goes back to the person who paid."] : []),
+      ...(over.length > 0 ? ["", ...over.map((proof) => `${where(proof)}, ${proof.sense}, gift ${proof.giftId}, session ${proof.sessionId}: its gift is over, so no proof can pay it. Refuse it to close it.`)] : []),
+      "",
+      "See what each read: pnpm portal:pin",
+      "Then pin it, or refuse it: pnpm portal:pin <session> ...",
+      "",
+      "In production, with the operator's environment: VIKY_ALLOW_PRODUCTION_DATABASE=1 PROVEN_BY=<the operator account> before the command above.",
+    ].join("\n"),
+  };
+}
+
 /** An alert Resend did not take: a line in the logs, and a note in the pass under way when there is one. */
 function notSent(subject: string, why: string): void {
   const line = `alert not sent ("${subject}"): ${why.slice(0, 200)}`;

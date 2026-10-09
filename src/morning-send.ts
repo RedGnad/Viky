@@ -64,8 +64,11 @@ export async function tellAboutDays(giftId: string, days: readonly SettledDay[],
   return await tell(giftId, { kind: "day", outcome: last.outcome, amount: "", ...(today ? { today } : {}) }, deps, last.day);
 }
 
-/** Tells everyone subscribed to a gift how its first proof's review was decided, when it did not reach the gift. */
-export async function tellAboutReview(giftId: string, verdict: "refused" | "notYet", deps: TellingDeps): Promise<number> {
+/**
+ * Tells everyone subscribed to a gift how its first proof's review was closed, when it did not reach the gift:
+ * decided by the operator, or never made before the contract stopped taking the proof (`unread`).
+ */
+export async function tellAboutReview(giftId: string, verdict: "refused" | "notYet" | "unread", deps: TellingDeps): Promise<number> {
   return await tell(giftId, { kind: "reviewed", verdict, amount: "" }, deps);
 }
 

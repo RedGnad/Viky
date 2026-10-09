@@ -55,6 +55,7 @@ test("the card draws no trail and no flag for it, and says where its proof stand
     waiting: "Not proved yet.",
     checking: "Shown. Viky is checking it.",
     refused: "Checked: it did not show what the gift asks.",
+    unread: "Shown. Viky did not check it in time.",
     building: "Waiting for the university's page to be set up.",
     proved: "Proved.",
     missed: "Not proved in time.",
@@ -124,6 +125,6 @@ test("the title says where the proof stands, to each of the two people", () => {
   assert.match(readFileSync("src/shown-verification.ts", "utf8"), /eventAt: BigInt\(evidence\.reading\.eventAt \?\? evidence\.observedAt\)/);
   assert.match(readFileSync("contracts/MilestoneGift.sol", "utf8"), /if \(_dayOf\(a\.eventAt\) > _dayOf\(g\.deadline\)\) revert DeadlinePassed\(\);/);
   // No gesture is offered for a showing that can no longer pay.
-  assert.match(page, /if \(proofStands === "ended"\) return null;/);
+  assert.match(page, /if \(proofStands === "ended" \|\| proofStands === "unread"\) return null;/);
   assert.match(page, /hadOrNot\.deadlineMs \+ MILESTONE_LATE_PROOF_SECONDS \* 1000/);
 });

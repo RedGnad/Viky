@@ -689,6 +689,8 @@ export const GIFT_CARD = {
     waiting: "Not proved yet.",
     checking: "Shown. Viky is checking it.",
     refused: "Checked: it did not show what the gift asks.",
+    /** Shown, held, and never reviewed before the contract stopped taking it (the audit of 8 Oct 2026): ours. */
+    unread: "Shown. Viky did not check it in time.",
     building: "Waiting for the university's page to be set up.",
     proved: "Proved.",
     missed: "Not proved in time.",
@@ -1232,6 +1234,13 @@ export const GIFT_LIVE = {
     checkingYours: "Shown. Viky is checking it.",
     checkingTheirs: (recipient: string | null) => `${recipient ?? "They"} showed it. Viky is checking it.`,
     refused: "It was checked and did not show what the gift asks.",
+    /**
+     * A proof held for review that nobody reviewed before the contract stopped taking it (the audit of 8 Oct 2026).
+     * True of the pass (src/milestone-pass.ts): the review is closed with this reason and the gift goes back to the
+     * person who paid. It says whose failure it is, and nothing of what the page showed, which nobody read.
+     */
+    unreadYours: "Viky did not check your proof in time.",
+    unreadTheirs: (recipient: string | null) => `Viky did not check ${recipient ? `${recipient}'s` : "their"} proof in time.`,
     buildingYours: "Your university's page is being set up. Then you show it here.",
     buildingTheirs: (recipient: string | null) => `${recipient ? `${recipient}'s` : "Their"} university page is being set up.`,
     /**
@@ -1705,6 +1714,9 @@ export const MORNING = {
     /** A first proof's review, decided (the founder, 29 Sep 2026): the answer the person was waiting for. */
     reviewRefused: "Your page was checked: it does not show what this gift is for. Open the gift to see why.",
     reviewNotYet: "Your page was checked and it works. The result is not there yet: show it again once it is.",
+    /** A proof nobody reviewed before the contract stopped taking it (the audit of 8 Oct 2026): sent as the gift goes back. */
+    reviewUnreadTo: (amount: string, funder: string) => `Viky did not check your proof in time. ${opening(amount)} went back to ${funder}.`,
+    reviewUnread: (amount: string) => `Viky did not check your proof in time. ${opening(amount)} went back.`,
   },
   funder: {
     /** "Léa did yesterday's lesson.": the second half is the register's, so no sentence here names a source. */
@@ -1721,6 +1733,8 @@ export const MORNING = {
     reviewRefused: "The page shown was checked: it does not show what the gift is for.",
     reviewNotYetNamed: (name: string) => `${name}'s page was checked and it works. The result is not there yet.`,
     reviewNotYet: "The page shown was checked and it works. The result is not there yet.",
+    reviewUnreadNamed: (name: string, amount: string) => `Viky did not check ${name}'s proof in time. ${opening(amount)} came back to you.`,
+    reviewUnread: (amount: string) => `Viky did not check their proof in time. ${opening(amount)} came back to you.`,
   },
 } as const;
 

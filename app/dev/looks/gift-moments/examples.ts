@@ -12,7 +12,7 @@ import type { MilestoneStatus } from "@/src/milestone-view";
 export const SHAPES = ["days", "climb", "stamp", "shown", "university"] as const;
 export type Shape = (typeof SHAPES)[number];
 
-export const MOMENTS = ["unopened", "notConnected", "running", "runningBack", "startTooHigh", "won", "over", "cameBack", "building", "held", "reviewRefused"] as const;
+export const MOMENTS = ["unopened", "notConnected", "running", "runningBack", "startTooHigh", "won", "over", "cameBack", "building", "held", "reviewRefused", "neverReviewed"] as const;
 export type ExampleMoment = (typeof MOMENTS)[number];
 
 /** The funder, the person it is for, somebody signed in who is neither, and somebody with no account at all. */
@@ -27,9 +27,10 @@ const RECIPIENT = "Léa";
 
 /** Which moments each shape has: a daily gift has no start too high, and the "went back" day is a daily gift's alone. */
 export function momentsOf(shape: Shape): readonly ExampleMoment[] {
-  // A university (D312): its provider being built, its first proof held for review, or refused by it.
-  if (shape === "university") return ["running", "building", "held", "reviewRefused"];
-  const own = MOMENTS.filter((moment) => moment !== "building" && moment !== "held" && moment !== "reviewRefused");
+  // A university (D312): its provider being built, its first proof held for review, refused by it, or never reviewed
+  // before the contract stopped taking it, the gift gone back (the audit of 8 Oct 2026).
+  if (shape === "university") return ["running", "building", "held", "reviewRefused", "neverReviewed"];
+  const own = MOMENTS.filter((moment) => moment !== "building" && moment !== "held" && moment !== "reviewRefused" && moment !== "neverReviewed");
   if (shape === "days") return own.filter((moment) => moment !== "startTooHigh");
   if (shape === "climb") return own.filter((moment) => moment !== "runningBack");
   // A certificate's clock starts when it is funded (MilestoneGift sets its deadline then), so it is never opened and
@@ -139,7 +140,9 @@ function milestone(shape: Exclude<Shape, "days">, moment: ExampleMoment, reader:
   // A certificate is started from the moment it is funded; a climb from its first reading.
   const connected = climb ? opened && moment !== "notConnected" : moment !== "cameBack";
   const reached = moment === "won";
-  const finished = moment === "won" || moment === "over";
+  // Never reviewed in time: the gift is over and gone back, as one whose time ran out, with the review's own reason.
+  const over = moment === "over" || moment === "neverReviewed";
+  const finished = moment === "won" || over;
   const target = climb ? 1500 : shape === "shown" ? 90 : 1;
   const startReading = climb && connected ? (moment === "startTooHigh" ? 1520 : 1280) : null;
   const todayReading = climb && connected ? (moment === "startTooHigh" ? 1520 : moment === "won" ? 1506 : moment === "over" ? 1390 : 1410) : null;
@@ -156,7 +159,7 @@ function milestone(shape: Exclude<Shape, "days">, moment: ExampleMoment, reader:
             ? "startTooHigh"
             : moment === "won"
               ? "reached"
-              : moment === "over"
+              : over
                 ? "returned"
                 : "climbing";
   return {
@@ -173,7 +176,7 @@ function milestone(shape: Exclude<Shape, "days">, moment: ExampleMoment, reader:
     target,
     todayReading,
     readAtMs: todayReading === null ? null : (now - 3600) * 1000,
-    deadlineMs: connected ? (moment === "over" ? now - DAY : now + 20 * DAY) * 1000 : null,
+    deadlineMs: connected ? (moment === "over" ? now - DAY : moment === "neverReviewed" ? now - 15 * DAY : now + 20 * DAY) * 1000 : null,
     durationDays: 30,
     opened,
     connected,
@@ -184,7 +187,7 @@ function milestone(shape: Exclude<Shape, "days">, moment: ExampleMoment, reader:
     earned: String(reached ? amount : 0),
     earnedDisplay: money(reached ? amount : 0),
     takenDisplay: money(0),
-    returnedDisplay: money(moment === "over" || moment === "cameBack" ? amount : 0),
+    returnedDisplay: money(over || moment === "cameBack" ? amount : 0),
     createdAtChain: now - 5 * DAY,
     claimedAtChain: opened ? now - 4 * DAY : 0,
     withdrawNonce: "0",
@@ -196,6 +199,6 @@ function milestone(shape: Exclude<Shape, "days">, moment: ExampleMoment, reader:
     standingAtOffer: climb ? 1280 : null,
     marathon: null,
     wca: null,
-    review: moment === "building" ? { status: "building" } : moment === "held" ? { status: "pending" } : moment === "reviewRefused" ? { status: "refused" } : null,
+    review: moment === "building" ? { status: "building" } : moment === "held" ? { status: "pending" } : moment === "reviewRefused" ? { status: "refused" } : moment === "neverReviewed" ? { status: "unread" } : null,
   };
 }

@@ -38,7 +38,7 @@ export type LiveInput = Readonly<{
    * waiting for the university's page to be built, or past the last day: "late" where the source dates what it grants,
    * so what was had in time can still be proved, and "ended" where the showing itself is what is dated.
    */
-  proof?: "pending" | "refused" | "building" | "late" | "ended" | null;
+  proof?: "pending" | "refused" | "building" | "late" | "ended" | "unread" | null;
   /** The last day of the late window, in the reader's clock: fourteen days after the gift's last day. */
   lateUntilInWords?: string | null;
   /** Which of the three drawings the gift has, which says what its promise is: day by day, at a target, with a proof. */
@@ -154,11 +154,15 @@ function proofHeadline(proof: NonNullable<LiveInput["proof"]>, voice: Voice, rec
       return L.awaitingProof.late;
     case "ended":
       return L.awaitingProof.ended;
+    case "unread":
+      return yours ? L.awaitingProof.unreadYours : L.awaitingProof.unreadTheirs(recipientName);
   }
 }
 
 /** What follows from a last day that has passed, under the state: until when, and where the money goes then. */
 function proofNext(proof: NonNullable<LiveInput["proof"]>, voice: Voice, funderName: string | null, until: string | null): string | null {
+  // Never reviewed in time: the contract takes no proof any more, and the pass sends the gift back.
+  if (proof === "unread") return voice === "funder" ? L.over.byItself.theirs : L.over.byItself.yours;
   if (until === null) return null;
   if (proof === "late") return voice === "recipient" ? L.awaitingProof.lateNextYours(until) : voice === "funder" ? L.awaitingProof.lateNextTheirs(until) : L.awaitingProof.lateNextReading(until);
   if (proof === "ended") return voice === "recipient" ? L.awaitingProof.endedNextYours(funderName, until) : voice === "funder" ? L.awaitingProof.endedNextTheirs(until) : null;
@@ -313,7 +317,8 @@ export function liveOf(input: LiveInput): Live {
 
     case "over":
       return {
-        headline: voice === "funder" ? L.over.theirs(recipientName) : L.over.yours,
+        // A proof shown and never reviewed is not the person's lateness: the headline says whose it was.
+        headline: input.proof === "unread" ? proofHeadline("unread", voice, recipientName) : voice === "funder" ? L.over.theirs(recipientName) : L.over.yours,
         // Everything goes back when nothing was earned: the whole amount, whether or not it has been sent yet.
         figure: { label: voice === "funder" ? L.over.label.theirs : L.over.label.yours(funderName), value: input.amountDisplay },
         next:

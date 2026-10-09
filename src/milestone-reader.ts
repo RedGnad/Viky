@@ -177,6 +177,18 @@ export function canStillReach(gift: PhaseInput, nowSeconds: number): boolean {
 }
 
 /**
+ * The last moment the contract takes a proof for an opened gift of the second shape (a certificate, a university, an
+ * exam, a race, a competition): its last day and the late window, moved by a pause exactly as `canExpire` moves it.
+ * A proof sent after it is refused (`DeadlinePassed`) and `expire` is accepted from then on, so this is also the day a
+ * proof still held for review can no longer be paid (the audit of 8 Oct 2026).
+ */
+export function lateProofCloses(gift: Pick<MilestoneState, "deadline" | "proofResumedAt"> & Partial<Pick<MilestoneState, "version" | "proofPauseBegan">>): number {
+  const pause = lastPauseOf(gift);
+  if (pause) return closesAfterPause(gift.deadline, MILESTONE_LATE_PROOF_SECONDS, pause);
+  return Math.max(gift.deadline, gift.proofResumedAt) + MILESTONE_LATE_PROOF_SECONDS;
+}
+
+/**
  * Whether `expire` would be accepted now, by the contract's own rules and in the contract's own order: never while
  * readings are paused. A gift nobody opened, of either shape, after the dormant delay and the grace. A gift of the
  * second shape that was opened, once what was granted in time can no longer be shown: the deadline and the late
@@ -202,7 +214,7 @@ export function canExpire(
   if (pause) {
     const closes = (moment: number, window: number) => closesAfterPause(moment, window, pause);
     if (gift.recipient === null) return nowSeconds >= closes(gift.fundedAt + MILESTONE_DORMANT_SECONDS, MILESTONE_PROOF_GRACE_SECONDS);
-    if (gift.shape === SHAPE_HAVE_OR_NOT) return nowSeconds > closes(gift.deadline, MILESTONE_LATE_PROOF_SECONDS);
+    if (gift.shape === SHAPE_HAVE_OR_NOT) return nowSeconds > lateProofCloses(gift);
     if (gift.identityHash !== ZERO_HASH) return nowSeconds > closes(gift.deadline, MILESTONE_PROOF_GRACE_SECONDS);
     return nowSeconds >= closes(gift.claimedAt + MILESTONE_DORMANT_SECONDS, MILESTONE_PROOF_GRACE_SECONDS);
   }
@@ -212,7 +224,7 @@ export function canExpire(
   if (gift.recipient === null) {
     return nowSeconds >= gift.fundedAt + MILESTONE_DORMANT_SECONDS + MILESTONE_PROOF_GRACE_SECONDS;
   }
-  if (gift.shape === SHAPE_HAVE_OR_NOT) return nowSeconds > afterPauses(gift.deadline) + MILESTONE_LATE_PROOF_SECONDS;
+  if (gift.shape === SHAPE_HAVE_OR_NOT) return nowSeconds > lateProofCloses(gift);
   if (gift.identityHash !== ZERO_HASH) return nowSeconds > afterPauses(gift.deadline) + MILESTONE_PROOF_GRACE_SECONDS;
   return nowSeconds >= afterPauses(gift.claimedAt + MILESTONE_DORMANT_SECONDS) + MILESTONE_PROOF_GRACE_SECONDS;
 }

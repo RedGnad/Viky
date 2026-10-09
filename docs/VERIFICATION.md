@@ -28,6 +28,10 @@ today (`PROOF_VERIFIER` unset):
    line: the university, the gift and the state it ended in. The judges
    page prints what each pinned provider reads, from the pin itself, and says of a pin made ahead that no proof has
    been shown on it yet.
+   A proof held is never left: the operator is emailed when it is held, then every morning by the settling pass with
+   the time the contract can still pay it (a gift had or not takes a proof until its last day plus fourteen days).
+   Past that moment no review can pay it, so the pass closes the review as never made, both people read that Viky
+   did not check the proof in time, and the whole gift goes back to the person who paid (`src/milestone-pass.ts`).
 3. **A reading Viky makes itself** (zkFetch: the daily Duolingo lesson, the Chess.com ratings, the certificates, a race,
    and a connected source's reading with the person's key). It is fetched through Reclaim's TEE client and verified
    server side by the attestor's signature only: js-sdk `verifyProof` checks it against the attestor list it fetches

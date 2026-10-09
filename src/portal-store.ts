@@ -566,6 +566,24 @@ export async function decideReview(sessionId: string, status: "pinned" | "refuse
   return rows.length > 0;
 }
 
+/**
+ * The reason of a review nobody made before the contract stopped taking the proof (the audit of 8 Oct 2026): the
+ * failure is ours, and the person reads it as that, never as a page that did not show what the gift asks.
+ */
+export const NEVER_REVIEWED = "NEVER_REVIEWED";
+
+/**
+ * Closes every proof of a gift still held, once the contract can no longer pay it, with that reason. The proofs and
+ * what was read go, as with any review closed. Returns how many were closed: none when another run closed them first.
+ */
+export async function closeNeverReviewed(giftId: string): Promise<number> {
+  const rows = await sql()`
+    UPDATE viky_portal_reviews SET status = 'refused', reason = ${NEVER_REVIEWED}, decided_at = now(), proofs = 'null'::jsonb, reading = '{}'::jsonb
+     WHERE gift_id = ${giftId} AND status = 'pending'
+     RETURNING session_id`;
+  return rows.length;
+}
+
 export type ProviderRequest = Readonly<{ portalId: string; sense: PortalSense; instruction: string; firstGiftId: string | null; createdAt: Date; builtAt: Date | null; alertedAt: Date | null }>;
 
 function toRequest(row: Record<string, unknown>): ProviderRequest {

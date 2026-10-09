@@ -156,5 +156,8 @@ test("a gift had or not tells its subscribers when it is reached, from every req
   assert.match(readFileSync("app/api/proof/verify/route.ts", "utf8"), /if \(result\.arrived\) await tellReached\(result\.giftId\);/);
   assert.match(readFileSync("src/shown-verification.ts", "utf8"), /arrived: proved\.happened === "reached",/);
   // Its time running out is the settling pass's to tell, as for every milestone.
-  assert.match(readFileSync("src/milestone-pass.ts", "utf8"), /await tellAboutMilestone\(giftId, "expired", liveTellingDeps\(\)\);/);
+  // Through the pass's own telling since 8 Oct 2026: a proof never reviewed in time is said as that, not as "the time is up".
+  const pass = readFileSync("src/milestone-pass.ts", "utf8");
+  assert.match(pass, /await tell\(giftId, unread \? "neverReviewed" : "expired"\);/);
+  assert.match(pass, /return news === "neverReviewed" \? tellAboutReview\(giftId, "unread", liveTellingDeps\(\)\) : tellAboutMilestone\(giftId, news, liveTellingDeps\(\)\);/);
 });

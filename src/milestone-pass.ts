@@ -2,13 +2,14 @@ import type { Hex } from "viem";
 import type { CreationLine } from "./gift-creation";
 import { loadAllGifts } from "./gift-store";
 import { completePendingMilestoneCreations } from "./milestone-creation";
-import { canExpire, milestonePhase, readMilestoneGift, type MilestoneState } from "./milestone-reader";
+import { canExpire, lateProofCloses, milestonePhase, readMilestoneGift, type MilestoneState } from "./milestone-reader";
 import { MILESTONE_OURS_TO_FIX, runMilestoneReading, type MilestoneOutcome } from "./milestone-reading";
 import { relayExpire, relayMilestoneRefund } from "./milestone-relay";
-import { tellAboutMilestone } from "./morning-send";
+import { tellAboutMilestone, tellAboutReview } from "./morning-send";
 import { liveTellingDeps } from "./morning-send-live";
 import { SHAPE_CLIMB, isMilestoneGiftId, SHAPE_HAVE_OR_NOT } from "./milestone-protocol";
-import { latestReviewOf } from "./portal-store";
+import { closeNeverReviewed, latestReviewOf, loadPortal, NEVER_REVIEWED, pendingReviews, type PortalReview } from "./portal-store";
+import { heldProofsReminder, wholeDays, type HeldProofLine } from "./provider-alert";
 import { escrowOf, RelayerError } from "./relayer";
 
 /**
@@ -25,9 +26,21 @@ import { escrowOf, RelayerError } from "./relayer";
  * university, an exam, a race, a competition) nobody opened, or opened and never proved once the late window has passed. A gift whose reading failed on our side in this pass is held: it is not closed on a pass that
  * could not read it (D57), even though a reading after the deadline could not have saved it, so that nobody has to
  * reason about which of our failures were harmless.
+ *
+ * A first proof held for the operator's review (D312) is the settling pass's too, since 8 Oct 2026. While the contract
+ * can still pay it, the operator is reminded of it each morning, with the time left. Once the contract takes no proof
+ * for the gift any more, no review can pay it: the review is closed as never made, the person reads that, and the gift
+ * goes back as any other. Before, the pass held such a gift from that same moment on, for good: nothing was paid and
+ * nothing came back until somebody refused the proof by hand.
  */
 
-export type MilestonePassLine = { giftId: string; step: "create" | "read" | "expire" | "refund"; result: string; hash?: string };
+export type MilestonePassLine = { giftId: string; step: "create" | "read" | "expire" | "refund" | "review"; result: string; hash?: string };
+
+/** A first proof held for review, as the pass needs it: whose it is, and when it was shown. */
+export type HeldProof = Pick<PortalReview, "sessionId" | "portalId" | "sense" | "giftId" | "observedAt">;
+
+/** One held proof in the morning's reminder: until when the contract can pay it, or nothing when its gift is over. */
+export type HeldReminder = HeldProof & Readonly<{ closesAt: number | null }>;
 
 export type MilestonePassDeps = {
   gifts: () => Promise<ReadonlyArray<{ giftId: string; escrow: Hex | null }>>;
@@ -38,9 +51,38 @@ export type MilestonePassDeps = {
   now: () => number;
   /** Completes the milestone creations whose record failed after their money moved (D87). */
   completeCreations?: () => Promise<readonly CreationLine[]>;
-  /** Whether a first proof of this gift is held for the operator's review (D312): shown, and not yet settled or refused. */
-  inReview?: (giftId: string) => Promise<boolean>;
+  /** The first proofs held for the operator's review (D312): shown, and not yet settled or refused. Asked once a settling pass. */
+  heldProofs?: () => Promise<readonly HeldProof[]>;
+  /** Closes a gift's held proofs as never reviewed, once the contract takes none any more: how many it closed. */
+  closeNeverReviewed?: (giftId: string) => Promise<number>;
+  /** Whether a gift's last review was closed that way, by this pass or an earlier one whose `expire` did not leave. */
+  neverReviewed?: (giftId: string) => Promise<boolean>;
+  /** Reminds the operator of what is still held, once a morning. */
+  remind?: (held: readonly HeldReminder[], nowSeconds: number) => Promise<void>;
+  /** Tells whoever asked to be told about the gift (src/morning-send.ts). */
+  tell?: (giftId: string, news: "reached" | "expired" | "neverReviewed") => Promise<unknown>;
 };
+
+/** The morning's reminder, once in a UTC day whatever runs the settling pass again. */
+async function remindOfHeldProofs(held: readonly HeldReminder[], nowSeconds: number): Promise<void> {
+  const { tellOnceToday } = await import("./attested-calls");
+  await tellOnceToday(
+    "held-proofs",
+    async () => {
+      const lines: HeldProofLine[] = [];
+      for (const proof of held) {
+        const university = (await loadPortal(proof.portalId).catch(() => null))?.university ?? null;
+        lines.push({ sessionId: proof.sessionId, portalId: proof.portalId, university, sense: proof.sense, giftId: proof.giftId, shownAt: proof.observedAt, closesAt: proof.closesAt });
+      }
+      return heldProofsReminder(lines, nowSeconds);
+    },
+    nowSeconds * 1_000,
+  );
+}
+
+function liveTell(giftId: string, news: "reached" | "expired" | "neverReviewed"): Promise<unknown> {
+  return news === "neverReviewed" ? tellAboutReview(giftId, "unread", liveTellingDeps()) : tellAboutMilestone(giftId, news, liveTellingDeps());
+}
 
 export function liveMilestonePassDeps(): MilestonePassDeps {
   return {
@@ -51,7 +93,14 @@ export function liveMilestonePassDeps(): MilestonePassDeps {
     refund: relayMilestoneRefund,
     now: () => Math.floor(Date.now() / 1_000),
     completeCreations: () => completePendingMilestoneCreations(),
-    inReview: async (giftId) => (await latestReviewOf(giftId))?.status === "pending",
+    heldProofs: () => pendingReviews(),
+    closeNeverReviewed,
+    neverReviewed: async (giftId) => {
+      const last = await latestReviewOf(giftId);
+      return last?.status === "refused" && last.reason === NEVER_REVIEWED;
+    },
+    remind: remindOfHeldProofs,
+    tell: liveTell,
   };
 }
 
@@ -89,18 +138,40 @@ export async function milestonePass(settle: boolean, deps: MilestonePassDeps = l
   if (deps.completeCreations) {
     for (const line of await deps.completeCreations()) lines.push({ giftId: line.giftId ?? `creation ${line.nonce.slice(0, 10)}`, step: "create", result: line.result });
   }
+  // What is held for review, read once. A list that cannot be read is not an empty one: no gift a held proof could
+  // belong to is closed on it (`passOne`), and the report says so.
+  let held: readonly HeldProof[] | null = [];
+  if (settle && deps.heldProofs) {
+    try {
+      held = await deps.heldProofs();
+    } catch (error) {
+      held = null;
+      lines.push({ giftId: "reviews", step: "review", result: `failed: ${error instanceof Error ? error.message.slice(0, 200) : String(error)}` });
+    }
+  }
+  const reminders: HeldReminder[] = [];
   for (const record of await deps.gifts()) {
     try {
-      lines.push(...(await passOne(record, settle, deps)));
+      lines.push(...(await passOne(record, settle, deps, held, reminders)));
     } catch (error) {
       // One gift that cannot be read today never stops the pass for the others, and the report says which.
       lines.push({ giftId: record.giftId, step: "read", result: `failed: ${error instanceof Error ? error.message.slice(0, 200) : String(error)}` });
     }
   }
+  if (reminders.length > 0 && deps.remind) {
+    // A reminder that does not leave never fails the pass: the lines above say what is held all the same.
+    await deps.remind(reminders, deps.now()).catch((error) => lines.push({ giftId: "reviews", step: "review", result: `reminder not sent: ${error instanceof Error ? error.message.slice(0, 200) : String(error)}` }));
+  }
   return lines;
 }
 
-async function passOne(record: { giftId: string; escrow: Hex | null }, settle: boolean, deps: MilestonePassDeps): Promise<MilestonePassLine[]> {
+async function passOne(
+  record: { giftId: string; escrow: Hex | null },
+  settle: boolean,
+  deps: MilestonePassDeps,
+  heldProofs: readonly HeldProof[] | null = [],
+  reminders: HeldReminder[] = [],
+): Promise<MilestonePassLine[]> {
   const lines: MilestonePassLine[] = [];
   const giftId = record.giftId;
   let contract: Hex;
@@ -109,6 +180,7 @@ async function passOne(record: { giftId: string; escrow: Hex | null }, settle: b
   } catch (error) {
     return [{ giftId, step: "read", result: error instanceof Error ? error.message : "no contract recorded" }];
   }
+  const tell = deps.tell ?? liveTell;
   let state = await deps.read(contract, giftId);
   let held = false;
   const phase = milestonePhase(state, deps.now());
@@ -119,26 +191,48 @@ async function passOne(record: { giftId: string; escrow: Hex | null }, settle: b
     lines.push({ giftId, step: "read", result: describe(outcome), hash: "hash" in outcome ? outcome.hash : undefined });
     held = outcome.kind === "refused" && MILESTONE_OURS_TO_FIX.has(outcome.code);
     if (outcome.kind === "reached") {
-      await tellAboutMilestone(giftId, "reached", liveTellingDeps());
+      await tell(giftId, "reached");
       state = await deps.read(contract, giftId);
     }
   }
   if (!settle) return lines;
+  const now = deps.now();
+  const closable = canExpire(state, now);
+  // Only a gift had or not, opened, has a proof to hold: nothing else is asked about a review.
+  const hadOrNot = state.shape === SHAPE_HAVE_OR_NOT && state.recipient !== null;
+  const proofs = hadOrNot ? (heldProofs ?? []).filter((proof) => proof.giftId === giftId) : [];
+  if (proofs.length > 0 && !closable) {
+    // Held while the contract can still pay it: the operator is reminded each morning, with the time left. A gift
+    // paid or ended meanwhile leaves a held proof that pays nothing, which only a refusal closes.
+    const over = state.settled || state.cancelled;
+    const closesAt = over ? null : lateProofCloses(state);
+    for (const proof of proofs) reminders.push({ ...proof, closesAt });
+    lines.push({
+      giftId,
+      step: "review",
+      result: closesAt === null ? "held: a first proof of a gift that is over, refuse it to close it (pnpm portal:pin)" : `held: a first proof waits for review, the contract can pay it for ${wholeDays(closesAt - now)} more (pnpm portal:pin)`,
+    });
+  }
   if (held) {
     lines.push({ giftId, step: "expire", result: "held: today's reading failed on our side" });
     return lines;
   }
-  if (canExpire(state, deps.now())) {
-    // A proof shown in time and still waiting for the operator is not the recipient's lateness: the gift is not taken
-    // back on it. The report says so every day until the review is decided, which is the operator's to do.
-    if (state.shape === SHAPE_HAVE_OR_NOT && state.recipient !== null && (await deps.inReview?.(giftId))) {
-      lines.push({ giftId, step: "expire", result: "held: a first proof is under review, decide it (pnpm portal:pin)" });
+  if (closable) {
+    if (hadOrNot && heldProofs === null) {
+      lines.push({ giftId, step: "expire", result: "held: the proofs held for review could not be read" });
       return lines;
     }
+    // The contract takes no proof for this gift any more (`lateProofCloses`), so one still held can never be paid:
+    // its review is closed as never made, which is ours and which the person reads, before the gift goes back.
+    const closed = proofs.length > 0 ? ((await deps.closeNeverReviewed?.(giftId)) ?? 0) : 0;
+    if (closed > 0) lines.push({ giftId, step: "review", result: `closed: ${closed === 1 ? "a first proof was" : `${closed} first proofs were`} never reviewed, and the contract takes none any more` });
     const line = await attempt(giftId, "expire", () => deps.expire(giftId, contract));
     lines.push(line);
     if (line.result !== "sent") return lines;
-    await tellAboutMilestone(giftId, "expired", liveTellingDeps());
+    // Said as what happened: a proof never reviewed is not "the time is up", on this pass or on the one that
+    // sends the `expire` an earlier pass could not.
+    const unread = closed > 0 || (hadOrNot && (await deps.neverReviewed?.(giftId)) === true);
+    await tell(giftId, unread ? "neverReviewed" : "expired");
     state = await deps.read(contract, giftId);
   }
   if (state.refundable > 0n) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, contract)));

@@ -5,6 +5,7 @@ import test, { after, before } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import {
   awaitingPin,
+  closeNeverReviewed,
   configurePortalStore,
   countPortals,
   decideReview,
@@ -15,8 +16,10 @@ import {
   loadPortal,
   loadReview,
   markRequestBuilt,
+  NEVER_REVIEWED,
   openRequests,
   pageOfRequest,
+  pendingReviews,
   pinProvider,
   portalByRequestHash,
   portalCountries,
@@ -363,6 +366,20 @@ test("a held proof is held once, by its sense, and a decision drops its proofs; 
   assert.equal((await loadReview("session-held-1"))?.proofs, null);
   // And what was read from the page goes with them (the audit of 1 Oct 2026, V-02): Privacy says it is erased at the decision.
   assert.deepEqual((await loadReview("session-held-1"))?.reading, {});
+  // Never reviewed before the contract stopped taking it (the audit of 8 Oct 2026): every proof of the gift still held
+  // is closed at once with that reason, dropped like any other, and one already decided keeps its own.
+  assert.equal(await holdForReview({ ...held, sessionId: "session-held-2" }), true);
+  assert.equal(await holdForReview({ ...held, sessionId: "session-held-3" }), true);
+  assert.equal(await holdForReview({ ...held, sessionId: "session-other-gift", giftId: "1000044" }), true);
+  assert.equal(await closeNeverReviewed("1000043"), 2);
+  assert.equal(await closeNeverReviewed("1000043"), 0, "closed once");
+  for (const session of ["session-held-2", "session-held-3"]) {
+    const closed = await loadReview(session);
+    assert.deepEqual([closed?.status, closed?.reason, closed?.proofs, closed?.reading], ["refused", NEVER_REVIEWED, null, {}]);
+  }
+  assert.equal((await loadReview("session-held-1"))?.reason, "WITNESS_OTHER_PATTERN");
+  assert.deepEqual((await pendingReviews()).map((review) => review.sessionId), ["session-other-gift"], "another gift's proof stays held");
+  assert.equal(await decideReview("session-other-gift", "refused", "test"), true);
   await db.query(`INSERT INTO viky_milestone_gifts (gift_id, portal) VALUES ('1000043', 'uni-b-br')`);
   await assert.rejects(removePortal("uni-b-br"), /named by a gift/);
   assert.equal(await removePortal("uni-a-br"), true);

@@ -11,7 +11,7 @@ import { bibStillOpen, DISTANCE_LABELS, finishInWords, marathonEventById } from 
 import { isWcaId, WCA_EVENTS, wcaCourseOf, wcaResultInWords } from "./wca";
 import type { MilestoneStatus } from "./milestone-view";
 import { escrowOf } from "./relayer";
-import { latestReviewOf, loadPortal, resultsExtractOf, type PortalReview, type PortalSense } from "./portal-store";
+import { latestReviewOf, loadPortal, NEVER_REVIEWED, resultsExtractOf, type PortalReview, type PortalSense } from "./portal-store";
 import { GRADE_UNITS, gradeTargetInWords, scaleKey, scaleMismatch, scaleOfChoice } from "./university-shown";
 
 /**
@@ -21,6 +21,12 @@ import { GRADE_UNITS, gradeTargetInWords, scaleKey, scaleMismatch, scaleOfChoice
  */
 
 export type Viewer = Readonly<{ isRecipient: boolean; isFunder: boolean; holdsTheLink: boolean }>;
+
+/**
+ * What a university gift waits on, or was closed by: its provider being built, its first proof's review, and `unread`
+ * for a review nobody made before the contract stopped taking the proof (the audit of 8 Oct 2026).
+ */
+type UniversityWait = Readonly<{ status: "building" | PortalReview["status"] | "unread"; message?: string }>;
 
 export function milestoneStatusOf(input: {
   record: GiftRecord;
@@ -35,7 +41,7 @@ export function milestoneStatusOf(input: {
   /** A grade gift's target in words, on its scale (the founder, 28 Sep 2026). */
   targetWords?: string | null;
   /** What a university gift waits on (D313): its provider being built, or its first proof's review. */
-  review?: Readonly<{ status: "building" | PortalReview["status"]; message?: string }> | null;
+  review?: UniversityWait | null;
 }): MilestoneStatus {
   const { record, state, viewer } = input;
   const conditionId = input.milestone?.conditionId ?? "";
@@ -151,7 +157,7 @@ const UNIVERSITY_SENSES: Readonly<Record<string, PortalSense>> = {
  * when the gift was made; or its first proof held for review, or refused by it. Nothing for any other gift, and
  * nothing when the tables cannot be read.
  */
-async function universityWait(giftId: string, milestone: MilestoneRecord | null): Promise<Readonly<{ status: "building" | PortalReview["status"]; message?: string }> | null> {
+async function universityWait(giftId: string, milestone: MilestoneRecord | null): Promise<UniversityWait | null> {
   const sense = milestone ? UNIVERSITY_SENSES[milestone.conditionId] : undefined;
   if (!sense || !milestone?.portal) return null;
   try {
@@ -159,6 +165,8 @@ async function universityWait(giftId: string, milestone: MilestoneRecord | null)
     if (portal && !portal[sense]) return { status: "building" };
     const review = await latestReviewOf(giftId);
     if (!review) return null;
+    // Nobody reviewed it before the contract stopped taking it: said as that, never as a page that showed too little.
+    if (review.status === "refused" && review.reason === NEVER_REVIEWED) return { status: "unread" };
     // The review found the university grades on another scale than the gift was made on: said with both scales.
     const chosen = scaleOfChoice(milestone.gradeScale ?? undefined);
     const pinned = resultsExtractOf(portal?.results ?? null)?.grade.scale;

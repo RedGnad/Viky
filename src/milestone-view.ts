@@ -106,7 +106,7 @@ export type MilestoneStatus = Readonly<{
    * target on the contract is 1, or a count nobody reads, and is never printed. Nothing for a climb or a grade.
    */
   asked?: string | null;
-  review: Readonly<{ status: "building" | "pending" | "refused"; /** The refusal in its own words, where it has them: a scale that does not match. */ message?: string }> | null;
+  review: Readonly<{ status: "building" | "pending" | "refused" | "unread"; /** The refusal in its own words, where it has them: a scale that does not match. */ message?: string }> | null;
   /** Which version of its contract holds the gift (src/v2.ts). Absent on an answer made before the second existed. */
   version?: ContractVersion;
   /** The second version only: what ending the gift now would do, for the person it is for (src/gift-ending.ts). */
