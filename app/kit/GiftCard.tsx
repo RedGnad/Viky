@@ -201,6 +201,8 @@ function milestoneStateInWords(status: MilestoneStatus): string {
   // Something had or not says where its one proof stands, and never its target, which is 1 or a count nobody reads.
   if (status.shape === "certificate") {
     if (status.reached) return W.hadOrNot.proved;
+    // Shown and never reviewed in time: said before "not proved in time", which would put it on the person.
+    if (status.review?.status === "unread") return W.hadOrNot.unread;
     if (status.finished) return W.hadOrNot.missed;
     if (!status.opened) return W.notOpened;
     if (status.review) return W.hadOrNot[status.review.status === "pending" ? "checking" : status.review.status];

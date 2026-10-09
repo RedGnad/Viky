@@ -351,7 +351,9 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
   const pastTheLastDay = Boolean(hadOrNot && hadOrNot.deadlineMs !== null && nowMs !== 0 && Math.floor(nowMs / 86_400_000) > Math.floor(hadOrNot.deadlineMs / 86_400_000));
   // Where a source dates what it grants, what was had in time can still be proved; where the showing is what is dated,
   // nothing shown after the last day can pay (src/shown-verification.ts: the day shown is the day sent to the contract).
-  const proofStands = !hadOrNot || gift.finished || !hadOrNot.opened ? null : (hadOrNot.review?.status ?? (pastTheLastDay ? (condition?.nature === "shown" ? "ended" : "late") : null));
+  // A proof nobody reviewed in time is said for good, on the gift over as on the gift about to go back.
+  const unread = hadOrNot?.review?.status === "unread";
+  const proofStands = !hadOrNot || !hadOrNot.opened ? null : unread ? "unread" : gift.finished ? null : (hadOrNot.review?.status ?? (pastTheLastDay ? (condition?.nature === "shown" ? "ended" : "late") : null));
   /** The target as a sentence may name it: a climb's number, a grade's words, and nothing for something had or not. */
   const targetToName = !milestone ? null : hadOrNot ? (milestone.targetWords ?? null) : (milestone.targetWords ?? (milestone.target === null ? null : String(milestone.target)));
 
@@ -657,13 +659,14 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
       case "shareProof":
         if (!milestone) return null;
         // Nothing shown after the last day can pay, so no gesture is offered for it: the title says when it goes back.
-        if (proofStands === "ended") return null;
+        // The same once a proof was never reviewed in time: the contract takes none any more.
+        if (proofStands === "ended" || proofStands === "unread") return null;
         // A shown condition takes its one proof from the person's own account; a certificate takes a pasted link (D162).
         // A marathon takes a bib before the start and a reading after the finish, on its own screen (D273).
         if (milestone.conditionId === "marathon-finish") return <MarathonProof giftId={giftId} status={milestone} yours={mine} onChanged={reloadAll} />;
         if (milestone.conditionId === "wca-time") return <WcaProof giftId={giftId} status={milestone} yours={mine} onChanged={reloadAll} />;
         return conditionById(milestone.conditionId)?.nature === "shown" ? (
-          <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} review={milestone.review?.status ?? null} reviewMessage={milestone.review?.message ?? null} limitReached={emptyReserve === "proofs"} openAtLoad={openProof} onShown={reloadAll} />
+          <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} review={milestone.review?.status === "unread" ? null : (milestone.review?.status ?? null)} reviewMessage={milestone.review?.message ?? null} limitReached={emptyReserve === "proofs"} openAtLoad={openProof} onShown={reloadAll} />
         ) : (
           <CertificateProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} onProved={reloadAll} />
         );

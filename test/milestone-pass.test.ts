@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { COUNTING_PASS, dailyPass, SETTLING_PASS, type DailyPassDeps } from "../src/daily-pass";
-import { canExpire, milestonePhase, type MilestoneState } from "../src/milestone-reader";
-import { milestonePass, type MilestonePassDeps } from "../src/milestone-pass";
+import { canExpire, lateProofCloses, milestonePhase, type MilestoneState } from "../src/milestone-reader";
+import { milestonePass, type HeldProof, type HeldReminder, type MilestonePassDeps } from "../src/milestone-pass";
 import type { MilestoneOutcome } from "../src/milestone-reading";
 import { MILESTONE_DORMANT_SECONDS, MILESTONE_LATE_PROOF_SECONDS, MILESTONE_PROOF_GRACE_SECONDS, SHAPE_HAVE_OR_NOT, ZERO_SUBJECT } from "../src/milestone-protocol";
+import { RelayerError } from "../src/relayer";
 import { MILESTONE_ACTIONS, PAY } from "../src/sentences";
 
 const CONTRACT = "0x00000000000000000000000000000000000000c2" as const;
@@ -330,31 +331,138 @@ test("a pause across the last day moves a had-or-not gift's window to the pause'
   assert.equal(canExpire({ ...HAD_OR_NOT, proofResumedAt: LAST_DAY - 86_400 }, LAST_DAY + MILESTONE_LATE_PROOF_SECONDS + 1), true);
 });
 
-test("a had-or-not gift whose first proof is held for review is not taken back, and the report says why", async () => {
-  const run = world(HAD_OR_NOT, nothingRead, LAST_DAY + 15 * 86_400);
-  const asked: string[] = [];
-  run.deps.inReview = async (giftId) => {
-    asked.push(giftId);
-    return true;
+/** A first proof of the had-or-not gift, held for review since the day before its last day. */
+const HELD: HeldProof = { sessionId: "session-held", portalId: "utoulouse", sense: "enrolment", giftId: "1000007", observedAt: LAST_DAY - 86_400 };
+
+/** The pass of one had-or-not gift with what is held for review, and everything the pass did about it. */
+function reviewed(nowSeconds: number, held: readonly HeldProof[] = [HELD], initial: MilestoneState = HAD_OR_NOT) {
+  const run = world(initial, nothingRead, nowSeconds);
+  const pending = [...held];
+  const closedAsNeverReviewed: string[] = [];
+  const told: string[] = [];
+  const reminded: HeldReminder[][] = [];
+  run.deps.heldProofs = async () => pending;
+  run.deps.closeNeverReviewed = async (giftId) => {
+    const mine = pending.filter((proof) => proof.giftId === giftId);
+    for (const proof of mine) pending.splice(pending.indexOf(proof), 1);
+    if (mine.length > 0) closedAsNeverReviewed.push(giftId);
+    return mine.length;
   };
+  run.deps.neverReviewed = async (giftId) => closedAsNeverReviewed.includes(giftId);
+  run.deps.remind = async (list) => void reminded.push([...list]);
+  run.deps.tell = async (giftId, news) => void told.push(`${giftId}:${news}`);
+  return { ...run, pending, closedAsNeverReviewed, told, reminded };
+}
+
+test("a first proof still held is reminded of each morning, from the first, with the time the contract can still pay it", async () => {
+  // Held the day before the last day: the first settling pass after it reminds, fifteen days before the window closes.
+  const first = reviewed(LAST_DAY - 3_600);
+  const lines = await milestonePass(true, first.deps);
+  assert.deepEqual(first.calls, ["reach:1000007"], "nothing is closed and nothing goes back while it can be paid");
+  assert.deepEqual(first.reminded, [[{ ...HELD, closesAt: LAST_DAY + MILESTONE_LATE_PROOF_SECONDS }]]);
+  assert.equal(first.reminded[0][0].closesAt, lateProofCloses(HAD_OR_NOT), "the moment is the contract's own, as canExpire reads it");
+  assert.deepEqual(
+    lines.filter((line) => line.step === "review").map((line) => line.result),
+    ["held: a first proof waits for review, the contract can pay it for 14 days more (pnpm portal:pin)"],
+  );
+  // On the last day of the window it still is, with what is left of it.
+  const last = reviewed(LAST_DAY + MILESTONE_LATE_PROOF_SECONDS - 3_600);
+  const lastLines = await milestonePass(true, last.deps);
+  assert.deepEqual(last.calls, []);
+  assert.equal(last.reminded.length, 1);
+  assert.match(lastLines[0].result, /the contract can pay it for less than a day more/);
+  // The counting pass reminds of nothing and asks nothing: one reminder a morning is the settling pass's.
+  const counting = reviewed(LAST_DAY - 3_600);
+  counting.deps.heldProofs = async () => {
+    throw new Error("not asked");
+  };
+  await milestonePass(false, counting.deps);
+  assert.deepEqual(counting.reminded, []);
+  // Nothing held, nothing sent.
+  const none = reviewed(LAST_DAY - 3_600, []);
+  await milestonePass(true, none.deps);
+  assert.deepEqual(none.reminded, []);
+});
+
+test("once the contract takes no proof any more, a proof never reviewed is closed with its reason and the gift goes back", async () => {
+  // Until 8 Oct 2026 the pass held this gift from this very moment, for good: the contract already refused every
+  // proof (MilestoneGiftV2.sol, `DeadlinePassed`), so nothing was paid and nothing came back until a refusal by hand.
+  assert.match(readFileSync("contracts/MilestoneGiftV2.sol", "utf8"), /if \(block\.timestamp > _closes\(g\.deadline, LATE_PROOF_WINDOW\)\) revert DeadlinePassed\(\);/);
+  const run = reviewed(LAST_DAY + MILESTONE_LATE_PROOF_SECONDS + 3_600);
   const lines = await milestonePass(true, run.deps);
-  assert.deepEqual(asked, ["1000007"]);
-  assert.deepEqual(run.calls, [], "neither closed nor refunded");
-  assert.deepEqual(lines.map((line) => `${line.step}:${line.result}`), ["expire:held: a first proof is under review, decide it (pnpm portal:pin)"]);
-  // Once the review is decided the pass closes it as any other.
-  run.deps.inReview = async () => false;
+  assert.deepEqual(run.closedAsNeverReviewed, ["1000007"]);
+  assert.deepEqual(run.calls, ["expire:1000007", "refund:1000007"]);
+  assert.equal(run.state().refundedToFunder, 25_000_000n, "all of it went back to the person who paid");
+  assert.deepEqual(run.told, ["1000007:neverReviewed"], "said as what happened, never as the time being up");
+  assert.deepEqual(run.reminded, [], "nothing is left to remind of");
+  assert.deepEqual(lines.map((line) => `${line.step}:${line.result}`), [
+    "review:closed: a first proof was never reviewed, and the contract takes none any more",
+    "expire:sent",
+    "refund:sent",
+  ]);
+  // Two proofs of the same gift held: both are closed, and the line counts them.
+  const two = reviewed(LAST_DAY + MILESTONE_LATE_PROOF_SECONDS + 3_600, [HELD, { ...HELD, sessionId: "session-held-2" }]);
+  const twoLines = await milestonePass(true, two.deps);
+  assert.equal(twoLines[0].result, "closed: 2 first proofs were never reviewed, and the contract takes none any more");
+  assert.deepEqual(two.pending, []);
+});
+
+test("an expire that did not leave is sent by the next pass, and the person still reads why", async () => {
+  const run = reviewed(LAST_DAY + MILESTONE_LATE_PROOF_SECONDS + 3_600);
+  const expire = run.deps.expire;
+  run.deps.expire = async () => {
+    throw new RelayerError("REVERTED", "refused", "TooEarly");
+  };
+  const refused = await milestonePass(true, run.deps);
+  assert.deepEqual(run.closedAsNeverReviewed, ["1000007"], "the review is closed: no proof can be paid whatever happens to the expire");
+  assert.deepEqual(run.told, [], "nobody is told the money went back when it did not");
+  assert.deepEqual(refused.map((line) => `${line.step}:${line.result}`), ["review:closed: a first proof was never reviewed, and the contract takes none any more", "expire:refused: TooEarly"]);
+  // The next morning the expire leaves, and the message is still the review's, not "the time is up".
+  run.deps.expire = expire;
   await milestonePass(true, run.deps);
   assert.deepEqual(run.calls, ["expire:1000007", "refund:1000007"]);
-  // The review is only asked of a gift that could be closed, and never of a climb or of a gift nobody opened.
-  const early = world(HAD_OR_NOT, nothingRead, LAST_DAY);
-  early.deps.inReview = async () => {
-    throw new Error("not asked");
+  assert.deepEqual(run.told, ["1000007:neverReviewed"]);
+});
+
+test("a gift with nothing held goes back as before, and a list that cannot be read closes no gift it could concern", async () => {
+  // Never shown: "the time is up" is true, and no review is closed.
+  const plain = reviewed(LAST_DAY + MILESTONE_LATE_PROOF_SECONDS + 3_600, []);
+  await milestonePass(true, plain.deps);
+  assert.deepEqual(plain.calls, ["expire:1000007", "refund:1000007"]);
+  assert.deepEqual(plain.told, ["1000007:expired"]);
+  assert.deepEqual(plain.closedAsNeverReviewed, []);
+  // The reviews cannot be read: the gift is held today, and the report says so.
+  const blind = reviewed(LAST_DAY + MILESTONE_LATE_PROOF_SECONDS + 3_600);
+  blind.deps.heldProofs = async () => {
+    throw new Error("connection refused");
   };
-  await milestonePass(true, early.deps);
+  const lines = await milestonePass(true, blind.deps);
+  assert.deepEqual(blind.calls, [], "neither closed nor refunded");
+  assert.deepEqual(lines.map((line) => `${line.giftId}:${line.step}:${line.result}`), ["reviews:review:failed: connection refused", "1000007:expire:held: the proofs held for review could not be read"]);
+  // A climb has no proof to hold: it goes back all the same on such a morning.
   const climb = world(CLIMBING, { kind: "already", giftId: "1000000", reason: "deadline_passed" }, DEADLINE + MILESTONE_PROOF_GRACE_SECONDS + 1);
-  climb.deps.inReview = async () => {
-    throw new Error("not asked");
+  climb.deps.heldProofs = async () => {
+    throw new Error("connection refused");
   };
   await milestonePass(true, climb.deps);
   assert.deepEqual(climb.calls, ["expire:1000000", "refund:1000000"]);
+});
+
+test("a proof still held for a gift that is over is named as that, with no day promised", async () => {
+  // Paid by a later proof while the first stayed held: nothing can be paid on it, and only a refusal closes it.
+  const paid = reviewed(LAST_DAY - 3_600, [HELD], { ...HAD_OR_NOT, settled: true, earned: 25_000_000n, earnedBalance: 25_000_000n });
+  const lines = await milestonePass(true, paid.deps);
+  assert.deepEqual(paid.reminded, [[{ ...HELD, closesAt: null }]]);
+  assert.deepEqual(paid.closedAsNeverReviewed, [], "not closed as never reviewed: the gift was paid");
+  assert.deepEqual(lines.map((line) => `${line.step}:${line.result}`), ["review:held: a first proof of a gift that is over, refuse it to close it (pnpm portal:pin)"]);
+});
+
+test("the moment a late proof stops being taken is the one canExpire reads, with and without a pause", () => {
+  const resumed = LAST_DAY + 3 * 86_400;
+  for (const gift of [HAD_OR_NOT, { ...HAD_OR_NOT, proofResumedAt: resumed }, { ...HAD_OR_NOT, version: 2 as const, proofPauseBegan: LAST_DAY - 86_400, proofResumedAt: resumed }, { ...HAD_OR_NOT, version: 2 as const }]) {
+    const closes = lateProofCloses(gift);
+    assert.equal(canExpire(gift, closes), false, "taken until that very second");
+    assert.equal(canExpire(gift, closes + 1), true);
+  }
+  assert.equal(lateProofCloses({ ...HAD_OR_NOT, proofResumedAt: resumed }), resumed + MILESTONE_LATE_PROOF_SECONDS);
 });
