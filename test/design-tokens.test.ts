@@ -634,14 +634,24 @@ test("the app a phone installs is painted in the product's own ground", () => {
  * A page never restarts itself under somebody (D153). The worker's provider reloads the whole page on every `online`
  * event, and a phone fires that when it finishes connecting, wakes, or changes network: the founder saw the landing
  * load twice on his phone and never on a desktop. Off, and nothing else in the app may ask for a reload either.
+ *
+ * One reload exists since the audit of 9 Oct 2026, and a person asks for it: the press on the offline page, where an
+ * installed app has no reload of its own and the page had nothing to press. It is tied to that click and to nothing
+ * else: no event of the network, no timer, nothing a page does by itself.
  */
 test("nothing reloads the page because the network came back", () => {
   const layout = readFileSync("app/layout.tsx", "utf8");
   assert.match(layout, /reloadOnOnline=\{false\}/, "the library's own reload is off");
+  const pressed = "app/~offline/page.tsx";
   for (const file of globSync("app/**/*.{ts,tsx}")) {
     const source = readFileSync(file, "utf8");
+    if (file === pressed) continue;
     if (/location\.reload\(\)/.test(source)) assert.fail(`${file} reloads the page, and nothing may`);
   }
+  const offline = readFileSync(pressed, "utf8");
+  assert.equal(offline.match(/location\.reload\(\)/g)?.length, 1);
+  assert.match(offline, /addEventListener\("click", function \(\) \{ window\.location\.reload\(\); \}\)/, "on a press, and only there");
+  assert.doesNotMatch(offline, /"online"|visibilitychange|setTimeout|setInterval|useEffect/, "never by itself");
 });
 
 /**
