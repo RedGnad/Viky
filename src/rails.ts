@@ -126,6 +126,11 @@ export type WayIn = Readonly<{
    * euros, and what a whole euro brings beyond the gift and the fee stays in the account.
    */
   cents?: boolean;
+  /**
+   * The currency its page is opened in when nothing quotes it (src/card-ask.ts): the euro when absent. Dollars for a
+   * page that takes a currency and whose fee and floor are then said in dollars at the day's rate.
+   */
+  paidIn?: "USD";
   /** How long they say a payment takes, in their own words, when they say it. Absent rather than guessed. */
   takes?: string;
   /** What they keep, as they publish it. */
@@ -431,7 +436,7 @@ export const RAMP_BARE_PAGE = "https://app.ramp.network/";
  * own widget reads the key from the address and fails without it, read in its script on 27 Sep 2026), so the page
  * opens bare, where it works. Mercuryo keeps its page: filling it in needs a partner `widget_id`.
  */
-export function wayInPage(way: WayIn, fill: Readonly<{ account?: string; euros?: number }> = {}, key: string | undefined = rampHostApiKey()): string {
+export function wayInPage(way: WayIn, fill: Readonly<{ account?: string; euros?: number; ask?: CardAsked }> = {}, key: string | undefined = rampHostApiKey()): string {
   if (way === WAY_IN_USDC) return rampnowPage(fill);
   if (way !== WAY_IN_GIFT_COIN) return way.page;
   if (!key) return RAMP_BARE_PAGE;
@@ -445,25 +450,34 @@ export function wayInPage(way: WayIn, fill: Readonly<{ account?: string; euros?:
   return address.toString();
 }
 
+/** What a card is asked for on a page that takes a currency: how much, and of what. */
+export type CardAsked = Readonly<{ currency: string; amount: number }>;
+
 /**
- * Rampnow's public page, filled in and locked (the founder, 1 Oct 2026): a card payment in euros of this amount, for
- * USDC on Monad, to this account. `lockFields` names the five fields its page can lock, and `prefill` is the word its
- * page reads to take them from the address (both read in its script, 1 Oct 2026). No key of ours: its page adds its own.
+ * Rampnow's public page, filled in and locked (the founder, 1 Oct 2026): a card payment of this amount, for USDC on
+ * Monad, to this account. `lockFields` names the five fields its page can lock, and `prefill` is the word its page
+ * reads to take them from the address (both read in its script, 1 Oct 2026). No key of ours: its page adds its own.
+ *
+ * In euros unless a currency is asked (`ask`, 9 Oct 2026): the one its own quote was given in, or dollars. Its page
+ * takes the currency from the address as it takes the euro: opened with `srcCurrency=USD&srcAmount=20` locked, it
+ * showed "20 USD" and 18.15 USDC that day, and "20 GBP" for the pound, nothing paid.
  */
-export function rampnowPage(fill: Readonly<{ account?: string; euros?: number }>): string {
+export function rampnowPage(fill: Readonly<{ account?: string; euros?: number; ask?: CardAsked }>): string {
   const address = new URL(WAY_IN_USDC.page);
   const set = (name: string, value: string) => address.searchParams.set(name, value);
+  // To the cent, and never under what was worked out: its page takes cents (`WAY_IN_USDC.cents`). An amount asked in
+  // another currency comes already written to that currency's own decimals.
+  const paid: CardAsked | undefined = fill.ask && fill.ask.amount > 0 ? fill.ask : fill.euros && fill.euros > 0 ? { currency: "EUR", amount: upToTheCent(fill.euros) } : undefined;
   set("orderType", "buy");
   set("srcChain", "fiat");
-  set("srcCurrency", "EUR");
-  // To the cent, and never under what was worked out: its page takes cents (`WAY_IN_USDC.cents`).
-  if (fill.euros && fill.euros > 0) set("srcAmount", String(upToTheCent(fill.euros)));
+  set("srcCurrency", paid?.currency ?? "EUR");
+  if (paid) set("srcAmount", String(paid.amount));
   set("paymentMode", "card");
   set("dstCurrency", "USDC");
   set("dstChain", "monad");
   if (fill.account) set("walletAddress", fill.account);
   // Only what is filled in is locked: a field locked empty could not be filled by the person either.
-  const locked = ["srcAsset", ...(fill.euros && fill.euros > 0 ? ["srcAmount"] : []), "dstAsset", "paymentMode", ...(fill.account ? ["walletAddress"] : [])];
+  const locked = ["srcAsset", ...(paid ? ["srcAmount"] : []), "dstAsset", "paymentMode", ...(fill.account ? ["walletAddress"] : [])];
   // Written as its own page writes it, with bare commas: the form opened and read on 1 Oct 2026.
   return `${address.toString()}&lockFields=${locked.join(",")}&prefill=true`;
 }

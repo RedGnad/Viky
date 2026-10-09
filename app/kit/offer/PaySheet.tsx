@@ -11,7 +11,8 @@ import { whereTheRailsServe } from "@/src/client/rails";
 import { conditionById } from "@/src/conditions";
 import { certificateById, milestoneById } from "@/src/milestone-conditions";
 import { draftToTerms, draftUnits, isComplete, type GiftDraft } from "@/src/gift-draft";
-import { serviceChargeEur, serviceChargeIsCeiling, wayInFor } from "@/src/gift-amount";
+import { askByRule } from "@/src/card-ask";
+import { serviceChargeIsCeiling, wayInFor } from "@/src/gift-amount";
 import { lastNameGiven, tidyGiftName } from "@/src/gift-names";
 import { judgeLineIsTrue } from "@/src/judge-line";
 import { formatAusd } from "@/src/gift-reader";
@@ -233,7 +234,8 @@ export function PaySheet({
   const say = (amount: number) => moneyIn(amount, code);
   const gift = units === undefined ? undefined : giftTyped({ typedAmount: draft.typedAmount, typedIn: draft.typedIn, units, code, rates: money.rates });
   // The card pays what its service is asked for and the account the rest, so the figures add up to the card's (src/pay-sum.ts).
-  const sum = byCard && euros && gift !== undefined ? cardSum({ code, gift, cardEuros: euros, feeEuros: serviceChargeEur(euros, way.fee), rates: money.rates }) : undefined;
+  const ask = byCard && euros ? askByRule(way, euros, money.rates?.usdPerEur) : undefined;
+  const sum = ask && gift !== undefined ? cardSum({ code, gift, charged: ask, fee: ask.fee, rates: money.rates }) : undefined;
   const feeCeiling = Boolean(euros) && serviceChargeIsCeiling(euros ?? 0, way.fee);
   const heldRead = heldIn(inAccount, code, money.rates);
   const giftRead = gift === undefined ? formatAusd(units ?? 0n) : say(gift);
@@ -394,7 +396,7 @@ export function PaySheet({
   // The card services are opened in euros for everybody (src/rails.ts). Where the sheet counts in another money, the
   // card's figure in that money is the euros at the day's rate, not what the bank will take: it is said "about", and
   // the euros the card is charged are said under the button, to the cent (the audit of 9 Oct 2026, F19).
-  const converted = code !== "EUR";
+  const converted = sum !== undefined && sum.charged.currency !== code;
   const total = enough ? { label: W.rows.fromAccount, amount: giftRead, about: false } : sum ? { label: W.youPay, amount: say(sum.card), about: converted } : undefined;
 
   return (
@@ -486,7 +488,7 @@ export function PaySheet({
               {/* What the card is really charged, where the figures above are a conversion. */}
               {sum && converted ? (
                 <p className={HELP} data-card-charged="">
-                  {W.cardCharged(moneyIn(sum.cardEuros, "EUR"))}
+                  {W.cardCharged(moneyIn(sum.charged.amount, sum.charged.currency))}
                 </p>
               ) : null}
             </>
