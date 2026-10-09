@@ -25,8 +25,8 @@ export function centsDown(units: bigint): string {
  * Always small beside what pays (the founder, 9 Oct 2026: a code is visible, never put forward in the place of the
  * card): a small key that opens a field and a small button. On the pay sheet, when the link carried a code, the field
  * is shown from the start with that code in it, under the question as its name. The sheet says when it is drawn
- * (`offered`), having asked the server itself, and makes the account of somebody who has none before the code is sent
- * (`before`).
+ * (`offered`), having asked the server itself, keeps the key's place while it waits for that answer (`awaited`), and
+ * makes the account of somebody who has none before the code is sent (`before`).
  */
 export function JudgeCode({
   needed,
@@ -36,6 +36,7 @@ export function JudgeCode({
   shownFromTheStart = false,
   label = W.code.label,
   offered,
+  awaited = false,
   startWith = "",
   before,
 }: Readonly<{
@@ -49,6 +50,8 @@ export function JudgeCode({
   label?: string;
   /** Whether a code can be used here now, when whoever draws this has asked the server already; asked here otherwise. */
   offered?: boolean;
+  /** The server has not said yet whether a code can be used: the key's place is kept, with nothing drawn in it. */
+  awaited?: boolean;
   /** The code the link carried: the field starts on it. */
   startWith?: string;
   /** Done before the code is sent. False stops there, and whoever gave it has said why. */
@@ -120,7 +123,10 @@ export function JudgeCode({
       </div>
     );
   }
-  if (covered || !(offered ?? (open && !credited))) return null;
+  if (covered) return null;
+  // As tall as the key that may be drawn there, and nothing to see, to press or to read.
+  if (awaited && !shown) return <div className="invisible h-[40px] shrink-0" aria-hidden="true" data-code-place="" />;
+  if (!(offered ?? (open && !credited))) return null;
   const field = (
     <div className="flex flex-col gap-[var(--space-xs)]">
       <Field id="gift-code" label={label} value={code} onChange={setCode} autoComplete="off" spellCheck={false} />

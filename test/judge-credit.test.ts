@@ -147,7 +147,8 @@ test("the code is asked where a person is about to pay: the pay sheet and the wa
   const code = readFileSync("app/kit/offer/JudgeCode.tsx", "utf8");
   // Only while credits are open, the gift not covered, the account not yet credited: asked of the server here, or
   // said by the pay sheet, which has asked it already.
-  assert.match(code, /if \(covered \|\| !\(offered \?\? \(open && !credited\)\)\) return null;/);
+  assert.match(code, /if \(covered\) return null;/);
+  assert.match(code, /if \(!\(offered \?\? \(open && !credited\)\)\) return null;/);
   assert.match(code, /if \(offered !== undefined\) return;\s+let live = true;\s+getJson<\{ open\?: boolean; credited\?: boolean \}>\("\/api\/judge\/credit"\)/);
   assert.match(code, /const covered = needed !== null && held !== null && held >= needed;/);
   assert.match(code, /postJson<\{ units: string \}>\("\/api\/judge\/credit", \{ code \}\)/);
@@ -158,7 +159,7 @@ test("the code is asked where a person is about to pay: the pay sheet and the wa
   assert.match(code, /W\.code\.adjusted\(formatAusd\(adjustedTo\)\)/);
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   // On the sheet since 9 Oct 2026, for somebody with no account too: the code's press makes it, then sends the code.
-  assert.match(sheet, /<JudgeCode\s+shownFromTheStart=\{where === "first"\}\s+label=\{where === "first" \? W\.code\.have : undefined\}\s+offered=\{codeInReach\}\s+startWith=\{linkCode\}\s+before=\{accountForTheCode\}/);
+  assert.match(sheet, /<JudgeCode\s+key=\{shape\}\s+shownFromTheStart=\{shape === "link"\}\s+label=\{shape === "link" \? W\.code\.have : undefined\}\s+offered=\{codeInReach\}\s+awaited=\{codeAwaited\}\s+startWith=\{linkCode\}\s+before=\{accountForTheCode\}/);
   assert.match(code, /if \(before && !\(await before\(\)\)\) return;\s+const answer = await postJson/, "the account first, then the code");
   // Marked as chosen, or the card would go back to its starting figure (D158).
   assert.match(sheet, /onMakeIt=\{\(dollars\) => onChange\(\{ \.\.\.draft, dollars, typedAmount: dollars, typedIn: "USD" \}\)\}/);

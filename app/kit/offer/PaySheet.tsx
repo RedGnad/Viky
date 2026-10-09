@@ -97,15 +97,16 @@ export function PaySheet({
   // of the server, and read again once the code has given it, null until the server says so. The code itself is
   // `JudgeCode`'s (D297, D299).
   const [untouchedCredit, setUntouchedCredit] = useState<bigint | null>(null);
-  // Whether a code can be used now, and whether this account has had its credit: the server's answer, null before it.
-  const [credits, setCredits] = useState<Readonly<{ open: boolean; credited: boolean }> | null>(null);
+  // Whether a code can be used now, and whether this account has had its credit: the server's answer, null before it,
+  // and "unread" when it could not be had.
+  const [credits, setCredits] = useState<Readonly<{ open: boolean; credited: boolean }> | "unread" | null>(null);
   /**
    * The code a link carried (src/client/judge-link.ts): read while the sheet is open, which is in a browser and after
    * the page arrived, so the sheet's first image already has its field.
    */
   const linkCode = open ? judgeCodeFromTheLink() : "";
-  /** The code gave its credit on this sheet, from which of its two places: its two lines stay where its field was. */
-  const [codeGiven, setCodeGiven] = useState<"first" | "under" | null>(null);
+  /** The code gave its credit on this sheet, in which of its two shapes: its two lines stay where its field was. */
+  const [codeGiven, setCodeGiven] = useState<"link" | "key" | null>(null);
   /** A code is being used: its field stays through the account being made and read. */
   const [codeStarted, setCodeStarted] = useState(false);
   /** The code's press made the account, and told Home so: taken back when the sheet closes without paying. */
@@ -120,7 +121,10 @@ export function PaySheet({
         setUntouchedCredit(typeof answer.untouchedCredit === "string" && /^\d+$/.test(answer.untouchedCredit) ? BigInt(answer.untouchedCredit) : null);
       },
       () => {
-        if (live) setUntouchedCredit(null);
+        if (!live) return;
+        setUntouchedCredit(null);
+        // An answer had before stands; with none, the place kept for the key is given back.
+        setCredits((was) => was ?? "unread");
       },
     );
     return () => {
@@ -200,12 +204,16 @@ export function PaySheet({
   const cardClosed = card?.offered === false;
   // Whether a code can be used: credits are open, and this account, or nobody yet, has not had one. Not known until
   // the server has said.
-  const codeOffered = credits === null ? null : credits.open && !credits.credited;
-  // Where the code stands: first when the link carried one, under the card's button otherwise.
-  const codeFirst = codeGiven === "first" || (codeGiven === null && linkCode !== "");
+  const codeOffered = credits === null || credits === "unread" ? null : credits.open && !credits.credited;
+  // The code's shape, in its one place above the total: its field from the start when the link carried one, a small
+  // key that opens the field otherwise.
+  const codeFromLink = codeGiven === "link" || (codeGiven === null && linkCode !== "");
   // Drawn only for an account that cannot pay, once that is known, and kept while it is being used. A code the link
   // carried is shown before the server has said credits are open; the key waits for its answer.
-  const codeInReach = !enough && (pays === "card" || codeStarted) && (codeFirst ? codeOffered !== false : codeOffered === true);
+  const codeInReach = !enough && (pays === "card" || codeStarted) && (codeFromLink ? codeOffered !== false : codeOffered === true);
+  // While the key waits for that answer its place is kept, so the total and the card's button under it do not move
+  // when it is drawn.
+  const codeAwaited = !codeFromLink && !enough && pays === "card" && credits === null;
   // The credit was given a moment ago and the account, read before it, is being read again: no card is named meanwhile.
   const creditArriving = codeGiven !== null && pays === "card";
   // The card's lines, its figure and its line of terms are drawn for the card alone.
@@ -326,20 +334,22 @@ export function PaySheet({
   };
 
   /**
-   * The code's field, in one of its two places. Kept in that place from the press to the credit, so nothing it holds is
-   * lost while the account is made and read; and its two lines stay there once the credit is in.
+   * The code, in one of its two shapes. Kept in that shape from the press to the credit, so nothing it holds is lost
+   * while the account is made and read; and its two lines stay there once the credit is in.
    */
-  const theCode = (where: "first" | "under") => (
+  const theCode = (shape: "link" | "key") => (
     <JudgeCode
-      shownFromTheStart={where === "first"}
-      label={where === "first" ? W.code.have : undefined}
+      key={shape}
+      shownFromTheStart={shape === "link"}
+      label={shape === "link" ? W.code.have : undefined}
       offered={codeInReach}
+      awaited={codeAwaited}
       startWith={linkCode}
       before={accountForTheCode}
       needed={units ?? null}
       held={held.state === "read" ? inAccount : null}
       onCredited={() => {
-        setCodeGiven(where);
+        setCodeGiven(shape);
         forgetJudgeCodeFromTheLink();
         setBalanceRead((n) => n + 1);
       }}
@@ -392,9 +402,10 @@ export function PaySheet({
         {line(W.rows.viky, W.nothing)}
       </div>
 
-      {/* A code the link carried comes first, above what the card is asked (9 Oct 2026): visible, and small beside
-          the card's button, which stays the sheet's one action. */}
-      {codeFirst ? theCode("first") : null}
+      {/* The code comes above the total, whichever its shape (the founder, 9 Oct 2026): the field when the link
+          carried one, a small "Have a code?" that opens it in that same place otherwise. Visible, and small beside the
+          card's button, which stays the sheet's one action. */}
+      {theCode(codeFromLink ? "link" : "key")}
 
       {total ? (
         <div>
@@ -434,9 +445,6 @@ export function PaySheet({
           )}
         </>
       )}
-      {/* When the link carried no code: a small "Have a code?" right under the card's button, before any word of the
-          card service (the founder, 9 Oct 2026: it stood under that paragraph, set back). It opens its field there. */}
-      {codeFirst ? null : theCode("under")}
       {/* One line: who takes the card, its ID the first time, and its terms (the mockup of 3 Oct 2026). */}
       {byCard ? <CardLine way={way} /> : null}
       {/* What the press does where it makes something: an account, the first time. Signed in, the phone's own prompt
