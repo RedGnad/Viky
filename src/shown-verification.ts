@@ -57,6 +57,11 @@ export type ShownVerificationDeps = VerificationDeps & {
   milestoneRecordOf(giftId: string): Promise<MilestoneRecord | null>;
   /** Holds the first proof of a witness portal with no pin for the operator's review (D312); false when already held. */
   holdForReview?(review: Omit<PortalReview, "status" | "reason">): Promise<boolean>;
+  /**
+   * Tells the operator that a session of a pinned rule ended at Reclaim with no proof (the founder, 9 Oct 2026): the
+   * one way to know a fixed rule gives nothing any more. Never refuses anything, and a test that omits it tells nobody.
+   */
+  pinnedRuleStopped?(stop: Readonly<{ portalId: string; sense: PortalReview["sense"]; giftId: string; providerVersion: string; state: string }>): Promise<unknown>;
   /** Takes the mark off a pin made ahead, once the first proof that fits it has been paid. */
   confirmPin?(portalId: string, sense: PortalReview["sense"]): Promise<boolean>;
   /** Whether the recipient's agreement lets this gift be read (src/consent-guard.ts); a test that omits it reads. */
@@ -165,7 +170,12 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
     if (RECLAIM_STOPPED.includes(state)) {
       // Ended at Reclaim with no proof: closed here as well, so no page takes it up again or offers its link, and the
       // person is told to start another. Nothing was read, so nothing is recorded against the gift.
-      await deps.consumeShownSession({ sessionId: session.sessionId, evidence: { stopped: state }, attestation: { message: {}, signature: "0x" }, proofs: null });
+      const closed = await deps.consumeShownSession({ sessionId: session.sessionId, evidence: { stopped: state }, attestation: { message: {}, signature: "0x" }, proofs: null });
+      // Under a pin, the operator is told, once: by the call that closed the session, and whatever the alert does.
+      const pinned = provider.witness?.pin ? provider.witness : null;
+      if (closed && pinned?.pin && deps.pinnedRuleStopped) {
+        await deps.pinnedRuleStopped({ portalId: pinned.portalId, sense: pinned.sense, giftId: session.giftId, providerVersion: pinned.pin.providerVersion, state }).catch(() => undefined);
+      }
       throw new VerificationError("VERIFICATION_STOPPED", SHOW_PROOF.refusals.stopped, 409);
     }
     throw new VerificationError("NO_PROOF_YET", "Reclaim has not returned a proof yet");

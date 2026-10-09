@@ -78,6 +78,28 @@ export async function sendReviewAlert(
   return sendAlert(reviewAlert(review, university), env);
 }
 
+/**
+ * The alert for a session of a pinned rule that ended with no proof (the founder, 9 Oct 2026): a rule written by hand
+ * reads a page that can change, and this is how the operator knows it gives nothing any more. One line: the
+ * university, the gift, the state Reclaim ended the session in.
+ */
+export function pinnedRuleAlert(stop: Readonly<{ portalId: string; sense: string; giftId: string; providerVersion: string; state: string }>, university: string | null): { subject: string; text: string } {
+  const where = university ? `${university} (${stop.portalId})` : stop.portalId;
+  return {
+    subject: `A pinned rule gave no proof: ${where}, ${stop.sense}`,
+    text: `${where}, gift ${stop.giftId}: a session of the pinned rule (version ${stop.providerVersion}) ended at Reclaim with no proof, in the state ${stop.state}.`,
+  };
+}
+
+/** Sends that alert, or says why not. Never throws: the session is closed whether or not the email leaves. */
+export async function sendPinnedRuleAlert(
+  stop: Readonly<{ portalId: string; sense: string; giftId: string; providerVersion: string; state: string }>,
+  university: string | null,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): Promise<AlertOutcome> {
+  return sendAlert(pinnedRuleAlert(stop, university), env);
+}
+
 /** An alert Resend did not take: a line in the logs, and a note in the pass under way when there is one. */
 function notSent(subject: string, why: string): void {
   const line = `alert not sent ("${subject}"): ${why.slice(0, 200)}`;

@@ -25,7 +25,7 @@ import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { admitRelay, countedIfSent } from "@/src/relay-admission";
 import { escrowOf, RelayerError } from "@/src/relayer";
 import { confirmPin, holdForReview, loadPortal } from "@/src/portal-store";
-import { sendReviewAlert } from "@/src/provider-alert";
+import { sendPinnedRuleAlert, sendReviewAlert } from "@/src/provider-alert";
 import { shownConditionById } from "@/src/shown-conditions";
 import { verifyShownSession } from "@/src/shown-verification";
 import { tellReached } from "@/src/morning-send-live";
@@ -122,6 +122,8 @@ export async function POST(request: Request) {
           return held;
         },
         confirmPin,
+        // A session of a pinned rule that Reclaim ended with no proof (9 Oct 2026): the operator is told, in one line.
+        pinnedRuleStopped: async (stop) => sendPinnedRuleAlert(stop, (await loadPortal(stop.portalId).catch(() => null))?.university ?? null),
         milestoneOf: async (giftId) => {
           if (!isMilestoneGiftId(giftId)) return null;
           const state = await readMilestoneGift(giftEscrow, giftId);
