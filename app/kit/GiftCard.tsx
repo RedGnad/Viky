@@ -94,8 +94,8 @@ export function GiftCard({
   );
 }
 
-/** The height a gift's place is held at when this device kept none: a daily gift's card on a phone. */
-export const GIFT_PLACE_HEIGHT = 236;
+/** The height a gift's place is held at when this device kept none: a daily gift's card, measured at 390 and at 1440 (9 Oct 2026). */
+export const GIFT_PLACE_HEIGHT = 287;
 
 /**
  * A gift's place while the list is read, on a device that saw one there last time (the founder, 9 Oct 2026): the card's
