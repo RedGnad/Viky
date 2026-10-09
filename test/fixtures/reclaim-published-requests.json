@@ -1,0 +1,216 @@
+{
+  "read": "9 Oct 2026",
+  "from": "api.reclaimprotocol.org/api/providers/<id>/configs, by the SDK's fetchProviderConfigs",
+  "providers": [
+    {
+      "name": "Duolingo",
+      "id": "cdf8cb3b-2976-4413-ab2d-693ae5028380",
+      "version": "1.0.8",
+      "requests": [
+        {
+          "url": "https://www.duolingo.com/2023-05-23/users/{{duolingo_user_id}}/privacy-settings",
+          "expectedPageUrl": "",
+          "urlType": "TEMPLATE",
+          "method": "GET",
+          "responseMatches": [
+            {
+              "value": "\"id\":\"{{marker}}\"",
+              "type": "contains",
+              "isOptional": false,
+              "order": 0,
+              "invert": false
+            }
+          ],
+          "responseRedactions": [
+            {
+              "order": 0,
+              "jsonPath": "$.privacySettings[10].id",
+              "regex": "\"id\":\"(?<marker>[A-Za-z0-9_-]+)\""
+            }
+          ],
+          "bodySniff": {
+            "enabled": false,
+            "template": ""
+          },
+          "responseVariables": [
+            "marker",
+            "duolingo_user_id"
+          ],
+          "credentials": "include"
+        },
+        {
+          "url": "https://www.duolingo.com/2023-05-23/users/{{duolingo_user_id}}?fields=id,totalXp",
+          "expectedPageUrl": "",
+          "urlType": "TEMPLATE",
+          "method": "GET",
+          "responseMatches": [
+            {
+              "value": "\"id\":{{id}}",
+              "type": "contains",
+              "isOptional": false,
+              "order": 0,
+              "invert": false
+            },
+            {
+              "value": "\"totalXp\":{{xp}}",
+              "type": "contains",
+              "isOptional": false,
+              "order": 1,
+              "invert": false
+            }
+          ],
+          "responseRedactions": [
+            {
+              "order": 0,
+              "jsonPath": "$.id",
+              "regex": "\"id\":(?<id>\\d+)"
+            },
+            {
+              "order": 1,
+              "jsonPath": "$.totalXp",
+              "regex": "\"totalXp\":(?<xp>\\d+)"
+            }
+          ],
+          "bodySniff": {
+            "enabled": false,
+            "template": ""
+          },
+          "responseVariables": [
+            "id",
+            "xp",
+            "duolingo_user_id"
+          ],
+          "credentials": "include"
+        }
+      ]
+    },
+    {
+      "name": "TOEFL MyBest Score",
+      "id": "67ec1b13-b206-4fac-a78c-fbd5a2af55b3",
+      "version": "1.0.0",
+      "requests": [
+        {
+          "url": "https://v2.ereg.ets.org/ereg/pbs/getPbs\\\\?testId=(.*)?&source=(.*)?$",
+          "expectedPageUrl": "",
+          "urlType": "REGEX",
+          "method": "GET",
+          "responseMatches": [
+            {
+              "value": "\"scoreValue\":\"{{scoreValue}}\"",
+              "type": "contains",
+              "invert": false,
+              "description": null
+            },
+            {
+              "value": "\"bookingId\":{{bookingId}}",
+              "type": "contains",
+              "invert": false,
+              "description": null
+            }
+          ],
+          "responseRedactions": [
+            {
+              "xPath": "",
+              "jsonPath": "$.scores.TOTAL.scoreValue",
+              "regex": "\"scoreValue\":\"(.*)\"",
+              "hash": ""
+            },
+            {
+              "xPath": "",
+              "jsonPath": "$.scores.LISTENING.bookingId",
+              "regex": "\"bookingId\":(.*)",
+              "hash": ""
+            }
+          ],
+          "bodySniff": {
+            "enabled": false,
+            "regex": "",
+            "template": null
+          },
+          "requestHash": "0x881b7539dce87f232902946fa97c9410805b7587bb45d3f8fb5041193f3dee21",
+          "responseVariables": [
+            "scoreValue",
+            "bookingId"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "American University of Rome, Student Status",
+      "id": "8a769077-53f8-4bbb-b75f-d2afe3eb6a42",
+      "version": "1.0.0",
+      "requests": [
+        {
+          "url": "https://my.aur.edu/ICS/Student/$",
+          "expectedPageUrl": "",
+          "urlType": "REGEX",
+          "method": "GET",
+          "responseMatches": [
+            {
+              "value": ">Course Schedule for{{Student_name}}</span>",
+              "type": "contains",
+              "invert": false,
+              "description": null
+            },
+            {
+              "value": "ctl00_lblMajorInfo\">{{Intended_major}}</span>",
+              "type": "contains",
+              "invert": false,
+              "description": null
+            },
+            {
+              "value": "\"font\\-weight:bold;\">{{Status}}</span>",
+              "type": "contains",
+              "invert": false,
+              "description": null
+            },
+            {
+              "value": "left\">\r\n\t\t\t\t{{Current_semester}} \\- All Divisions\r\n\t\t",
+              "type": "contains",
+              "invert": false,
+              "description": null
+            }
+          ],
+          "responseRedactions": [
+            {
+              "xPath": "",
+              "jsonPath": "",
+              "regex": ">Course Schedule for(.*?)</span>",
+              "hash": ""
+            },
+            {
+              "xPath": "id(\"pg0_V_rptPackage_ctl00_rptMajor_ctl00_lblMajorInfo\")",
+              "jsonPath": "",
+              "regex": "ctl00_lblMajorInfo\">(.*?)</span>",
+              "hash": ""
+            },
+            {
+              "xPath": "id(\"pg5_V_lblDivName\")",
+              "jsonPath": "",
+              "regex": "\"font\\\\-weight:bold;\">(.*?)</span>",
+              "hash": ""
+            },
+            {
+              "xPath": "",
+              "jsonPath": "",
+              "regex": "left\">\r\n\t\t\t\t(.*?) \\\\- All Divisions\r\n\t\t",
+              "hash": ""
+            }
+          ],
+          "bodySniff": {
+            "enabled": false,
+            "regex": "",
+            "template": null
+          },
+          "requestHash": "0xe7543349ac7ac9b06c34a04ad8a1b5062e699513a8fcb61b1f82d85b6f06f18c",
+          "responseVariables": [
+            "Student_name",
+            "Intended_major",
+            "Status",
+            "Current_semester"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -25,7 +25,7 @@ const CONTRACT = "0x00000000000000000000000000000000000000E5" as Hex;
 const APP_ID = "0x15678cD04e54ccc2bC1c24cb455be3C60Eb11ADf";
 const SESSION_ID = "session_12345678";
 const NOW = 1_784_000_100;
-const REQUEST = "0x881b7539dce87f232902946fa97c9410805b7587bb45d3f8fb5041193f3dee21";
+const REQUEST = "0xd40b146a6c7210c1ee0213ad3e04c424bea780a4d8315d883595cfa1ce12fd3d";
 
 /** A milestone condition for the tests, registered for their duration: the register grows in PR 2, not here. */
 const SHOWN: ShownEntry = {
