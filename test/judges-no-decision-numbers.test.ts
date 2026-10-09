@@ -33,9 +33,11 @@ test("no decision number and no decisions file is named in what the judges page 
   }
 });
 
-test("the reader of comments is not fooled by a line that only looks like one", () => {
-  // A comment that ends on its own line, a comment of several, and code after it.
-  const lines = printed("test/judges-no-decision-numbers.test.ts");
-  assert.ok(lines.some((line) => line.includes("function printed(path: string)")));
-  assert.ok(!lines.some((line) => line.includes("A file's lines that are not comments")));
+test("a comment keeps its decision numbers, and what is printed beside it is still read", () => {
+  // The page's own first comment names a decision, and its steps for a judge are read as printed.
+  const source = readFileSync("app/judges/page.tsx", "utf8");
+  assert.match(source, /\{\/\* The judges' own path \(D291/);
+  const lines = printed("app/judges/page.tsx");
+  assert.ok(!lines.some((line) => line.includes("The judges' own path")));
+  assert.ok(lines.some((line) => line.includes("Open Viky by the link in the submission portal")));
 });
