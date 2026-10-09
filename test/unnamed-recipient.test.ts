@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { FUND, PAY } from "../src/sentences";
+import { FUND, GIFT_LIVE, PAY } from "../src/sentences";
 import { sharedWith } from "../src/preview-line";
 
 /**
@@ -20,9 +20,8 @@ test("with no name, nothing reads 'for ,' or 's name', and with a name nothing c
     FUND.closed.kept("$30.00", ""),
     FUND.closed.keptWhileOpen("$30.00", ""),
     FUND.waitingGift.which("$30.00", ""),
-    FUND.made.title("$30.00", ""),
     sharedWith("", "$30.00", "It becomes yours as you go."),
-    FUND.made.onlyThem(""),
+    GIFT_LIVE.unopened.sendIt(null),
     FUND.waiting.giftSaid("$30.00", ""),
   ];
   for (const sentence of empty) assert.doesNotMatch(sentence, broken, sentence);

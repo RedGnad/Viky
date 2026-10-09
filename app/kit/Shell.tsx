@@ -65,6 +65,11 @@ type Props =
       /** "Step 2 of 5", above the step's title (GOV.UK's caption), in the meta voice: it says where you are. */
       caption?: string;
       step?: ReactNode;
+      /**
+       * The page is a gift's card (the UI pass of 8 Oct 2026, screen 4): its column is the card's own, 440 with the
+       * page's margins, as on the three destinations. In a task's column of 480 the card stood at 432 on a computer.
+       */
+      card?: boolean;
       children: ReactNode;
     }>
   | Readonly<{ kind: "document"; back?: string; backLabel?: string; character?: ReactNode; children: ReactNode }>;
@@ -103,7 +108,8 @@ export function Shell(props: Props) {
    * of 440, which no mockup had decided. The page without an account is as wide as its widest line from 1024
    * (`.home-column`), and what a sheet covers there is the card: its column is the card's.
    */
-  const column = props.kind === "task" ? "var(--app-column-max)" : props.kind === "document" ? "var(--prose-max)" : "calc(var(--gift-card-width) + 2 * var(--page-margin))";
+  const cardColumn = "calc(var(--gift-card-width) + 2 * var(--page-margin))";
+  const column = props.kind === "task" ? (props.card ? cardColumn : "var(--app-column-max)") : props.kind === "document" ? "var(--prose-max)" : cardColumn;
   const width = props.kind === "destination" && props.wide ? "home-column" : "max-w-[var(--page-column)]";
   /**
    * The rail and the bar are drawn on a destination that is somebody's, and nowhere else (`Nav` draws nothing without

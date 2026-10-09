@@ -128,10 +128,12 @@ test("the messages are offered under the card and under the funder's link, never
   const decide = readFileSync("app/kit/YouDecide.tsx", "utf8");
   assert.match(decide, /<Act name=\{Y\.notifications\} state=\{told\.step === "on" \? Y\.on : Y\.off\}/);
   assert.match(decide, /const tells = about !== null && told\.step !== "unsupported";/, "no button where the browser has nothing to grant at all");
-  // Under the link the funder has just been given, the three shapes of gift each with their own.
-  const link = readFileSync("app/components/PayGift.tsx", "utf8");
-  const made = link.slice(link.indexOf("W.made.lostLink"), link.indexOf("W.made.seeIt"));
-  assert.match(made, /<FunderControls\s+giftId=\{made\.giftId\}\s+about=\{!madeMilestone \? \{ kind: "morning" \} : certificateById\(made\.conditionId\) \? \{ kind: "hadOrNot" \} : \{ kind: "reach", target: String\(made\.target\) \}\}/);
+  // Under the link the funder has just been given, the three shapes of gift each with their own: on the gift's own
+  // page since 8 Oct 2026, which is the screen after paying, where an unopened gift tells its funder and nobody else.
+  assert.match(page, /const unopenedForItsFunder = readerIsFunder && !status\.opened;/);
+  assert.match(page, /const about: ToldAbout \| null = \(!status\.opened && !unopenedForItsFunder\) \|\| gift\.finished \|\| gift\.cancelled/);
+  assert.match(page, /: milestone && \(readsLive \|\| unopenedForItsFunder\)\s+\? \{ kind: "reach", target: String\(milestone\.targetWords \?\? milestone\.target\) \}/);
+  assert.doesNotMatch(readFileSync("app/components/PayGift.tsx", "utf8"), /FunderControls/, "the screen it stood on is gone");
   const funder = readFileSync("app/kit/FunderControls.tsx", "utf8");
   assert.match(funder, /<MessagesSheet open=\{open === "messages"\} onClose=\{\(\) => setOpen\(null\)\} told=\{told\} about=\{about\} yours=\{false\} \/>/);
   // An iPhone outside the Home Screen: the sentence and its two steps, in full, and no button that could grant nothing.

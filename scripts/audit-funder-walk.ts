@@ -608,7 +608,7 @@ async function sceneFirstPayment(w: Walk): Promise<void> {
   await w.s.shot(w.journey, "38 the gift being made", "The payment landed (balance read replaced), the creation held unanswered", { real: "replaced: balance reads, POST /api/gift/create (held, then answered)" });
   await note(w, "38 the gift being made");
   release?.();
-  await w.s.text(/is in Boo's name\./, 40_000);
+  await w.s.text("Send it to Boo.", 40_000);
   await settle(w);
   await w.s.shot(w.journey, "39 the gift made, with its link", "The creation answered", { real: "replaced: balance reads, POST /api/gift/create" });
   await note(w, "39 the gift made, with its link", `share offered: ${(await w.page.getByRole("button", { name: "Share", exact: true }).count()) > 0}`);
@@ -616,7 +616,8 @@ async function sceneFirstPayment(w: Walk): Promise<void> {
   await w.s.shot(w.journey, "40 the link copied", "On the gift made: Copy the link", { scrollTo: w.page.getByRole("button", { name: "Copied" }), real: "replaced: balance reads, POST /api/gift/create" });
   await note(w, "40 the link copied", `clipboard: ${await w.page.evaluate("navigator.clipboard.readText()").catch(() => "unreadable")}`);
 
-  // A reload of the made screen, then a new tab: where the link is afterwards.
+  // A reload of the gift's page, which is the screen after paying since 8 Oct 2026, then the address the made screen
+  // had, in a new tab: it leads to the gift's page when the tab kept the gift, and to the pay screen otherwise.
   await w.page.reload();
   await settle(w);
   await note(w, "41a the made screen after a reload");
@@ -660,7 +661,7 @@ async function sceneFromAccount(w: Walk): Promise<void> {
   await w.s.shot(w.journey, "53 the creation refused", "On the pay sheet: Put $45.00 in Boo's name, the creation answering a refusal", { real: "replaced: balance reads, POST /api/gift/create (a 503 with a typed sentence)" });
   await note(w, "53 the creation refused", undefined, Date.now() - pressed);
   await press(w, w.page.getByRole("button", { name: "Try again", exact: true }));
-  await w.s.text(/is in Boo's name\./, 40_000);
+  await w.s.text("Send it to Boo.", 40_000);
   await settle(w);
   await w.s.shot(w.journey, "54 made from the account", "On the refusal: Try again", { real: "replaced: balance reads, POST /api/gift/create" });
   await note(w, "54 made from the account");

@@ -7,7 +7,6 @@ import { ReplayArrival } from "../ReplayArrival";
 import { FundAmount } from "../screens/FundAmount";
 import { GiftScreen } from "../screens/GiftScreen";
 import { HomeScreen } from "../screens/HomeScreen";
-import { Made } from "../screens/Made";
 import { Review } from "../screens/Review";
 import { Welcome } from "../screens/Welcome";
 
@@ -32,7 +31,6 @@ export default async function Page({ params, searchParams }: Props) {
       {screen.id === "gift" ? <GiftScreen /> : null}
       {screen.id === "amount" ? <FundAmount /> : null}
       {screen.id === "review" ? <Review /> : null}
-      {screen.id === "made" ? <Made /> : null}
       {screen.id === "home" || screen.id === "gift" ? <ReplayArrival /> : null}
     </LabFrame>
   );

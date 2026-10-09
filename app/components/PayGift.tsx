@@ -19,7 +19,6 @@ import { usdcRouterAddress } from "@/src/usdc-router";
 import { conditionById } from "@/src/conditions";
 import { GOAL_TYPE_DUOLINGO_COURSE_XP } from "@/src/gift-terms";
 import { cadenceOf, certificateById, milestoneById } from "@/src/milestone-conditions";
-import { spokenAmount, whenInWords } from "@/src/display-currency";
 import { twoDecimalsDown } from "@/src/exit-steps";
 import { afterPaying, refusalAfterPaying } from "@/src/after-paying";
 import { nextFundingStep, pausedAfterFailure, POLL_MS } from "@/src/funding-step";
@@ -28,9 +27,9 @@ import { draftToTerms, isComplete, type GiftDraft } from "@/src/gift-draft";
 import { cardDraft, clearedCardDraft, startingCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
 import { tidyGiftName } from "@/src/gift-names";
 import { rememberGiftLink } from "@/src/gift-link-memory";
+import { markJustMade } from "@/src/just-made";
 import { formatAusd } from "@/src/gift-reader";
 import { dollarsToUnits } from "@/src/money";
-import { newDailyGiftsPayTheSameDay } from "@/src/v2";
 import { forgetPendingGift, peekPendingGift, savePendingGift, type PendingGift } from "@/src/pending-gift";
 import { wayInAsksNothing, wayInPage, waysIn, WAY_IN_USDC, type WayIn } from "@/src/rails";
 import { JudgeCode } from "../kit/offer/JudgeCode";
@@ -42,22 +41,17 @@ import { frameKeepsSignIn, rampnowFrameOn } from "@/src/rampnow-frame";
 import { clearRampnowPending, noteRampnowPending, payAtRampnowBeside, readRampnowPending, useRampnowPending } from "@/src/client/rampnow-pending";
 import { noteInRampnowJournal } from "@/src/client/rampnow-journal";
 import { dollarsSaidIn, giftAsTyped, heldIn, moneyIn, moneyTypedIn } from "@/src/pay-sum";
-import { FunderControls } from "../kit/FunderControls";
 import { Lines } from "../kit/Lines";
 import { Step, Steps } from "../kit/Steps";
 import { Said } from "../kit/Said";
-import { FoldChevron } from "../kit/GiftLive";
 import { whereTheRailsServe } from "@/src/client/rails";
 import { CASH_OUT as C, FUND as W, MILESTONE_FUND as M, OFFER, OFFER as O, PAY as P } from "@/src/sentences";
-import { Figure } from "../kit/Figure";
 import { FieldRefusal } from "../kit/FieldRefusal";
-import { Success } from "../kit/Motion";
 import { Shell } from "../kit/Shell";
 import { Working } from "../kit/Working";
-import { previewLine, sharedWith } from "@/src/preview-line";
 import { AccountPanel } from "./AccountPanel";
 import { DoorNotice } from "../kit/AccountDoor";
-import { BODY, CARD, CARD_LABEL, CARD_TITLE, HELP, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
+import { BODY, CARD, CARD_LABEL, CARD_TITLE, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "./ui";
 import { WaitLine } from "../kit/Waiting";
 
 /**
@@ -73,26 +67,12 @@ import { WaitLine } from "../kit/Waiting";
  * nothing to pay for, and this screen says so rather than asking the questions again: they are asked on the card.
  */
 
+/** Where a gift just made was kept for the screen that followed, until 8 Oct 2026: read once more, to leave that screen. */
 const MADE_KEY = "viky.giftMade";
 
 type Step = "pay" | "account" | "paying" | "done";
 const ALL_STEPS: readonly Step[] = ["pay", "account", "paying", "done"];
 type Phase = "waiting" | "taking" | "converting" | "giving" | "short" | "failed";
-
-type Made = Readonly<{
-  giftId: string;
-  claimUrl: string;
-  atMs: number;
-  recipientName: string;
-  /** The giver's name as they gave it, for the words the link is shared with; nothing on a gift made before 1 Oct 2026. */
-  funderName?: string;
-  conditionId: string;
-  amount: string;
-  days: number;
-  goal?: string;
-  target?: number;
-  namedByFunder?: boolean;
-}>;
 
 function readSession<T>(key: string): T | null {
   try {
@@ -115,7 +95,6 @@ function writeSession(key: string, value: unknown): void {
 const never = () => () => {};
 const inBrowser = () => true;
 const onServer = () => false;
-const canShare = () => typeof navigator !== "undefined" && typeof navigator.share === "function";
 /**
  * What a refusal to make the gift says, once the money is in the account (src/after-paying.ts): the route's own typed
  * sentence, the passkey's own, or that the gift was not made and the money is in the account. Never a library's words,
@@ -147,7 +126,6 @@ export function PayGift() {
   useMoneySession();
   const router = useRouter();
   const browser = useSyncExternalStore(never, inBrowser, onServer);
-  const sharing = useSyncExternalStore(never, canShare, onServer);
   const params = useSearchParams();
   const asked = params.get("step");
   // Whether the pay press already opened the partner's page (D296): only when that page arrives filled in.
@@ -156,12 +134,8 @@ export function PayGift() {
 
   // The gift is read from the same store the card writes (src/card-draft.ts): one gift, in one place, on the device.
   const draft = useSyncExternalStore(subscribeToCardDraft, cardDraft, startingCardDraft);
-  const [made, setMade] = useState<Made | null>(() => (typeof window === "undefined" ? null : readSession<Made>(MADE_KEY)));
-  /**
-   * Whether the gift was made by a press on this screen a moment ago, rather than read back from the session on a
-   * reload: the character's arrival answers the payment, and a reload is not one (V4, decision B).
-   */
-  const [justMade, setJustMade] = useState(false);
+  /** The gift this screen made a moment ago: its page is where the person is being taken, and nothing is paid twice. */
+  const [madeGift, setMadeGift] = useState<string | null>(null);
   const [kept, setKept] = useState<PendingGift | undefined>(() => (typeof window === "undefined" ? undefined : peekPendingGift()));
   const [balance, setBalance] = useState<bigint | null>(null);
   const [phase, setPhase] = useState<Phase>("waiting");
@@ -297,12 +271,18 @@ export function PayGift() {
   // Where the screen belongs: a gift already made, a payment already running, or nothing to pay for at all.
   useEffect(() => {
     if (!browser) return;
-    if (step === "done" && !made) replace("pay");
+    // The screen of a gift just made is the gift's own page since 8 Oct 2026: an address kept from before leads there.
+    if (step === "done") {
+      const before = readSession<{ giftId?: string }>(MADE_KEY)?.giftId;
+      if (before && /^\d{1,78}$/.test(before)) router.replace(`/g/${before}`);
+      else replace("pay");
+      return;
+    }
     if (step === "account" && address) replace("pay");
-    if (step !== "done" && !ready) replace("pay");
+    if (!ready && madeGift === null) replace("pay");
     // A payment was started for this gift before the page went: the wait is where this person was (D74).
-    if (step === "pay" && address && ready && kept?.wayIn && phase === "waiting" && made === null) replace("paying");
-  }, [browser, step, made, address, ready, kept, phase]);
+    if (step === "pay" && address && ready && kept?.wayIn && phase === "waiting" && madeGift === null) replace("paying");
+  }, [browser, step, madeGift, address, ready, kept, phase, router]);
 
   const give = useCallback(async () => {
     // Opens the passkey here if the page was reloaded or came back from the card page: the signature is the first
@@ -391,30 +371,19 @@ export function PayGift() {
     // The gift's link: the server's answer, or on the second version of the contracts the one this browser makes from
     // the funder's own signature, since the server was never given what opens the gift (src/client/v2.ts).
     const claimUrl = await linkOfMade(account, result, request.salt);
-    const record: Made = {
-      giftId: result.giftId,
-      claimUrl,
-      atMs: Date.now(),
-      recipientName: recipient,
-      funderName: funder,
-      conditionId: condition.id,
-      amount: units.toString(),
-      days,
-      ...(milestone && cadence ? { goal: milestone.words.goal(target, cadence.label), target, namedByFunder: subject.length > 0 } : {}),
-      ...(certificate ? { goal: certificate.words.goal(target, draft.scale), target } : {}),
-    };
-    writeSession(MADE_KEY, record);
-    // This device keeps the link, so the gift's page can offer it again long after this screen is gone.
+    // This device keeps the link: the gift's page, which is the screen that follows, shows it to be sent.
     rememberGiftLink(result.giftId, claimUrl);
     // Made, so nothing is left on this device to pick up or to fill in again (D74).
     forgetPendingGift();
     clearedCardDraft();
     setKept(undefined);
-    setMade(record);
-    setJustMade(true);
-    replace("done");
-    window.scrollTo(0, 0);
-  }, [ensureSigner, condition, milestone, certificate, cadence, draft.course, draft.standing, draft.standingReadAt, subject, target, days, units, recipient, funder]);
+    setMadeGift(result.giftId);
+    // The character at the head of that page answers this payment, once (src/just-made.ts).
+    markJustMade(result.giftId);
+    // The gift's own page is the screen after paying (the UI pass of 8 Oct 2026, screen 3): its card says "Send it",
+    // with the link under it. A screen of its own said the amount and the condition a second time.
+    router.replace(`/g/${result.giftId}`);
+  }, [router, ensureSigner, condition, milestone, certificate, cadence, draft.course, draft.standing, draft.standingReadAt, subject, target, days, units, recipient, funder]);
 
   // While paying: watch the account, turn what arrived into what a gift holds, then make the gift.
   useEffect(() => {
@@ -627,111 +596,6 @@ export function PayGift() {
     return (
       <Shell kind="task">
         <WaitLine>{O.oneMoment}</WaitLine>
-      </Shell>
-    );
-  }
-
-  // ---------------------------------------------------------------------------------------------------------------
-  // It is in their name.
-  if (step === "done" && made) {
-    const madeCondition = conditionById(made.conditionId);
-    const madeMilestone = made.goal !== undefined && made.target !== undefined;
-    const madeUnits = BigInt(made.amount);
-    const day = madeUnits / BigInt(made.days);
-    // The person's currency leads with "about", and the dollars put in their name are under the title, exact (the
-    // founder, 29 Sep 2026). The terms say the same currency; a converted day is "about" already, so it is not said twice.
-    const led = money.led(madeUnits);
-    const perDay = money.led(day);
-    return (
-      <Shell
-        kind="task"
-        back="/gifts"
-        backLabel={W.backToGifts}
-        backFollows
-        step={W.made.title(spokenAmount(led, true), made.recipientName)}
-        /* At payment, the character arrives on the expressive spring, once, and no confetti: the one confetti of the app
-           is the gift reached (decision B, V4). It is the app's own character, waving, where the gift box of the first
-           look stood (the founder, 28 Sep 2026: that box is kept as the kid, for later, and drawn on no screen now). */
-        character={
-          justMade ? (
-            <Success>
-              <span className="block w-[72px] shrink-0">
-                <Figure id="made" arms="wave" mouth="soft" halftone />
-              </span>
-            </Success>
-          ) : (
-            <span className="block w-[72px] shrink-0">
-              <Figure id="made" arms="wave" mouth="soft" halftone />
-            </span>
-          )
-        }
-      >
-        <section className="flex flex-col gap-[var(--space-sm)]">
-          {madeMilestone ? (
-            <>
-              <p className={BODY}>{M.made.terms(spokenAmount(led, true), made.goal ?? "", made.days, madeCondition?.source ?? "")}</p>
-              <p className={BODY}>{M.made.allOrNothing}</p>
-            </>
-          ) : (
-            <>
-              {/* The day's share and the days, two figures side by side where a sentence said them (the founder's
-                  rule 5 of 1 Oct 2026). The whole amount is the title's. */}
-              <div className="flex gap-[var(--space-xxl)]" data-made-figures>
-                <div>
-                  <p className={MONEY}>{`${perDay.converted || day * BigInt(made.days) === madeUnits ? "" : W.made.about}${spokenAmount(perDay)}`}</p>
-                  <p className={META}>{W.made.aDay}</p>
-                </div>
-                <div>
-                  <p className={MONEY}>{made.days}</p>
-                  <p className={META}>{W.made.days(made.days)}</p>
-                </div>
-              </div>
-              <p className={BODY}>{W.made.firstDay(madeCondition?.source ?? "", newDailyGiftsPayTheSameDay())}</p>
-            </>
-          )}
-          <p className={HELP}>{W.made.reference(whenInWords(made.atMs), made.giftId)}</p>
-        </section>
-        <section className={CARD}>
-          <h2 className={TITLE}>{W.made.linkTitle}</h2>
-          <p className="select-all break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--background)] p-[var(--space-md)] text-[length:var(--type-help)]">{made.claimUrl}</p>
-          <button type="button" onClick={() => copy("link", made.claimUrl)} className={PRIMARY_BUTTON}>
-            {copied === "link" ? W.made.copied : W.made.copy}
-          </button>
-          {copyRefused === "link" ? <FieldRefusal id="link-refused">{W.made.copyRefused}</FieldRefusal> : null}
-          {sharing ? (
-            <button
-              type="button"
-              // Who, how much in the giver's own currency, what it is; the link follows (the founder, 1 Oct 2026).
-              onClick={() => void navigator.share({ title: "Viky", text: sharedWith(made.funderName, spokenAmount(led), previewLine(madeCondition, madeMilestone)), url: made.claimUrl }).catch(() => undefined)}
-              className={SECONDARY_BUTTON}
-            >
-              {W.made.share}
-            </button>
-          ) : null}
-          <p className={HELP}>{W.made.onlyThem(made.recipientName)}</p>
-          {/* What happens next, folded under its name, as lines (the founder, 4 Oct 2026): what the pay sheet said
-              of a missed day and of a link nobody opens, and the way back to a lost link. */}
-          <details className="gift-fold" data-made-next>
-            <summary className="gift-fold-name">
-              {W.made.nextTitle}
-              <FoldChevron />
-            </summary>
-            <div className="gift-fold-body">
-              <Lines quiet rows={[!madeMilestone ? P.fold.missedDay : certificateById(made.conditionId) ? P.fold.notShown : P.fold.notReached, P.fold.notOpened, W.made.lostLink]} />
-            </div>
-          </details>
-        </section>
-        {/* Being told how it goes, offered here, right after the link exists (the founder, 1 Oct 2026): the funder was
-            never offered it, and it is how "what they miss comes back to you" reaches them without opening Viky. It
-            is the funder's round button, as on the gift's own page. */}
-        <FunderControls
-          giftId={made.giftId}
-          about={!madeMilestone ? { kind: "morning" } : certificateById(made.conditionId) ? { kind: "hadOrNot" } : { kind: "reach", target: String(made.target) }}
-          takeBack={null}
-        />
-        <Link href={`/g/${made.giftId}`} className={SECONDARY_BUTTON}>
-          {W.made.seeIt}
-        </Link>
       </Shell>
     );
   }

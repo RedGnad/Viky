@@ -154,8 +154,6 @@ test("a gift on the first two versions reads as it always did, and the first day
   // The first day: the day after the connection on the first two versions, the day of the connection on the third.
   assert.equal(GIFT_PAGE.lines.fromConnecting(7), "7 days, from the day after it is connected");
   assert.equal(GIFT_PAGE.lines.fromConnecting(7, true), "7 days, from the day it is connected");
-  assert.equal(FUND.made.firstDay("Duolingo"), "First day counted the day after they connect Duolingo.");
-  assert.equal(FUND.made.firstDay("Duolingo", true), "First day counted the day they connect Duolingo.");
   assert.equal(WORDS.countingFrom("4 Oct"), "Done. From today, 4 Oct, every day with your lesson is yours, counted the day you do it.");
   // A gift counted on one course is the same condition, with the same words.
   assert.equal(conditionOfGoal(GOAL_TYPE_DUOLINGO_COURSE_XP)?.recipient?.asItGoes, WORDS);

@@ -102,8 +102,9 @@ test("a link is shared with who gave it, how much in their own currency, and wha
   assert.equal(sharedWith("Mom", "about €21.67", previewLine(lesson, false)), `Mom put about €21.67 in your name. ${previewLine(lesson, false)}`);
   assert.equal(sharedWith("  ", "$25.00", "It becomes yours as you go."), "This is for you: $25.00 in your name. It becomes yours as you go.");
   assert.equal(sharedWith(null, "$25.00", previewLine(undefined, true)), "This is for you: $25.00 in your name. It becomes yours when you reach it.");
-  // The link follows the words: it is the share's own address, on both screens that share one.
-  assert.match(readFileSync("app/components/PayGift.tsx", "utf8"), /text: sharedWith\(made\.funderName, spokenAmount\(led\), previewLine\(madeCondition, madeMilestone\)\), url: made\.claimUrl \}/);
+  // The link follows the words: it is the share's own address, on the one screen that shares one since 8 Oct 2026,
+  // the gift's own page, which is also the screen after paying.
+  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /<LinkAgain giftId=\{giftId\} found=\{linkOpened\} shareText=\{sharedWith\(funderName, spokenAmount\(money\.led\(BigInt\(status\.amount\)\)\), previewLine\(condition, Boolean\(milestone\)\)\)\} \/>/);
   assert.match(readFileSync("app/kit/LinkAgain.tsx", "utf8"), /navigator\.share\(\{ title: "Viky", text: shareText, url: link \}\)/);
 });
 

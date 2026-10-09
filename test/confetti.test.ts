@@ -58,6 +58,11 @@ test("one action: seeing the gift, for the person it is for as for the funder, a
 test("at payment, the gift's character arrives on its spring, only when the payment was just made, and nothing is thrown", () => {
   const pay = readFileSync("app/components/PayGift.tsx", "utf8");
   assert.doesNotMatch(pay, /Confetti|ReachedMoment/);
-  assert.match(pay, /justMade \? \(\s*<Success>\s*<span className="block w-\[72px\] shrink-0">\s*<Figure id="made"/);
-  assert.match(pay, /setMade\(record\);\n\s*setJustMade\(true\);/, "the press that made it, and not a reload, is what plays it");
+  // On the gift's own page since 8 Oct 2026, which is the screen after paying: the payment marks the gift, the page
+  // reads the mark as it is first drawn, and forgets it, so a reload plays nothing.
+  assert.match(pay, /markJustMade\(result\.giftId\);\n[^\n]*\n[^\n]*\n\s*router\.replace\(`\/g\/\$\{result\.giftId\}`\);/, "the press that made it, and not a reload, is what plays it");
+  const page = readFileSync("app/components/GiftPage.tsx", "utf8");
+  assert.doesNotMatch(page, /Confetti/);
+  assert.match(page, /justMade \? \(\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*<Success>\s*<span className="block w-\[72px\] shrink-0">\s*<Figure id="made"/);
+  assert.match(page, /useEffect\(\(\) => \{\n\s*if \(justMade\) forgetJustMade\(\);\n\s*\}, \[justMade\]\);/);
 });

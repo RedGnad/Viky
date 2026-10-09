@@ -57,7 +57,7 @@ test("every character whose parts move is written into the page", () => {
   // A day earned jumps, a day gone back leaves, and the day that opens wakes (4 Oct 2026): those three, and no other.
   assert.match(row, /drawn=\{characterOf\(state\) === "earned" \|\| characterOf\(state\) === "returned" \|\| characterOf\(state\) === "today" \? "inline" : "referenced"\}/, "the row of a gift's page writes only the days that move (D216)");
   assert.match(readFileSync("app/kit/DayStrip.tsx", "utf8"), /drawn=\{characterOf\(day\) === "earned" \|\| characterOf\(day\) === "returned" \|\| characterOf\(day\) === "today" \|\| \(wake !== undefined && index === 0\) \? "inline" : "referenced"\}/, "the days that jump or leave in an arrival, and the first day of a card that opens its eyes (D226)");
-  assert.match(readFileSync("app/components/PayGift.tsx", "utf8"), /<Success>\s*<span className="block w-\[72px\] shrink-0">\s*<Figure id="made" arms="wave"/, "the app's own character answering a payment, where the gift box stood (28 Sep 2026)");
+  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /<Success>\s*<span className="block w-\[72px\] shrink-0">\s*<Figure id="made" arms="wave"/, "the app's own character answering a payment, where the gift box stood (28 Sep 2026)");
   assert.match(readFileSync("app/layout.tsx", "utf8"), /preload\(CHARACTERS_FILE, \{ as: "image"/, "the file is asked for in the head");
   assert.match(readFileSync("next.config.mjs", "utf8"), /source: "\/characters\.svg", headers: \[\{ key: "Cache-Control", value: "public, max-age=31536000, immutable" \}\]/);
 });

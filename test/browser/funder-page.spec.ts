@@ -1,12 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { TERMS, aWindow, climb, daily, endedDaily, photographer, serve } from "./gift-fixtures";
-import { DAY, gift, json, makeAnAccount, neverAskedToBeTold, now } from "./gift-kit";
+import { DAY, gift, json, makeAnAccount, neverAskedToBeTold, now, profile } from "./gift-kit";
 
 /**
- * The page of the person who offered a gift, and the screen of a gift just made with its link (the founder's six
- * rules of 1 Oct 2026, kit-rules.html): the same round controls as the person it is for has, the link's second
- * gesture and the taking back read in a sheet before they are made, a state said in a title and a line, and what
- * happens next folded under its name.
+ * The page of the person who offered a gift, which is also the screen of a gift just made, with its link (the
+ * founder's six rules of 1 Oct 2026, kit-rules.html, and the UI pass of 8 Oct 2026, screen 3): the same round
+ * controls as the person it is for has, the taking back read in a sheet before it is made, a state said in a title
+ * and a line, and the link in the card with one button.
  *
  * What is real: the product's pages against the server under test, its sign-in with a passkey, every press. What is
  * stood in for: the gift, answered here as the server would answer it, and the routes that make a link or take a
@@ -15,6 +15,12 @@ import { DAY, gift, json, makeAnAccount, neverAskedToBeTold, now } from "./gift-
  * VIKY_FUNDER_CAPTURES=<folder> also photographs each state at 390 by 844: a page whole, a sheet as the screen shows it.
  */
 const shot = photographer(process.env.VIKY_FUNDER_CAPTURES);
+/** The same, of a window as wide as a computer's, once what enters the page has entered. */
+const wide = async (page: Page, name: string) => {
+  if (!process.env.VIKY_FUNDER_CAPTURES) return;
+  await page.waitForTimeout(900);
+  await page.screenshot({ path: `${process.env.VIKY_FUNDER_CAPTURES}/${name}.png` });
+};
 const controls = (page: Page) => page.locator("section.you-decide");
 const act = (page: Page, which: "messages" | "back") => page.locator(`[data-decide="${which}"]`);
 
@@ -41,12 +47,13 @@ const unopened = (giftId: string, over: Record<string, unknown> = {}) =>
 test.describe("the funder's page", () => {
   test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each test opens its own windows");
 
-  test("a gift nobody opened: the link is the one action, its second gesture and the taking back are read in a sheet first", async ({ browser, baseURL }) => {
+  test("a gift nobody opened, on the device that holds its link: the card says to send it, and the link is one field and one button", async ({ browser, baseURL }) => {
     test.setTimeout(180_000);
     const GIFT = "51";
     const device = await aWindow(browser, baseURL);
     const { page } = device;
     await neverAskedToBeTold(device.context);
+    await device.context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await serve(page, GIFT, () => unopened(GIFT), TERMS.daily, null);
     const asked: string[] = [];
     await page.route(`**/api/gift/${GIFT}/link`, (route) => {
@@ -58,38 +65,40 @@ test.describe("the funder's page", () => {
       return route.fulfill(json({ code: "TEST", message: "Not walked here." }, 409));
     });
     await makeAnAccount(device);
-    await page.evaluate((link) => window.localStorage.setItem("viky.gift-link.51", link), `${device.baseURL}/g/51?t=AbCdEfGhIjKlMnOpQrStUv`);
+    const link = `${device.baseURL}/g/51?t=AbCdEfGhIjKlMnOpQrStUv`;
+    await page.evaluate((kept) => window.localStorage.setItem("viky.gift-link.51", kept), link);
     await page.goto(`/g/${GIFT}`);
 
-    // The link this device kept: copying it is the sun, and the way to another is a small button beside it.
-    const copy = page.getByRole("button", { name: "Copy the link again" });
-    await expect(copy).toBeVisible();
+    // The screen after paying is this page (the UI pass of 8 Oct 2026, screen 3): the state is what there is to do.
+    await expect(page.getByText("Send it to Boo.", { exact: true })).toBeVisible();
+    await expect(page.getByText("Whoever opens the link takes the gift.", { exact: true })).toBeVisible();
+    await expect(page.getByText("$7.00", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("In their name", { exact: true }).first()).toBeVisible();
+    // The link in its field, and copying it is the sun. Nothing is titled, framed, "again", or said of where it is kept.
+    const field = page.locator("[data-gift-link]");
+    await expect(field).toHaveText(link);
+    const copy = page.getByRole("button", { name: "Copy the link", exact: true });
     await expect(copy).toHaveCSS("background-color", "rgb(255, 197, 49)");
-    const again = page.getByRole("button", { name: "Get the link again" });
-    expect((await again.boundingBox())?.height, "the one small button is 40 high").toBe(40);
-    // What pressing it does to the link already sent is no longer a paragraph on the page.
-    await expect(page.getByText(/The link you had stops working the moment you do\./)).toBeHidden();
-    // One round button, and no link under the card.
-    await expect(controls(page).getByRole("button")).toHaveCount(1);
+    await expect(page.getByRole("heading", { name: "The link" })).toHaveCount(0);
+    await expect(page.getByText("Only this device kept it: the link carries the key that opens the gift.")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /again/i })).toHaveCount(0);
+    expect((await field.boundingBox())!.y, "the field is above its button").toBeLessThan((await copy.boundingBox())!.y);
+    // Two round controls under the card: being told, as it was offered under the link of a gift just made, and taking back.
+    await expect(controls(page).getByRole("button")).toHaveCount(2);
     await expect(act(page, "back")).toHaveText("Take backUnopened");
     await expect(page.getByRole("button", { name: "Take this gift back" })).toHaveCount(0);
     await shot(page, "01-unopened-link-kept");
+    // A press on the field copies, as the button does, and the button says so for a moment.
+    await field.click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
+    await expect(page.locator('button[data-copy-the-link][data-state="done"]')).toHaveText("Copied");
+    await shot(page, "01b-copied");
+    await expect(page.getByRole("button", { name: "Copy the link", exact: true })).toBeVisible();
 
-    // The second gesture, read before it is made: nothing is asked of the server until the press in the sheet.
-    await again.click();
-    const sheet = page.getByRole("dialog", { name: "Get the link again" });
-    await expect(sheet.getByText("Lost the link, or sent it from another device? Get a new one. The link you had stops working the moment you do.")).toBeVisible();
-    expect(asked).toEqual([]);
-    await shot(page, "01b-link-again-sheet", false);
-    await sheet.getByRole("button", { name: "Not now" }).click();
-    await expect(sheet).toBeHidden();
-    expect(asked).toEqual([]);
-    await again.click();
-    await sheet.getByRole("button", { name: "Get the link again" }).click();
-    await expect(page.getByText("Here is the new link. The one you had before no longer opens this gift.")).toBeVisible();
-    expect(asked).toEqual(["link"]);
-    await expect(page.getByText(/ZyXwVuTsRqPoNmLkJiHgFe/)).toBeVisible();
-    await shot(page, "01c-new-link");
+    // The date and the number are a line of what was agreed, and nowhere in the open.
+    await page.getByText("What was agreed", { exact: true }).click();
+    await expect(page.locator("dl.said-lines > div").filter({ hasText: /^Made/ })).toHaveText(/^Made.+, gift 51$/);
+    await shot(page, "01a-unopened-agreed-open");
 
     // Taking it back: the reading before, in a sheet, with the amount on the press.
     await act(page, "back").click();
@@ -100,11 +109,11 @@ test.describe("the funder's page", () => {
     await shot(page, "02-take-back-sheet", false);
     await back.getByRole("button", { name: "Not now" }).click();
     await expect(back).toBeHidden();
-    expect(asked).toEqual(["link"]);
+    expect(asked).toEqual([]);
     await device.context.close();
   });
 
-  test("on another device the one action is the way back to the link, and a gift of the second version finds the same one", async ({ browser, baseURL }) => {
+  test("on a device that does not hold the link: a gift of today finds the same one on one press, a gift of the first contract reads the sheet first", async ({ browser, baseURL }) => {
     test.setTimeout(180_000);
     const device = await aWindow(browser, baseURL);
     const { page } = device;
@@ -112,40 +121,69 @@ test.describe("the funder's page", () => {
     await serve(page, "52", () => unopened("52"), TERMS.daily, null);
     await serve(page, "53", () => unopened("53", { version: 2 }), TERMS.daily, null);
     await makeAnAccount(device);
+
+    // A gift of today: where it stands, the day it comes back, and one button with what it gives under it.
+    await page.goto(`/g/53`);
+    await expect(page.getByText("Boo has not opened it yet.", { exact: true })).toBeVisible();
+    await expect(page.getByText(/^By .+, or it comes back to you\.$/)).toBeVisible();
+    const find = page.getByRole("button", { name: "Find the link", exact: true });
+    await expect(find).toBeVisible();
+    await expect(find).not.toHaveCSS("background-color", "rgb(255, 197, 49)");
+    await expect(page.getByText("The same link you sent. It still works.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Copy the link/ })).toHaveCount(0);
+    await shot(page, "03-second-version-no-link");
+
+    // The press finds it (the review of 2 Oct 2026, R-17), with no sheet between: the server is asked for the gift's
+    // salt, which is public, and is sent nothing else; the funder's own account signs it here, and the link is made
+    // in this browser.
+    const salts: string[] = [];
+    await page.route("**/api/gift/53/link", (route) => {
+      salts.push(route.request().postData() ?? "");
+      return route.fulfill(json({ salt: `0x${"07".repeat(32)}` }));
+    });
+    await find.click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByText("Here is the link. It is the one you had: it still opens this gift.")).toBeVisible();
+    expect(salts).toEqual(['{"find":true}']);
+    // The link as it is sent since R-01: a preview token where a server reads, the secret after the #, where none does.
+    const link = await page.locator("[data-gift-link]").innerText();
+    expect(link).toMatch(new RegExp(`^${device.baseURL}/g/53\\?t=[A-Za-z0-9_-]{32}#[A-Za-z0-9_-]{32}$`));
+    const found = new URL(link);
+    expect(found.searchParams.get("t")).not.toBe(found.hash.slice(1));
+    // The same account, the same salt: the same link, on any device. Kept by this one from now on, and the card says
+    // what there is to do with it.
+    expect(await page.evaluate(() => window.localStorage.getItem("viky.gift-link.53"))).toBe(link);
+    await expect(page.getByText("Send it to Boo.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Copy the link", exact: true })).toHaveCSS("background-color", "rgb(255, 197, 49)");
+    await expect(page.getByRole("button", { name: "Find the link" })).toHaveCount(0);
+    await shot(page, "04-second-version-link-found");
+
+    // A gift of the first contract: its link is replaced, which is a decision, read in a sheet before the press.
+    const asked: string[] = [];
+    await page.route("**/api/gift/52/link", (route) => {
+      asked.push("link");
+      return route.fulfill(json({ claimUrl: `${device.baseURL}/g/52?t=ZyXwVuTsRqPoNmLkJiHgFe` }));
+    });
     await page.goto(`/g/52`);
     const again = page.getByRole("button", { name: "Get the link again" });
     await expect(again).toHaveCSS("background-color", "rgb(255, 197, 49)");
     await expect(page.getByRole("button", { name: /^Copy the link/ })).toHaveCount(0);
-    await shot(page, "03-unopened-no-link");
-
-    await page.goto(`/g/53`);
-    const find = page.getByRole("button", { name: "Find the link again" });
-    await expect(find).toBeVisible();
-    await find.click();
-    const sheet = page.getByRole("dialog", { name: "Find the link again" });
-    await expect(sheet.getByText("Lost the link, or sent it from another device? Find it again here. It is the same link: the one you sent still works.")).toBeVisible();
-    await shot(page, "04-second-version-find-sheet", false);
-
-    // The press in the sheet finds it (the review of 2 Oct 2026, R-17). The server is asked for the gift's salt, which
-    // is public, and is sent nothing else; the funder's own account signs it here, and the link is made in this browser.
-    const asked: string[] = [];
-    await page.route("**/api/gift/53/link", (route) => {
-      asked.push(route.request().postData() ?? "");
-      return route.fulfill(json({ salt: `0x${"07".repeat(32)}` }));
-    });
-    await sheet.getByRole("button", { name: "Find the link again" }).click();
-    await expect(page.getByText("Here is the link. It is the one you had: it still opens this gift.")).toBeVisible();
-    expect(asked).toEqual(['{"find":true}']);
-    // The link as it is sent since R-01: a preview token where a server reads, the secret after the #, where none does.
-    const link = await page.locator("p.select-all").innerText();
-    expect(link).toMatch(new RegExp(`^${device.baseURL}/g/53\\?t=[A-Za-z0-9_-]{32}#[A-Za-z0-9_-]{32}$`));
-    const found = new URL(link);
-    expect(found.searchParams.get("t")).not.toBe(found.hash.slice(1));
-    // The same account, the same salt: the same link, on any device. Kept by this one from now on.
-    expect(await page.evaluate(() => window.localStorage.getItem("viky.gift-link.53"))).toBe(link);
-    await expect(page.getByRole("button", { name: "Copy the link" })).toHaveCSS("background-color", "rgb(255, 197, 49)");
-    await expect(page.getByRole("button", { name: "Find the link again" })).toHaveCount(0);
-    await shot(page, "04b-second-version-link-found");
+    await expect(page.getByText(/The link you had stops working the moment you do\./)).toBeHidden();
+    await shot(page, "04b-first-contract-no-link");
+    await again.click();
+    const sheet = page.getByRole("dialog", { name: "Get the link again" });
+    await expect(sheet.getByText("Lost the link, or sent it from another device? Get a new one. The link you had stops working the moment you do.")).toBeVisible();
+    expect(asked).toEqual([]);
+    await shot(page, "04c-link-again-sheet", false);
+    await sheet.getByRole("button", { name: "Not now" }).click();
+    await expect(sheet).toBeHidden();
+    expect(asked).toEqual([]);
+    await again.click();
+    await sheet.getByRole("button", { name: "Get the link again" }).click();
+    await expect(page.getByText("Here is the new link. The one you had before no longer opens this gift.")).toBeVisible();
+    expect(asked).toEqual(["link"]);
+    await expect(page.locator("[data-gift-link]")).toHaveText(/ZyXwVuTsRqPoNmLkJiHgFe/);
+    await shot(page, "04d-new-link");
     await device.context.close();
   });
 
@@ -243,38 +281,69 @@ test.describe("the funder's page", () => {
     await running.context.close();
   });
 
-  test("a gift just made: two figures, the link, what happens next folded, and the messages as a round button", async ({ browser, baseURL }) => {
+  test("on a computer the gift's card is 440 wide, in the middle of the window", async ({ browser, baseURL }) => {
+    test.setTimeout(120_000);
+    const device = await profile(browser, baseURL, { width: 1440, height: 900 });
+    const { page } = device;
+    await neverAskedToBeTold(device.context);
+    await serve(page, "8", () => unopened("8"), TERMS.daily, null);
+    await makeAnAccount(device);
+    const link = `${device.baseURL}/g/8?t=AbCdEfGhIjKlMnOpQrStUv`;
+    await page.evaluate((kept) => window.localStorage.setItem("viky.gift-link.8", kept), link);
+    await page.goto("/g/8");
+    const card = page.locator("section.gift-card-placed");
+    await expect(card).toBeVisible();
+    const box = (await card.boundingBox())!;
+    expect(Math.round(box.width), "the card's own width: it stood at 432 in a task's column").toBe(440);
+    expect(Math.abs(box.x + box.width / 2 - 720), "in the middle of a window of 1440").toBeLessThanOrEqual(1);
+    // What is in the card is as wide as the card allows, and no wider: the button never runs across the window.
+    const copy = (await page.getByRole("button", { name: "Copy the link", exact: true }).boundingBox())!;
+    expect(copy.width).toBeLessThanOrEqual(440);
+    expect(copy.x).toBeGreaterThanOrEqual(box.x);
+    await wide(page, "13-after-paying-1440");
+    // And on a device that does not hold the link: the same column, with the one button no wider than the card.
+    await serve(page, "9", () => unopened("9", { version: 2 }), TERMS.daily, null);
+    await page.goto("/g/9");
+    const find = page.getByRole("button", { name: "Find the link", exact: true });
+    await expect(find).toBeVisible();
+    const other = (await page.locator("section.gift-card-placed").boundingBox())!;
+    expect(Math.round(other.width)).toBe(440);
+    expect((await find.boundingBox())!.width).toBeLessThanOrEqual(440);
+    await wide(page, "14-no-link-1440");
+    await device.context.close();
+  });
+
+  test("the screen of a gift just made is the gift's own page, and an address kept from before leads there", async ({ browser, baseURL }) => {
     test.setTimeout(180_000);
     const device = await aWindow(browser, baseURL);
     const { page } = device;
     await neverAskedToBeTold(device.context);
-    await page.route("**/api/gift/7/notify", (route) => route.fulfill(json({ on: false, possible: false })));
+    await serve(page, "7", () => unopened("7"), TERMS.daily, null);
     await makeAnAccount(device);
-    const made = (over: Record<string, unknown>) =>
-      page.evaluate((record) => window.sessionStorage.setItem("viky.giftMade", JSON.stringify(record)), { giftId: "7", claimUrl: `${device.baseURL}/g/7?t=AbCdEfGhIjKlMnOpQrStUv`, atMs: Date.now(), recipientName: "Boo", funderName: "Mom", conditionId: "duolingo-daily", amount: "7000000", days: 7, ...over });
-    await made({});
+    const link = `${device.baseURL}/g/7?t=AbCdEfGhIjKlMnOpQrStUv`;
+    // What the pay screen kept of a gift it made, before 8 Oct 2026, and the link the device keeps.
+    await page.evaluate(
+      ([record, kept]) => {
+        window.sessionStorage.setItem("viky.giftMade", record);
+        window.localStorage.setItem("viky.gift-link.7", kept);
+      },
+      [JSON.stringify({ giftId: "7", claimUrl: link, atMs: Date.now(), recipientName: "Boo", funderName: "Mom", conditionId: "duolingo-daily", amount: "7000000", days: 7 }), link],
+    );
     await page.goto("/fund?step=done");
-    await expect(page.getByRole("button", { name: "Copy the link" })).toBeVisible();
-    // The day's share and the days, side by side; the whole amount is the title's.
-    await expect(page.locator("[data-made-figures] > div")).toHaveText(["$1.00A day", "7Days"]);
-    await expect(page.getByText("First day counted the day after they connect Duolingo.")).toBeVisible();
-    await expect(page.getByText(/over 7 days/)).toHaveCount(0);
-    // What happens next is folded, with the way back to a lost link at its foot.
-    const next = page.locator("[data-made-next]");
-    await expect(next.getByText("A lost link")).toBeHidden();
-    await expect(controls(page).getByRole("button")).toHaveCount(1);
-    await shot(page, "11-made-habit");
-    await next.getByText("What happens next", { exact: true }).click();
-    // Lines, a label and its value: what the pay sheet said of a missed day and of a link nobody opens, and a lost link.
-    await expect(next.locator("dl.said-lines > div")).toHaveText(["A missed dayback to you", "Not opened in 14 daysback to you", "A lost linkthis gift's page makes a new one"]);
-    await shot(page, "11b-made-habit-next-open");
-
-    await made({ conditionId: "chess-rating", amount: "25000000", days: 30, goal: "1500 in rapid", target: 1500, namedByFunder: true });
+    await expect(page).toHaveURL(/\/g\/7$/);
+    await expect(page.getByText("Send it to Boo.", { exact: true })).toBeVisible();
+    await expect(page.locator("[data-gift-link]")).toHaveText(link);
+    await expect(page.getByRole("button", { name: "Copy the link", exact: true })).toBeVisible();
+    // Nothing of the screen that stood here: no title that says the amount again, no reference, no fold of its own.
+    await expect(page.getByText(/is in Boo's name\./)).toHaveCount(0);
+    await expect(page.getByText(/Reference: gift/)).toHaveCount(0);
+    await expect(page.getByText("What happens next", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "See this gift" })).toHaveCount(0);
+    await shot(page, "11-after-paying-is-the-gift-page");
+    // With nothing kept, the address leads to the pay screen, which says there is nothing to pay for.
+    await page.evaluate(() => window.sessionStorage.removeItem("viky.giftMade"));
     await page.goto("/fund?step=done");
-    await expect(page.getByText("$25.00 when they reach 1500 in rapid, within 30 days of connecting Chess.com.")).toBeVisible();
-    await expect(page.getByText("All of it, at once, or all of it back to you.", { exact: true })).toBeVisible();
-    await expect(page.locator("[data-made-figures]")).toHaveCount(0);
-    await shot(page, "12-made-climb");
+    await expect(page).toHaveURL(/\/fund\?step=pay$/);
     await device.context.close();
   });
 });

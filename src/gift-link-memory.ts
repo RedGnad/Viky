@@ -9,12 +9,23 @@
 
 const KEY = "viky.gift-link.";
 
+/** Whoever draws from this memory is told when a link is kept: the gift's page says "Send it" the moment one is here. */
+const followers = new Set<() => void>();
+
+export function followGiftLinks(follower: () => void): () => void {
+  followers.add(follower);
+  return () => {
+    followers.delete(follower);
+  };
+}
+
 export function rememberGiftLink(giftId: string, claimUrl: string): void {
   try {
     window.localStorage.setItem(KEY + giftId, claimUrl);
   } catch {
     // A browser that refuses storage still made the gift; only the second copy of the link is lost.
   }
+  for (const follower of followers) follower();
 }
 
 export function giftLinkOnThisDevice(giftId: string): string | null {

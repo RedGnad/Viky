@@ -831,7 +831,7 @@ function withdrawal(): Scenario[] {
         await s.page.evaluate(`window.sessionStorage.setItem("viky.giftMade", JSON.stringify({ giftId: "42", claimUrl: "https://viky.cash/g/42?t=x", atMs: Date.now(), recipientName: "Boo", conditionId: "duolingo-daily", amount: "25000000", days: 30 }))`);
         await s.goto("/fund?step=done");
         await s.page.waitForTimeout(2500);
-        await s.shot("euros", "made", "the made screen, read in euros");
+        await s.shot("euros", "made", "the address the made screen had until 8 Oct 2026: it leads to the gift's own page, read in euros");
       },
     },
     {

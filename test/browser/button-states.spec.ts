@@ -64,7 +64,7 @@ test.describe("the one button, four states", () => {
     await page.goto(`/g/${GIFT}`);
 
     // At rest: its words, on its relief, in the sun.
-    const copy = page.getByRole("button", { name: "Copy the link again" });
+    const copy = page.getByRole("button", { name: "Copy the link" });
     await expect(copy).toBeVisible();
     await expect(copy).toHaveCSS("background-color", SUN);
     await expect(copy).toHaveCSS("transform", "none");
@@ -86,7 +86,7 @@ test.describe("the one button, four states", () => {
     // on while it is installed, so the moment itself is held by test/waits.test.ts: 2.2 s.)
     await page.clock.runFor(2_500);
     await expect(done).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Copy the link again" })).toHaveCSS("background-color", SUN);
+    await expect(page.getByRole("button", { name: "Copy the link" })).toHaveCSS("background-color", SUN);
 
     // Doing: the wheel and what is being done, in the button, which stays down in its own colour and is not faded.
     await page.locator('[data-decide="back"]').click();

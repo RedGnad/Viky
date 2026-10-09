@@ -48,7 +48,7 @@ export function Review() {
       </section>
       <p className={HELP}>{W.check.fromAccount(TO_NOE.held)}</p>
       <div className="flex flex-col gap-[var(--tap-gap)]">
-        <Link href={labHref("made")} className={PRIMARY_BUTTON}>
+        <Link href={labHref("gift")} className={PRIMARY_BUTTON}>
           {W.check.putIt(TO_NOE.amount, TO_NOE.recipient)}
         </Link>
         <Link href={labHref("home")} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>

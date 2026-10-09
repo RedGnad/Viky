@@ -114,17 +114,6 @@ export const FUNDER_JOURNEY: readonly CatalogueScreen[] = [
         says: ["A gift is waiting for your payment", "set up on this device and not made yet.", "Sign in to pick it up", "Whatever you paid stays in your account."],
       },
       {
-        name: "It is in their name",
-        when: "the gift exists on chain: the amount, the reference and the date, the link, and what happens next",
-        says: ["Reference: gift", "Copy the link", "Share", "Whoever opens this link takes the gift, so send it only to", "What happens next", "See this gift"],
-        gap: "whoever holds this link takes the gift. The check says so before paying; the real lock is the source's name when the funder filled it in (D58).",
-      },
-      {
-        name: "The copy failed",
-        when: "the browser refused the clipboard",
-        says: ["Your browser would not let us copy it. Press and hold the link above, then choose Copy."],
-      },
-      {
         name: "Making the gift refused",
         when: "the route refused, with its own typed sentence, and the page waits for a gesture rather than repeating it",
         says: ["Try again"],
@@ -185,7 +174,7 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
     file: "src/sentences.ts",
     states: [
       // The nine moments of document J (V4, D172 to D175), each as its two people and a reader read it.
-      { name: "Jamais ouvert", when: "nobody has opened the link: the promise with the first name, the day it goes back, and opening it", says: ["put this in your name.", "has not opened it yet.", "Yours day by day", "or it goes back to", "If not by", "Open my gift", "It creates your account with your fingerprint, face or screen lock. 18 or older.", "I already have an account", "This link is missing its key. Ask for the link again."] },
+      { name: "Jamais ouvert", when: "nobody has opened the link: the promise with the first name, the day it goes back, and opening it", says: ["put this in your name.", "has not opened it yet.", "Yours day by day", "or it goes back to", "or it comes back to you.", "Send it to", "Whoever opens the link takes the gift.", "Copy the link", "Share", "Find the link", "The same link you sent. It still works.", "Your browser would not let us copy it. Press and hold the link, then choose Copy.", "Open my gift", "It creates your account with your fingerprint, face or screen lock. 18 or older.", "I already have an account", "This link is missing its key. Ask for the link again."] },
       { name: "Ouvert, pas relié", when: "opened, and nothing started: the one gesture, the agreement unfolded, and the day it goes back", says: ["and it starts.", "is not connected yet.", "or it goes back to", "Connect now: only what you reach after connecting counts."] },
       { name: "En cours, quotidien", when: "a daily gift counting: the last day judged, in words; no action", says: ["Yesterday counted.", "Today still counts.", "Next reading:", "Yours so far", "Theirs so far"] },
       { name: "En cours, progression", when: "a climb under way: how far is left, where they are today, and and the live line of the reading while the page is open; no action", says: ["to go.", "Today", "Checked just now"] },

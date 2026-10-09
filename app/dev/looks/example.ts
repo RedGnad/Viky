@@ -17,7 +17,6 @@ export const SCREENS = [
   { id: "gift", name: "A gift's page", characters: true },
   { id: "amount", name: "Offering a gift: how much", characters: false },
   { id: "review", name: "Check this over", characters: false },
-  { id: "made", name: "The gift is made", characters: true },
 ] as const;
 
 export type ScreenId = (typeof SCREENS)[number]["id"];

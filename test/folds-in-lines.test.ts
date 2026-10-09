@@ -28,7 +28,7 @@ test("the gift page's two folds are lines, four at most, and print no paragraph"
   assert.match(checked, /\.slice\(0, MOST_LINES_IN_A_FOLD\);\n\s*const checked = \(\n\s*<>\n\s*<Lines quiet rows=\{checkedRows\} \/>/);
   assert.doesNotMatch(checked, /<p /, "no paragraph in how it is checked: the lines, then the two tools");
   // A habit: what a day pays, how long, where a missed day goes.
-  assert.match(agreed, /\[W\.lines\.days, agreedWhen\(daily\)\] as const, \[W\.lines\.missedDay, backToFunder\] as const\]/);
+  assert.match(agreed, /\[W\.lines\.days, agreedWhen\(daily\)\] as const, \[W\.lines\.missedDay, backToFunder\] as const, madeBeforeOpening\]/);
   assert.deepEqual([GIFT_PAGE.lines.days, GIFT_PAGE.lines.missedDay, GIFT_PAGE.lines.backToYou], ["Days", "A missed day", "back to you"]);
   // The funder still reads that the person it is for can end it (the audit of 1 Oct 2026).
   assert.deepEqual([GIFT_PAGE.lines.canEnd("Boo"), GIFT_PAGE.lines.theRest], ["Boo can end it", "the rest comes back to you"]);
@@ -53,10 +53,12 @@ test("who agreed to what is read is a line, to the person and to the funder", ()
   assert.match(consent, /if \(state\?\.kind === "stop"\) return \[\[reads, C\.lines\.theyStopped\(/, "a stop is said with its day, and nothing promises a reading after it");
 });
 
-test("what happens next, under the link of a gift just made, is the pay sheet's own lines and the way back to a lost link", () => {
-  const link = read("app/components/PayGift.tsx");
-  assert.match(link, /<Lines quiet rows=\{\[!madeMilestone \? P\.fold\.missedDay : certificateById\(made\.conditionId\) \? P\.fold\.notShown : P\.fold\.notReached, P\.fold\.notOpened, W\.made\.lostLink\]\} \/>/);
-  assert.deepEqual(FUND.made.lostLink, ["A lost link", "this gift's page makes a new one"]);
+test("what happens next is said by the gift's own page since 8 Oct 2026, and the pay sheet keeps its lines", () => {
+  // The screen of a gift just made, and its fold "What happens next", are gone: the gift's page is that screen, and
+  // what it folded is in "What was agreed" and in the line under the state (test/ui-pass-the-gift-after-paying.test.ts).
+  const pay = read("app/components/PayGift.tsx");
+  assert.doesNotMatch(pay, /data-made-next|W\.made\./);
+  assert.equal("made" in FUND, false);
   assert.deepEqual(PAY.fold.missedDay, ["A missed day", "back to you"]);
 });
 
