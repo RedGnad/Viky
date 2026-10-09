@@ -125,7 +125,7 @@ test("the sheet is held, and what stands under the frame is the way out", () => 
   assert.match(sheet, /<p className=\{HELP\}>\{unreachable \? W\.rampnow\.notShowing : W\.rampnow\.cantSignIn\}<\/p>/);
   assert.match(sheet, /\{known \? null : <CardTermsLine way=\{WAY_IN_USDC\} \/>\}/);
   // The page beside is the payment to finish when there is one, never a new payment in its place.
-  assert.match(sheet, /href=\{finishing \? rampnowFinishPage\(orderUid\) : rampnowPage\(\{ account, euros \}\)\}/);
+  assert.match(sheet, /href=\{finishing \? rampnowFinishPage\(orderUid\) : rampnowPage\(\{ account, ask \}\)\}/);
   // A payment is possible once the frame has stood long enough, and the late way out comes five minutes after the
   // frame opened or after a payment became known.
   assert.match(sheet, /const timer = setTimeout\(\(\) => now\.current\.onSaid\("possible", null\), PAYMENT_POSSIBLE_AFTER_MS\);/);
@@ -141,7 +141,7 @@ test("the wait says a known payment and gives one button; with nothing known it 
   assert.ok(from > 0);
   assert.match(waiting, /onFinish=\{\(\) => setFrame\(\{ mode: "finish", orderUid: rampnowPending\.orderUid \}\)\}/, "the payment opened again in our frame");
   // "No, pay now": the payment is forgotten and the frame opens on a new one, in the same press.
-  assert.match(waiting, /onPayNow=\{\(\) => \{\n\s*noteInRampnowJournal\("Viky: answered no, pay now"\);\n\s*clearRampnowPending\(address\);\n\s*setRampnowFailed\(false\);\n\s*if \(rampnowBeside\) payAtRampnowBeside\(address, wayInPage\(wayIn, \{ account: address, euros: toBuy \}\)\);\n\s*else setFrame\(\{ mode: "new" \}\);\n\s*\}\}/);
+  assert.match(waiting, /onPayNow=\{\(\) => \{\n\s*noteInRampnowJournal\("Viky: answered no, pay now"\);\n\s*clearRampnowPending\(address\);\n\s*setRampnowFailed\(false\);\n\s*if \(rampnowBeside\) payAtRampnowBeside\(address, wayInPage\(wayIn, \{ account: address, euros: toBuy, ask: toPay \}\)\);\n\s*else setFrame\(\{ mode: "new" \}\);\n\s*\}\}/);
   assert.doesNotMatch(waiting, /openCard\b|openCardAgain|payByCard/, "never Pay by card here");
   // The pay press that arrives with a payment already waited for opens nothing.
   assert.match(paying, /if \(arrival && browser && address\) \{\n\s*setArrival\(false\);\n\s*if \(!rampnowPending && !rampnowBeside\) setFrame\(\{ mode: "new" \}\);\n\s*\}/);
@@ -149,10 +149,12 @@ test("the wait says a known payment and gives one button; with nothing known it 
   assert.match(paying, /onBack=\{\(\) => \{\n(\s*\/\/[^\n]*\n)*\s*if \(frame\?\.mode !== "finish"\) clearRampnowPending\(address\);\n\s*setFrame\(null\);\n\s*\}\}/);
   // Paying, when nothing is waited for: "Pay €X by card", and the failure said once above it.
   assert.match(paying, /\{rampnowFailed \? <FieldRefusal id="rampnow-failed">\{P\.rampnow\.failed\}<\/FieldRefusal> : null\}/);
-  assert.match(paying, /\{toBuy \? P\.payByCard\(moneyIn\(toBuy, "EUR"\)\) : W\.waiting\.openCard\}/);
+  // The amount is what the card is asked, in its currency (9 Oct 2026): Rampnow's quote, or dollars by the rule.
+  assert.match(paying, /\{toPaySaid \? P\.payByCard\(toPaySaid\) : W\.waiting\.openCard\}/);
+  assert.match(paying, /const toPaySaid = toPay \? moneyIn\(toPay\.amount, toPay\.currency\) : undefined;/);
   assert.equal(PAY.payByCard("€6.00"), "Pay €6.00 by card");
   // The title above it writes the amount as the button does: it said "30 EUR" over a button saying "€30.00".
-  assert.match(paying, /step=\{W\.waiting\.title\(toBuy \? moneyIn\(toBuy, "EUR"\) : undefined\)\}/);
+  assert.match(paying, /step=\{W\.waiting\.title\(toPaySaid\)\}/);
   assert.equal(FUND.waiting.title("€30.00"), "Waiting for your €30.00 payment");
   assert.equal(FUND.waiting.title(undefined), "Waiting for your payment");
 
@@ -283,7 +285,7 @@ test("where the frame cannot keep the person signed in, it is never shown: Safar
   // The pay press: the frame where it can, Rampnow's page beside where it cannot, followed as started from a tab.
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   assert.match(sheet, /if \(frameKeepsSignIn\(navigator\.userAgent\)\) return router\.push\("\/fund\?step=paying&rampnow=1"\);/);
-  assert.match(sheet, /const beside = payAtRampnowBeside\(account, wayInPage\(way, \{ account, euros \}\)\);[\s\S]{0,400}return router\.push\("\/fund\?step=paying"\);/);
+  assert.match(sheet, /const beside = payAtRampnowBeside\(account, wayInPage\(way, \{ account, euros: offer\.euros, ask \}\)\);[\s\S]{0,400}return router\.push\("\/fund\?step=paying"\);/);
   const store = readFileSync("src/client/rampnow-pending.ts", "utf8");
   assert.match(store, /if \(!tab\) return false;[\s\S]{0,300}noteRampnowPending\(account, \{ via: "tab" \}\);\n\s*return true;/, "a tab the browser refused leaves nothing waited for");
   // The screen that waits never opens the frame there: its button that pays is a link to Rampnow's page in a tab.
@@ -291,7 +293,7 @@ test("where the frame cannot keep the person signed in, it is never shown: Safar
   assert.match(wait, /const rampnowBeside = browser && rampnowFrameOn\(\) && !frameKeepsSignIn\(navigator\.userAgent\);/);
   assert.match(wait, /if \(!rampnowPending && !rampnowBeside\) setFrame\(\{ mode: "new" \}\);/);
   assert.match(wait, /pending=\{rampnowBeside \? \{ \.\.\.rampnowPending, via: "tab" \} : rampnowPending\}/);
-  assert.match(wait, /if \(rampnowBeside\) payAtRampnowBeside\(address, wayInPage\(wayIn, \{ account: address, euros: toBuy \}\)\);\n\s*else setFrame\(\{ mode: "new" \}\);/);
+  assert.match(wait, /if \(rampnowBeside\) payAtRampnowBeside\(address, wayInPage\(wayIn, \{ account: address, euros: toBuy, ask: toPay \}\)\);\n\s*else setFrame\(\{ mode: "new" \}\);/);
   assert.match(wait, /data-rampnow-pay-beside=""\n\s*onClick=\{\(\) => \{\n\s*noteInRampnowJournal\("Viky: the card page was opened beside, from the wait"\);\n\s*noteRampnowPending\(address, \{ via: "tab" \}\);/);
   // And the judges page says the limit as it is, with what was measured and what was not.
   const judges = readFileSync("app/judges/page.tsx", "utf8");

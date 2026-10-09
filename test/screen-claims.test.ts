@@ -385,7 +385,7 @@ test("on the sheet that pays, one fold holds what only some readers need, and th
   // The fold holds short lines, a label and its value, and never a paragraph (the founder, 4 Oct 2026): what comes
   // back and when, by the kind of gift, and the card's fee. It held up to eight sentences.
   const inside = sheet.slice(sheet.indexOf('<details className="said-fold" data-what-happens="">'), sheet.indexOf("</details>"));
-  assert.match(inside, /<Lines quiet rows=\{\[milestone \? W\.fold\.notReached : certificate \? W\.fold\.notShown : W\.fold\.missedDay, W\.fold\.notOpened, \.\.\.\(byCard \? \[\[W\.rows\.fee, feeInALine\(way, euros\)\] as const\] : \[\]\)\]\} \/>/);
+  assert.match(inside, /<Lines quiet rows=\{\[milestone \? W\.fold\.notReached : certificate \? W\.fold\.notShown : W\.fold\.missedDay, W\.fold\.notOpened, \.\.\.\(byCard \? \[\[W\.rows\.fee, feeInALine\(way, offer\.euros\)\] as const\] : \[\]\)\]\} \/>/);
   assert.doesNotMatch(inside, /<p /, "no paragraph in it");
   // And what the sheet says in the open is what the mockup says: the name, the lines, the total, the action, its line.
   for (const said of ["W.nameLabel(recipient)", "W.rows.gift(recipient)", "W.rows.fromAccount", "W.rows.fee", "W.rows.viky", "W.youPay", "W.payByCard(", "<CardLine way={way} />", "W.passkeyMakesTheAccount"]) {

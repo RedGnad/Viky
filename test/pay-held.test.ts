@@ -70,12 +70,13 @@ test("the sheet: one reading that fails whole, a button that does not go while n
   assert.match(sheet, /\.catch\(\(\) => \{\n\s*if \(live\) setHeld\(\{ state: "unread" \}\);\n\s*\}\);/);
   assert.doesNotMatch(sheet, /held \?\? 0n/);
   // The button does not go, and the press does nothing, while what pays is not settled.
-  assert.match(sheet, /<Button waiting=\{!ready \|\| !settled \|\| status === "busy"\} doing=\{busy \? W\.paying : null\}/);
+  // Nor while the card service is asked its price (9 Oct 2026): no figure is named, so there is none to press on.
+  assert.match(sheet, /<Button waiting=\{!ready \|\| !settled \|\| quoteAwaited \|\| status === "busy"\} doing=\{busy \? W\.paying : null\}/);
   assert.match(sheet, /if \(!ready \|\| units === undefined \|\| !settled\) return;/);
   // The card's lines, its figure and its line of terms are drawn for the card alone.
   // And not in the moment a judge's credit, just given, is being read (9 Oct 2026), nor under the card service's
   // smallest payment, where no card is offered.
-  assert.match(sheet, /const byCard = pays === "card" && !cardClosed && !creditArriving && !offer\.atFloor;/);
+  assert.match(sheet, /const byCard = pays === "card" && !cardClosed && !creditArriving && !underTheFloor;/);
   assert.match(sheet, /\{pays !== "card" \? null : cardClosed \? \(/);
   // The wait is said under the button, and the failure with what reads again.
   assert.match(sheet, /\{pays === "reading" \? <WaitLine>\{W\.readingAccount\}<\/WaitLine> : null\}/);

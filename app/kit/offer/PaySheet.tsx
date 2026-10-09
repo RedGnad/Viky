@@ -11,14 +11,14 @@ import { whereTheRailsServe } from "@/src/client/rails";
 import { conditionById } from "@/src/conditions";
 import { certificateById, milestoneById } from "@/src/milestone-conditions";
 import { draftToTerms, draftUnits, isComplete, type GiftDraft } from "@/src/gift-draft";
-import { askByRule } from "@/src/card-ask";
+import { keepCardAsk, useCardAsk } from "@/src/client/card-ask";
 import { serviceChargeIsCeiling, wayInFor } from "@/src/gift-amount";
 import { lastNameGiven, tidyGiftName } from "@/src/gift-names";
 import { judgeLineIsTrue } from "@/src/judge-line";
 import { formatAusd } from "@/src/gift-reader";
 import { savePendingGift } from "@/src/pending-gift";
 import { heldForTheLines, payWith, type HeldReading } from "@/src/pay-held";
-import { cardSum, giftTyped, heldIn, moneyIn, perEuro, smallestGiftByCard, toDecimals } from "@/src/pay-sum";
+import { across, cardSum, giftTyped, heldIn, moneyIn, perEuro, smallestGiftByCard, toDecimals } from "@/src/pay-sum";
 import { unitsFromTyped } from "@/src/amount-in-currency";
 import type { RailReach } from "@/src/rail-country";
 import { feeInALine, wayInFillsIn, wayInPage, waysIn, WAY_IN_USDC } from "@/src/rails";
@@ -206,7 +206,10 @@ export function PaySheet({
   const inAccount = heldForTheLines(Boolean(address), held);
   const enough = pays === "account";
   const short = units === undefined || units <= inAccount ? 0n : units - inAccount;
-  const offer = wayInFor(short, waysIn(), money.rates?.usdPerEur, railIn);
+  // One money on the whole sheet, the one the gift was typed in (the mockup of 3 Oct 2026); dollars when no rate is read.
+  const code = money.rates && perEuro(money.currency, money.rates) !== undefined ? money.currency : "USD";
+  // The way, and what the rule asks of it for a reader who counts in that money: a reader in euros is asked in euros.
+  const offer = wayInFor(short, waysIn(), money.rates?.usdPerEur, railIn, code);
   const way = offer.way;
   /** Paying by card is not offered in the payer's country (the founder, 29 Sep 2026): the account is the way left. */
   const cardClosed = card?.offered === false;
@@ -224,29 +227,48 @@ export function PaySheet({
   const codeAwaited = !codeFromLink && !enough && pays === "card" && credits === null;
   // The credit was given a moment ago and the account, read before it, is being read again: no card is named meanwhile.
   const creditArriving = codeGiven !== null && pays === "card";
-  // Under every card service's smallest payment (9 Oct 2026): no card is offered, and a gift a card can pay for is.
-  const underTheFloor = pays === "card" && !cardClosed && !creditArriving && offer.atFloor;
-  // The card's lines, its figure and its line of terms are drawn for the card alone, and above its service's floor.
-  const byCard = pays === "card" && !cardClosed && !creditArriving && !offer.atFloor;
-  const euros = units === undefined || !byCard ? 0 : offer.euros;
-  // One money on the whole sheet, the one the gift was typed in (the mockup of 3 Oct 2026); dollars when no rate is read.
-  const code = money.rates && perEuro(money.currency, money.rates) !== undefined ? money.currency : "USD";
   const say = (amount: number) => moneyIn(amount, code);
   const gift = units === undefined ? undefined : giftTyped({ typedAmount: draft.typedAmount, typedIn: draft.typedIn, units, code, rates: money.rates });
+  // The card is what pays, once that is known and for somebody a card serves.
+  const cardInPlay = open && pays === "card" && !cardClosed && !creditArriving && units !== undefined;
+  // What the card is asked (src/client/card-ask.ts): Rampnow's own quote in the sheet's money when it gives one, the
+  // rule otherwise, in the currency the service's page is opened in. While the quote is asked, no figure is named.
+  const asked = useCardAsk({ on: cardInPlay, offer, short, code, usdPerEur: money.rates?.usdPerEur });
+  const quoteAwaited = cardInPlay && asked.state === "asking";
+  // Under the card service's smallest payment (9 Oct 2026): no card is offered, and a gift a card can pay for is.
+  const underTheFloor = cardInPlay && asked.state === "under";
+  // The card's figure, its line and its line of terms are drawn for the card alone, and above its service's floor.
+  const byCard = pays === "card" && !cardClosed && !creditArriving && !underTheFloor;
+  const ask = cardInPlay && asked.state === "ask" ? asked.ask : undefined;
   // The card pays what its service is asked for and the account the rest, so the figures add up to the card's (src/pay-sum.ts).
-  const ask = byCard && euros ? askByRule(way, euros, money.rates?.usdPerEur) : undefined;
   const sum = ask && gift !== undefined ? cardSum({ code, gift, charged: ask, fee: ask.fee, rates: money.rates }) : undefined;
-  const feeCeiling = Boolean(euros) && serviceChargeIsCeiling(euros ?? 0, way.fee);
+  // The same sum in the money the card is charged in, for the line under the button, which adds up to what the button
+  // says: the sheet's own sum when the card is charged in the sheet's money; otherwise the gift in that money, which
+  // is exact in dollars, since a gift is kept in dollars to the cent.
+  const giftCharged = ask === undefined || units === undefined ? undefined : ask.currency === code ? gift : heldIn(units, ask.currency, money.rates);
+  const chargedSum = ask === undefined || giftCharged === undefined ? undefined : ask.currency === code ? sum : cardSum({ code: ask.currency, gift: giftCharged, charged: ask, fee: ask.fee, rates: money.rates });
+  // A share its service publishes as "up to" is said so; a quote is the service's own figure, and is said as it is.
+  const feeCeiling = asked.state === "ask" && !asked.quoted && serviceChargeIsCeiling(offer.euros ?? 0, way.fee);
   const heldRead = heldIn(inAccount, code, money.rates);
   const giftRead = gift === undefined ? formatAusd(units ?? 0n) : say(gift);
   // The one line under the card's button: the part of the gift the card pays, its fee, and what stays, which add up
-  // to the card's figure to the cent.
-  const cardSaid = sum
-    ? W.cardSum({ gift: say(toDecimals(sum.gift - sum.fromAccount, code)), part: sum.fromAccount > 0, fee: feeCeiling ? W.upTo(say(sum.fee)) : say(sum.fee), stays: sum.stays > 0 ? say(sum.stays) : null })
+  // to the cent to what the button says, in the money the card is charged in.
+  const sayCharged = (amount: number) => moneyIn(amount, chargedSum?.code ?? code);
+  const cardSaid = chargedSum
+    ? W.cardSum({
+        gift: sayCharged(toDecimals(chargedSum.gift - chargedSum.fromAccount, chargedSum.code)),
+        part: chargedSum.fromAccount > 0,
+        fee: feeCeiling ? W.upTo(sayCharged(chargedSum.fee)) : sayCharged(chargedSum.fee),
+        stays: chargedSum.stays > 0 ? sayCharged(chargedSum.stays) : null,
+      })
     : null;
-  // Under the floor: the floor in the sheet's money, and the smallest round gift a card can pay for.
-  const floorSaid = underTheFloor ? say(way.smallestEur * (perEuro(code, money.rates) ?? 1)) : null;
-  const floorGift = underTheFloor && gift !== undefined ? smallestGiftByCard({ way, code, gift, heldUnits: inAccount, rates: money.rates }) : undefined;
+  // Under the floor: the floor in the sheet's own money, so it reads beside the gift the button proposes; said
+  // "about" when the card would be charged in another money, since it is that money's floor at the day's rate. And
+  // the smallest round gift, in the sheet's money, that a card can pay for.
+  const floor = asked.state === "under" && underTheFloor ? asked.floor : undefined;
+  const floorRate = floor ? across(floor.currency, code, money.rates) : undefined;
+  const floorSaid = !floor ? null : floor.currency === code || floorRate === undefined ? moneyIn(floor.amount, floor.currency) : `${W.about} ${say(toDecimals(floor.amount * floorRate, code))}`;
+  const floorGift = floor && gift !== undefined ? smallestGiftByCard({ way, code, gift, heldUnits: inAccount, rates: money.rates, floor }) : undefined;
   // The gift is paid from a balance no larger than the judge credit, with nothing gone out of the account since it
   // arrived (D295): the balance is then the credit alone, and the sheet may say the credit pays.
   const paidFromCredit = judgeLineIsTrue({ gift: units, held: held.state === "read" ? held.parts.ausd : null, untouchedCredit });
@@ -269,6 +291,8 @@ export function PaySheet({
       const said: GiftDraft = gift === undefined ? draft : { ...draft, typedAmount: String(gift), typedIn: code };
       onChange(said);
       savePendingGift({ ...draftToTerms(said, account), wayIn: way.name });
+      // What the card is asked goes with the press, so the screen that waits opens the card's page on this amount.
+      if (!enough && asked.state === "ask") keepCardAsk({ ask: asked.ask, quoted: asked.quoted, forUnits: short.toString(), code });
       // A card paid inside Viky opens on the wait, in a sheet of its own, by this same press.
       if (!enough && way.embedded) return router.push("/fund?step=paying&card=1");
       // Rampnow in a frame of our own, when it is switched on (src/rampnow-frame.ts): opened on the wait, by this press.
@@ -277,7 +301,7 @@ export function PaySheet({
         // Where the frame cannot keep the person signed in at Rampnow, they never see it (the founder, 4 Oct 2026):
         // its page opens beside by this same press, and the payment is followed as one started from a tab. A tab the
         // browser refused leaves nothing waited for: the wait then offers the page by a link of its own.
-        const beside = payAtRampnowBeside(account, wayInPage(way, { account, euros }));
+        const beside = payAtRampnowBeside(account, wayInPage(way, { account, euros: offer.euros, ask }));
         noteInRampnowJournal(beside ? "Viky: the pay press opened the card page beside" : "Viky: the browser refused the card page beside the pay press", { carried: { browser: navigator.userAgent } });
         return router.push("/fund?step=paying");
       }
@@ -285,7 +309,7 @@ export function PaySheet({
       // their code yet, a first funder has only just made it: the waiting screen shows it, with its copy, and opens the
       // page when they press (D296).
       if (!enough && wayInFillsIn(way)) {
-        window.open(wayInPage(way, { account, euros }), "_blank", "noopener,noreferrer");
+        window.open(wayInPage(way, { account, euros: offer.euros, ask }), "_blank", "noopener,noreferrer");
         router.push("/fund?step=paying&opened=1");
       } else router.push("/fund?step=paying");
       // Still busy on purpose: the sheet stands as it is until the wait has replaced the page.
@@ -393,9 +417,10 @@ export function PaySheet({
   /** What the account puts in, said as the part taken from the gift: "\u2212 €8.24". */
   const less = (amount: number) => `\u2212\u2009${say(amount)}`;
   // The figure the sheet adds up to, and the action that pays it: the card's, the account's, or none to show.
-  // The card services are opened in euros for everybody (src/rails.ts). Where the sheet counts in another money, the
-  // card's figure in that money is the euros at the day's rate, not what the bank will take: it is said "about", and
-  // the euros the card is charged are said under the button, to the cent (the audit of 9 Oct 2026, F19).
+  // A card charged in the sheet's own money is said as it is: Rampnow's quote in that money, or the rule when the
+  // sheet counts in the currency the rule asks in. Where the sheet counts in another money, the total in it is a
+  // conversion at the day's rate, not what the bank will take: it is said "about", and the button says what the card
+  // is really charged, with the line under it adding up to that (the founder, 9 Oct 2026).
   const converted = sum !== undefined && sum.charged.currency !== code;
   const total = enough ? { label: W.rows.fromAccount, amount: giftRead, about: false } : sum ? { label: W.youPay, amount: say(sum.card), about: converted } : undefined;
 
@@ -442,6 +467,13 @@ export function PaySheet({
             {total.amount}
           </p>
         </div>
+      ) : quoteAwaited ? (
+        // While the card service is asked its price: the total's place is kept, with nothing in it, so the button
+        // under it does not move when the figure lands.
+        <div aria-hidden="true" data-pay-total-awaited="">
+          <p className={CARD_LABEL}>{W.youPay}</p>
+          <p className={`${CARD_AMOUNT} invisible whitespace-nowrap tabular-nums`}>{giftRead}</p>
+        </div>
       ) : null}
 
       {/* When the link carried no code: a small "Have a code?" under the price and right above the card's button (the
@@ -466,10 +498,12 @@ export function PaySheet({
                   {W.cardStartsAt(floorSaid)}
                 </p>
               ) : null}
-              <Button waiting={!ready || !settled || status === "busy"} doing={busy ? W.paying : null} step={WAITS.account} onPress={() => (underTheFloor ? raiseTheGift() : void pay())} data-pays={underTheFloor ? "floor" : pays}>
-                {underTheFloor ? (floorGift === undefined ? W.pay : W.makeTheGift(say(floorGift))) : enough ? (paidFromCredit ? W.code.payWithCredit(giftRead) : W.payFromAccount(giftRead, recipient)) : sum ? W.payByCard(say(sum.card)) : W.pay}
+              <Button waiting={!ready || !settled || quoteAwaited || status === "busy"} doing={busy ? W.paying : null} step={WAITS.account} onPress={() => (underTheFloor ? raiseTheGift() : void pay())} data-pays={underTheFloor ? "floor" : pays}>
+                {underTheFloor ? (floorGift === undefined ? W.pay : W.makeTheGift(say(floorGift))) : enough ? (paidFromCredit ? W.code.payWithCredit(giftRead) : W.payFromAccount(giftRead, recipient)) : sum ? W.payByCard(moneyIn(sum.charged.amount, sum.charged.currency)) : W.pay}
               </Button>
               {pays === "reading" ? <WaitLine>{W.readingAccount}</WaitLine> : null}
+              {/* The card service is being asked its price: said, and no figure is named meanwhile. */}
+              {quoteAwaited ? <WaitLine>{W.workingOutTotal}</WaitLine> : null}
               {/* A reading that failed is said, with what reads it again. Never the card in its place. */}
               {pays === "unread" ? (
                 <>
@@ -483,12 +517,6 @@ export function PaySheet({
               {cardSaid ? (
                 <p className={HELP} data-card-sum="">
                   {cardSaid}
-                </p>
-              ) : null}
-              {/* What the card is really charged, where the figures above are a conversion. */}
-              {sum && converted ? (
-                <p className={HELP} data-card-charged="">
-                  {W.cardCharged(moneyIn(sum.charged.amount, sum.charged.currency))}
                 </p>
               ) : null}
             </>
@@ -559,7 +587,7 @@ export function PaySheet({
           <FoldChevron />
         </summary>
         <div className="said-fold-body">
-          <Lines quiet rows={[milestone ? W.fold.notReached : certificate ? W.fold.notShown : W.fold.missedDay, W.fold.notOpened, ...(byCard ? [[W.rows.fee, feeInALine(way, euros)] as const] : [])]} />
+          <Lines quiet rows={[milestone ? W.fold.notReached : certificate ? W.fold.notShown : W.fold.missedDay, W.fold.notOpened, ...(byCard ? [[W.rows.fee, feeInALine(way, offer.euros)] as const] : [])]} />
         </div>
       </details>
     </Sheet>

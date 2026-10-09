@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { cardReach } from "../src/card-rail";
+import { askByRule } from "../src/card-ask";
 import { arrivesInDollars, DOLLAR_COIN_ALLOWANCE, eurosNeededOn, serviceChargeEur, wayInFor } from "../src/gift-amount";
 import { feeInALine, feeSentence, RAMPNOW_OPEN_IN, rampnowPage, rampnowWayIn, WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAY_IN_USDC, wayInAsksNothing, wayInFillsIn, wayInPage, WAYS_IN, waysIn } from "../src/rails";
 import { FUND, PAY } from "../src/sentences";
@@ -83,9 +84,13 @@ test("the fee is the one measured, and the amount asked covers it so the gift is
   }
   assert.equal(feeSentence(WAY_IN_USDC), "Rampnow keeps 7 % plus 0.40 EUR with a minimum of 1.00 EUR");
   assert.equal(DOLLAR_COIN_ALLOWANCE, 0.01);
-  // Thirty dollars at the European Central Bank's 1.1355: 26.42 EUR, 26.69 with the allowance, 29.13 with the fee.
-  // It asked 30 until 9 Oct 2026: the rest of a whole euro, which was neither the gift nor the fee.
-  assert.equal(eurosNeededOn(30_000_000n, WAY_IN_USDC, 1.1355), 29.13);
+  // Thirty dollars at the European Central Bank's 1.1355, asked in dollars since 9 Oct 2026: 30.31 with the
+  // allowance, 33.08 with the fee, of which 2.77 is the fee. In euros, as its own quote in euros gives it and as the
+  // rule stood until then: 26.42 EUR, 26.69 with the allowance, 29.13 with the fee.
+  const thirty = eurosNeededOn(30_000_000n, WAY_IN_USDC, 1.1355)!;
+  const asked = askByRule(WAY_IN_USDC, thirty, 1.1355)!;
+  assert.deepEqual([asked.currency, asked.amount, Math.round(asked.fee * 100) / 100], ["USD", 33.08, 2.77]);
+  assert.equal(eurosNeededOn(30_000_000n, { ...WAY_IN_USDC, paidIn: undefined }, 1.1355), 29.13);
   // Every whole gift from 5 to 1,000 dollars: what Rampnow delivered that day for the euros asked covers the gift.
   for (let dollars = 5; dollars <= 1_000; dollars += 1) {
     const euros = eurosNeededOn(BigInt(dollars) * 1_000_000n, WAY_IN_USDC, 1.1355)!;
@@ -106,15 +111,16 @@ test("it is offered where Rampnow says it fully serves, and gives way by one sen
     const ways = waysIn();
     const france = wayInFor(30_000_000n, ways, 1.1355, cardReach("fr"));
     assert.equal(france.way, WAY_IN_USDC);
-    assert.equal(france.euros, 29.13);
+    assert.equal(askByRule(france.way, france.euros!, 1.1355)?.amount, 33.08);
     assert.equal(cardReach("sn").Rampnow, "does-not");
     const dakar = wayInFor(30_000_000n, ways, 1.1355, cardReach("sn"));
     assert.equal(dakar.way, WAY_IN_CHAIN_COIN, "Senegal is under Restricted at Rampnow, and Ramp does not sell there");
     assert.deepEqual(dakar.insteadOf, { way: WAY_IN_USDC, because: "country" });
     assert.equal(cardReach(null).Rampnow, "unknown", "no country known: offered, and its own check decides");
-    // A gift under its smallest card payment is paid at that payment, the rest staying in the account.
+    // A gift under its smallest card payment: the offer says so, with that payment, six dollars, the dollar above
+    // five euros at the day's rate.
     const small = wayInFor(2_000_000n, ways, 1.1355, cardReach("fr"));
-    assert.deepEqual([small.way, small.euros, small.atFloor], [WAY_IN_USDC, 5, true]);
+    assert.deepEqual([small.way, askByRule(small.way, small.euros!, 1.1355)?.amount, small.atFloor], [WAY_IN_USDC, 6, true]);
   });
 });
 

@@ -69,7 +69,7 @@ function figure(text: string): number {
 /** The one line under the card's button, read back as figures: "€8.00 gift, €1.04 card fee, €0.08 stays yours." */
 async function theCardSum(page: Page): Promise<{ gift: number; part: boolean; fee: number; stays: number; text: string }> {
   const text = (await sheet(page).locator("[data-card-sum]").innerText()).trim();
-  const read = text.match(/^€(\d+\.\d{2}) (gift|of the gift), (?:up to )?€(\d+\.\d{2}) card fee(?:, €(\d+\.\d{2}) stays yours)?\.$/);
+  const read = text.match(/^[€$](\d+\.\d{2}) (gift|of the gift), (?:up to )?[€$](\d+\.\d{2}) card fee(?:, [€$](\d+\.\d{2}) stays yours)?\.$/);
   expect(read, text).not.toBeNull();
   return { gift: Number(read![1]), part: read![2] === "of the gift", fee: Number(read![3]), stays: Number(read![4] ?? 0), text };
 }
@@ -163,7 +163,8 @@ test.describe("the pay sheet of 3 Oct 2026", () => {
     // The gift, what the account puts in, and that Viky takes nothing: the fee and what stays are not lines any more.
     expect(labels).toEqual(["Boo's gift", "From your Viky money", "Viky takes"]);
     const total = (await sheet(page).locator("[data-pay-total]").innerText()).trim();
-    // One money format: every figure is written in euros, to the cent, and nothing is "about".
+    // One money format: every figure is written in euros, to the cent, and nothing is "about": a reader in euros is
+    // asked in euros, by Rampnow's rule as by any other.
     for (const value of [...values.slice(0, -1), total]) expect(value).toMatch(/^(− )?€\d+\.\d{2}$/);
     // One line under the button: the part of the gift the card pays, the fee, what stays. They add up to the card's
     // figure, to the cent, and the part is the gift less what the account puts in.
@@ -400,12 +401,19 @@ test.describe("a judge's code on the pay sheet: visible, and small beside the ca
       await expect(field).toHaveValue(THE_CODE);
       // The card is still the sheet's one action, with its figure, its line and its total.
       const card = sheet(page).locator('[data-pays="card"]');
-      await expect(card).toHaveText(/^Pay \$\d+\.\d{2} by card$/);
-      // The sheet counts in dollars and the card is charged in euros: the total is said about, and the euros under
-      // the button, to the cent.
-      await expect(sheet(page).locator("[data-pay-total]")).toHaveText(/^about \$\d+\.\d{2}$/);
-      await expect(sheet(page).locator("[data-card-charged]")).toHaveText(/^Your card is charged €\d+\.\d{2}\.$/);
-      expect((await sheet(page).locator("[data-card-charged]").boundingBox())!.y).toBeGreaterThan((await card.boundingBox())!.y);
+      if (process.env.VIKY_RAMPNOW_FRAME_BUILD) {
+        // The sheet counts in dollars and Rampnow's page is opened in dollars for it: the figure is what the card is
+        // charged, on the total and on the button.
+        await expect(card).toHaveText(/^Pay \$\d+\.\d{2} by card$/);
+        await expect(sheet(page).locator("[data-pay-total]")).toHaveText(/^\$\d+\.\d{2}$/);
+      } else {
+        // The sheet counts in dollars and the card is charged in euros: the total is said about, and the button says
+        // the euros really charged.
+        await expect(card).toHaveText(/^Pay €\d+\.\d{2} by card$/);
+        await expect(sheet(page).locator("[data-pay-total]")).toHaveText(/^about \$\d+\.\d{2}$/);
+      }
+      // The button says what the card is charged, so no other line says it.
+      await expect(sheet(page).locator("[data-card-charged]")).toHaveCount(0);
       await expect(sheet(page).getByText(/takes your card/)).toBeVisible();
       // First, and small: the code's field and its button stand above the card's button, and the button is the
       // smaller of the two, in height and in width.
@@ -529,8 +537,9 @@ test.describe("a judge's code on the pay sheet: visible, and small beside the ca
  *
  * Which card service stands depends on the build's settings, so the figures are read off the screen and checked as a
  * sum. A build with Rampnow's settings (VIKY_RAMPNOW_FRAME_BUILD=1) is also held to the founder's own example: a gift
- * of 8 euros, its fee of 1.04, and a few cents that stay. The card's own figure moves by a cent with the day's rate,
- * since the gift is kept in dollars to the cent: 9.12 on 9 Oct 2026.
+ * of 8 euros, its fee of 1.04, and a few cents that stay. With no key of Rampnow's set, which is how these builds run,
+ * its page is opened in dollars by the rule (9 Oct 2026): a sheet read in euros says the card's figure "about", and
+ * the dollars the card is charged under the line. The figure moves by a cent with the day's rate.
  */
 const RAMPNOW_BUILD = Boolean(process.env.VIKY_RAMPNOW_FRAME_BUILD);
 
@@ -560,6 +569,10 @@ test.describe("the card on the pay sheet: one line that adds up, and no card und
         expect([said.gift, said.fee]).toEqual([8, 1.04]);
         expect(said.stays).toBeGreaterThan(0);
         expect(said.stays).toBeLessThanOrEqual(0.1);
+        // A reader in euros is asked in euros, with no key of Rampnow's as with one: the figure is what the card is
+        // charged, and nothing is "about".
+        await expect(sheet(page).locator("[data-pay-total]")).toHaveText(/^€\d+\.\d{2}$/);
+        await expect(sheet(page).locator("[data-card-charged]")).toHaveCount(0);
       }
       await shotAt(page, "C1-the-card-and-its-line");
       await funder.context.close();
@@ -568,7 +581,7 @@ test.describe("the card on the pay sheet: one line that adds up, and no card und
     test(`under the card service's smallest payment: no card, the floor said, and one press makes the gift an amount a card can pay for (${size.width})`, async ({ browser, baseURL }) => {
       const funder = await toTheSheet(browser, baseURL, { ausd: 0n, signedIn: true, gifts: [], amount: RAMPNOW_BUILD ? "3" : "2", size });
       const { page } = funder;
-      await expect(sheet(page).locator("[data-card-floor]")).toHaveText(/^Card payments start at €\d+\.\d{2}\.$/);
+      await expect(sheet(page).locator("[data-card-floor]")).toHaveText(/^Card payments start at [€$]\d+\.\d{2}\.$/);
       const raise = sheet(page).locator('[data-pays="floor"]');
       await expect(raise).toHaveText(/^Make the gift €\d+\.00$/);
       await expect(sheet(page).locator('[data-pays="card"]')).toHaveCount(0);
@@ -600,4 +613,176 @@ test.describe("the card on the pay sheet: one line that adds up, and no card und
       await funder.context.close();
     });
   }
+});
+
+/**
+ * Rampnow in the reader's currency, by its own quote (the founder, 9 Oct 2026). The quote is asked of our own route,
+ * which is answered here as Rampnow's answer would make it answer; the page is told quotes are asked on this
+ * deployment, which the server says on the page itself when the key is set. Only a build with Rampnow's settings
+ * offers Rampnow, so these run on one (VIKY_RAMPNOW_FRAME_BUILD=1).
+ */
+type Quote = Readonly<Record<string, unknown>>;
+
+async function answerTheQuote(funder: Profile, answer: Quote | null, waitMs = 0): Promise<string[]> {
+  const asked: string[] = [];
+  await funder.page.route("**/api/rails/card-quote**", async (route) => {
+    asked.push(new URL(route.request().url()).search);
+    if (waitMs) await new Promise((done) => setTimeout(done, waitMs));
+    if (answer === null) return route.abort();
+    return route.fulfill(json(answer));
+  });
+  await funder.page.evaluate(() => {
+    document.body.dataset.cardQuotes = "on";
+  });
+  return asked;
+}
+
+test.describe("Rampnow's own quote on the pay sheet, in the money the sheet is read in (9 Oct 2026)", () => {
+  test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each case opens its own window");
+  test.skip(!RAMPNOW_BUILD, "Rampnow is offered only on a build with its settings");
+  test.setTimeout(150_000);
+
+  for (const size of SHOTS ? SIZES : SIZES.slice(0, 1)) {
+    test(`a quote in euros: the figure is the quote's, said exactly, and its line adds up to it (${size.width})`, async ({ browser, baseURL }) => {
+      let asked: string[] = [];
+      const funder = await toTheSheet(browser, baseURL, {
+        ausd: 0n,
+        signedIn: true,
+        gifts: [],
+        amount: "8",
+        size,
+        beforeTheSheet: async (payer) => void (asked = await answerTheQuote(payer, { state: "quoted", quote: { currency: "EUR", amount: 9.12, fee: 1.0435, arrives: 9.07 } })),
+      });
+      const { page } = funder;
+      const button = sheet(page).locator('[data-pays="card"]');
+      await expect(button).toHaveText("Pay €9.12 by card");
+      // Exactly: no "about", and no line of what the card is charged, since the figure is what it is charged.
+      await expect(sheet(page).locator("[data-pay-total]")).toHaveText("€9.12");
+      await expect(sheet(page).locator("[data-card-sum]")).toHaveText("€8.00 gift, €1.04 card fee, €0.08 stays yours.");
+      await expect(sheet(page).locator("[data-card-charged]")).toHaveCount(0);
+      await expect(sheet(page).getByText("Working out your total.")).toHaveCount(0);
+      // Asked once, for the sheet's money and the USDC the gift needs, and nothing of a person.
+      expect(asked.length).toBe(1);
+      expect(asked[0]).toMatch(/^\?currency=EUR&units=\d+$/);
+      await shotAt(page, "Q1-the-quote-in-the-readers-money");
+      await funder.context.close();
+    });
+
+    test(`while the quote is asked: no figure, the button waits and says so, and stays in its place when the figure lands (${size.width})`, async ({ browser, baseURL }) => {
+      const funder = await toTheSheet(browser, baseURL, {
+        ausd: 0n,
+        signedIn: true,
+        gifts: [],
+        amount: "8",
+        size,
+        beforeTheSheet: async (payer) => void (await answerTheQuote(payer, { state: "quoted", quote: { currency: "EUR", amount: 9.12, fee: 1.0435, arrives: 9.07 } }, 2_400)),
+      });
+      const { page } = funder;
+      const button = sheet(page).locator('[data-pays="card"]');
+      await expect(sheet(page).getByText("Working out your total.")).toBeVisible();
+      await expect(button).toBeDisabled();
+      await expect(sheet(page).locator("[data-pay-total]")).toHaveCount(0);
+      await expect(sheet(page).locator("[data-pay-total-awaited]")).toHaveCount(1);
+      await expect(sheet(page).locator("[data-card-sum]")).toHaveCount(0);
+      expect(await sheet(page).innerText()).not.toMatch(/by card/i);
+      const before = (await button.boundingBox())!.y;
+      await shotAt(page, "Q2-the-quote-being-asked");
+      await expect(button).toHaveText("Pay €9.12 by card", { timeout: 15_000 });
+      await expect(button).toBeEnabled();
+      // The total's place was kept, so the button stays where it was: within the pixel or two by which the line that
+      // adds up, under it, is shorter than the line that says the wait.
+      expect(Math.abs((await button.boundingBox())!.y - before)).toBeLessThan(2);
+      await funder.context.close();
+    });
+
+    test(`a reader in euros whose quote does not answer in three seconds is asked in euros by the rule, exactly as before (${size.width})`, async ({ browser, baseURL }) => {
+      const funder = await toTheSheet(browser, baseURL, { ausd: 0n, signedIn: true, gifts: [], amount: "8", size, beforeTheSheet: async (payer) => void (await answerTheQuote(payer, { state: "quoted", quote: { currency: "EUR", amount: 9.5, fee: 1.0435, arrives: 9.07 } }, 7_000)) });
+      const { page } = funder;
+      const button = sheet(page).locator('[data-pays="card"]');
+      await expect(button).toHaveText(/^Pay €\d+\.\d{2} by card$/, { timeout: 15_000 });
+      // The sheet of today: euros to the cent, said exactly, and never a dollar.
+      await expect(sheet(page).locator("[data-pay-total]")).toHaveText(/^€\d+\.\d{2}$/);
+      const said = await theCardSum(page);
+      expect([said.gift, said.fee]).toEqual([8, 1.04]);
+      expect(Math.round((said.gift + said.fee + said.stays) * 100)).toBe(Math.round(figure((await button.innerText()).replace(/^Pay | by card$/g, "")) * 100));
+      expect(await sheet(page).innerText()).not.toMatch(/\$/);
+      const settled = await button.innerText();
+      await shotAt(page, "Q3-no-answer-a-reader-in-euros-stays-in-euros");
+      // The answer that comes after it changes nothing: the figure the person may be pressing does not move.
+      await page.waitForTimeout(5_000);
+      await expect(button).toHaveText(settled);
+      expect(settled).not.toBe("Pay €9.50 by card");
+      await funder.context.close();
+    });
+
+    test(`a reader in euros with no quote to say: the rule in euros at once, and the address of today (${size.width})`, async ({ browser, baseURL }) => {
+      for (const none of [{ state: "none", because: "off" }, { state: "none", because: "silent" }, { state: "none", because: "not-understood" }, null] as const) {
+        const funder = await toTheSheet(browser, baseURL, { ausd: 0n, signedIn: true, gifts: [], amount: "8", size, beforeTheSheet: async (payer) => void (await answerTheQuote(payer, none)) });
+        const { page } = funder;
+        await expect(sheet(page).locator('[data-pays="card"]')).toHaveText(/^Pay €\d+\.\d{2} by card$/);
+        await expect(sheet(page).locator("[data-pay-total]")).toHaveText(/^€\d+\.\d{2}$/);
+        expect(await sheet(page).innerText()).not.toMatch(/\$|about/);
+        await funder.context.close();
+      }
+    });
+
+    test(`a reader in a money Rampnow gives no quote in: the total about, in that money; the button and its line in the dollars charged (${size.width})`, async ({ browser, baseURL }) => {
+      const funder = await toTheSheet(browser, baseURL, { ausd: 0n, signedIn: true, gifts: [], currency: "XOF", amount: "6000", size, beforeTheSheet: async (payer) => void (await answerTheQuote(payer, { state: "none", because: "not-taken" })) });
+      const { page } = funder;
+      const button = sheet(page).locator('[data-pays="card"]');
+      await expect(button).toHaveText(/^Pay \$\d+\.\d{2} by card$/);
+      // The total in francs, said about; the gift's own line in francs, as typed.
+      await expect(sheet(page).locator("[data-pay-total]")).toHaveText(/^about [\d\s\u00a0]+FCFA$/);
+      await expect(sheet(page).locator("[data-pay-lines] > div > span:last-child").first()).toHaveText(/^6[\s\u00a0]000[\s\u00a0]FCFA$/);
+      // The line under the button is in dollars and adds up to what the button says the card is charged.
+      const said = await theCardSum(page);
+      expect(said.text).toMatch(/^\$\d+\.\d{2} gift, \$\d+\.\d{2} card fee/);
+      expect(Math.round((said.gift + said.fee + said.stays) * 100)).toBe(Math.round(figure((await button.innerText()).replace(/^Pay | by card$/g, "")) * 100));
+      await expect(sheet(page).locator("[data-card-charged]")).toHaveCount(0);
+      expect(await sheet(page).innerText()).not.toMatch(/Your card is charged/);
+      await shotAt(page, "Q5-a-money-with-no-quote-the-dollars-charged");
+      await funder.context.close();
+    });
+
+    test(`under the floor for that reader: the floor in their own money, said about, beside the gift the button proposes (${size.width})`, async ({ browser, baseURL }) => {
+      const funder = await toTheSheet(browser, baseURL, { ausd: 0n, signedIn: true, gifts: [], currency: "XOF", amount: "2000", size, beforeTheSheet: async (payer) => void (await answerTheQuote(payer, { state: "none", because: "not-taken" })) });
+      const { page } = funder;
+      await expect(sheet(page).locator("[data-card-floor]")).toHaveText(/^Card payments start at about [\d\s\u00a0]+FCFA\.$/);
+      await expect(sheet(page).locator('[data-pays="floor"]')).toHaveText(/^Make the gift [\d\s\u00a0]+FCFA$/);
+      await expect(sheet(page).locator('[data-pays="card"]')).toHaveCount(0);
+      expect(await sheet(page).innerText()).not.toMatch(/\$/);
+      await shotAt(page, "Q6-under-the-floor-in-a-money-with-no-quote");
+      await funder.context.close();
+    });
+
+    test(`under Rampnow's smallest payment, by its own answer: the floor in the sheet's money, and the gift a card pays for (${size.width})`, async ({ browser, baseURL }) => {
+      const funder = await toTheSheet(browser, baseURL, { ausd: 0n, signedIn: true, gifts: [], amount: "3", size, beforeTheSheet: async (payer) => void (await answerTheQuote(payer, { state: "under", currency: "EUR", smallest: 5 })) });
+      const { page } = funder;
+      await expect(sheet(page).locator("[data-card-floor]")).toHaveText("Card payments start at €5.00.");
+      await expect(sheet(page).locator('[data-pays="floor"]')).toHaveText("Make the gift €4.00");
+      await expect(sheet(page).locator('[data-pays="card"]')).toHaveCount(0);
+      await expect(sheet(page).locator("[data-pay-total]")).toHaveCount(0);
+      await shotAt(page, "Q4-under-the-floor-by-the-quote");
+      await funder.context.close();
+    });
+  }
+
+  test("the press opens Rampnow's frame on the amount and the currency the sheet said", async ({ browser, baseURL }) => {
+    const funder = await toTheSheet(browser, baseURL, { ausd: 0n, signedIn: true, gifts: [], amount: "8", beforeTheSheet: async (payer) => void (await answerTheQuote(payer, { state: "quoted", quote: { currency: "EUR", amount: 9.12, fee: 1.0435, arrives: 9.07 } })) });
+    const { page } = funder;
+    // The frame's address is asked of our own route, which is answered here with a page that goes nowhere.
+    const frames: string[] = [];
+    await page.route("**/api/fund/rampnow-frame**", (route) => {
+      frames.push(new URL(route.request().url()).search);
+      return route.fulfill(json({ url: "about:blank" }));
+    });
+    const button = sheet(page).locator('[data-pays="card"]');
+    await expect(button).toHaveText("Pay €9.12 by card");
+    await button.click();
+    await expect(page).toHaveURL(/\/fund\?step=paying/, { timeout: 30_000 });
+    // Asked for the amount and the currency the press was made on, once what is left to pay has been read.
+    await expect.poll(() => frames.includes("?currency=EUR&amount=9.12"), { timeout: 30_000 }).toBe(true);
+    expect(frames.filter((asked) => asked !== "" && asked !== "?currency=EUR&amount=9.12")).toEqual([]);
+    await funder.context.close();
+  });
 });

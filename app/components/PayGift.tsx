@@ -22,6 +22,8 @@ import { cadenceOf, certificateById, milestoneById } from "@/src/milestone-condi
 import { twoDecimalsDown } from "@/src/exit-steps";
 import { afterPaying, refusalAfterPaying } from "@/src/after-paying";
 import { nextFundingStep, pausedAfterFailure, POLL_MS } from "@/src/funding-step";
+import { askToPay } from "@/src/card-ask";
+import { useCardAsk } from "@/src/client/card-ask";
 import { eurosToBuyOn } from "@/src/gift-amount";
 import { draftToTerms, isComplete, type GiftDraft } from "@/src/gift-draft";
 import { cardDraft, clearedCardDraft, startingCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
@@ -227,6 +229,20 @@ export function PayGift() {
   const cadence = milestone && draft.cadence ? cadenceOf(milestone, draft.cadence) : undefined;
   const ready = isComplete(draft);
   const units = ready ? dollarsToUnits(draft.dollars) : null;
+  // What a card is asked for what is left to pay (src/client/card-ask.ts): the amount the pay press was made on when
+  // this is the wait that follows it, else Rampnow's own quote in the money the gift was typed in when it gives one,
+  // else the rule, in the currency the service's page is opened in. What is left is not known until the account has
+  // been read, and what the person's gifts hold for them: after a payment that fell short, those are taken already.
+  const leftToPay = units === null || balance === null ? 0n : phase === "short" ? units - balance : earned === null ? 0n : units - balance - totalEarned(earned);
+  const cardShort = leftToPay > 0n ? leftToPay : 0n;
+  const askMoney = moneyTypedIn(draft.typedAmount !== undefined ? draft : { typedAmount: kept?.typedAmount, typedIn: kept?.typedIn }, money.rates);
+  /** The euros the rule asks for it, for a reader in that money, never under the service's floor: a wait must be payable. */
+  const ruleEuros = cardShort > 0n ? eurosToBuyOn(cardShort, wayIn, money.rates?.usdPerEur, askMoney) : undefined;
+  const cardAsked = useCardAsk({ on: step === "paying" && Boolean(address) && cardShort > 0n, offer: { way: wayIn, euros: ruleEuros, atFloor: false }, short: cardShort, code: askMoney, usdPerEur: money.rates?.usdPerEur, kept: true });
+  /** While Rampnow is asked its price, no amount is named and no page of it is opened. */
+  const askAwaited = cardAsked.state === "asking";
+  const toPay = askToPay(cardAsked);
+  const toPaySaid = toPay ? moneyIn(toPay.amount, toPay.currency) : undefined;
   const days = Number(draft.days);
   const target = Number(draft.target);
   const recipient = tidyGiftName(draft.recipientName);
@@ -675,8 +691,17 @@ export function PayGift() {
         </Shell>
       );
     }
+    if (phase === "short" && arrived !== undefined && askAwaited) {
+      // What is left to pay is being priced by the card service: said, and no amount named meanwhile.
+      return (
+        <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.arrived.title}>
+          <WaitLine>{P.workingOutTotal}</WaitLine>
+        </Shell>
+      );
+    }
     if (phase === "short" && arrived !== undefined) {
-      const more = eurosToBuyOn(units - held, wayIn, money.rates?.usdPerEur) ?? wayIn.smallestEur;
+      // What is left to pay, as the card is asked it; in euros by the service's floor when no rate was read.
+      const more = toPaySaid ?? moneyIn(ruleEuros ?? wayIn.smallestEur, "EUR");
       const makeIt = twoDecimalsDown(held, 6);
       // What the gift would become, as the button and the sentence say it, and as it is kept if the button is pressed.
       const makeItUnits = dollarsToUnits(makeIt);
@@ -684,7 +709,7 @@ export function PayGift() {
       const makeItSaid = said(makeItUnits);
       return (
         <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.arrived.title}>
-          <Said text={W.arrived.short(said(arrived), gift, moneyIn(more, "EUR"), makeItSaid)} />
+          <Said text={W.arrived.short(said(arrived), gift, more, makeItSaid)} />
           {cardClosed ? (
             <CardNotOffered country={card?.country ?? null} />
           ) : (
@@ -694,14 +719,14 @@ export function PayGift() {
                 onClick={() => {
                   if (wayIn.embedded) setCardOpen(true);
                   // What arrived fell short: paying the rest is a new payment, asked for by this press.
-                  else if (wayIn === WAY_IN_USDC && rampnowBeside) payAtRampnowBeside(address, wayInPage(wayIn, { account: address, euros: more }));
+                  else if (wayIn === WAY_IN_USDC && rampnowBeside) payAtRampnowBeside(address, wayInPage(wayIn, { account: address, euros: ruleEuros, ask: toPay }));
                   else if (wayIn === WAY_IN_USDC && rampnowFrameOn()) setFrame({ mode: "new" });
-                  else window.open(wayInPage(wayIn, { account: address, euros: more }), "_blank", "noopener,noreferrer");
+                  else window.open(wayInPage(wayIn, { account: address, euros: ruleEuros, ask: toPay }), "_blank", "noopener,noreferrer");
                   setPhase("waiting");
                 }}
                 className={PRIMARY_BUTTON}
               >
-                {W.arrived.payMore(moneyIn(more, "EUR"))}
+                {W.arrived.payMore(more)}
               </button>
               <CardTermsLine way={wayIn} />
             </>
@@ -778,13 +803,14 @@ export function PayGift() {
     }
     // What a card is asked for: the gift, less everything the person pays with, their account and what their gifts
     // still hold for them, which is being taken. Not known, and nothing asked, until both have been read.
-    const toBuy = balance === null || earned === null ? undefined : eurosToBuyOn(units - held - totalEarned(earned), wayIn, money.rates?.usdPerEur);
+    // In euros by the rule, for a page whose settings the person types themselves; what is said and opened is `toPay`.
+    const toBuy = balance === null || earned === null ? undefined : ruleEuros;
     const start = address.slice(0, 4);
     const end = address.slice(-4);
     /** A card paid through Rampnow, in its frame or on its page beside: the wait is two short steps. */
     const byRampnow = wayIn === WAY_IN_USDC && rampnowFrameOn() && !cardClosed;
     return (
-      <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.waiting.title(toBuy ? moneyIn(toBuy, "EUR") : undefined)}>
+      <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.waiting.title(toPaySaid)}>
         <section className="flex flex-col gap-[var(--space-xs)]">
           {/* Two short lines, a label and its value, where two sentences stood (the founder, 4 Oct 2026). */}
           <Lines
@@ -862,7 +888,7 @@ export function PayGift() {
               noteInRampnowJournal("Viky: answered no, pay now");
               clearRampnowPending(address);
               setRampnowFailed(false);
-              if (rampnowBeside) payAtRampnowBeside(address, wayInPage(wayIn, { account: address, euros: toBuy }));
+              if (rampnowBeside) payAtRampnowBeside(address, wayInPage(wayIn, { account: address, euros: toBuy, ask: toPay }));
               else setFrame({ mode: "new" });
             }}
           />
@@ -871,19 +897,23 @@ export function PayGift() {
           // refuses, and from that press the payment is followed as one started from a tab.
           <Steps>
             <Step says={W.waiting.steps.payBeside(wayIn.name)}>
-              <a
-                href={wayInPage(wayIn, { account: address, euros: toBuy })}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={PRIMARY_BUTTON}
-                data-rampnow-pay-beside=""
-                onClick={() => {
-                  noteInRampnowJournal("Viky: the card page was opened beside, from the wait");
-                  noteRampnowPending(address, { via: "tab" });
-                }}
-              >
-                {toBuy ? P.payByCard(moneyIn(toBuy, "EUR")) : W.waiting.openCard}
-              </a>
+              {askAwaited ? (
+                <WaitLine>{P.workingOutTotal}</WaitLine>
+              ) : (
+                <a
+                  href={wayInPage(wayIn, { account: address, euros: toBuy, ask: toPay })}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={PRIMARY_BUTTON}
+                  data-rampnow-pay-beside=""
+                  onClick={() => {
+                    noteInRampnowJournal("Viky: the card page was opened beside, from the wait");
+                    noteRampnowPending(address, { via: "tab" });
+                  }}
+                >
+                  {toPaySaid ? P.payByCard(toPaySaid) : W.waiting.openCard}
+                </a>
+              )}
               <CardTermsLine way={wayIn} />
             </Step>
             <Step says={W.waiting.steps.comeBack} />
@@ -900,7 +930,7 @@ export function PayGift() {
                   setFrame({ mode: "new" });
                 }}
               >
-                {toBuy ? P.payByCard(moneyIn(toBuy, "EUR")) : W.waiting.openCard}
+                {toPaySaid ? P.payByCard(toPaySaid) : W.waiting.openCard}
               </button>
               <CardTermsLine way={wayIn} />
             </Step>
@@ -908,7 +938,7 @@ export function PayGift() {
           </Steps>
         ) : (
           <>
-            <a href={wayInPage(wayIn, { account: address, euros: toBuy })} target="_blank" rel="noopener noreferrer" className={PRIMARY_BUTTON} onClick={() => setPartnerOpened(true)}>
+            <a href={wayInPage(wayIn, { account: address, euros: toBuy, ask: toPay })} target="_blank" rel="noopener noreferrer" className={PRIMARY_BUTTON} onClick={() => setPartnerOpened(true)}>
               {partnerOpened ? W.waiting.openAgain(wayIn.name) : W.waiting.openFirst(wayIn.name)}
             </a>
             <CardTermsLine way={wayIn} />
@@ -926,7 +956,8 @@ export function PayGift() {
         <RampnowSheet
           open={frame !== null}
           account={address}
-          euros={toBuy}
+          ask={toPay}
+          asking={askAwaited}
           finish={frame?.mode === "finish" ? { orderUid: frame.orderUid } : null}
           known={rampnowPending?.known ?? false}
           started={rampnowPending !== null}
