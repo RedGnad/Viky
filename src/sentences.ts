@@ -254,6 +254,8 @@ export const PAY = {
   atTheRate: (day: string) => `At the European Central Bank's rate of ${day}. It sets one each working day.`,
   /** Said before the action, because it is what pressing it does: nothing was asked of this person until now. */
   passkeyMakesTheAccount: "Your face or your fingerprint creates your account when you press pay. Nothing was asked of you until now.",
+  /** The same, where a code can be used on the sheet as well (9 Oct 2026): either press makes the account. */
+  passkeyMakesTheAccountEitherWay: "Your face or your fingerprint creates your account when you press pay or use the code.",
   /**
    * For a passkey made on another device, which this one does not know of: pay would make a second account. It said
    * "I already have an account", which declares a state: a button says what its press does (the founder, 4 Oct 2026).
@@ -348,9 +350,17 @@ export const PAY = {
       : how === "sheet"
         ? `Paid from your judge credit. A funder pays by card through ${service}, in a sheet inside Viky.`
         : `Paid from your judge credit. A funder pays by card on ${service}'s page, in a tab of its own.`,
-  /** The judge code in the pay sheet, as a code is asked at a checkout (D297, the founder's choice A of 28 Sep 2026). */
+  /**
+   * The judge code in the pay sheet, as a code is asked at a checkout (D297, the founder's choice A of 28 Sep 2026).
+   * The card stays the sheet's one action (the founder, 9 Oct 2026: a code is visible, never put forward in the
+   * card's place). When the link that brought the person carried a code, its field comes first, above what the card is
+   * asked, open and filled in, under the question as its name and with a small button; otherwise the question is a
+   * small key under the card's button, which opens the field where it stands.
+   */
   code: {
     have: "Have a code?",
+    /** The action once the credit is all the account holds and it covers the gift: what pays is said on the button. */
+    payWithCredit: (amount: string) => `Pay ${amount} with your credit`,
     label: "Code",
     use: "Use the code",
     using: "Checking the code",

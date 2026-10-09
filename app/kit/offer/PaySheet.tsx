@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMadeHere, useOnAComputer } from "@/src/account/door";
 import { useAccount } from "@/src/account/provider";
 import { getJson } from "@/src/client/api";
+import { forgetJudgeCodeFromTheLink, judgeCodeFromTheLink } from "@/src/client/judge-link";
 import { useDisplayCurrency } from "@/src/client/display-currency";
 import { readHeldForPaying } from "@/src/client/pay-held";
 import { whereTheRailsServe } from "@/src/client/rails";
@@ -42,8 +43,14 @@ import { WaitLine } from "../Waiting";
  * In this order and nothing else in the open: the name, the one thing to fill in; lines that add up, in the one money
  * the gift was typed in (the gift, what the account puts in, the card's fee, what stays, and that Viky takes nothing);
  * the total; one action; one line under it saying who takes the card and its terms. Then one fold for a careful reader,
- * "What happens to my money", and the judge's code, last and folded. The link's warning lives on the link's screen,
- * the rate in the fold, and the passkey's line only where the press makes an account.
+ * "What happens to my money". The link's warning lives on the link's screen, the rate in the fold, and the passkey's
+ * line only where the press makes an account.
+ *
+ * A judge's code (D297; the founder, 9 Oct 2026). The card stays the sheet's one action: a code is visible, and never
+ * put forward in the card's place. When the link that brought the person carried a code, its field comes first, above
+ * what the card is asked, open and filled in, with a small button; otherwise a small "Have a code?" stands under the
+ * card's button and opens the field there. Using it makes the account of somebody who has none, and once the credit
+ * is in, the sheet's button pays with it, with no card, no fee and no smallest payment.
  *
  * One way in, chosen for the person (D239, the founder's decision of 25 Sep 2026): the first card service unless it
  * refuses them, by its own answer about their country, its own asset list, or its published floor; then the next, and
@@ -90,12 +97,26 @@ export function PaySheet({
   // of the server, and read again once the code has given it, null until the server says so. The code itself is
   // `JudgeCode`'s (D297, D299).
   const [untouchedCredit, setUntouchedCredit] = useState<bigint | null>(null);
+  // Whether a code can be used now, and whether this account has had its credit: the server's answer, null before it.
+  const [credits, setCredits] = useState<Readonly<{ open: boolean; credited: boolean }> | null>(null);
+  /**
+   * The code a link carried (src/client/judge-link.ts): read while the sheet is open, which is in a browser and after
+   * the page arrived, so the sheet's first image already has its field.
+   */
+  const linkCode = open ? judgeCodeFromTheLink() : "";
+  /** The code gave its credit on this sheet, from which of its two places: its two lines stay where its field was. */
+  const [codeGiven, setCodeGiven] = useState<"first" | "under" | null>(null);
+  /** A code is being used: its field stays through the account being made and read. */
+  const [codeStarted, setCodeStarted] = useState(false);
+  /** The code's press made the account, and told Home so: taken back when the sheet closes without paying. */
+  const madeForTheCode = useRef(false);
   useEffect(() => {
     if (!open) return;
     let live = true;
     getJson<{ open?: boolean; credited?: boolean; untouchedCredit?: string | null }>("/api/judge/credit").then(
       (answer) => {
         if (!live) return;
+        setCredits({ open: answer.open === true, credited: answer.credited === true });
         setUntouchedCredit(typeof answer.untouchedCredit === "string" && /^\d+$/.test(answer.untouchedCredit) ? BigInt(answer.untouchedCredit) : null);
       },
       () => {
@@ -177,7 +198,18 @@ export function PaySheet({
   const way = offer.way;
   /** Paying by card is not offered in the payer's country (the founder, 29 Sep 2026): the account is the way left. */
   const cardClosed = card?.offered === false;
-  const byCard = pays === "card" && !cardClosed;
+  // Whether a code can be used: credits are open, and this account, or nobody yet, has not had one. Not known until
+  // the server has said.
+  const codeOffered = credits === null ? null : credits.open && !credits.credited;
+  // Where the code stands: first when the link carried one, under the card's button otherwise.
+  const codeFirst = codeGiven === "first" || (codeGiven === null && linkCode !== "");
+  // Drawn only for an account that cannot pay, once that is known, and kept while it is being used. A code the link
+  // carried is shown before the server has said credits are open; the key waits for its answer.
+  const codeInReach = !enough && (pays === "card" || codeStarted) && (codeFirst ? codeOffered !== false : codeOffered === true);
+  // The credit was given a moment ago and the account, read before it, is being read again: no card is named meanwhile.
+  const creditArriving = codeGiven !== null && pays === "card";
+  // The card's lines, its figure and its line of terms are drawn for the card alone.
+  const byCard = pays === "card" && !cardClosed && !creditArriving;
   const euros = units === undefined || !byCard ? 0 : offer.euros;
   // One money on the whole sheet, the one the gift was typed in (the mockup of 3 Oct 2026); dollars when no rate is read.
   const code = money.rates && perEuro(money.currency, money.rates) !== undefined ? money.currency : "USD";
@@ -188,6 +220,9 @@ export function PaySheet({
   const feeCeiling = Boolean(euros) && serviceChargeIsCeiling(euros ?? 0, way.fee);
   const heldRead = heldIn(inAccount, code, money.rates);
   const giftRead = gift === undefined ? formatAusd(units ?? 0n) : say(gift);
+  // The gift is paid from a balance no larger than the judge credit, with nothing gone out of the account since it
+  // arrived (D295): the balance is then the credit alone, and the sheet may say the credit pays.
+  const paidFromCredit = judgeLineIsTrue({ gift: units, held: held.state === "read" ? held.parts.ausd : null, untouchedCredit });
 
   /**
    * The passkey makes the account at the moment pay is pressed, which is what the sheet says it will do: a new one on
@@ -240,6 +275,46 @@ export function PaySheet({
    */
   const cardPaidHow = (): "frame" | "sheet" | "tab" => (way.embedded ? "sheet" : way === WAY_IN_USDC && rampnowFrameOn() && frameKeepsSignIn(navigator.userAgent) ? "frame" : "tab");
 
+  /**
+   * The account of somebody who uses a code and has none: made by that press, as pay makes it. Home is told, so it
+   * keeps the page it is drawing under the sheet, and the sheet stays as it is for the press that pays with the credit.
+   */
+  const accountForTheCode = async (): Promise<boolean> => {
+    setCodeStarted(true);
+    if (address) return true;
+    setProblem(null);
+    madeForTheCode.current = true;
+    onMaking(true);
+    try {
+      await ensureAccount();
+      return true;
+    } catch {
+      madeForTheCode.current = false;
+      onMaking(false);
+      setProblem(W.notMade);
+      return false;
+    }
+  };
+
+  /** Closed without paying, after the code's press made the account: Home draws the page of that account again. */
+  const close = () => {
+    if (madeForTheCode.current) {
+      madeForTheCode.current = false;
+      onMaking(false);
+    }
+    // The next opening starts from what is true then: the link's code if it was not used, the account as it is read.
+    setCodeGiven(null);
+    setCodeStarted(false);
+    onClose();
+  };
+
+  // A credit the account's reading does not show yet is read for again, until it does.
+  useEffect(() => {
+    if (!creditArriving) return;
+    const again = setTimeout(() => setBalanceRead((n) => n + 1), 3000);
+    return () => clearTimeout(again);
+  }, [creditArriving, balanceRead]);
+
   /** Somebody whose account was made on another device: their passkey is asked for, and none is made. The sheet stays. */
   const signInFirst = async () => {
     setProblem(null);
@@ -249,6 +324,28 @@ export function PaySheet({
       setProblem(W.notMade);
     }
   };
+
+  /**
+   * The code's field, in one of its two places. Kept in that place from the press to the credit, so nothing it holds is
+   * lost while the account is made and read; and its two lines stay there once the credit is in.
+   */
+  const theCode = (where: "first" | "under") => (
+    <JudgeCode
+      shownFromTheStart={where === "first"}
+      label={where === "first" ? W.code.have : undefined}
+      offered={codeInReach}
+      startWith={linkCode}
+      before={accountForTheCode}
+      needed={units ?? null}
+      held={held.state === "read" ? inAccount : null}
+      onCredited={() => {
+        setCodeGiven(where);
+        forgetJudgeCodeFromTheLink();
+        setBalanceRead((n) => n + 1);
+      }}
+      onMakeIt={(dollars) => onChange({ ...draft, dollars, typedAmount: dollars, typedIn: "USD" })}
+    />
+  );
 
   const line = (label: string, value: string) => (
     <div className="flex items-baseline justify-between gap-[var(--space-md)] border-b border-[var(--divider)] py-[var(--space-sm)] last:border-b-0">
@@ -263,7 +360,7 @@ export function PaySheet({
   const total = enough ? { label: W.rows.fromAccount, amount: giftRead } : sum ? { label: W.youPay, amount: say(sum.card) } : undefined;
 
   return (
-    <Sheet open={open} title={W.title(recipient)} onClose={onClose} tall>
+    <Sheet open={open} title={W.title(recipient)} onClose={close} tall>
       {/* The one thing to fill in, so it comes first (the mockup of 3 Oct 2026). Optional: empty, the gift is from
           nobody, which this product has always made, and no sentence breaks. */}
       <Field
@@ -278,17 +375,26 @@ export function PaySheet({
       {/* Lines that add up (src/pay-sum.ts): the gift, less what the account puts in, plus the card's fee, plus what stays. */}
       <div data-pay-lines="">
         {line(W.rows.gift(recipient), giftRead)}
-        {pays !== "card" ? null : cardClosed ? (
-          heldRead !== undefined && inAccount > 0n ? line(W.rows.fromAccount, less(heldRead)) : null
-        ) : sum ? (
+        {/* While a credit just given is read: the gift and what Viky takes, and nothing of a card. */}
+        {creditArriving ? null : (
           <>
-            {sum.fromAccount > 0 ? line(W.rows.fromAccount, less(sum.fromAccount)) : null}
-            {line(W.rows.fee, feeCeiling ? W.upTo(say(sum.fee)) : say(sum.fee))}
-            {sum.stays > 0 ? line(W.rows.stays, say(sum.stays)) : null}
+            {pays !== "card" ? null : cardClosed ? (
+              heldRead !== undefined && inAccount > 0n ? line(W.rows.fromAccount, less(heldRead)) : null
+            ) : sum ? (
+              <>
+                {sum.fromAccount > 0 ? line(W.rows.fromAccount, less(sum.fromAccount)) : null}
+                {line(W.rows.fee, feeCeiling ? W.upTo(say(sum.fee)) : say(sum.fee))}
+                {sum.stays > 0 ? line(W.rows.stays, say(sum.stays)) : null}
+              </>
+            ) : null}
           </>
-        ) : null}
+        )}
         {line(W.rows.viky, W.nothing)}
       </div>
+
+      {/* A code the link carried comes first, above what the card is asked (9 Oct 2026): visible, and small beside
+          the card's button, which stays the sheet's one action. */}
+      {codeFirst ? theCode("first") : null}
 
       {total ? (
         <div>
@@ -299,35 +405,42 @@ export function PaySheet({
         </div>
       ) : null}
 
-      {/* Only when the gift is paid from a balance no larger than the judge credit, with nothing gone out of the
-          account since it arrived (D295): the balance is then the credit alone. */}
-      {judgeLineIsTrue({ gift: units, held: held.state === "read" ? held.parts.ausd : null, untouchedCredit }) ? <p className={HELP}>{W.fromJudgeCredit(cardPaidHow(), way.name)}</p> : null}
-      {pays === "card" && cardClosed ? (
-        <CardNotOffered country={card?.country ?? null} whole />
+      {/* Only when the credit is all the account holds (D295, `paidFromCredit`). */}
+      {paidFromCredit ? <p className={HELP}>{W.fromJudgeCredit(cardPaidHow(), way.name)}</p> : null}
+      {creditArriving ? (
+        <WaitLine>{W.readingAccount}</WaitLine>
       ) : (
         <>
-          {/* While what the account holds is not known, the button names no way to pay and does not go (the founder,
-              5 Oct 2026): it said "by card" to somebody who had the money, and a press led there. */}
-          <Button waiting={!ready || !settled || status === "busy"} doing={busy ? W.paying : null} step={WAITS.account} onPress={() => void pay()} data-pays={pays}>
-            {enough ? W.payFromAccount(giftRead, recipient) : sum ? W.payByCard(say(sum.card)) : W.pay}
-          </Button>
-          {pays === "reading" ? <WaitLine>{W.readingAccount}</WaitLine> : null}
-          {/* A reading that failed is said, with what reads it again. Never the card in its place. */}
-          {pays === "unread" ? (
+          {pays === "card" && cardClosed ? (
+            <CardNotOffered country={card?.country ?? null} whole />
+          ) : (
             <>
-              <FieldRefusal id="account-unread">{W.accountUnread}</FieldRefusal>
-              <button type="button" className={`${SMALL_BUTTON} self-start`} onClick={() => setBalanceRead((n) => n + 1)}>
-                {W.readAgain}
-              </button>
+              {/* While what the account holds is not known, the button names no way to pay and does not go (the
+                  founder, 5 Oct 2026): it said "by card" to somebody who had the money, and a press led there. */}
+              <Button waiting={!ready || !settled || status === "busy"} doing={busy ? W.paying : null} step={WAITS.account} onPress={() => void pay()} data-pays={pays}>
+                {enough ? (paidFromCredit ? W.code.payWithCredit(giftRead) : W.payFromAccount(giftRead, recipient)) : sum ? W.payByCard(say(sum.card)) : W.pay}
+              </Button>
+              {pays === "reading" ? <WaitLine>{W.readingAccount}</WaitLine> : null}
+              {/* A reading that failed is said, with what reads it again. Never the card in its place. */}
+              {pays === "unread" ? (
+                <>
+                  <FieldRefusal id="account-unread">{W.accountUnread}</FieldRefusal>
+                  <button type="button" className={`${SMALL_BUTTON} self-start`} onClick={() => setBalanceRead((n) => n + 1)}>
+                    {W.readAgain}
+                  </button>
+                </>
+              ) : null}
+              {/* One line: who takes the card, its ID the first time, and its terms (the mockup of 3 Oct 2026). */}
+              {byCard ? <CardLine way={way} /> : null}
             </>
-          ) : null}
-          {/* One line: who takes the card, its ID the first time, and its terms (the mockup of 3 Oct 2026). */}
-          {byCard ? <CardLine way={way} /> : null}
+          )}
         </>
       )}
+      {/* When the link carried no code: a small "Have a code?" under the card's button, which opens its field there. */}
+      {codeFirst ? null : theCode("under")}
       {/* What the press does where it makes something: an account, the first time. Signed in, the phone's own prompt
           says it, and the sheet says nothing more. */}
-      {address || hasCredential ? null : <p className={HELP}>{madeHere ? W.passkeyMakesTheAccount : ACCOUNT_DOOR.madeOnTheMainSite}</p>}
+      {address || hasCredential ? null : <p className={HELP}>{madeHere ? (codeInReach ? W.passkeyMakesTheAccountEitherWay : W.passkeyMakesTheAccount) : ACCOUNT_DOOR.madeOnTheMainSite}</p>}
       {/* On a computer, which choice of the system's sheet follows the person, before the press that makes the account. */}
       {address || hasCredential || !madeHere || !computer ? null : (
         <p className={HELP} data-on-a-computer="">
@@ -351,9 +464,9 @@ export function PaySheet({
           the panel that creates one or signs an old one in appears in place, rather than on a screen of its own. */}
       {problem && !address ? <AccountPanel /> : null}
       {/* Where the card is not offered, an account is what money can be sent to: somebody without one makes it here. */}
-      {pays === "card" && cardClosed && !address ? <AccountPanel /> : null}
+      {!creditArriving && pays === "card" && cardClosed && !address ? <AccountPanel /> : null}
       {/* No code where the card is paid inside Viky: that sheet is already told whose account it is. */}
-      {pays === "card" && (cardClosed || (!wayInFillsIn(way) && !way.embedded)) && address ? (
+      {!creditArriving && pays === "card" && (cardClosed || (!wayInFillsIn(way) && !way.embedded)) && address ? (
         <div className="flex flex-col gap-[var(--space-xs)]">
           <p className={CARD_LABEL}>{W.yourCode}</p>
           <p className={`${HELP} select-all break-all tabular-nums`}>{address}</p>
@@ -390,18 +503,6 @@ export function PaySheet({
           <Lines quiet rows={[milestone ? W.fold.notReached : certificate ? W.fold.notShown : W.fold.missedDay, W.fold.notOpened, ...(byCard ? [[W.rows.fee, feeInALine(way, euros)] as const] : [])]} />
         </div>
       </details>
-
-      {/* A judge's code (D297): only while credits are open and the gift is not yet covered, last and folded, so a
-          payer is not told they should have one (the mockup of 3 Oct 2026). */}
-      {address ? (
-        <JudgeCode
-          folded
-          needed={units ?? null}
-          held={held.state === "read" ? inAccount : null}
-          onCredited={() => setBalanceRead((n) => n + 1)}
-          onMakeIt={(dollars) => onChange({ ...draft, dollars, typedAmount: dollars, typedIn: "USD" })}
-        />
-      ) : null}
     </Sheet>
   );
 }
