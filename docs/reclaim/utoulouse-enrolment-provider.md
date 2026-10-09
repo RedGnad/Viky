@@ -103,19 +103,16 @@ path is 4.0.0's.
 
 ## Not verified
 
-- No proof has been made on a rule written by hand. The stand-in pages of
-  `test/browser/utoulouse-provider-script.spec.ts` are drawn from Vaadin's and esup-mdw's sources, not from a student's
-  session: that the real menu is found, and that a press made by the script sends the body the rule expects, will be
-  known at the next student's pass, from the log's lines.
+- On 9 Oct 2026 a student's pass on version 5.0.0 made a proof on this rule and gift 1000008 was paid at once, with no
+  review (transaction 0xd950…77e2, block 111901591, 12:55:27 UTC).
 - The veil on the real page. It is drawn and measured on the stand-in pages, one of them under the policy above; that
   Reclaim's window runs the script before the university's page draws, and shows the veil rather than its own wait,
   will be seen at the next student's pass (`veil drawn (readyState=loading)` in the log says the first). A second
   sign-in asked on a third host after the ENT is not under the veil: the script does nothing there.
 - How long a proof takes after the press, on this path. On the three real proofs of 7 Oct 2026, made on the agent's
   path, the founder read two to three seconds from the start of a proof to its sending in Reclaim's own logs, which is
-  why the veil waits 60 seconds after the press before it says "That did not work.". No proof has been made on this
-  path yet: one that took longer than that, on a page Reclaim leaves open meanwhile, would be told as a failure while
-  it succeeds.
+  why the veil waits 60 seconds after the press before it says "That did not work.". A proof that took longer than
+  that, on a page Reclaim leaves open meanwhile, would be told as a failure while it succeeds.
 - A finger on a real phone. The touches are taken from a browser that is told its screen is touched, not from a hand.
 - Reclaim has not approved the provider since a version was saved by hand on 8 Oct 2026 (`isApproved: false` on every
   version). The script of 3.0.0 ran all the same.

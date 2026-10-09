@@ -130,4 +130,10 @@ test("the verify route counts a proof whenever Reclaim's record holds one, which
   assert.match(route, /if \(cameBackWithProof && !counted\) await cameBack\(false\);/);
   // And the watch looks up, each night, the ones that never came back.
   assert.match(readFileSync("app/api/cron/watch/route.ts", "utf8"), /await countProofsNeverTaken\(\)\.catch\(/);
+  // After the watch itself (the final audit of 9 Oct 2026): each session is asked of Reclaim one by one, and a night
+  // its record answered slowly the task was cut at sixty seconds before the watch had looked at anything.
+  const watch = readFileSync("app/api/cron/watch/route.ts", "utf8");
+  const looked = watch.indexOf("const watch = await watchAfterMorning();");
+  assert.ok(looked > 0 && looked < watch.indexOf("await countProofsNeverTaken()"), "the watch first, the count after");
+  assert.match(watch, /NextResponse\.json\(\{ watch, proofsNeverCounted, \.\.\.test \}, \{ headers: NO_STORE \}\)/, "the answer keeps its fields");
 });
