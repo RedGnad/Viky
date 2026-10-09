@@ -1,21 +1,25 @@
 "use client";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { CARD, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "./ui";
+import { CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "./ui";
 import { useDoor, useMadeHere, useOnAComputer } from "@/src/account/door";
 import { accountError } from "@/src/account/errors";
 import { useAccount } from "@/src/account/provider";
-import { ACCOUNT_DOOR as W } from "@/src/sentences";
+import { ACCOUNT_DOOR as W, GIFT_PAGE } from "@/src/sentences";
 import { CopyThisLink, Elsewhere, MadeOnTheMainSite, Outdated } from "../kit/AccountDoor";
+import { Button } from "../kit/Button";
 
 /**
  * Creating an account, or coming back to one. Consumer words only.
  *
- * Two things changed in the design pass, and both were the same mistake. The first thing on the card used to
- * be an optional field for naming the device, so the first thing a person met in Viky was a question that
- * does not matter: it is behind a disclosure now, which is what progressive disclosure is for. And the
- * primary action ran to two lines on a 375 pixel phone, which is a label problem rather than a layout one:
- * it says what it does, and how it does it moved to the line underneath.
+ * Nobody is asked to name anything (the UI pass of 8 Oct 2026): the device names the passkey itself, with the day and
+ * the hour it was made (src/account/passkey-label.ts), as the door in the header always did. The field went behind a
+ * disclosure first, and is gone. The primary action says what it does, and how it does it is the line underneath.
+ *
+ * `opening` is the panel on the link of a gift nobody has opened yet (the same pass, screen 1): one button, "Open my
+ * gift", which makes the account and then opens the gift on that one press (the page runs both, and the button says
+ * "Opening" throughout); one line under it; and a quiet link for somebody who has an account already. No frame of its
+ * own: it stands in the gift's card. On a device that remembers a passkey the button signs in, so no second account
+ * is made by a press that did not mean it, and the quiet link is the one that makes a new one.
  *
  * `returning` swaps which of the two leads. Somebody whose session closed in the middle of paying for a gift is not
  * making an account, they are coming back to one, and making a second would leave the gift and the payment on the
@@ -29,10 +33,15 @@ import { CopyThisLink, Elsewhere, MadeOnTheMainSite, Outdated } from "../kit/Acc
  * update. Anywhere else the button is never grey: a phone that says it has no platform authenticator is often wrong,
  * so the gesture decides and a failure says what to do.
  */
-export function AccountPanel({ returning = false, signInOnly = false }: Readonly<{ returning?: boolean; signInOnly?: boolean }>) {
-  const { address, hasCredential, status, error, createAccount, signIn, signOut, useAnotherAccount, clearError } = useAccount();
-  const [displayName, setDisplayName] = useState("");
-  const [naming, setNaming] = useState(false);
+export type OpeningAGift = Readonly<{
+  /** The press: the page makes the account or signs in, then opens the gift. */
+  pressed: (how: "make" | "signIn") => void;
+  /** Whether that press is still being answered, past the passkey itself. */
+  busy: boolean;
+}>;
+
+export function AccountPanel({ returning = false, signInOnly = false, opening }: Readonly<{ returning?: boolean; signInOnly?: boolean; opening?: OpeningAGift }>) {
+  const { address, hasCredential, status, error, createAccount, signIn, signOut, useAnotherAccount } = useAccount();
   const door = useDoor();
   // No account is made on an address that is not Viky's own: there the panel offers signing in, and the way to viky.cash.
   const madeHere = useMadeHere();
@@ -67,6 +76,42 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
   if (door.kind === "outdated") return <Outdated />;
   if (door.kind === "elsewhere") return <Elsewhere handset={door.handset} app={door.app} />;
 
+  if (opening) {
+    const doing = busy || opening.busy;
+    // A device that remembers a passkey signs in with it; any other makes the account. The quiet link is the other one.
+    const main = returning ? "signIn" : "make";
+    const lines = returning ? [W.samePasskey] : noSensor ? [...W.computer(onGift), W.adult] : computer ? [W.opensIt, W.onAComputer] : [W.opensIt];
+    return (
+      <div className="flex flex-col gap-[var(--space-md)]" data-opening-a-gift="">
+        {/* No account is made on an address that is not Viky's own: the way to viky.cash stands where the button would. */}
+        {!returning && !madeHere ? (
+          <MadeOnTheMainSite />
+        ) : (
+          <>
+            <Button doing={doing ? GIFT_PAGE.opening : null} failed={error ? error.guidance : null} failedId="open-my-gift-refused" onPress={() => opening.pressed(main)} data-open-my-gift="">
+              {GIFT_PAGE.openMyGift}
+            </Button>
+            {lines.map((line) => (
+              <p key={line} className={HELP} {...(line === W.opensIt || line === W.adult ? { "data-adult": "" } : {})}>
+                {line}
+              </p>
+            ))}
+            {noSensor && !returning ? <CopyThisLink browser={null} /> : null}
+          </>
+        )}
+        {/* The other way in, quiet: it is not this screen's action. Where no account can be made, there is none to offer. */}
+        {returning && !madeHere ? null : (
+          <button type="button" onClick={() => opening.pressed(returning ? "make" : "signIn")} disabled={doing} className="inline-flex min-h-[var(--tap-target)] items-center self-center font-medium underline" data-other-way-in="">
+            {returning ? W.newAccount : W.alreadyHave}
+          </button>
+        )}
+        {/* A rescue is offered only once a try failed (rule 6): what to change on the phone, and the link to carry. */}
+        {error && phone ? <p className={HELP}>{W.ifItKeepsFailing[phone](onGift)}</p> : null}
+        {error && phone ? <CopyThisLink browser={phone === "iphone" ? "safari" : "chrome"} /> : null}
+      </div>
+    );
+  }
+
   const signInButton = (
     <button
       type="button"
@@ -86,7 +131,8 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
       className="flex flex-col gap-[var(--space-md)]"
       onSubmit={(event) => {
         event.preventDefault();
-        void createAccount(displayName);
+        // The device names the passkey itself, with when it was made (src/account/passkey-label.ts).
+        void createAccount("");
       }}
     >
       <button type="submit" disabled={busy} className={returning ? SECONDARY_BUTTON : PRIMARY_BUTTON}>
@@ -105,32 +151,6 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
         {W.adult}
       </p>
       {noSensor ? <CopyThisLink browser={null} /> : null}
-
-      {naming ? (
-        <>
-          <label className={HELP} htmlFor="display-name">
-            A name for this account on your device
-          </label>
-          <input
-            id="display-name"
-            name="displayName"
-            autoComplete="off"
-            value={displayName}
-            onChange={(event) => {
-              setDisplayName(event.target.value);
-              if (error) clearError();
-            }}
-            className={FIELD}
-            placeholder="Viky account"
-            disabled={busy}
-          />
-          <p className={HELP}>Only your device uses it, to label your passkey. Viky never receives it.</p>
-        </>
-      ) : (
-        <button type="button" onClick={() => setNaming(true)} className={`${SMALL_BUTTON} self-start`}>
-          Name this device (optional)
-        </button>
-      )}
     </form>
   );
 

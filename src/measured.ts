@@ -53,12 +53,16 @@ export const FINALITY_GAP = { readings: 20, fewestBlocks: 1, mostBlocks: 2, read
  * the product's own. The seconds are the screens' own with a virtual passkey that answers at once and the gift's
  * answers stood in: no person's time and none of Monad's is in them. Three runs, one after the other on the same
  * server: the first, the slowest, is the one given moment by moment, and `runs` is what each took in all.
+ *
+ * Measured again on 8 Oct 2026, when "Open my gift" came to make the account and open the gift on one press (the UI
+ * pass of that day): two gestures where there were three, and the opening follows the account with nothing pressed,
+ * inside the same tenth of a second on these screens. On 2 Oct 2026 the same path was three gestures and 1.9 s.
  */
 export const ARRIVAL = {
-  measuredOn: "2 Oct 2026",
-  gestures: ["Press Create my account", "Answer the device's passkey prompt, a face or a fingerprint", "Press Open my gift"],
-  seconds: { linkShown: 1.1, accountMade: 1.8, giftOpened: 1.9 },
-  runs: [1.9, 0.8, 0.8],
+  measuredOn: "8 Oct 2026",
+  gestures: ["Press Open my gift", "Answer the device's passkey prompt, a face or a fingerprint"],
+  seconds: { linkShown: 0.3, accountMade: 0.9, giftOpened: 0.9 },
+  runs: [0.9, 0.7, 0.9],
 } as const;
 
 const MON_UNITS = 1_000_000n;

@@ -214,7 +214,7 @@ export const SCENARIOS: Scenario[] = [
       await s.api("GET", GIFT_READ, () => ({ status: 200, body: gift() }), "GET /api/gift/[id]");
       await agreement(s, null);
       await s.goto(`/g/${GIFT_ID}?t=${CLAIM_TOKEN}`);
-      await s.text("Create your account to open it. Nothing to install.");
+      await s.text("It creates your account with your fingerprint, face or screen lock. 18 or older.");
       await s.shot("recipient", "link opened, no account", "Opened from the link the funder sent (a link, not a click from home), with no account on this device");
     },
   },

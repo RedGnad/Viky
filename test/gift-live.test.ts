@@ -143,7 +143,7 @@ test("the line above the name never says 'your' to somebody the gift is not thei
 
 test("the next moment is only said where there is one, and it is the reader's own clock", () => {
   assert.equal(liveOf(input({ moment: "counting" })).next, "Next reading: tomorrow at 9:00 AM your time.");
-  assert.equal(liveOf(input({ moment: "unopened" })).next, "Open it by 3 Oct 2026: after 14 days unopened, it goes back to Mom.");
+  assert.equal(liveOf(input({ moment: "unopened" })).next, "By 3 Oct 2026, or it goes back to Mom.");
   // The headline already says who has not opened or connected what: the next line says the date and nothing again.
   assert.equal(liveOf(input({ moment: "unopened", voice: "funder" })).next, "If not by 3 Oct 2026, it comes back to you.");
   assert.equal(liveOf(input({ moment: "openedNotConnected" })).next, "By 7 Oct 2026, or it goes back to Mom.");
