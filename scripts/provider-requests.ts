@@ -2,7 +2,7 @@ import "../src/load-env";
 import { getAddress } from "viem";
 import { ensurePortalSchema, loadPortal, markRequestAlerted, markRequestBuilt, openRequests, saveProvider, type PortalSense } from "../src/portal-store";
 import { sendProviderAlert } from "../src/provider-alert";
-import { defaultProviderDomain } from "../src/provider-instruction";
+import { providerDomains } from "../src/provider-instruction";
 
 /**
  * The providers funders' gifts are waiting on (D313). A gift on a university without a provider of the sense it reads
@@ -16,8 +16,9 @@ import { defaultProviderDomain } from "../src/provider-instruction";
  *     emails the open requests nobody was emailed about yet (made before `RESEND_API_KEY` existed, or whose email
  *     failed), once each.
  *   PROVEN_BY=0x… pnpm provider:add <portal id> <enrolment|results> <provider id> [--domain <domain>]
- *     registers the provider built from it as a witness provider with no pin yet, on the domain given or the sign-in
- *     page's own, and closes the request: the next proof from it is held for review (`pnpm portal:pin`).
+ *     registers the provider built from it as a witness provider with no pin yet, on the domain given, or the domains
+ *     the university's other provider already reads, or the sign-in page's own, and closes the request: the next proof
+ *     from it is held for review (`pnpm portal:pin`).
  *
  * Against production, the operator command of "The test database" applies (`VIKY_ALLOW_PRODUCTION_DATABASE=1`).
  * `DRY_RUN=1` says what would be registered and writes nothing.
@@ -47,7 +48,8 @@ async function main() {
   const portal = await loadPortal(String(portalId));
   if (!portal) throw new Error(`no university ${portalId}`);
   const at = process.argv.indexOf("--domain");
-  const domain = (at > 0 ? process.argv[at + 1] : defaultProviderDomain(portal.loginUrl))?.trim().toLowerCase() ?? null;
+  // The domain given, or the ones the university's other provider already reads, or the sign-in page's own.
+  const domain = (at > 0 ? process.argv[at + 1] : providerDomains(portal))?.trim().toLowerCase() ?? null;
   const provider = {
     portalId: portal.portalId,
     sense: sense as PortalSense,

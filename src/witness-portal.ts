@@ -172,6 +172,18 @@ export function verifyWitnessProof(
   return { data: { context, extractedParameters }, url, method, responseMatches, responseRedactions, specHash };
 }
 
+/**
+ * The refusals that say one thing: this proof is not the one the pin describes. Another version of the provider,
+ * another pattern, another method. Reclaim's agent writes a version for each pass it makes, so two students shown
+ * before any pin, or one student shown twice, hold proofs of two versions: the pin born of one does not cover the
+ * other, and that is no fault of the proof. Such a proof is pinned from in its turn; it is never refused for it.
+ */
+const PIN_DOES_NOT_COVER: readonly string[] = ["WITNESS_OTHER_VERSION", "WITNESS_OTHER_PATTERN", "WITNESS_OTHER_METHOD"];
+
+export function pinDoesNotCover(code: string | undefined): boolean {
+  return code !== undefined && PIN_DOES_NOT_COVER.includes(code);
+}
+
 /** The pin a first proof gives, once the operator has read it: the version it came from and what its claim signed. */
 export function pinOf(reading: WitnessReading, providerVersion: string): WitnessPin {
   return { providerVersion, url: reading.url, method: reading.method, responseMatches: reading.responseMatches, responseRedactions: reading.responseRedactions, specHash: reading.specHash };

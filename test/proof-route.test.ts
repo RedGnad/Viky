@@ -196,7 +196,8 @@ test("the operator pins a university ahead of the pass from Reclaim's published 
   assert.match(script, /if \(!sameRule\(again, provider\.pin\)\) throw new Error\(/);
   assert.ok(script.indexOf("if (!sameRule(again, provider.pin))") < script.indexOf("pinProvider(portalId, sense, { pin, extract, operator, providerId })"));
   // Refused while a proof is held, and a proof held under a pin made ahead is pinned from, not settled on it.
-  assert.match(script, /if \(provider\.pin && provider\.extract && !provider\.pin\.ahead\) \{/);
+  // And not when the operator names what to read: the provider is then pinned from the proof (test/held-proofs-stay-held.test.ts).
+  assert.match(script, /if \(provider\.pin && provider\.extract && !provider\.pin\.ahead && !pinsFromThis\) \{/);
   // The route takes the mark off when the first proof fits.
   assert.match(readFileSync("app/api/proof/verify/route.ts", "utf8"), /\n        confirmPin,\n/);
 });

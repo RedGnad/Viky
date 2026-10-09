@@ -253,12 +253,30 @@ export function gradeInWords(units: number | bigint, scale: GradeScale): string 
   return `${value.toFixed(2)} / ${scale.max}`;
 }
 
-/** A grade as a results page prints it, "14,50" or "14.5": a number with two decimals at most, or nothing. */
+/**
+ * A grade as a results page prints it: the number, then perhaps the jury's points and the scale it is out of,
+ * "12.345(+0.5)/20". A portal prints the grade as it stores it, so often with three decimals, and follows it with what
+ * it adds (EsupPortail's esup-mdw, the record Toulouse runs: ResultatController writes the stored number and
+ * "(+points)", NotesView adds "/scale" where the scale is not 20 or is always shown; read 9 Oct 2026).
+ */
+const GRADE_AS_PRINTED = /^(\d{1,4})(?:[.,](\d{1,3}))?\s*(?:\(\s*\+\s*\d{1,3}(?:[.,]\d{1,3})?\s*\))?\s*(?:\/\s*(\d{1,4}))?$/;
+
+/**
+ * The grade a results page prints, "14,50", "14.5" or "12.345(+0.5)/20", to the hundredth: a number, or nothing. A
+ * third decimal is cut and never rounded: 12.345 is 12.34, and 9.999 is not 10, because a gift is paid at the grade
+ * the page shows and at no better one. What follows the number does not stop the reading, and is not added to it.
+ */
 export function gradeOf(text: string | undefined): number | undefined {
   if (typeof text !== "string") return undefined;
-  const match = text.trim().match(/^(\d{1,4})(?:[.,](\d{1,2}))?$/);
+  const match = text.trim().match(GRADE_AS_PRINTED);
   if (!match) return undefined;
-  return Number(`${match[1]}.${match[2] ?? "0"}`);
+  return Number(`${match[1]}.${(match[2] ?? "0").slice(0, 2)}`);
+}
+
+/** The scale a printed grade says it is out of, "/20", where the page prints one. */
+export function gradeOutOf(text: string | undefined): number | undefined {
+  const match = typeof text === "string" ? text.trim().match(GRADE_AS_PRINTED) : null;
+  return match?.[3] === undefined ? undefined : Number(match[3]);
 }
 
 /** Whether a number is the shape of a grade at all, before the portal's scale is known: above zero, in hundredths. */
@@ -373,7 +391,11 @@ export function gradeShownBy(results: ResultsExtract, fields: Readonly<Record<st
     return { kind: "read", metricValue: gradeUnits(rank), inWords: letterOfRank(rank)! };
   }
   const grade = gradeOf(fields[results.grade.field]);
-  if (grade === undefined || !isGradeOnScale(scale, grade)) return { kind: "refused", code: "NO_GRADE", message: "The results page shown carries no grade on the university's scale." };
+  // A grade the page itself says is out of another scale than the university's is not one on it, whatever its number.
+  const outOf = gradeOutOf(fields[results.grade.field]);
+  if (grade === undefined || !isGradeOnScale(scale, grade) || (outOf !== undefined && outOf !== scale.max)) {
+    return { kind: "refused", code: "NO_GRADE", message: "The results page shown carries no grade on the university's scale." };
+  }
   const units = gradeUnits(grade);
   return { kind: "read", metricValue: units, inWords: gradeInWords(units, scale) };
 }

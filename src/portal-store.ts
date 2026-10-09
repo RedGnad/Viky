@@ -582,13 +582,16 @@ function toRequest(row: Record<string, unknown>): ProviderRequest {
 
 /**
  * Asks the operator for a university's provider of one sense (D313), once: a second gift on the same university and
- * sense finds the request already there. A request marked built while no provider exists any more is asked again.
+ * sense finds the request already there. A request marked built while no provider exists any more is asked again. A
+ * request still open takes the instruction as it is written today (9 Oct 2026): the one it was first asked with may
+ * have been corrected since, and the operator builds from what the request says.
  */
 export async function requestProvider(input: { portalId: string; sense: PortalSense; instruction: string; giftId: string | null }): Promise<ProviderRequest> {
   await sql()`
     INSERT INTO viky_provider_requests (portal_id, sense, instruction, first_gift_id)
     VALUES (${input.portalId}, ${input.sense}, ${input.instruction}, ${input.giftId})
-    ON CONFLICT (portal_id, sense) DO UPDATE SET first_gift_id = COALESCE(viky_provider_requests.first_gift_id, EXCLUDED.first_gift_id), built_at = CASE
+    ON CONFLICT (portal_id, sense) DO UPDATE SET first_gift_id = COALESCE(viky_provider_requests.first_gift_id, EXCLUDED.first_gift_id),
+      instruction = CASE WHEN viky_provider_requests.built_at IS NULL THEN EXCLUDED.instruction ELSE viky_provider_requests.instruction END, built_at = CASE
       WHEN EXISTS (SELECT 1 FROM viky_portal_providers p WHERE p.portal_id = EXCLUDED.portal_id AND p.sense = EXCLUDED.sense) THEN viky_provider_requests.built_at
       ELSE NULL END`;
   const rows = await sql()`SELECT * FROM viky_provider_requests WHERE portal_id = ${input.portalId} AND sense = ${input.sense}`;

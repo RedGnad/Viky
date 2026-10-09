@@ -10,6 +10,7 @@ import { conditionAnswered, type GiftDraft } from "../src/gift-draft";
 import { UNIVERSITY_GRADE_SHOWN, UNIVERSITY_YEAR_SHOWN } from "../src/shown-conditions";
 import {
   gradeInWords,
+  gradeOutOf,
   gradeOf,
   gradeScaleInWords,
   gradeScaleOf,
@@ -154,7 +155,26 @@ test("a grade is carried in hundredths and read back in words on its scale", () 
   assert.equal(gradeOf("14,50"), 14.5, "a comma is what half the portals print");
   assert.equal(gradeOf("14.5"), 14.5);
   assert.equal(gradeOf(" 14 "), 14);
-  for (const bad of ["14/20", "", "14.555", "A", undefined, "-1"]) assert.equal(gradeOf(bad), undefined, String(bad));
+  // As a portal stores it (EsupPortail's esup-mdw, read 9 Oct 2026): three decimals, cut to the hundredth and never
+  // rounded, then perhaps the jury's points and the scale, which do not stop the reading and are not added to it.
+  assert.equal(gradeOf("12.345"), 12.34, "cut, not rounded");
+  assert.equal(gradeOf("12,349"), 12.34);
+  assert.equal(gradeOf("9.999"), 9.99, "never a ten the page does not show");
+  assert.equal(gradeOf("12.500"), 12.5);
+  assert.equal(gradeOf("12.345(+0.5)"), 12.34, "the jury's points follow the grade, and are not added");
+  assert.equal(gradeOf("12.345(+0.5)/20"), 12.34);
+  assert.equal(gradeOf("12.5 (+ 0,5) / 20"), 12.5);
+  assert.equal(gradeOf("14/20"), 14);
+  assert.equal(gradeOutOf("14/20"), 20);
+  assert.equal(gradeOutOf("12.345(+0.5)/20"), 20);
+  assert.equal(gradeOutOf("14"), undefined);
+  for (const bad of ["", "14.5555", "A", undefined, "-1", "DEF", "12.3.4", "12 points", "(+0.5)", "/20", "12/"]) assert.equal(gradeOf(bad), undefined, String(bad));
+  // On the university's scale: the grade is read with what follows it, and a grade the page says is out of another
+  // scale is not one on it.
+  assert.deepEqual(gradeShownBy(OUT_OF_20, { average: "12.345(+0.5)/20", ...THIS_YEAR }), { kind: "read", metricValue: 1234, inWords: "12.34 / 20" });
+  assert.deepEqual(gradeShownBy(OUT_OF_20, { average: "12.345", ...THIS_YEAR }), { kind: "read", metricValue: 1234, inWords: "12.34 / 20" });
+  assert.equal((gradeShownBy(OUT_OF_20, { average: "7.5/10", ...THIS_YEAR }) as { code?: string }).code, "NO_GRADE");
+  assert.equal((gradeShownBy(OUT_OF_20, { average: "DEF", ...THIS_YEAR }) as { code?: string }).code, "NO_GRADE");
   assert.ok(isGradeShape(14.5));
   assert.ok(isGradeShape(0.01));
   for (const bad of [0, -1, 14.555, 1_001, Number.NaN]) assert.equal(isGradeShape(bad), false, String(bad));
@@ -217,7 +237,9 @@ test("the results page is read by the row's own rule: passed, the grade on the s
   assert.deepEqual(gradeShownBy(OUT_OF_20, { average: "0", ...THIS_YEAR }), { kind: "read", metricValue: 0, inWords: "0.00 / 20" }, "a zero is a grade, and the contract says not there yet");
   for (const [fields, code] of [
     [{ average: "21", ...THIS_YEAR }, "NO_GRADE"],
-    [{ average: "14/20", ...THIS_YEAR }, "NO_GRADE"],
+    // Out of another scale than the university's, said by the page itself: not a grade on it. ("14/20" is read, above.)
+    [{ average: "14/10", ...THIS_YEAR }, "NO_GRADE"],
+    [{ average: "14 sur 20", ...THIS_YEAR }, "NO_GRADE"],
     [{ decision: "Admis", ...THIS_YEAR }, "NO_GRADE"],
     [{ average: "14", academicYear: "2024-2025" }, "WRONG_TERM"],
   ] as const) {
