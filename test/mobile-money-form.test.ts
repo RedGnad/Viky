@@ -32,7 +32,7 @@ test("a press says under each field what it is missing, in the sentences the rou
   assert.equal(MOBILE_OUT.amountUnder("5 872 F"), "At least 5 872 F at a time.");
   assert.equal(MOBILE_OUT.amountOver("8 806 F"), "At most 8 806 F at a time.");
   // The button is pressable while nothing is under way, and a press with a field missing asks nothing of the passkey.
-  assert.match(form, /<button type="button" onClick=\{\(\) => void send\(\)\} disabled=\{busy\} className=\{PRIMARY_BUTTON\}>/);
+  assert.match(form, /<Button doing=\{busy \? doing : null\} onPress=\{\(\) => void send\(\)\}>/);
   assert.doesNotMatch(form, /disabled=\{!ready\}/);
   assert.match(form, /setPressed\(true\);\n\s*if \(!network \|\| !numberFits \|\| !holderFits \|\| \(!changed && \(!within \|\| local === null\)\)\) return;/);
   // A press with no price yet, or after one that failed, asks for the price and goes on (the founder, 5 Oct 2026):

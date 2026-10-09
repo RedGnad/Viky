@@ -15,8 +15,9 @@ import { CopyLine } from "../kit/CopyLine";
 import { Sheet } from "../kit/Sheet";
 import { BODY, CARD, CARD_AMOUNT, CARD_LABEL, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
 import { Said } from "../kit/Said";
-import { ButtonWords, StepInProgress, WaitLine } from "../kit/Waiting";
+import { WaitLine } from "../kit/Waiting";
 import { WAITS } from "@/src/sentences";
+import { Button } from "../kit/Button";
 
 /**
  * A gift card, the Bitrefill way's second use (D271): the card chosen in a sheet, as "Which university?" is, from the
@@ -258,17 +259,14 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
         <div className="flex flex-wrap gap-[var(--tap-gap)]">
           {card ? (
             price ? (
-              <button type="button" onClick={() => void buy()} disabled={busy} className={PRIMARY_BUTTON}>
-                {busy ? W.confirming : W.confirm}
-              </button>
+              <Button doing={busy ? W.confirming : null} onPress={() => void buy()}>
+                {W.confirm}
+              </Button>
             ) : (
               <>
-                <button type="button" onClick={() => void askPrice()} disabled={busy || (!chosenPackage && (!typedFits || typedFar))} className={PRIMARY_BUTTON}>
-                  <ButtonWords busy={busy} doing={W.pricing}>
-                    {W.getPrice}
-                  </ButtonWords>
-                </button>
-                <StepInProgress busy={busy} step={WAITS.price("Bitrefill")} />
+                <Button doing={busy ? W.pricing : null} step={WAITS.price("Bitrefill")} waiting={!chosenPackage && (!typedFits || typedFar)} onPress={() => void askPrice()}>
+                  {W.getPrice}
+                </Button>
               </>
             )
           ) : null}
