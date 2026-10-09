@@ -265,9 +265,13 @@ test("a missing provider is asked for once, with its instruction, and a witness 
   assert.match(instruction, /pnpm provider:add uni-a-br enrolment <the provider's id> --domain a\.br/);
   const first = await requestProvider({ portalId: "uni-a-br", sense: "enrolment", instruction, giftId: null });
   assert.equal(first.builtAt, null);
+  // Written before anything moves, with no gift: not listed for the operator nor counted for a judge until one exists.
+  assert.equal((await openRequests()).length, 0);
+  assert.equal((await providerCounts())?.requested, 0);
   const again = await requestProvider({ portalId: "uni-a-br", sense: "enrolment", instruction, giftId: "1000042" });
   assert.equal(again.firstGiftId, "1000042", "the first gift is kept once known");
   assert.equal((await openRequests()).length, 1);
+  assert.equal((await providerCounts())?.requested, 1);
   // Built: a witness provider on its own domain, no pin yet.
   const witness = { portalId: "uni-a-br", sense: "enrolment" as const, providerId: "abcdefab-0000-4000-8000-000000000001", verification: "witness" as const, domain: "a.br", providerVersion: "", requestHash: "", extract: null, pin: null, addedBy: OPERATOR };
   assert.match(String(providerProblem({ ...witness, domain: null })), /domain/);

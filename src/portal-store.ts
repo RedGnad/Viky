@@ -595,8 +595,13 @@ export async function requestProvider(input: { portalId: string; sense: PortalSe
   return toRequest(rows[0]);
 }
 
+/**
+ * The providers asked for and not built, for the operator's list. Only where a gift exists on the university (the
+ * audit of 9 Oct 2026): the request is written before anything moves, with no gift, and a gift that was never paid
+ * for left a line the judges page counted and the operator was asked to build for.
+ */
 export async function openRequests(): Promise<readonly ProviderRequest[]> {
-  const rows = await sql()`SELECT * FROM viky_provider_requests WHERE built_at IS NULL ORDER BY created_at LIMIT 200`;
+  const rows = await sql()`SELECT * FROM viky_provider_requests WHERE built_at IS NULL AND first_gift_id IS NOT NULL ORDER BY created_at LIMIT 200`;
   return rows.map(toRequest);
 }
 
@@ -623,7 +628,8 @@ export async function providerCounts(): Promise<{ listed: number; enrolment: num
       SELECT count(*) FILTER (WHERE sense = 'enrolment')::int AS enrolment, count(*) FILTER (WHERE sense = 'results')::int AS results,
              count(*) FILTER (WHERE verification = 'witness')::int AS witness, count(*) FILTER (WHERE verification = 'witness' AND pin IS NOT NULL)::int AS pinned
         FROM viky_portal_providers`;
-    const requests = await sql()`SELECT count(*)::int AS n FROM viky_provider_requests WHERE built_at IS NULL`;
+    // Asked for by a gift that exists, as `openRequests` lists them.
+    const requests = await sql()`SELECT count(*)::int AS n FROM viky_provider_requests WHERE built_at IS NULL AND first_gift_id IS NOT NULL`;
     const one = providers[0] ?? {};
     return {
       listed: Number(listed[0]?.n ?? 0),

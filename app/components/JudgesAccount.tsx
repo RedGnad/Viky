@@ -33,7 +33,7 @@ export function JudgesAccount() {
           ) : (
             <p className="text-[length:var(--type-help)] text-[var(--muted)]" data-agreement-key="">
               Your agreement key is not in this page&apos;s memory right now: it is made when you sign in and dropped when
-              the page is loaded again. Sign out, sign in, and come back here through You, For judges, to read it.
+              the page is loaded again. Sign out, sign in, and come back here through Me, For judges, to read it.
             </p>
           )}
           <p className="text-[length:var(--type-help)] text-[var(--muted)]">
@@ -45,7 +45,7 @@ export function JudgesAccount() {
         </>
       ) : (
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
-          Not signed in. Create or open an account on the home page, then come back through You, For judges.
+          Not signed in. Create or open an account on the home page, then come back through Me, For judges.
         </p>
       )}
     </Fold>

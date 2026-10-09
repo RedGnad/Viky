@@ -16,7 +16,9 @@ function delay(seconds: number): string {
 /** How late the runs of one plan actually began, which is the figure a pass mark would hide. */
 function after(plan: { runs: number; soonestSeconds: number; latestSeconds: number }): string {
   if (plan.runs === 0) return "";
-  if (plan.runs === 1 || plan.soonestSeconds === plan.latestSeconds) return `It began ${delay(plan.latestSeconds)} after its minute.`;
+  if (plan.runs === 1) return `It began ${delay(plan.latestSeconds)} after its minute.`;
+  // Two delays said in the same words are one figure: "between 10 minutes and 10 minutes" (the audit of 9 Oct 2026).
+  if (delay(plan.soonestSeconds) === delay(plan.latestSeconds)) return `They began ${delay(plan.latestSeconds)} after that minute.`;
   return `They began between ${delay(plan.soonestSeconds)} and ${delay(plan.latestSeconds)} after that minute.`;
 }
 

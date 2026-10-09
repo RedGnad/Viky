@@ -48,7 +48,7 @@ export function MilestoneJudges() {
           : ""}
       </p>
       <p className={HELP}>
-        The rule it rests on (DECISIONS.md D44): the funder signs the target and the highest start they pay a climb from; the first reading
+        The rule it rests on: the funder signs the target and the highest start they pay a climb from; the first reading
         is recorded as the start whatever it says, so a recipient cannot retry until a reading suits them, and a start above what the funder
         accepted can never pay. Each cadence is its own goal with its own provider id, so a blitz rating can never settle a rapid gift:
       </p>
@@ -143,7 +143,7 @@ export function MilestoneJudges() {
         <li>
           The contract judges when a reading was taken, not when the rated game was played. Viky looks at each climb every five minutes, when
           an outside scheduler calls its pass, and the recipient can ask for a reading at any time; a rating reached and then lost again between two readings, or reached in the last hours and first read
-          after the deadline, does not pay (DECISIONS.md D48).
+          after the deadline, does not pay.
         </li>
         <li>
           Below the target, a day&apos;s reading is a plain read of the public page and carries no proof, because the contract refuses a reading

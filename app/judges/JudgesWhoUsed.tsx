@@ -15,6 +15,7 @@ const BETWEEN_WORDS: Readonly<Record<GiftBetween, string>> = {
   "founder to another": "from the founder to somebody else",
   "another to founder": "from somebody else to the founder",
   "the founder's own try": "the founder's own try, between his test accounts",
+  "not opened yet": "opened by nobody yet",
 };
 
 function Account({ account, founders }: Readonly<{ account: string; founders: ReadonlySet<string> }>) {
@@ -96,7 +97,8 @@ export function JudgesWhoUsed({ index }: Readonly<{ index: IndexRead | null }>) 
         <dd className={HELP} data-who-used="between">
           Between two people neither of whom is the founder: {usage.between["two others"]}. From the founder to somebody
           else: {usage.between["founder to another"]}. From somebody else to the founder: {usage.between["another to founder"]}.
-          The founder&apos;s own tries, between his test accounts: {usage.between["the founder's own try"]}.
+          The founder&apos;s own tries, between his test accounts: {usage.between["the founder's own try"]}. Opened by
+          nobody yet: {usage.between["not opened yet"]}.
         </dd>
         <dt className={MUTED}>Earned, and gone back</dt>
         <dd className={HELP} data-who-used="amounts">
