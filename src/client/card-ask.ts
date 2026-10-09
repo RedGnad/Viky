@@ -13,6 +13,13 @@ import { WAY_IN_USDC, type WayIn } from "@/src/rails";
 /** How long a quote is waited for: past it the rule answers, and an answer that comes later changes nothing. */
 export const QUOTE_WAIT_MS = 3_000;
 
+/**
+ * How long the amount must have stood still before Rampnow is asked (the founder, 9 Oct 2026): an amount on its way
+ * to another, a figure being typed, asks nothing. The server keeps a quote some seconds besides, so the same need is
+ * not asked of Rampnow twice in a row (src/rampnow-quote.ts).
+ */
+export const QUOTE_SETTLE_MS = 400;
+
 /** Whether this deployment asks Rampnow for quotes: said by the server on the page itself (app/layout.tsx). */
 export function cardQuotesOn(): boolean {
   return document.body.dataset.cardQuotes === "on";
@@ -61,15 +68,20 @@ export function useCardAsk(input: Readonly<{ on: boolean; offer: Readonly<{ way:
   useEffect(() => {
     if (!asks || isCarried) return;
     let waited = true;
+    let cut: ReturnType<typeof setTimeout> | undefined;
     const say = (said: QuoteSaid) => {
       if (!waited) return;
       waited = false;
       setAnswer({ name, said });
     };
-    const cut = setTimeout(() => say("late"), QUOTE_WAIT_MS);
-    getJson<QuoteSaid>(`/api/rails/card-quote?currency=${encodeURIComponent(code)}&units=${need}`).then(say, () => say("late"));
+    // Asked once the amount has stood still; then the first of the two says, the answer or three seconds.
+    const settled = setTimeout(() => {
+      cut = setTimeout(() => say("late"), QUOTE_WAIT_MS);
+      getJson<QuoteSaid>(`/api/rails/card-quote?currency=${encodeURIComponent(code)}&units=${need}`).then(say, () => say("late"));
+    }, QUOTE_SETTLE_MS);
     return () => {
       waited = false;
+      clearTimeout(settled);
       clearTimeout(cut);
     };
   }, [asks, name, code, need, isCarried]);

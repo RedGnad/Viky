@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { askOfTheQuote, askOfTheRule, askToPay, paidIn, usdcToAsk, type CardAskState } from "../src/card-ask";
-import { ASK_KEPT_MS, cardAskKept, keepCardAsk, QUOTE_WAIT_MS } from "../src/client/card-ask";
+import { ASK_KEPT_MS, cardAskKept, keepCardAsk, QUOTE_SETTLE_MS, QUOTE_WAIT_MS } from "../src/client/card-ask";
 import { eurosToBuyOn, wayInFor } from "../src/gift-amount";
 import { rampnowPage, WAY_IN_GIFT_COIN, WAY_IN_USDC } from "../src/rails";
 import { PAY } from "../src/sentences";
@@ -122,7 +122,13 @@ test("the screens: the server says on the page whether quotes are asked, the quo
   assert.match(hook, /return document\.body\.dataset\.cardQuotes === "on";/);
   assert.match(hook, /const asks = on && quotes && offer\.way === WAY_IN_USDC && need > 0n;/, "asked for Rampnow alone, when this deployment asks");
   // The first of the two says: the answer, or three seconds. What comes after changes nothing.
-  assert.match(hook, /const say = \(said: QuoteSaid\) => \{\s+if \(!waited\) return;\s+waited = false;\s+setAnswer\(\{ name, said \}\);\s+\};\s+const cut = setTimeout\(\(\) => say\("late"\), QUOTE_WAIT_MS\);/);
+  assert.match(hook, /const say = \(said: QuoteSaid\) => \{\s+if \(!waited\) return;\s+waited = false;\s+setAnswer\(\{ name, said \}\);\s+\};/);
+  assert.match(hook, /cut = setTimeout\(\(\) => say\("late"\), QUOTE_WAIT_MS\);/);
+  // Nothing is asked while the amount is still changing (the founder, 9 Oct 2026): the ask waits for it to stand
+  // still, and an amount that changes meanwhile takes the ask away before it left.
+  assert.equal(QUOTE_SETTLE_MS, 400);
+  assert.match(hook, /const settled = setTimeout\(\(\) => \{\s+cut = setTimeout\(\(\) => say\("late"\), QUOTE_WAIT_MS\);\s+getJson<QuoteSaid>\(/);
+  assert.match(hook, /return \(\) => \{\s+waited = false;\s+clearTimeout\(settled\);\s+clearTimeout\(cut\);\s+\};/);
   assert.match(hook, /if \(answer\?\.name !== name\) return \{ state: "asking" \};/);
   assert.match(hook, /getJson<QuoteSaid>\(`\/api\/rails\/card-quote\?currency=\$\{encodeURIComponent\(code\)\}&units=\$\{need\}`\)/);
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
@@ -149,7 +155,10 @@ test("the screens: the server says on the page whether quotes are asked, the quo
   // in dollars is worked out. It says nothing of which currency was paid in so far (the founder, 9 Oct 2026).
   const judges = readFileSync("app/judges/page.tsx", "utf8");
   assert.match(judges, /<span data-rampnow-currency>\s+\{rampnowQuotesOn\(\)/);
-  assert.match(judges, /"Its page is opened in dollars\. With Viky's public partner key set, which it is not on this deployment, it is opened in the currency the funder reads Viky in/);
-  assert.match(judges, /The amount in dollars is worked out by a rule measured on 9 Oct 2026 without paying/);
+  // With no partner key of Rampnow's, which is how production runs (the founder, 9 Oct 2026: he has none), the page
+  // says the rule and that Rampnow's own quote is not asked. Nothing lets a judge think a live quote runs.
+  assert.match(judges, /: "Its page is opened in euros for a funder who reads Viky in euros, and in dollars for every other\. Rampnow's own quote is not asked on this deployment: no partner key of Rampnow's is set\."\}/);
+  assert.match(judges, /The amount is then worked out by a rule, not by Rampnow:/);
+  assert.doesNotMatch(judges, /Viky's public partner key|which it is not on this deployment/);
   assert.doesNotMatch(judges, /so far was made in euros|none has been made in dollars/);
 });

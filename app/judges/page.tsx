@@ -186,10 +186,11 @@ export default async function JudgesPage() {
       {/* The currency its page is opened in (9 Oct 2026), said as this deployment does it. */}
       <span data-rampnow-currency>
         {rampnowQuotesOn()
-          ? "Its page is opened in the currency the funder reads Viky in, for the amount Rampnow's own quote gives, where Rampnow takes a card in that currency; the quote is asked by Viky's server with its public partner key. Otherwise, and whenever the quote does not answer within three seconds, it is opened in dollars."
-          : "Its page is opened in dollars. With Viky's public partner key set, which it is not on this deployment, it is opened in the currency the funder reads Viky in, for the amount Rampnow's own quote gives."}{" "}
-        The amount in dollars is worked out by a rule measured on 9 Oct 2026 without paying: Rampnow keeps 7 % plus 0.40 EUR, never
-        under 1.00 EUR, said in dollars at the day&apos;s rate, and takes no card payment under 5 EUR.
+          ? "Its page is opened in the currency the funder reads Viky in, for the amount Rampnow's own quote gives, where Rampnow takes a card in that currency; the quote is asked by Viky's server with a public partner key. Otherwise, and whenever the quote does not answer within three seconds: in euros for a funder who reads Viky in euros, in dollars for every other."
+          : "Its page is opened in euros for a funder who reads Viky in euros, and in dollars for every other. Rampnow's own quote is not asked on this deployment: no partner key of Rampnow's is set."}{" "}
+        The amount is then worked out by a rule, not by Rampnow: it keeps 7 % plus 0.40 EUR, never under 1.00 EUR, and takes no
+        card payment under 5 EUR, read on its page without paying on 1 Oct 2026 in euros and on 9 Oct 2026 in dollars, where those
+        figures are said in dollars at the day&apos;s rate.
       </span>{" "}
       {rampnowOn
         ? rampnowFrameOn()
