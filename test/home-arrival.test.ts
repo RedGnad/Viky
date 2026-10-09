@@ -115,7 +115,10 @@ test("4. where the device's memory was wrong, the place opens or closes by its h
   // Closing gives the gap back and only then takes the place away; a card that lands a little taller slides to it.
   assert.match(place, /const closing = slide\(box, from, 0, \{ from: 0, to: -gapAbove\(box\) \}, true\);/);
   assert.match(place, /closing\.onfinish = \(\) => \{\n\s*over = true;\n\s*setThere\(false\);/);
-  assert.match(place, /if \(drawn && !reduced\(\)\) slide\(box, from, height\);/);
+  assert.match(place, /if \(from > 0\) \{\n\s*slide\(box, from, height\);\n\s*return;\n\s*\}/);
+  // An open place whose block has nothing to show yet takes no room and no gap, and opens when it has.
+  assert.match(css, /\[data-place\]:has\(> :empty\) \{\n  display: none;\n\}/);
+  assert.match(place, /slide\(box, 0, height, \{ from: -gapAbove\(box\), to: 0 \}\);\n\s*box\.animate\(\[\{ opacity: 0 \}, \{ opacity: 1 \}\], \{ duration: MOTION\.place\.fadeMs, easing: "ease-out" \}\);\n\s*\}\);/);
   // A place that is not open and not closing is not in the page: no room, no gap, no turn taken in the entrance.
   assert.match(place, /if \(!there\) return null;/);
 });

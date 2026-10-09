@@ -1063,6 +1063,10 @@ dialog.sheet[open] {
 .page-enters > [data-turns] {
   animation: none !important;
 }
+/* An open place whose block has nothing to show yet takes no room and no gap, as if it were not there. */
+[data-place]:has(> :empty) {
+  display: none;
+}
 .comes-up,
 .comes-up-within > * {
   animation: come-up var(--come-up-duration) ease-out backwards;

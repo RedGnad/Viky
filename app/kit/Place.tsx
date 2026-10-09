@@ -62,7 +62,8 @@ const gapAbove = (box: HTMLElement) => parseFloat(getComputedStyle(box.parentEle
  * it grows from nothing to its height; closed after, it goes back to nothing and is taken away. When what it holds
  * changes height on a drawn screen, a card landing where its place was held a little short, it goes from one height
  * to the other. A place that is not open and not closing is not in the page at all: no room, no gap, and no turn
- * taken in the entrance.
+ * taken in the entrance. An open place whose block has nothing to show yet takes no room and no gap either, and
+ * opens when it has.
  */
 export function Place({
   open = true,
@@ -116,7 +117,14 @@ export function Place({
       const from = stood.current;
       if (from === null || Math.abs(height - from) < 0.5) return;
       stood.current = height;
-      if (drawn && !reduced()) slide(box, from, height);
+      if (!drawn || reduced()) return;
+      if (from > 0) {
+        slide(box, from, height);
+        return;
+      }
+      // What it holds had nothing to show until now, and took no room (app/globals.css): it opens as a place does.
+      slide(box, 0, height, { from: -gapAbove(box), to: 0 });
+      box.animate([{ opacity: 0 }, { opacity: 1 }], { duration: MOTION.place.fadeMs, easing: "ease-out" });
     });
     watch.observe(held);
     return () => watch.disconnect();
