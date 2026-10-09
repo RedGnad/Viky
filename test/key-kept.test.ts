@@ -176,7 +176,7 @@ test("the header's door: a device that knows no account is asked for no passkey 
   assert.match(door, /onClick=\{\(\) => \(hasCredential \? void tryPasskey\(\) : setOpen\(\(was\) => !was\)\)\}/);
   // In the door, making an account comes first and signing in second, and only the second asks for a passkey.
   const panel = door.slice(door.indexOf('role="dialog"'));
-  assert.ok(panel.indexOf("onClick={() => void make()}") > 0 && panel.indexOf("onClick={() => void make()}") < panel.indexOf("onClick={() => void tryPasskey()}"));
+  assert.ok(panel.indexOf("onPress={() => void make()}") > 0 && panel.indexOf("onPress={() => void make()}") < panel.indexOf("onClick={() => void tryPasskey()}"));
   assert.equal(DOOR.create, "Create my account");
   assert.equal(DOOR.open, "Sign in");
   // "Try again" is said only of a passkey this device remembers.

@@ -10,8 +10,8 @@ import { MARATHON_PROOF as W } from "@/src/sentences";
 import { BODY, CARD, FIELD, HELP, PRIMARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { Said } from "./Said";
 import { FieldRefusal } from "./FieldRefusal";
-import { ButtonWords, StepInProgress } from "./Waiting";
 import { WAITS } from "@/src/sentences";
+import { Button } from "./Button";
 
 /**
  * The recipient's half of "Finish a marathon" (D273), in two moments on the gift's page. Before the start: the bib,
@@ -119,12 +119,9 @@ export function MarathonProof({ giftId, status, yours, onChanged }: Readonly<{ g
       ) : null}
       {!marathon.bibOpen ? (
         <>
-          <button type="button" onClick={() => void read()} disabled={busy} className={PRIMARY_BUTTON}>
-            <ButtonWords busy={state.at === "reading" || state.at === "proving"} doing={W.reading}>
-              {W.readMyResult}
-            </ButtonWords>
-          </button>
-          <StepInProgress busy={state.at === "reading" || state.at === "proving"} step={WAITS.proof} />
+          <Button doing={state.at === "reading" || state.at === "proving" ? W.reading : null} step={WAITS.proof} waiting={busy && state.at !== "reading" && state.at !== "proving"} onPress={() => void read()}>
+            {W.readMyResult}
+          </Button>
           <FieldRefusal id="marathon-read-refusal">{state.at === "refused" ? state.message : undefined}</FieldRefusal>
         </>
       ) : null}
