@@ -183,15 +183,13 @@ export default async function JudgesPage() {
         </>
       ) : null}
       . A conversion promises at least ninety-nine for a hundred, or nothing moves.{" "}
-      {/* The currency its page is opened in (9 Oct 2026), said as this deployment does it, and what was really paid. */}
+      {/* The currency its page is opened in (9 Oct 2026), said as this deployment does it. */}
       <span data-rampnow-currency>
         {rampnowQuotesOn()
           ? "Its page is opened in the currency the funder reads Viky in, for the amount Rampnow's own quote gives, where Rampnow takes a card in that currency; the quote is asked by Viky's server with its public partner key. Otherwise, and whenever the quote does not answer within three seconds, it is opened in dollars."
           : "Its page is opened in dollars. With Viky's public partner key set, which it is not on this deployment, it is opened in the currency the funder reads Viky in, for the amount Rampnow's own quote gives."}{" "}
         The amount in dollars is worked out by a rule measured on 9 Oct 2026 without paying: Rampnow keeps 7 % plus 0.40 EUR, never
-        under 1.00 EUR, said in dollars at the day&apos;s rate, and takes no card payment under 5 EUR. Every card payment made
-        through it so far was made in euros, which was the only currency until that day: none has been made in dollars or
-        in another currency.
+        under 1.00 EUR, said in dollars at the day&apos;s rate, and takes no card payment under 5 EUR.
       </span>{" "}
       {rampnowOn
         ? rampnowFrameOn()

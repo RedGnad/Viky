@@ -77,7 +77,8 @@ test("the ask a pay press was made on is kept for the wait that follows: ten min
 
 test("the screens: the server says on the page whether quotes are asked, the quote is waited for three seconds and no more, and no figure is named meanwhile", () => {
   assert.equal(QUOTE_WAIT_MS, 3_000);
-  assert.equal(PAY.readingCardPrice, "Reading the card's price.");
+  assert.equal(PAY.workingOutTotal, "Working out your total.");
+  assert.ok(!("readingCardPrice" in PAY));
   assert.equal(PAY.cardCharged("$11.35"), "Your card is charged $11.35.");
   // Said by the server, from the one setting, on the page itself: no request is spent to learn it.
   assert.match(readFileSync("app/layout.tsx", "utf8"), /<body className="antialiased" data-card-quotes=\{rampnowQuotesOn\(\) \? "on" : undefined\}>/);
@@ -91,7 +92,7 @@ test("the screens: the server says on the page whether quotes are asked, the quo
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   assert.match(sheet, /const quoteAwaited = cardInPlay && asked\.state === "asking";/);
   assert.match(sheet, /<Button waiting=\{!ready \|\| !settled \|\| quoteAwaited \|\| status === "busy"\}/, "the button does not go while the price is asked");
-  assert.match(sheet, /\{quoteAwaited \? <WaitLine>\{W\.readingCardPrice\}<\/WaitLine> : null\}/);
+  assert.match(sheet, /\{quoteAwaited \? <WaitLine>\{W\.workingOutTotal\}<\/WaitLine> : null\}/);
   assert.match(sheet, /\) : quoteAwaited \? \(\s+\/\/[^\n]+\n\s+\/\/[^\n]+\n\s+<div aria-hidden="true" data-pay-total-awaited="">/, "the total's place is kept, with nothing in it");
   // A card charged in the sheet's own money is said exactly; in another, about, with what it is charged under the line.
   assert.match(sheet, /const converted = sum !== undefined && sum\.charged\.currency !== code;/);
@@ -101,8 +102,11 @@ test("the screens: the server says on the page whether quotes are asked, the quo
   assert.match(wait, /const cardAsked = useCardAsk\(\{ on: step === "paying" && Boolean\(address\) && cardShort > 0n, offer: \{ way: wayIn, euros: ruleEuros, atFloor: false \}, short: cardShort, code: askMoney, usdPerEur: money\.rates\?\.usdPerEur, kept: true \}\);/);
   assert.match(wait, /ask=\{toPay\}\s+asking=\{askAwaited\}/);
   assert.match(readFileSync("app/kit/offer/RampnowSheet.tsx", "utf8"), /if \(!open \|\| !account \|\| finishing \|\| asking\) return;/);
-  // The judges page says the currency as this deployment does it, and that no payment was made in dollars yet.
+  // The judges page says the currency Rampnow's page is opened in, as this deployment does it, and how the amount
+  // in dollars is worked out. It says nothing of which currency was paid in so far (the founder, 9 Oct 2026).
   const judges = readFileSync("app/judges/page.tsx", "utf8");
   assert.match(judges, /<span data-rampnow-currency>\s+\{rampnowQuotesOn\(\)/);
-  assert.match(judges, /Every card payment made\s+through it so far was made in euros, which was the only currency until that day: none has been made in dollars or\s+in another currency\./);
+  assert.match(judges, /"Its page is opened in dollars\. With Viky's public partner key set, which it is not on this deployment, it is opened in the currency the funder reads Viky in/);
+  assert.match(judges, /The amount in dollars is worked out by a rule measured on 9 Oct 2026 without paying/);
+  assert.doesNotMatch(judges, /so far was made in euros|none has been made in dollars/);
 });

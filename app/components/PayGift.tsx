@@ -695,7 +695,7 @@ export function PayGift() {
       // What is left to pay is being priced by the card service: said, and no amount named meanwhile.
       return (
         <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.arrived.title}>
-          <WaitLine>{P.readingCardPrice}</WaitLine>
+          <WaitLine>{P.workingOutTotal}</WaitLine>
         </Shell>
       );
     }
@@ -898,7 +898,7 @@ export function PayGift() {
           <Steps>
             <Step says={W.waiting.steps.payBeside(wayIn.name)}>
               {askAwaited ? (
-                <WaitLine>{P.readingCardPrice}</WaitLine>
+                <WaitLine>{P.workingOutTotal}</WaitLine>
               ) : (
                 <a
                   href={wayInPage(wayIn, { account: address, euros: toBuy, ask: toPay })}

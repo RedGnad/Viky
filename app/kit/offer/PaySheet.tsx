@@ -489,7 +489,7 @@ export function PaySheet({
               </Button>
               {pays === "reading" ? <WaitLine>{W.readingAccount}</WaitLine> : null}
               {/* The card service is being asked its price: said, and no figure is named meanwhile. */}
-              {quoteAwaited ? <WaitLine>{W.readingCardPrice}</WaitLine> : null}
+              {quoteAwaited ? <WaitLine>{W.workingOutTotal}</WaitLine> : null}
               {/* A reading that failed is said, with what reads it again. Never the card in its place. */}
               {pays === "unread" ? (
                 <>

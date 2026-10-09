@@ -664,7 +664,7 @@ test.describe("Rampnow's own quote on the pay sheet, in the money the sheet is r
       await expect(sheet(page).locator("[data-pay-total]")).toHaveText("€9.12");
       await expect(sheet(page).locator("[data-card-sum]")).toHaveText("€8.00 gift, €1.04 card fee, €0.08 stays yours.");
       await expect(sheet(page).locator("[data-card-charged]")).toHaveCount(0);
-      await expect(sheet(page).getByText("Reading the card's price.")).toHaveCount(0);
+      await expect(sheet(page).getByText("Working out your total.")).toHaveCount(0);
       // Asked once, for the sheet's money and the USDC the gift needs, and nothing of a person.
       expect(asked.length).toBe(1);
       expect(asked[0]).toMatch(/^\?currency=EUR&units=\d+$/);
@@ -683,7 +683,7 @@ test.describe("Rampnow's own quote on the pay sheet, in the money the sheet is r
       });
       const { page } = funder;
       const button = sheet(page).locator('[data-pays="card"]');
-      await expect(sheet(page).getByText("Reading the card's price.")).toBeVisible();
+      await expect(sheet(page).getByText("Working out your total.")).toBeVisible();
       await expect(button).toBeDisabled();
       await expect(sheet(page).locator("[data-pay-total]")).toHaveCount(0);
       await expect(sheet(page).locator("[data-pay-total-awaited]")).toHaveCount(1);
