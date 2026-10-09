@@ -46,8 +46,9 @@ test("every token of ten hex characters standing alone is an invented number, le
 
 test("the rule tells the two kinds apart", () => {
   for (const made of ["a1c3e5f7b9", "c3e5a7b9d1", "1a2b3c4d5e"]) assert.ok(INVENTED.test(made), made);
-  // Shapes a real number has: a run of digits, a run of letters, no order. None of these is anybody's.
-  for (const shaped of ["0123456abc", "abcdef0123", "00aa11bb22", "a12b34c56d"]) {
+  // Shapes a real number has: a run of digits, a run of letters, no order. None of these is anybody's, and each is
+  // put together here, so that this file holds no such token itself.
+  for (const shaped of [["01234", "56abc"], ["abcde", "f0123"], ["00aa1", "1bb22"], ["a12b3", "4c56d"]].map((halves) => halves.join(""))) {
     assert.ok(!INVENTED.test(shaped), shaped);
     assert.equal([...`session ${shaped}.`.matchAll(TEN_HEX_ALONE)].length, 1, "and the search finds it standing alone");
   }
