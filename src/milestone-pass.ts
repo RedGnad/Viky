@@ -122,13 +122,27 @@ function describe(outcome: MilestoneOutcome): string {
   }
 }
 
+/**
+ * A step that failed for another reason than the contract's own refusal: it still ends this gift's pass, and the
+ * report names the step it was, where it used to say "read" of an `expire` that did not leave (the final audit of
+ * 9 Oct 2026).
+ */
+class StepFailed extends Error {
+  constructor(
+    readonly step: "expire" | "refund",
+    readonly cause: unknown,
+  ) {
+    super(cause instanceof Error ? cause.message : String(cause));
+  }
+}
+
 async function attempt(giftId: string, step: "expire" | "refund", action: () => Promise<{ hash: string }>): Promise<MilestonePassLine> {
   try {
     const result = await action();
     return { giftId, step, result: "sent", hash: result.hash };
   } catch (error) {
     if (error instanceof RelayerError && error.code === "REVERTED") return { giftId, step, result: `refused: ${error.contractError ?? "unknown"}` };
-    throw error;
+    throw new StepFailed(step, error);
   }
 }
 
@@ -154,8 +168,9 @@ export async function milestonePass(settle: boolean, deps: MilestonePassDeps = l
     try {
       lines.push(...(await passOne(record, settle, deps, held, reminders)));
     } catch (error) {
-      // One gift that cannot be read today never stops the pass for the others, and the report says which.
-      lines.push({ giftId: record.giftId, step: "read", result: `failed: ${error instanceof Error ? error.message.slice(0, 200) : String(error)}` });
+      // One gift that cannot be read today never stops the pass for the others, and the report says which, and which
+      // step it was when it was sending money back.
+      lines.push({ giftId: record.giftId, step: error instanceof StepFailed ? error.step : "read", result: `failed: ${error instanceof Error ? error.message.slice(0, 200) : String(error)}` });
     }
   }
   if (reminders.length > 0 && deps.remind) {

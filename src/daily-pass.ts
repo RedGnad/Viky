@@ -16,6 +16,7 @@ import { countingSince, recordPass, type CountingLeft, type NewPass, type PassHo
 import { gatheringNotes } from "./pass-notes";
 import { escrowOf, relayerClients, relayerPreflight, RelayerError } from "./relayer";
 import { dailyAbiOf } from "./v2";
+import { sendAlert } from "./provider-alert";
 import { watchAtPassStart, type RelayerAtStart, type WatchLine } from "./watch";
 
 /**
@@ -41,7 +42,18 @@ import { watchAtPassStart, type RelayerAtStart, type WatchLine } from "./watch";
  * gift whose oldest open day closes at 06:00 that morning: its last chance, once.
  */
 
-export type DailyPassLine = { giftId: string; step: "create" | "count" | "drain" | "finalise" | "refund" | "read" | "expire" | "review" | "retire" | "erase"; result: string; hash?: string };
+export type DailyPassLine = {
+  giftId: string;
+  step: "create" | "count" | "drain" | "finalise" | "refund" | "read" | "expire" | "review" | "retire" | "erase";
+  result: string;
+  hash?: string;
+  /**
+   * A step this pass was to make and did not (the final audit of 9 Oct 2026): a refusal that is not the one an
+   * ordinary morning gives at that place, a failure, a creation that waits for an operator. Each is a line in the logs
+   * and one of the lines of the single email the pass sends when it ends (`undoneAlert`).
+   */
+  undone?: true;
+};
 
 /**
  * Refusals that say something broke on our side rather than something the person did. A reading refused for
@@ -158,6 +170,11 @@ export type DailyPassDeps = {
    */
   watch?: (relayer: RelayerAtStart, pass: PassPlanName) => Promise<readonly WatchLine[]>;
   /**
+   * Tells the operator what the pass left undone, in one email when it ends (src/provider-alert.ts). Absent in the
+   * tests of the other steps. It never stops the pass.
+   */
+  tell?: (alert: Readonly<{ subject: string; text: string }>) => Promise<unknown>;
+  /**
    * Erases what a gift on a connected source kept, once the gift is over (src/gift-end-erasure.ts): the access, the
    * account's name and id, the morning readings. It answers one line for the report, or nothing when nothing was left;
    * it never throws. Absent in the tests of the other steps.
@@ -190,6 +207,7 @@ function liveDeps(): DailyPassDeps {
     milestones: (settle) => milestonePass(settle),
     journal: recordPass,
     watch: (relayer, pass) => watchAtPassStart(relayer, pass),
+    tell: (alert) => sendAlert(alert),
     eraseAtEnd: (giftId) => erasureLine(giftId),
   };
 }
@@ -329,7 +347,8 @@ async function runPass(
   // fourteen-day return, can see it (D87).
   if (deps.completeCreations && !plan.only) {
     for (const line of await deps.completeCreations()) {
-      lines.push({ giftId: line.giftId ?? `creation ${line.nonce.slice(0, 10)}`, step: "create", result: line.result });
+      // A creation whose money moved and that nothing can finish by itself waits for somebody: it is told.
+      lines.push({ giftId: line.giftId ?? `creation ${line.nonce.slice(0, 10)}`, step: "create", result: line.result, ...(line.result.includes("needs an operator") ? { undone: true as const } : {}) });
     }
   }
 
@@ -396,7 +415,7 @@ async function runPass(
     } catch (error) {
       // A gift the chain could not be read for is one line of the report; the others are still settled.
       if (unread.has(giftId)) hold(giftId, null, escrow);
-      lines.push({ giftId, step: "read", result: `failed: ${failureCode(error)}` });
+      lines.push({ giftId, step: "read", result: `failed: ${failureCode(error)}`, undone: true });
       continue;
     }
     if (unread.has(giftId)) {
@@ -425,21 +444,27 @@ async function runPass(
       if (plan.refund && stillOwedToFunder(gift) > 0n) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow)));
       continue;
     }
-    lines.push(await attempt(giftId, "drain", () => deps.drain(giftId, escrow)));
-    const finalised = await attempt(giftId, "finalise", () => deps.finalise(giftId, escrow));
+    // What an ordinary morning answers here is not a step left undone: no missed day to drain, a gift that is not over,
+    // nothing freed to send back. Any other refusal is, as is every refusal of a refund asked for a gift read as owed.
+    lines.push(await attempt(giftId, "drain", () => deps.drain(giftId, escrow), "NothingToDrain"));
+    const finalised = await attempt(giftId, "finalise", () => deps.finalise(giftId, escrow), "FinalisationTooEarly");
     lines.push(finalised);
-    if (plan.refund) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow)));
+    if (plan.refund) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow), "NothingToRefund"));
     // The gift this pass has just closed is erased by this pass, not by tomorrow's.
     if (plan.refund && finalised.result === "sent") await eraseIfConnected(deps, record, lines);
   }
   // The second reading of held gifts is about those gifts alone: the milestones and the exits have their own passes.
-  if (plan.only) return { relayer: address, balanceWei: balance.toString(), lines, watch };
+  if (plan.only) {
+    await tellWhatWasLeft(deps, plan.name, lines, clock());
+    return { relayer: address, balanceWei: balance.toString(), lines, watch };
+  }
   if (deps.milestones) {
     try {
-      lines.push(...(await deps.milestones(plan.refund)));
+      // On the milestone contract nothing is asked that is not owed: an `expire` or a refund refused or failed is undone.
+      for (const line of await deps.milestones(plan.refund)) lines.push((line.step === "expire" || line.step === "refund") && /^(refused|failed):/.test(line.result) ? { ...line, undone: true } : line);
     } catch (error) {
       if (stopsEveryRelay(error)) throw error;
-      lines.push({ giftId: "milestones", step: "drain", result: `failed: ${failureCode(error)}` });
+      lines.push({ giftId: "milestones", step: "drain", result: `failed: ${failureCode(error)}`, undone: true });
     }
   }
   // Terms nobody can use any more say so, on the pass that settles. Nothing here moves money: the contract already
@@ -448,7 +473,54 @@ async function runPass(
     const retired = await deps.retireExits();
     if (retired > 0) lines.push({ giftId: "exits", step: "retire", result: `${retired} set(s) of terms past their deadline` });
   }
+  await tellWhatWasLeft(deps, plan.name, lines, clock());
   return { relayer: address, balanceWei: balance.toString(), lines, watch };
+}
+
+/**
+ * The one email a pass sends about what it left undone, or nothing on an ordinary morning (the final audit of 9 Oct
+ * 2026). A step the contract refused or that failed used to be a line of the task's answer and nothing else: no log,
+ * no row, no email, so money a pass could not send back stayed where it was with nobody told. Nothing is lost by it,
+ * since anybody can call the contract; somebody has to know that it is to be done.
+ */
+export function undoneAlert(pass: PassPlanName, lines: readonly DailyPassLine[], atSeconds: number): Readonly<{ subject: string; text: string }> | null {
+  const undone = lines.filter((line) => line.undone);
+  if (undone.length === 0) return null;
+  return {
+    subject: `The ${pass} pass left ${undone.length} ${undone.length === 1 ? "step" : "steps"} undone`,
+    text: [
+      `The ${pass} pass of ${new Date(atSeconds * 1_000).toISOString()} left ${undone.length === 1 ? "this step" : "these steps"} undone:`,
+      ...undone.map((line) => `- gift ${line.giftId}, ${line.step}: ${line.result}`),
+      "The next pass tries each again. One that comes back the same way needs reading: the function can be called on the contract by anybody.",
+    ].join("\n"),
+  };
+}
+
+/** Says it in the logs, a line each, and to the operator, once. Whatever happens to the email, the pass ends as it did. */
+async function tellWhatWasLeft(deps: DailyPassDeps, pass: PassPlanName, lines: readonly DailyPassLine[], atSeconds: number): Promise<void> {
+  const alert = undoneAlert(pass, lines, atSeconds);
+  if (!alert) return;
+  for (const line of lines) if (line.undone) console.error(`${pass} pass, undone: gift ${line.giftId}, ${line.step}: ${line.result}`);
+  if (!deps.tell) return;
+  try {
+    await deps.tell(alert);
+  } catch (error) {
+    console.error(`the ${pass} pass could not say what it left undone: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * A pass that stopped, said by the route that ran it: a line in the logs and one email. It used to be an answer of
+ * status 500 that only the scheduler read. Never throws.
+ */
+export async function passStopped(pass: PassPlanName, error: unknown, tell: (alert: Readonly<{ subject: string; text: string }>) => Promise<unknown> = sendAlert): Promise<void> {
+  const reason = (error instanceof Error ? error.message : String(error)).slice(0, 600);
+  console.error(`the ${pass} pass stopped: ${reason}`);
+  try {
+    await tell({ subject: `The ${pass} pass stopped`, text: `The ${pass} pass of ${new Date().toISOString()} stopped before its end: ${reason}\nWhat it did before that stands. The next pass starts again from the gifts as they are.` });
+  } catch (failure) {
+    console.error(`the ${pass} pass could not say that it stopped: ${failure instanceof Error ? failure.message : String(failure)}`);
+  }
 }
 
 /**
@@ -529,13 +601,14 @@ function stopsEveryRelay(error: unknown): boolean {
  * audit of 27 Sep 2026: one timeout used to end the pass, milestones and exits included). Only a failure every later
  * relay would meet stops it.
  */
-async function attempt(giftId: string, step: "drain" | "finalise" | "refund", action: () => Promise<{ hash: string }>): Promise<DailyPassLine> {
+async function attempt(giftId: string, step: "drain" | "finalise" | "refund", action: () => Promise<{ hash: string }>, expected?: string): Promise<DailyPassLine> {
   try {
     const result = await action();
     return { giftId, step, result: "sent", hash: result.hash };
   } catch (error) {
-    if (error instanceof RelayerError && error.code === "REVERTED") return { giftId, step, result: `refused: ${error.contractError ?? "unknown"}` };
+    // `expected` is the refusal an ordinary morning gives at this place; with none named, every refusal is a step undone.
+    if (error instanceof RelayerError && error.code === "REVERTED") return { giftId, step, result: `refused: ${error.contractError ?? "unknown"}`, ...(error.contractError === expected && expected !== undefined ? {} : { undone: true as const }) };
     if (stopsEveryRelay(error)) throw error;
-    return { giftId, step, result: `failed: ${failureCode(error)}` };
+    return { giftId, step, result: `failed: ${failureCode(error)}`, undone: true };
   }
 }
