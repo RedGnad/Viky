@@ -2,6 +2,7 @@
 // contract's balance, the goals signed on 26 Sep 2026, and when the founder's key took the contracts.
 
 import assert from "node:assert/strict";
+import { RACE_RESULT_RACES } from "../src/race-result-races";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { followsThirdDailyContract } from "../src/envio-index";
@@ -258,3 +259,32 @@ test("three sentences the audit of 9 Oct 2026 found late: two equal delays, the 
   assert.ok(page.includes("<span data-judge-code-until>The code works until {lastDayOfTheCode()}, UTC.</span>"));
   assert.ok(page.includes("return new Date(JUDGE_CREDIT_ENDS - 1).toLocaleDateString("));
 });
+
+test("the sentences the audit of 9 Oct 2026 asked to redo from the code: a provider never written to, a climb's reading, the races, the rhythm", () => {
+  const register = read("src/condition-proof.ts");
+  // Nothing is written to a provider (the founder): the page promised to ask Bitrefill, and said two questions "had
+  // not been answered" that were never asked.
+  assert.ok(page.includes("Personal API for the pilot, the risk assumed and written here. The pilot&apos;s limits"));
+  assert.doesNotMatch(page, /is to ask Bitrefill|Business API when the time comes/);
+  assert.equal((register.match(/and that question has not been asked\./g) ?? []).length, 2);
+  assert.doesNotMatch(register, /has not been answered/);
+  // A climb has no button for its reading: it is read as its page opens, which the gift's page says of itself.
+  assert.ok(page.includes("once it is reached open the gift&apos;s page: a climb is read as its page opens, and has no button for it."));
+  assert.doesNotMatch(page, /ask for the reading from the gift/);
+  const gift = read("app/components/GiftPage.tsx");
+  assert.ok(gift.includes("A milestone is read as its page opens, so it has no button for it"));
+  assert.ok(gift.includes("{(mine || readerIsFunder) && !milestone && !gift.finished && gift.connected"), "Count now is a habit's button, never a climb's");
+  // The races are the register's own count, and no town is named, on the page or in the register it prints.
+  assert.ok(page.includes("({RACE_RESULT_KEPT.races} races in {RACE_RESULT_KEPT.countries} countries)"));
+  assert.ok(page.includes("const RACE_RESULT_KEPT = { races: RACE_RESULT_RACES.length, countries: new Set(RACE_RESULT_RACES.map((race) => race.country)).size } as const;"));
+  assert.deepEqual([RACE_RESULT_RACES.length, new Set(RACE_RESULT_RACES.map((race) => race.country)).size], [35, 11]);
+  assert.doesNotMatch(page + register, /2,126 coming|Lusaka|Francistown|Marathon de Dakar/);
+  // The rhythm of readings since the third daily contract, in the register as in the page's own steps.
+  assert.ok(register.includes('inShort: "Read from Duolingo the day the lesson is done.'));
+  assert.ok(register.includes("read through an attested fetch the day the lesson is done: when the gift's page is opened after the lesson, or within a quarter of an hour."));
+  assert.ok(page.includes("when the gift's page is opened after the lesson, or within a quarter of an hour"), "the page's own step says the same");
+  assert.ok(register.includes("read through an attested fetch when the climb starts and when its target is reached, and checked the same way as Duolingo."));
+  assert.ok(register.includes("when the person binds the account, when the climb starts and when its target is reached"));
+  assert.doesNotMatch(register, /Read each morning from Duolingo|read once a morning|read every day through an attested fetch|at every daily reading/);
+});
+
