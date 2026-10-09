@@ -15,6 +15,7 @@ export const JUDGES_CONTENTS: ReadonlyArray<Readonly<{ id: string; says: string 
   { id: "agora", says: "AUSD, Agora's dollar" },
   { id: "mera", says: "Mera: the path, and two keys" },
   { id: "money-in", says: "How money comes in" },
+  { id: "money-out", says: "How money goes out" },
   { id: "reading", says: "How a day is read" },
   { id: "risks", says: "Risks and holes" },
   { id: "milestone", says: "A milestone: a Chess.com rating" },

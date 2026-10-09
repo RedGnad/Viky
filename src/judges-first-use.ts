@@ -1,4 +1,4 @@
-import type { SentConversion } from "./exit-store";
+import type { SentConversion, SentExchange } from "./exit-store";
 import { formatAusd } from "./gift-reader";
 import { localInWords, operatorInWords } from "./mobile-money";
 import type { ArrivedPayout } from "./mobile-money-store";
@@ -10,10 +10,14 @@ import type { ArrivedPayout } from "./mobile-money-store";
  */
 export type FirstUse = Readonly<{ words: string; transactions: ReadonlyArray<Readonly<{ label: string; hash: string }>> }>;
 
-/** A moment as this page writes it: "3 Oct 2026, 14:05 UTC". */
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+
+/**
+ * A moment as this page writes it: "3 Oct 2026, 14:05 UTC". The months are written here, three letters each: the
+ * system's own short name for September is "Sept" in British English, and the rest of the product writes "16 Sep".
+ */
 export function momentInWords(at: Date): string {
-  const day = at.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
-  return `${day}, ${at.toISOString().slice(11, 16)} UTC`;
+  return `${at.getUTCDate()} ${MONTHS[at.getUTCMonth()]} ${at.getUTCFullYear()}, ${at.toISOString().slice(11, 16)} UTC`;
 }
 
 const times = (count: number) => (count === 1 ? "once" : `${count} times`);
@@ -31,6 +35,19 @@ export function mobileMoneyUse(on: boolean, read: Readonly<{ count: number; firs
     { label: "the exchange that made them", hash: first.exitTx },
   ];
   return { words, transactions };
+}
+
+/**
+ * A way out that needs no setting, the bank or the card: the first exchange the journal holds for it, the dollars
+ * changed and the least they were to give of the coin its payout service buys. What the service then pays is on its
+ * side: the journal holds the exchange, and the page says no more than that.
+ */
+export function exchangeUse(read: Readonly<{ count: number; first: SentExchange | null }> | null, atLeast: (minOut: bigint) => string): FirstUse {
+  if (read === null) return { words: "Open. The exchanges could not be read right now.", transactions: [] };
+  if (read.count === 0 || read.first === null) return { words: "Open. Nobody has used it yet.", transactions: [] };
+  const first = read.first;
+  const words = `Open. Used ${times(read.count)}. The first exchange was sent on ${momentInWords(first.at)}: ${formatAusd(first.amount)} changed, for at least ${atLeast(first.minOut)}.`;
+  return { words, transactions: first.txHash ? [{ label: "the exchange", hash: first.txHash }] : [] };
 }
 
 /** Rampnow's way in: the first USDC the converter changed into what a gift holds, and the least it was to give. */

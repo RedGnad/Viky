@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import { formatAusd } from "../src/gift-reader";
 import test from "node:test";
-import { conversionUse, mobileMoneyUse, momentInWords } from "../src/judges-first-use";
+import { conversionUse, exchangeUse, mobileMoneyUse, momentInWords } from "../src/judges-first-use";
 import { countryInWords } from "../src/university-shown";
 
 // What the judges page says of mobile money and of Rampnow (the founder, 3 Oct 2026): switched off, open and unused,
@@ -12,6 +13,8 @@ const at = new Date("2026-10-03T14:05:41.000Z");
 
 test("a moment is written the way the rest of the page writes it, in UTC", () => {
   assert.equal(momentInWords(at), "3 Oct 2026, 14:05 UTC");
+  // September in three letters, as everywhere else in the product: the system's British short name is "Sept".
+  assert.equal(momentInWords(new Date("2026-09-16T15:40:57Z")), "16 Sep 2026, 15:40 UTC");
 });
 
 test("mobile money: switched off, unread, open and unused, then its first payout", () => {
@@ -38,4 +41,16 @@ test("Rampnow: switched off, unread, open and unused, then its first conversion"
   const first = conversionUse(true, { count: 1, first: { at, amount: 14_935_075n, minOut: 14_785_724n, txHash: EXIT } });
   assert.equal(first.words, "Open. Used once. The first conversion was sent on 3 Oct 2026, 14:05 UTC: $14.93 of USDC, for at least $14.78 of AUSD.");
   assert.deepEqual(first.transactions, [{ label: "the conversion", hash: EXIT }]);
+});
+
+test("the bank and the card, which need no setting: unread, open and unused, then the first exchange the journal holds", () => {
+  const ofUsdc = (minOut: bigint) => `${formatAusd(minOut)} of USDC`;
+  assert.equal(exchangeUse(null, ofUsdc).words, "Open. The exchanges could not be read right now.");
+  assert.deepEqual(exchangeUse({ count: 0, first: null }, ofUsdc), { words: "Open. Nobody has used it yet.", transactions: [] });
+  // What production's journal held on 9 Oct 2026: one exchange into USDC, of 16 Sep, and none into the chain's coin.
+  const first = exchangeUse({ count: 1, first: { at: new Date("2026-09-16T15:40:57Z"), amount: 10_000_000n, minOut: 9_995_586n, txHash: EXIT } }, ofUsdc);
+  assert.equal(first.words, "Open. Used once. The first exchange was sent on 16 Sep 2026, 15:40 UTC: $10.00 changed, for at least $9.99 of USDC.");
+  assert.deepEqual(first.transactions, [{ label: "the exchange", hash: EXIT }]);
+  // A first exchange with no hash kept is said without a link, never with an invented one.
+  assert.deepEqual(exchangeUse({ count: 2, first: { at: new Date("2026-09-16T15:40:57Z"), amount: 10_000_000n, minOut: 9_995_586n, txHash: null } }, ofUsdc).transactions, []);
 });

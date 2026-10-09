@@ -1,16 +1,17 @@
 import { BEFORE_THE_JOURNAL, cycleInWords, cycleUse, dailyCeilings, JUDGING, leftOf, limitsOf, LOST_ON_30_SEP_2026, RECLAIM_ALERT_LEFT, RECLAIM_ALLOWANCE, SEPTEMBER_2026, startsAgainInWords, utcDayInWords, type CycleUse } from "@/src/attested-calls";
+import { formatEther } from "viem";
 import { RACE_RESULT_RACES } from "@/src/race-result-races";
 import { LIMIT } from "@/src/sentences";
 import { PROOF_EVERY_SECONDS } from "@/src/milestone-reading";
 import { formatAusd } from "@/src/gift-reader";
 import { JUDGE_CREDIT_ENDS, judgeCreditConfig, judgeCreditsStanding, standingInWords } from "@/src/judge-credit";
-import { rampHostApiKey, rampnowWayIn, waysIn } from "@/src/rails";
+import { rampHostApiKey, rampnowWayIn, WAY_OUT_CARD, WAY_OUT_EURO, waysIn } from "@/src/rails";
 import { rampnowFrameOn } from "@/src/rampnow-frame";
 import { usdcRouterAddress } from "@/src/usdc-router";
 import { USDC_ROUTER } from "@/src/viky-contracts";
-import { conversionsSent } from "@/src/exit-store";
+import { conversionsSent, exchangesSentInto } from "@/src/exit-store";
 import { payoutsArrived } from "@/src/mobile-money-store";
-import { conversionUse, mobileMoneyUse, type FirstUse } from "@/src/judges-first-use";
+import { conversionUse, exchangeUse, mobileMoneyUse, type FirstUse } from "@/src/judges-first-use";
 import type { Metadata } from "next";
 import { MarkNotice } from "../kit/MarkNotice";
 import { Shell } from "../kit/Shell";
@@ -116,6 +117,10 @@ export default async function JudgesPage() {
   const converter = usdcRouterAddress();
   const rampnowOn = rampnowWayIn();
   const conversion = conversionUse(rampnowOn, rampnowOn ? await conversionsSent() : null);
+  // The two ways out that need no setting, by the exchanges the journal holds for each (the audit of 9 Oct 2026): the
+  // dollars changed into what its payout service buys, USDC for the bank, the chain's coin for the card.
+  const bankUse = exchangeUse(await exchangesSentInto(WAY_OUT_EURO.coin), (minOut) => `${formatAusd(minOut)} of USDC`);
+  const cardUse = exchangeUse(await exchangesSentInto(WAY_OUT_CARD.coin), (minOut) => `${formatEther(minOut)} MON`);
   // What the second version changes for our own key is said only once its contracts are set (src/v2.ts): until then no
   // gift is on them, and this page says nothing it cannot show.
   const escrowV2 = giftEscrowV2Address();
@@ -473,6 +478,32 @@ export default async function JudgesPage() {
             {rampnowWay}
           </>
         )}
+      </Fold>
+
+      {/* How money goes out (the audit of 9 Oct 2026): one line a way, with what opens it and where it stands, as the
+          ways in have theirs. The bank and the card need no setting: each is offered where its service pays the
+          person's country, and its state is what the journal of exchanges holds. */}
+      <Fold id="money-out" title="How money goes out">
+        <ul className={`${HELP} list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)]`} data-ways-out>
+          <li>
+            <strong>{WAY_OUT_EURO.title}</strong>, through {WAY_OUT_EURO.name}. No setting: it is offered wherever {WAY_OUT_EURO.name} pays a
+            bank account in the person&apos;s country. The account&apos;s dollars are changed for {WAY_OUT_EURO.sells} on one signature,
+            and {WAY_OUT_EURO.name} buys them. <UseLine use={bankUse} name="bank" />
+          </li>
+          <li>
+            <strong>{WAY_OUT_CARD.title}</strong>, through {WAY_OUT_CARD.name}. No setting: it is offered wherever {WAY_OUT_CARD.name} pays
+            onto a card in the person&apos;s country. The account&apos;s dollars are changed for {WAY_OUT_CARD.sells} on one signature,
+            and {WAY_OUT_CARD.name} buys them. <UseLine use={cardUse} name="card" />
+          </li>
+          <li>
+            <strong>Mobile money</strong>, through Switch Labs. One setting, <code>MOBILE_MONEY_OUT</code>, opens and closes it.{" "}
+            <UseLine use={mobileUse} name="mobile-money-out" />
+          </li>
+          <li>
+            <strong>A phone top-up or a gift card</strong>, through Bitrefill: what it is, its limits and how often each
+            was delivered are under &quot;Risks and holes&quot;, below.
+          </li>
+        </ul>
       </Fold>
 
       <Fold id="reading" title="How a day is read">
