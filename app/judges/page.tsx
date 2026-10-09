@@ -4,7 +4,7 @@ import { RACE_RESULT_RACES } from "@/src/race-result-races";
 import { LIMIT } from "@/src/sentences";
 import { PROOF_EVERY_SECONDS } from "@/src/milestone-reading";
 import { formatAusd } from "@/src/gift-reader";
-import { JUDGE_CREDIT_ENDS, judgeCreditConfig, judgeCreditsStanding, standingInWords } from "@/src/judge-credit";
+import { creditedAccountsOf, JUDGE_CREDIT_ENDS, judgeCreditConfig, judgeCreditsStanding, loadJudgeCredits, standingInWords } from "@/src/judge-credit";
 import { rampHostApiKey, rampnowWayIn, WAY_OUT_CARD, WAY_OUT_EURO, waysIn } from "@/src/rails";
 import { rampnowFrameOn } from "@/src/rampnow-frame";
 import { rampnowQuotesOn } from "@/src/rampnow-quote";
@@ -148,6 +148,10 @@ export default async function JudgesPage() {
   const judgeCredit = judgeCreditConfig();
   // How many were given and how many the ceiling still allows, counted from the journal at each reading of the page.
   const judgeStanding = judgeCredit ? await judgeCreditsStanding(judgeCredit).catch(() => null) : null;
+  // Whom the judge code credited, read once from the journal for the two blocks that count who used Viky: a gift such
+  // an account paid for is counted apart. Nobody where no credit is set; and when the journal cannot be read nothing
+  // says who was credited, so neither block shows a count.
+  const credited = judgeCredit ? await loadJudgeCredits().then(creditedAccountsOf).catch(() => null) : new Set<string>();
   // How money comes in, a block for each service, drawn in the order the pay sheet tries them (src/rails.ts, `waysIn`).
   const rampWay = (
     <>
@@ -214,6 +218,7 @@ export default async function JudgesPage() {
       {/* For a judge in a hurry (the audit of 1 Oct 2026, D-11): the page in one minute, then its contents. */}
       <JudgesMinute
         index={index}
+        credited={credited}
         // The universities beyond the ones a student can show from today: listed, less those whose rule is pinned and
         // those ready on Reclaim's own check.
         moreUniversities={portals && witnessLines ? Math.max(0, portals.listed - new Set([...witnessLines.filter((line) => line.pin).map((line) => line.portalId), ...readyOnReclaim.map((one) => one.portalId)]).size) : null}
@@ -332,7 +337,7 @@ export default async function JudgesPage() {
         </ol>
       </Fold>
 
-      <JudgesWhoUsed index={index} />
+      <JudgesWhoUsed index={index} credited={credited} />
 
       <Fold id="network" title="Network">
         {/* On a phone each label sits above its value: two columns there left a value 198 pixels, and breaking
