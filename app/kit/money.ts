@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Hex } from "viem";
 import { postJson } from "@/src/client/api";
 import { readCoinBalance } from "@/src/client/onchain";
@@ -7,6 +7,7 @@ import { AUSD, coinAt, COINS, isNative, MON, USDC } from "@/src/coins";
 import { dollarsToTheCent, readyFor, toTheCent, type Ready } from "@/src/exit-steps";
 import { chainCoinToChange } from "@/src/funding-step";
 import { WAYS_OUT, type WayOut } from "@/src/rails";
+import { forgetOnThisScreen, useSeen, writeSeen } from "./seen";
 
 /**
  * What the account holds, of all three coins. The way out is offered as soon as any of them is above what an account
@@ -159,33 +160,36 @@ export function holdsAnything(holdings: Holdings, gifts?: ReadonlyArray<Readonly
 }
 
 /**
- * Whether this device saw money on this account last time it looked, and it remembers what it sees now (D147).
+ * Whether this device saw something to take out on this account last time it looked, and it remembers what it sees
+ * now (D147).
  *
- * It decides one thing only: whether Home holds the room the way out will take while the balance is still being
- * read, so the card under it does not jump when the answer lands. A device that has never seen money here holds
- * nothing, and an account with nothing to take never keeps a hole where a button is not. It is kept for the device
- * rather than per account, because the page has to know before it knows whose it is.
+ * It decides one thing only: whether Home draws the way out while the balance is still being read, so nothing under
+ * it moves when the answer lands. A device that has never seen money here holds nothing, and an account with nothing
+ * to take never keeps a hole where a button is not. It is kept for the device rather than per account.
+ *
+ * Kept with what else this device last saw (app/kit/seen.tsx, the founder, 9 Oct 2026): the server reads it while it
+ * draws the page, so the place is held in the first image. In the device's own store it was read once the browser
+ * ran, a moment after that image. What is written is what the screen offered: the account's own money or what its
+ * gifts hold for it, once both have been read.
  */
-const SAW_MONEY = "viky.seen.holds";
-const neverChanges = () => () => {};
-const sawMoneyHere = () => {
-  try {
-    return window.localStorage.getItem(SAW_MONEY) === "1";
-  } catch {
-    return false;
-  }
-};
-const nothingRemembered = () => false;
+export const SAW_MONEY = "viky.seen.holds";
 
-export function useSawMoney(holdings: Holdings | null): boolean {
-  const saw = useSyncExternalStore(neverChanges, sawMoneyHere, nothingRemembered);
+/**
+ * Whether the way out is drawn, on Home and on Me (the founder, 9 Oct 2026). Once the account and its gifts are read,
+ * when there is something to take; until then, when what has been read already says so, or when this device saw money
+ * here last time.
+ */
+export function useSomethingToTake(holdings: Holdings | null, gifts: ReadonlyArray<Readonly<{ takeable?: string }>> | null, giftsRead: boolean, screen: "home" | "me"): boolean {
+  const sawMoney = useSawMoney(holdings, gifts, giftsRead, screen);
+  return holdings !== null && giftsRead ? holdsAnything(holdings, gifts) : (holdings !== null && holdsAnything(holdings)) || sawMoney;
+}
+
+export function useSawMoney(holdings: Holdings | null, gifts: ReadonlyArray<Readonly<{ takeable?: string }>> | null, giftsRead: boolean, screen: "home" | "me"): boolean {
+  const saw = useSeen(SAW_MONEY, screen) === 1;
   useEffect(() => {
-    if (holdings === null) return;
-    try {
-      window.localStorage.setItem(SAW_MONEY, holdsAnything(holdings) ? "1" : "0");
-    } catch {
-      // A device that keeps nothing holds no room, which is the same as a first visit.
-    }
-  }, [holdings]);
+    if (holdings === null || !giftsRead) return;
+    writeSeen(SAW_MONEY, holdsAnything(holdings, gifts) ? 1 : 0);
+    return () => forgetOnThisScreen(SAW_MONEY, screen);
+  }, [holdings, gifts, giftsRead, screen]);
   return saw;
 }

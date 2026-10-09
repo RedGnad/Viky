@@ -27,16 +27,23 @@ function keptFrom(initial: Seen): Map<string, number> {
 
 const neverChanges = () => () => {};
 
-function snapshot(key: string, initial: Seen): number | undefined {
-  const name = seenKey(key);
-  if (!onThisScreen.has(name)) onThisScreen.set(name, keptFrom(initial).get(name));
-  return onThisScreen.get(name);
+/**
+ * Where a screen keeps its own frozen reading of a key. Two screens may read one key, Home and Me the account's
+ * figure: named, each freezes its own, so the one that arrives reads what the one that leaves wrote, and never the
+ * value that one had frozen when it arrived itself (measured 9 Oct 2026: Me showed Home's old figure for an image).
+ */
+const slotOf = (key: string, screen: string) => `${screen}|${seenKey(key)}`;
+
+function snapshot(key: string, initial: Seen, screen = ""): number | undefined {
+  const slot = slotOf(key, screen);
+  if (!onThisScreen.has(slot)) onThisScreen.set(slot, keptFrom(initial).get(seenKey(key)));
+  return onThisScreen.get(slot);
 }
 
 /** What this device last saw under this key, the same on the server and in the browser's first render. */
-export function useSeen(key: string): number | undefined {
+export function useSeen(key: string, screen = ""): number | undefined {
   const initial = useContext(SeenContext);
-  return useSyncExternalStore(neverChanges, () => snapshot(key, initial), () => initial[seenKey(key)]);
+  return useSyncExternalStore(neverChanges, () => snapshot(key, initial, screen), () => initial[seenKey(key)]);
 }
 
 /** Written for the next screen, silently: telling this one would move a number mid-count. */
@@ -53,8 +60,8 @@ export function writeSeen(key: string, value: number): void {
 }
 
 /** The screen that read this key is going: the next one reads what was written since. */
-export function forgetOnThisScreen(key: string): void {
-  onThisScreen.delete(seenKey(key));
+export function forgetOnThisScreen(key: string, screen = ""): void {
+  onThisScreen.delete(slotOf(key, screen));
 }
 
 const many = new Map<string, readonly (number | undefined)[]>();

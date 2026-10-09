@@ -121,6 +121,9 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
     .replace(/\.page-enters \.arrives-in-turn[^{]*\{[\s\S]*?\n\s*\}/g, "")
     .replace(/@keyframes page-enter \{[\s\S]*?\n\}/, "")
     .replace(/@keyframes page-fade \{[\s\S]*?\n\}/, "")
+    // Part of that same arrival (the founder, 9 Oct 2026): what a reading brings once the screen has arrived comes up in
+    // the place held for it, a fade of 180 ms, once, and never the entrance again (app/kit/Place.tsx).
+    .replace(/@keyframes come-up \{[\s\S]*?\n\}/, "")
     // The fourth exception, and it answers the first gesture of all, opening the installed app: once per device, on
     // the launch screen's own image, never against reduced motion (src/launch-intro.ts, the founder, 28 Sep 2026).
     .replace(/\.launch-intro-figure \{[\s\S]*?\n\}/, "")

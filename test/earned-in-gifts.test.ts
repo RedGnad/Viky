@@ -57,7 +57,9 @@ test("the way out reads the gifts' part with the balances, counts it, and takes 
   assert.match(out, /await takeFromGifts\(account, inGifts\);/);
   assert.match(client, /await withdrawEarned\(\{ account, giftId: gift\.giftId, escrow: gift\.escrow, amount: BigInt\(gift\.earned\), nonce: BigInt\(gift\.nonce\) \}\)/, "the whole of each gift's part, at the nonce the contract expects");
   assert.ok(!out.includes("earned-in-gifts"), "the browser never imports the server's reader");
-  assert.match(readFileSync("app/kit/Home.tsx", "utf8"), /holdsAnything\(holdings, gifts\)/);
+  // Home and Me ask one place whether the way out is drawn, and it counts the gifts' part once they are read.
+  assert.match(readFileSync("app/kit/Home.tsx", "utf8"), /useSomethingToTake\(holdings, gifts, giftsRead, "home"\)/);
+  assert.match(readFileSync("app/kit/money.ts", "utf8"), /return holdings !== null && giftsRead \? holdsAnything\(holdings, gifts\) :/);
   assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /takeableFromHome: earned > 0n,/, "the line is said of a gift that holds something, a habit's as a milestone's");
   assert.match(readFileSync("src/my-gifts.ts", "utf8"), /takeable: role === "recipient" \? gift\.earnedBalance\.toString\(\) : "0",/);
   const route = readFileSync("app/api/gifts/earned/route.ts", "utf8");

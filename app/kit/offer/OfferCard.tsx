@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useAccount } from "@/src/account/provider";
 import { useMoneyStart } from "@/src/client/money-start";
 import { useDisplayCurrency } from "@/src/client/display-currency";
@@ -11,6 +11,7 @@ import { figureWithMark, typedFromUnits, unitsFromTyped } from "@/src/amount-in-
 import { figureIn } from "@/src/currencies";
 import { startingFigure } from "@/src/starting-amount";
 import { dollarsHeld, type Holdings } from "../money";
+import { forgetOnThisScreen, useSeen, writeSeen } from "../seen";
 import { AmountError } from "@/src/money";
 import { useReserves } from "@/src/client/reserves";
 import { emptyReserveOf } from "@/src/reserves";
@@ -41,6 +42,8 @@ import { WillSheet } from "./WillSheet";
  *    and the passkey is still the only door: nothing is taken without it.
  */
 const GIFT_ID = "offer";
+/** The account's own dollars the card last started on, on this device, in the coin's units (app/kit/seen.tsx). */
+export const STARTED_ON = "viky.seen.home.offer";
 
 export function OfferCard({
   holdings,
@@ -70,7 +73,19 @@ export function OfferCard({
    * what is shown is what is sent, and it reaches the device the first time anything on the card is changed.
    */
   const untouched = kept.typedAmount === undefined;
-  const starting = untouched ? startingFigure(money.currency, money.rates, holdings ? dollarsHeld(holdings) : undefined) : undefined;
+  /**
+   * While the account is read, the card starts on what it started on last time on this device (the founder, 9 Oct
+   * 2026): it showed thirty, then the account's own money a second later, the last thing to change as Home arrived.
+   * A device that remembers nothing starts on thirty, as before, and the page without an account always does.
+   */
+  const startedOn = useSeen(STARTED_ON);
+  const held = holdings ? dollarsHeld(holdings) : holdings === null && startedOn !== undefined ? BigInt(Math.round(startedOn)) : undefined;
+  const starting = untouched ? startingFigure(money.currency, money.rates, held) : undefined;
+  useEffect(() => {
+    if (!holdings) return;
+    writeSeen(STARTED_ON, Number(dollarsHeld(holdings)));
+    return () => forgetOnThisScreen(STARTED_ON);
+  }, [holdings]);
   const draft = starting ? { ...kept, dollars: starting.dollars } : kept;
   const change = (next: GiftDraft) => writeCardDraft(next, address);
   /**

@@ -19,7 +19,10 @@ import { FoldChevron } from "./GiftLive";
 import { InstallAct } from "./Install";
 import { MoneyKey } from "./MoneyKey";
 import { Act, RoundControls } from "./RoundControls";
-import { holdsAnything, useHoldings, useMoneyHeld } from "./money";
+import { useHoldings, useMoneyHeld, useSomethingToTake } from "./money";
+import { useFigureWhileRead } from "./MoneyHero";
+import { amountText } from "./Motion";
+import { Place, PlacesOf } from "./Place";
 import { useMyGifts } from "./my-gifts";
 import { KeyKeptLine } from "./KeyKept";
 import { SignInDoor } from "./SignInDoor";
@@ -63,7 +66,15 @@ export function Me() {
   const { gifts, problem: giftsUnread } = useMyGifts(address);
   /** Home's own figure (app/kit/money.ts): everything that is the person's and that they can take out now. */
   const held = useMoneyHeld(holdings, gifts, giftsUnread !== null);
-  const figure = held === undefined ? undefined : money.figure(held);
+  /**
+   * The same pieces as Home (the founder, 9 Oct 2026, app/kit/Place.tsx): while it is read, the figure is the last
+   * one this device saw, and the way out is drawn at once where this device saw money here last time.
+   */
+  const yours = useFigureWhileRead(address, money, held, "me");
+  const said = yours.value === undefined ? undefined : (yours.figure?.text ?? amountText(yours.value, yours.written));
+  /** What the first image said: a figure that differs from it comes up in place. */
+  const [saidFirst] = useState(said);
+  const toTake = useSomethingToTake(holdings, gifts, gifts !== null || giftsUnread !== null, "me");
   const [reading, setReading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [until, setUntil] = useState<string | null>(null);
@@ -114,14 +125,29 @@ export function Me() {
   }
 
   return (
+    <PlacesOf>
     <Shell kind="destination" active="me" title={W.title} character={<HeadCharacter scene="me" />}>
       {/* The money at the top, with the same action as under Home's balance (the founder, 29 Sep 2026; Venmo's Me tab
           sets its wallet and "Transfer" there). The figure is Home's, in the account's own currency (D147). */}
       <section className={CARD}>
         <p className={CARD_LABEL}>{H.yours}</p>
         <div className="flex flex-wrap items-center justify-between gap-[var(--space-md)]">
-          <p className={`${AMOUNT_IN_TITLE} text-[length:var(--type-card-amount)] leading-[1] tracking-[-0.02em]`}>{figure ? figure.text : "…"}</p>
-          {holdings !== null && holdsAnything(holdings, gifts) ? <SpendOrWithdraw /> : null}
+          <p
+            {...(said === undefined ? {} : { "data-amount": "" })}
+            {...(yours.pale ? { "data-pale": "" } : {})}
+            className={`${AMOUNT_IN_TITLE} ink-while-read text-[length:var(--type-card-amount)] leading-[1] tracking-[-0.02em]${yours.pale ? " text-[var(--on-surface-faint)]" : ""}`}
+          >
+            {said === undefined ? (
+              "…"
+            ) : (
+              <span key={said} className={said === saidFirst ? undefined : "comes-up"}>
+                {said}
+              </span>
+            )}
+          </p>
+          <Place open={toTake}>
+            <SpendOrWithdraw />
+          </Place>
         </div>
       </section>
 
@@ -161,7 +187,10 @@ export function Me() {
       </section>
 
       {/* What Viky reads, and the stop, for every gift this account is the person of (the founder, 29 Sep 2026). */}
-      <WhatVikyReads gifts={readForYou} zone={zone} />
+      {/* It comes with the list of gifts, after the first image: it opens its place by its height (app/kit/Place.tsx). */}
+      <Place open={readForYou.length > 0}>
+        <WhatVikyReads gifts={readForYou} zone={zone} />
+      </Place>
 
       <details className={`${CARD} me-code`}>
         <summary className="gift-fold-name font-medium">
@@ -226,6 +255,7 @@ export function Me() {
 
       <Links signedIn />
     </Shell>
+    </PlacesOf>
   );
 }
 

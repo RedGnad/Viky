@@ -492,9 +492,14 @@ export function ArrivalDay({ gift, index, children }: Readonly<{ gift: string; i
  * changed. A screen reader reads the value itself, never a number on the way, and a device that asks for reduced motion
  * is only ever shown the value itself.
  */
+/** An amount as a count writes it: what stands before the number, the number in its currency's decimals, what stands after. */
+export function amountText(value: number, { symbol, decimals = 2, after = "", thousands = "," }: Readonly<{ symbol: string; decimals?: number; after?: string; thousands?: string }>): string {
+  return `${symbol}${value.toLocaleString("en-GB", { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).replace(/,/g, thousands)}${after}`;
+}
+
 export function ArrivalAmount({ from, to, symbol, decimals = 2, after = "", thousands = "," }: Readonly<{ from: number; to: number; symbol: string; decimals?: number; after?: string; /** What parts the thousands: a comma, or the space a franc figure is written with. */ thousands?: string }>) {
   const plan = useContext(ArrivalContext);
-  const format = (value: number) => `${symbol}${value.toLocaleString("en-GB", { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).replace(/,/g, thousands)}${after}`;
+  const format = (value: number) => amountText(value, { symbol, decimals, after, thousands });
   // The first image shows where the count starts, not where it ends (the fix to #154); reduced motion reads `to`.
   const [shown, setShown] = useState(from);
   /**
@@ -603,7 +608,8 @@ export function useRevealOnScroll(main: RefObject<HTMLElement | null>): void {
     const root = main.current;
     if (!root) return;
     const blocks = [...root.querySelectorAll<HTMLElement>(":scope > *:not(header, dialog), :scope .arrives-in-turn > *")].filter(
-      (block) => !block.classList.contains("arrives-in-turn") && !block.querySelector("[data-reveal]") && !block.closest("[data-reveal]"),
+      // A place that holds a box whose blocks take their own turns is left to those blocks, as the box itself is.
+      (block) => !block.classList.contains("arrives-in-turn") && !block.hasAttribute("data-turns") && !block.querySelector("[data-reveal]") && !block.closest("[data-reveal]"),
     );
     return waitUnderTheScreen(blocks);
   }, [main]);
@@ -709,12 +715,12 @@ export function Expression({ children }: Readonly<{ children: ReactNode }>) {
  * read, the same in the browser's first render, frozen while the screen stands and written for the next one (D189).
  * A first visit has nothing seen and counts nothing.
  */
-export function useLastSeen(key: string, value: number | undefined): number | undefined {
-  const seen = useSeen(key);
+export function useLastSeen(key: string, value: number | undefined, screen = ""): number | undefined {
+  const seen = useSeen(key, screen);
   useEffect(() => {
     if (value === undefined) return;
     writeSeen(key, value);
-    return () => forgetOnThisScreen(key);
-  }, [key, value]);
+    return () => forgetOnThisScreen(key, screen);
+  }, [key, value, screen]);
   return seen;
 }

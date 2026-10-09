@@ -4,6 +4,7 @@ import { useOnAComputer } from "@/src/account/door";
 import { useKeyKept } from "@/src/account/provider";
 import { ACCOUNT_DOOR as W } from "@/src/sentences";
 import { BODY, CARD, HELP, SMALL_BUTTON } from "../components/ui";
+import { Place } from "./Place";
 
 /**
  * Where the account's key is kept, said on a computer once the browser has said it (the founder, 5 Oct 2026;
@@ -54,13 +55,16 @@ export function KeyKeptNotice() {
       // A browser that keeps nothing shows it again on its next visit.
     }
   };
+  // Read from the device once the browser runs, so it has no place in the first image: it opens its own (Place).
   return (
-    <section className={CARD} role="status" data-key-kept="here">
-      <p className={BODY}>{said.sentence}</p>
-      <button type="button" onClick={gotIt} className={`${SMALL_BUTTON} self-start`}>
-        {W.gotIt}
-      </button>
-    </section>
+    <Place>
+      <section className={CARD} role="status" data-key-kept="here">
+        <p className={BODY}>{said.sentence}</p>
+        <button type="button" onClick={gotIt} className={`${SMALL_BUTTON} self-start`}>
+          {W.gotIt}
+        </button>
+      </section>
+    </Place>
   );
 }
 
