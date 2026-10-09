@@ -3,6 +3,7 @@
 // server has said what became of the session. The network and the page are stood in for; the schedule is the real one.
 
 import assert from "node:assert/strict";
+import { SHOW_PROOF } from "../src/sentences";
 import { readFileSync } from "node:fs";
 import test, { afterEach, beforeEach, mock } from "node:test";
 import { ApiError } from "../src/client/api";
@@ -266,3 +267,14 @@ test("no page offers the link of a verification that is over", () => {
   // And a page whose proof is under review reads the gift again when it comes to the front.
   assert.match(source, /const underReview = yours && \(review === "pending" \|\| review === "building"\);/);
 });
+
+test("while the verification page is open, Viky says to stay on it, and it is that page that brings the person back", () => {
+  // The founder, 9 Oct 2026: Viky said to come back, the verification page says to keep it open, and on 8 Oct a
+  // student came back 69 seconds in, which closed the session.
+  assert.equal(SHOW_PROOF.waiting, "Sign in there and stay on that page. It brings you back here.");
+  assert.doesNotMatch(SHOW_PROOF.waiting, /Come back|Waiting for the proof/);
+  // It is true of the session Viky opens: Reclaim's page is told where to send the person once the proof is made.
+  assert.match(readFileSync("app/api/proof/session/route.ts", "utf8"), /proofRequest\.setRedirectUrl\(`\$\{accountAuthOriginFromRequest\(request\)\}\/g\/\$\{giftId\}`\);/);
+  assert.match(readFileSync("app/kit/ShowProof.tsx", "utf8"), /\{W\.waiting\}/);
+});
+

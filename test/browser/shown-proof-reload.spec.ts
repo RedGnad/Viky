@@ -25,7 +25,7 @@ import { agreement, gift, json, makeAnAccount, now, profile, shot as capture, si
 const SHOTS = process.env.VIKY_RELOAD_CAPTURES;
 const SIZES = sizesFor(SHOTS);
 const shot = (page: Page, size: string, name: string) => capture(SHOTS, page, size, name);
-const WAITING = "Waiting for the proof. Come back to this page when you are done there.";
+const WAITING = "Sign in there and stay on that page. It brings you back here.";
 const VERIFY_PAGE = "https://share.reclaimprotocol.org/verify/?template=reload";
 const HELD = "First proof from this university: checked within an hour.";
 /** Puts the page behind another, or back in front, as a browser tells a page of it. */
