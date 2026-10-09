@@ -33,7 +33,7 @@ contract VikyStravaClaimParser {
     string private constant TEE_APPLICATION_ID = "0x15678cD04e54ccc2bC1c24cb455be3C60Eb11ADf";
 
     // keccak256 of the exact signed `responseMatches` / `responseRedactions` byte slices of the
-    // published 6.0.0 provider, derived from the real captured proof set (session fa8968844e).
+    // published 6.0.0 provider, derived from the real captured proof set (session a8f5b7a8d2).
     bytes32 private constant MARKER_MATCHES_HASH = 0x50c9958ba1f7380373760eec627126eb1498058f65fcaa00b3653fcfb7aac000;
     bytes32 private constant MARKER_REDACTIONS_HASH =
         0x4b7281e7975402537afd79fe785e44f44f269f86538a681dc2e96701abb7b16a;
@@ -724,7 +724,7 @@ contract VikyStravaClaimParser {
 /// @notice Isolated direct verifier for the private Viky Strava provider, version 6.0.0.
 /// @dev Pins one witness and one stateless parser; it never consults Reclaim's upgradeable registry.
 /// @dev LIVE_SCHEMA_CONFIRMED intentionally remains false. The two 6.0.0 claim schemas are pinned from a
-///      REAL captured proof set that passes the SDK+TEE barrier (session fa8968844e), and
+///      REAL captured proof set that passes the SDK+TEE barrier (session a8f5b7a8d2), and
 ///      test/VikyStravaRealProof.t.sol drives that capture through this grammar. The gate stays closed
 ///      until the remaining provenance items are settled (live dashboard verificationType == WITNESS) and
 ///      the full on-chain flow is exercised on a deployed escrow.

@@ -199,7 +199,7 @@ function evidence(overrides: Partial<DuolingoEvidence> = {}): DuolingoEvidence {
     identityHash: keccak256(stringToHex("identity:477033640")),
     eventNullifier: keccak256(stringToHex("nullifier:baseline")),
     observedAt: 1_784_253_360,
-    sessionId: "a27c3d87fe",
+    sessionId: "a8d2e5c3d3",
     phase: "baseline",
     dayIndex: 0,
     ...overrides,

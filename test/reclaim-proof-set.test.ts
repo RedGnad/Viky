@@ -109,7 +109,7 @@ test("derives the session hash with the exact Solidity encoding and pins the wit
 });
 
 const SESSION = {
-  sessionId: "fa8968844e",
+  sessionId: "a8f5b7a8d2",
   appId: "0x15678cD04e54ccc2bC1c24cb455be3C60Eb11ADf",
   providerId: "cdf8cb3b-2976-4413-ab2d-693ae5028380",
   providerVersionString: "1.0.8",
@@ -118,7 +118,7 @@ const SESSION = {
 };
 
 const EXPECTED = {
-  sessionId: "fa8968844e",
+  sessionId: "a8f5b7a8d2",
   appId: "0x15678cD04e54ccc2bC1c24cb455be3C60Eb11ADf",
   providerId: "cdf8cb3b-2976-4413-ab2d-693ae5028380",
   providerVersion: "1.0.8",
