@@ -27,7 +27,7 @@ test("1. every block is at its place from the first image, held from what this d
   // What the device saw is kept where the server reads it while it draws the page, never in a store the browser reads
   // a moment after the first image.
   assert.match(money, /import \{ forgetOnThisScreen, useSeen, writeSeen \} from "\.\/seen";/);
-  assert.match(money, /const saw = useSeen\(SAW_MONEY\) === 1;/);
+  assert.match(money, /const saw = useSeen\(SAW_MONEY, screen\) === 1;/);
   assert.doesNotMatch(money, /localStorage/);
   assert.match(rows, /const saw = useSeen\(memory\.count\);\n\s*const heights = useSeenMany\(memory\.heights\);/);
   // The way out, on Home and on Me: drawn at once where this device saw money, and it is the button itself.
@@ -36,7 +36,7 @@ test("1. every block is at its place from the first image, held from what this d
     assert.match(source, /const toTake = useSomethingToTake\(holdings, gifts, /, screen);
     assert.match(source, /<Place open=\{toTake\}>\n\s*<SpendOrWithdraw \/>\n\s*<\/Place>/, screen);
   }
-  assert.match(home, /const toTake = useSomethingToTake\(holdings, gifts, giftsRead\);/);
+  assert.match(home, /const toTake = useSomethingToTake\(holdings, gifts, giftsRead, "home"\);/);
   assert.doesNotMatch(readFileSync("app/kit/SpendOrWithdraw.tsx", "utf8"), /holding|invisible/);
   // The gifts: one place for each gift this device saw, at the height its card had. Home shows three, Gifts all of
   // each of its two lists, and no list holds more places than a memory gone stale could be forgiven.
@@ -122,9 +122,13 @@ test("4. where the device's memory was wrong, the place opens or closes by its h
 
 test("5. while it is read, the figure is the last one this device saw: full ink for four seconds, the faint ink after", () => {
   // One piece for Home and for Me.
-  assert.match(hero, /export function useFigureWhileRead\(address: string \| undefined, money: DisplayMoney, dollars: bigint \| undefined\) \{/);
-  assert.match(hero, /const \{ figure, seen, value, written, startedWithout, pale \} = useFigureWhileRead\(address, money, dollars\);/);
-  assert.match(me, /const yours = useFigureWhileRead\(address, money, held\);/);
+  assert.match(hero, /export function useFigureWhileRead\(address: string \| undefined, money: DisplayMoney, dollars: bigint \| undefined, screen: "home" \| "me"\) \{/);
+  assert.match(hero, /const \{ figure, seen, value, written, startedWithout, pale \} = useFigureWhileRead\(address, money, dollars, "home"\);/);
+  assert.match(me, /const yours = useFigureWhileRead\(address, money, held, "me"\);/);
+  // One memory, read by each screen for itself: the one that arrives never takes what the one that leaves had frozen.
+  const seenSource = readFileSync("app/kit/seen.tsx", "utf8");
+  assert.match(seenSource, /const slotOf = \(key: string, screen: string\) => `\$\{screen\}\|\$\{seenKey\(key\)\}`;/);
+  assert.match(seenSource, /if \(!onThisScreen\.has\(slot\)\) onThisScreen\.set\(slot, keptFrom\(initial\)\.get\(seenKey\(key\)\)\);/);
   // Never a zero it remembers: a zero over money that has just arrived is what the rule of 4 Oct 2026 refuses.
   assert.match(hero, /const value = figure\?\.value \?\? \(seen \|\| undefined\);/);
   assert.match(hero, /<ArrivalAmount from=\{seen \?\? value\} to=\{value\}/);

@@ -715,12 +715,12 @@ export function Expression({ children }: Readonly<{ children: ReactNode }>) {
  * read, the same in the browser's first render, frozen while the screen stands and written for the next one (D189).
  * A first visit has nothing seen and counts nothing.
  */
-export function useLastSeen(key: string, value: number | undefined): number | undefined {
-  const seen = useSeen(key);
+export function useLastSeen(key: string, value: number | undefined, screen = ""): number | undefined {
+  const seen = useSeen(key, screen);
   useEffect(() => {
     if (value === undefined) return;
     writeSeen(key, value);
-    return () => forgetOnThisScreen(key);
-  }, [key, value]);
+    return () => forgetOnThisScreen(key, screen);
+  }, [key, value, screen]);
   return seen;
 }

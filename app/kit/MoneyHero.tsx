@@ -56,10 +56,11 @@ const AMOUNT = `money-display ${AMOUNT_IN_TITLE} tracking-[-0.02em]`;
  * A reading that does not land: after four seconds the figure remembered goes to the faint ink of the three dots, so
  * a figure that may be old is not said as firmly as one just read, and it is back in full ink when the reading lands.
  */
-export function useFigureWhileRead(address: string | undefined, money: DisplayMoney, dollars: bigint | undefined) {
+export function useFigureWhileRead(address: string | undefined, money: DisplayMoney, dollars: bigint | undefined, screen: "home" | "me") {
   const figure = dollars === undefined ? undefined : money.figure(dollars);
-  // What this device last saw of this account's money, so a change counts to its value once (brief, section 6).
-  const seen = useLastSeen(`viky.seen.money.${address}.${money.currency}`, figure?.value);
+  // What this device last saw of this account's money, so a change counts to its value once (brief, section 6). One
+  // memory for Home and for Me, read by each for itself (app/kit/seen.tsx).
+  const seen = useLastSeen(`viky.seen.money.${address}.${money.currency}`, figure?.value, screen);
   const value = figure?.value ?? (seen || undefined);
   /** How this currency writes an amount, which is known before the amount is. */
   const written = figure ?? money.figure(0n);
@@ -92,7 +93,7 @@ export function MoneyHero({
 }>) {
   const money = useDisplayCurrency(address);
   const dollars = useMoneyHeld(holdings, gifts, giftsUnread);
-  const { figure, seen, value, written, startedWithout, pale } = useFigureWhileRead(address, money, dollars);
+  const { figure, seen, value, written, startedWithout, pale } = useFigureWhileRead(address, money, dollars, "home");
 
   if (value === undefined) {
     return (

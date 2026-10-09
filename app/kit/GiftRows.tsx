@@ -41,7 +41,7 @@ export function useListPlaces(memory: ListMemory, list: RefObject<HTMLElement | 
     }, MOTION.arrival.budgetMs);
     return () => {
       window.clearTimeout(settled);
-      [memory.count, ...memory.heights].forEach(forgetOnThisScreen);
+      [memory.count, ...memory.heights].forEach((key) => forgetOnThisScreen(key));
     };
   }, [memory, list, length]);
   return { saw, heights };

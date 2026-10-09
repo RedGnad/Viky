@@ -70,11 +70,11 @@ export function Me() {
    * The same pieces as Home (the founder, 9 Oct 2026, app/kit/Place.tsx): while it is read, the figure is the last
    * one this device saw, and the way out is drawn at once where this device saw money here last time.
    */
-  const yours = useFigureWhileRead(address, money, held);
+  const yours = useFigureWhileRead(address, money, held, "me");
   const said = yours.value === undefined ? undefined : (yours.figure?.text ?? amountText(yours.value, yours.written));
   /** What the first image said: a figure that differs from it comes up in place. */
   const [saidFirst] = useState(said);
-  const toTake = useSomethingToTake(holdings, gifts, gifts !== null || giftsUnread !== null);
+  const toTake = useSomethingToTake(holdings, gifts, gifts !== null || giftsUnread !== null, "me");
   const [reading, setReading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [until, setUntil] = useState<string | null>(null);
@@ -187,7 +187,10 @@ export function Me() {
       </section>
 
       {/* What Viky reads, and the stop, for every gift this account is the person of (the founder, 29 Sep 2026). */}
-      <WhatVikyReads gifts={readForYou} zone={zone} />
+      {/* It comes with the list of gifts, after the first image: it opens its place by its height (app/kit/Place.tsx). */}
+      <Place open={readForYou.length > 0}>
+        <WhatVikyReads gifts={readForYou} zone={zone} />
+      </Place>
 
       <details className={`${CARD} me-code`}>
         <summary className="gift-fold-name font-medium">

@@ -179,17 +179,17 @@ export const SAW_MONEY = "viky.seen.holds";
  * when there is something to take; until then, when what has been read already says so, or when this device saw money
  * here last time.
  */
-export function useSomethingToTake(holdings: Holdings | null, gifts: ReadonlyArray<Readonly<{ takeable?: string }>> | null, giftsRead: boolean): boolean {
-  const sawMoney = useSawMoney(holdings, gifts, giftsRead);
+export function useSomethingToTake(holdings: Holdings | null, gifts: ReadonlyArray<Readonly<{ takeable?: string }>> | null, giftsRead: boolean, screen: "home" | "me"): boolean {
+  const sawMoney = useSawMoney(holdings, gifts, giftsRead, screen);
   return holdings !== null && giftsRead ? holdsAnything(holdings, gifts) : (holdings !== null && holdsAnything(holdings)) || sawMoney;
 }
 
-export function useSawMoney(holdings: Holdings | null, gifts: ReadonlyArray<Readonly<{ takeable?: string }>> | null = null, giftsRead = true): boolean {
-  const saw = useSeen(SAW_MONEY) === 1;
+export function useSawMoney(holdings: Holdings | null, gifts: ReadonlyArray<Readonly<{ takeable?: string }>> | null, giftsRead: boolean, screen: "home" | "me"): boolean {
+  const saw = useSeen(SAW_MONEY, screen) === 1;
   useEffect(() => {
     if (holdings === null || !giftsRead) return;
     writeSeen(SAW_MONEY, holdsAnything(holdings, gifts) ? 1 : 0);
-    return () => forgetOnThisScreen(SAW_MONEY);
-  }, [holdings, gifts, giftsRead]);
+    return () => forgetOnThisScreen(SAW_MONEY, screen);
+  }, [holdings, gifts, giftsRead, screen]);
   return saw;
 }

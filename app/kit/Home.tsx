@@ -97,7 +97,7 @@ export function Home({
   /** Whether the list has answered at all, with gifts or with a reading that failed. */
   const giftsRead = gifts !== null || problem !== null;
   /** Whether the way out is drawn (app/kit/money.ts): from the first image where this device saw money last time. */
-  const toTake = useSomethingToTake(holdings, gifts, giftsRead);
+  const toTake = useSomethingToTake(holdings, gifts, giftsRead, "home");
   /** How many gifts this device last saw here, and how tall the cards shown stood: their places while they are read. */
   const list = useRef<HTMLElement>(null);
   const { saw: sawGifts, heights: sawHeights } = useListPlaces(HOME_LIST, list, gifts === null ? null : gifts.length);

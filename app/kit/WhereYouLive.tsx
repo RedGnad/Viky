@@ -6,6 +6,7 @@ import { countryInWords } from "@/src/rail-country";
 import { WHERE_YOU_LIVE as W } from "@/src/sentences";
 import { CARD, HELP, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { CountryPicker } from "./CountryPicker";
+import { Place } from "./Place";
 
 /**
  * "Where do you live?" in Me (D274, the founder's decision of 27 Sep 2026): a fact of the account, asked once, from the
@@ -35,8 +36,11 @@ export function WhereYouLive({ address }: Readonly<{ address: string }>) {
 
   if (country === undefined) return null;
 
+  // Read once the browser runs, so it has no place in the first image: it opens its own (app/kit/Place.tsx), and
+  // goes from the line to the question, and back, by its height.
   if (country && !changing) {
     return (
+      <Place>
       <section className={CARD}>
         <div className="flex flex-wrap items-center justify-between gap-[var(--space-md)]">
           <span className="font-medium">{W.label}</span>
@@ -53,11 +57,13 @@ export function WhereYouLive({ address }: Readonly<{ address: string }>) {
           </p>
         ) : null}
       </section>
+      </Place>
     );
   }
 
   const chosen = changing ? country : proposed;
   return (
+    <Place>
     <section className={CARD}>
       <h2 className="font-medium">{W.question}</h2>
       <p className={HELP}>{W.why}</p>
@@ -87,5 +93,6 @@ export function WhereYouLive({ address }: Readonly<{ address: string }>) {
         </button>
       )}
     </section>
+    </Place>
   );
 }
