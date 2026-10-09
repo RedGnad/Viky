@@ -6,11 +6,11 @@ import { loadConsent, signConsent, type GiftConsentAnswer } from "@/src/client/c
 import { conditionById } from "@/src/conditions";
 import { dateInWords } from "@/src/moments";
 import { CONSENT as C, YOU_DECIDE as Y } from "@/src/sentences";
-import { BODY, CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
+import { BODY, CARD, HELP, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { FieldRefusal } from "./FieldRefusal";
 import { Sheet } from "./Sheet";
-import { ButtonWords, StepInProgress } from "./Waiting";
 import { WAITS } from "@/src/sentences";
+import { Button } from "./Button";
 
 /**
  * The recipient's yes and stop, where the gift is (the founder, 29 Sep 2026, the mockup consent.html; redrawn on
@@ -83,12 +83,9 @@ export function StopSheet({
       onClose={onClose}
       footer={
         <>
-          <button type="button" className={PRIMARY_BUTTON} disabled={busy} onClick={onStop}>
-            <ButtonWords busy={busy} doing={C.working}>
-              {C.stopReading}
-            </ButtonWords>
-          </button>
-          <StepInProgress busy={busy} step={WAITS.choice} />
+          <Button doing={busy ? C.working : null} step={WAITS.choice} onPress={onStop}>
+            {C.stopReading}
+          </Button>
           <button type="button" className={SECONDARY_BUTTON} disabled={busy} onClick={onClose}>
             {C.keepGoing}
           </button>
@@ -172,11 +169,9 @@ export function ConsentLine({
     <div className="gift-card-width flex flex-col gap-[var(--space-xs)]" data-consent-line>
       <div className="flex items-center justify-between gap-[var(--space-md)]">
         <p className={HELP}>{line}</p>
-        <button type="button" onClick={() => void agree()} disabled={busy} className={SMALL_BUTTON}>
-          <ButtonWords busy={busy} doing={C.working}>
-            {label}
-          </ButtonWords>
-        </button>
+        <Button look="small" doing={busy ? C.working : null} onPress={() => void agree()}>
+          {label}
+        </Button>
       </div>
       {problem ? <p className={HELP}>{problem}</p> : null}
     </div>

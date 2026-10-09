@@ -7,10 +7,10 @@ import { withTheStartSigned, type StartAsked } from "@/src/client/v2";
 import { conditionById } from "@/src/conditions";
 import { connectReturnInWords } from "@/src/connect-return";
 import { GIFT_PAGE as W } from "@/src/sentences";
-import { BODY, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../components/ui";
+import { BODY, HELP, PRIMARY_BUTTON } from "../components/ui";
 import { FieldRefusal } from "./FieldRefusal";
-import { ButtonWords, StepInProgress } from "./Waiting";
 import { WAITS } from "@/src/sentences";
+import { Button } from "./Button";
 
 /**
  * Connecting the account a gift counts, for a condition of the third nature (D188): the one gesture, in place of a
@@ -128,21 +128,15 @@ export function ConnectTheAccount({ giftId, conditionId, yours, onChanged }: Rea
           <p className={BODY}>{said ?? words.connected}</p>
           {!status.bound ? (
             <>
-              <button type="button" onClick={() => void start()} disabled={working} className={PRIMARY_BUTTON}>
-                <ButtonWords busy={busy === "starting"} doing={W.reading}>
-                  {words.start}
-                </ButtonWords>
-              </button>
-              <StepInProgress busy={busy === "starting"} step={WAITS.connecting(condition?.source ?? "")} />
+              <Button doing={busy === "starting" ? W.reading : null} step={WAITS.connecting(condition?.source ?? "")} waiting={working && busy !== "starting"} onPress={() => void start()}>
+                {words.start}
+              </Button>
             </>
           ) : null}
           <p className={HELP}>{words.erase}</p>
-          <button type="button" onClick={() => void erase()} disabled={working} className={SECONDARY_BUTTON}>
-            <ButtonWords busy={busy === "erasing"} doing={W.working}>
-              {words.disconnect}
-            </ButtonWords>
-          </button>
-          <StepInProgress busy={busy === "erasing"} step={WAITS.erasing} />
+          <Button look="secondary" doing={busy === "erasing" ? W.working : null} step={WAITS.erasing} waiting={working && busy !== "erasing"} onPress={() => void erase()}>
+            {words.disconnect}
+          </Button>
         </>
       ) : (
         <>

@@ -7,7 +7,7 @@ import { conditionById } from "@/src/conditions";
 import type { EndOffer } from "@/src/gift-ending";
 import { dateInWords } from "@/src/moments";
 import { CONSENT as C, END_GIFT as E, YOU_DECIDE as Y } from "@/src/sentences";
-import { BODY, CARD_LABEL, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../components/ui";
+import { BODY, CARD_LABEL, HELP, SECONDARY_BUTTON } from "../components/ui";
 import { Character, type CharacterState } from "./Character";
 import { connectsItsSource, stopReading, type StopCost } from "./Consent";
 import { EndFigures, useEnding } from "./EndGift";
@@ -15,8 +15,9 @@ import { FieldRefusal } from "./FieldRefusal";
 import { MessagesSheet, useTold, type ToldAbout } from "./MorningMessage";
 import { Act, BellMark, RoundControls } from "./RoundControls";
 import { Sheet } from "./Sheet";
-import { ButtonWords, StepInProgress } from "./Waiting";
+import { ButtonWords } from "./Waiting";
 import { WAITS } from "@/src/sentences";
+import { Button } from "./Button";
 
 /**
  * "You decide": the standing controls of the person a gift is for, under the card (the founder, 1 Oct 2026, the
@@ -204,12 +205,9 @@ export function YouDecide({
           footer={
             step === "break" ? (
               <>
-                <button type="button" className={PRIMARY_BUTTON} disabled={busy} onClick={() => void takeABreak()}>
-                  <ButtonWords busy={busy} doing={C.working}>
-                    {Y.takeABreak}
-                  </ButtonWords>
-                </button>
-                <StepInProgress busy={busy} step={WAITS.choice} />
+                <Button doing={busy ? C.working : null} step={WAITS.choice} onPress={() => void takeABreak()}>
+                  {Y.takeABreak}
+                </Button>
                 <button type="button" className={SECONDARY_BUTTON} disabled={busy} onClick={close}>
                   {Y.notNow}
                 </button>
@@ -217,12 +215,9 @@ export function YouDecide({
               </>
             ) : step === "end" ? (
               <>
-                <button type="button" className={PRIMARY_BUTTON} disabled={ending.busy} onClick={() => void endIt()}>
-                  <ButtonWords busy={ending.busy} doing={E.working}>
-                    {Y.endTheGift}
-                  </ButtonWords>
-                </button>
-                <StepInProgress busy={ending.busy} step={WAITS.ending} />
+                <Button doing={ending.busy ? E.working : null} step={WAITS.ending} onPress={() => void endIt()}>
+                  {Y.endTheGift}
+                </Button>
                 <button type="button" className={SECONDARY_BUTTON} disabled={ending.busy} onClick={close}>
                   {Y.notNow}
                 </button>

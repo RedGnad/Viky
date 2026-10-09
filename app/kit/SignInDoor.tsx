@@ -6,10 +6,11 @@ import { useMadeHere, useOnAComputer } from "@/src/account/door";
 import { doorWasAskedFor } from "@/src/account/door-asked";
 import { useAccount } from "@/src/account/provider";
 import { ACCOUNT_DOOR, DOOR as W } from "@/src/sentences";
-import { CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
+import { CARD, HELP, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { MadeOnTheMainSite } from "./AccountDoor";
-import { ButtonWords, StepInProgress } from "./Waiting";
+import { ButtonWords } from "./Waiting";
 import { WAITS } from "@/src/sentences";
+import { Button } from "./Button";
 
 /**
  * The one door into an account (the art direction brief of 17 Sep 2026, section 7): a small outlined button in the
@@ -129,12 +130,9 @@ export function SignInDoor() {
           {/* On an address that is not Viky's own no account is made: the way to viky.cash stands in the button's place. */}
           {madeHere ? (
             <>
-              <button type="button" onClick={() => void make()} disabled={busy} className={PRIMARY_BUTTON}>
-                <ButtonWords busy={busy} doing={W.busy}>
-                  {W.create}
-                </ButtonWords>
-              </button>
-              <StepInProgress busy={busy} step={WAITS.account} />
+              <Button doing={busy ? W.busy : null} step={WAITS.account} onPress={() => void make()}>
+                {W.create}
+              </Button>
               <p className={HELP} data-adult="">
                 {ACCOUNT_DOOR.adult}
               </p>

@@ -8,11 +8,11 @@ import type { MilestoneStatus } from "@/src/milestone-view";
 import { WCA_PROOF as W } from "@/src/sentences";
 import { WCA_MILESTONE } from "@/src/milestone-conditions";
 import { wcaResultInWords } from "@/src/wca";
-import { BODY, CARD, FIELD, HELP, PRIMARY_BUTTON } from "../components/ui";
+import { BODY, CARD, FIELD, HELP } from "../components/ui";
 import { Said } from "./Said";
 import { FieldRefusal } from "./FieldRefusal";
-import { ButtonWords, StepInProgress } from "./Waiting";
 import { WAITS } from "@/src/sentences";
+import { Button } from "./Button";
 
 /**
  * The competitor's half of "Set a time at a WCA competition" (the founder, 27 Sep 2026), in two moments on the gift's
@@ -92,12 +92,9 @@ export function WcaProof({ giftId, status, yours, onChanged }: Readonly<{ giftId
           {/* One line of help under the field, the rest folded (the founder's rule 4 of 1 Oct 2026). */}
           <Said under className={HELP} text={W.whoHelp(wca.title)} />
           <FieldRefusal id="wca-who-refusal">{state.at === "refused" ? state.message : undefined}</FieldRefusal>
-          <button type="submit" className={PRIMARY_BUTTON} disabled={busy || who.trim() === ""}>
-            <ButtonWords busy={state.at === "checking"} doing={W.checking}>
-              {W.checkRegistration}
-            </ButtonWords>
-          </button>
-          <StepInProgress busy={state.at === "checking"} step={WAITS.registration} />
+          <Button submits doing={state.at === "checking" ? W.checking : null} step={WAITS.registration} waiting={(busy && state.at !== "checking") || who.trim() === ""}>
+            {W.checkRegistration}
+          </Button>
         </form>
       </section>
     );
@@ -107,12 +104,9 @@ export function WcaProof({ giftId, status, yours, onChanged }: Readonly<{ giftId
     <section className={CARD}>
       <p className="font-medium">{W.registered(wca.registered.who, wca.title)}</p>
       <p className={HELP}>{W.beforeTheDay}</p>
-      <button type="button" onClick={() => void read()} disabled={busy} className={PRIMARY_BUTTON}>
-        <ButtonWords busy={state.at === "reading" || state.at === "proving"} doing={W.reading}>
-          {W.readMyResult}
-        </ButtonWords>
-      </button>
-      <StepInProgress busy={state.at === "reading" || state.at === "proving"} step={WAITS.proof} />
+      <Button doing={state.at === "reading" || state.at === "proving" ? W.reading : null} step={WAITS.proof} waiting={busy && state.at !== "reading" && state.at !== "proving"} onPress={() => void read()}>
+        {W.readMyResult}
+      </Button>
       <FieldRefusal id="wca-read-refusal">{state.at === "refused" ? state.message : undefined}</FieldRefusal>
     </section>
   );

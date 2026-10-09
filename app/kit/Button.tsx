@@ -19,7 +19,8 @@ import { StepInProgress } from "./Waiting";
  * look of rule 3 of 1 Oct 2026: `waiting`.
  *
  * While it is doing or done it is not pressed again: the press is dropped here, and the button stays in the page's
- * order, where a screen reader hears what it is doing. The wheel is the working ring every wait has
+ * order, where a screen reader hears what it is doing. A button that sends a form (`submits`) drops the form's own
+ * press the same way. The wheel is the working ring every wait has
  * (app/kit/Waiting.tsx); a device asking for less motion stops it and keeps the words.
  */
 const LOOKS = { primary: PRIMARY_BUTTON, secondary: SECONDARY_BUTTON, small: SMALL_BUTTON } as const;
@@ -32,6 +33,7 @@ export function Button({
   failedId,
   step = null,
   waiting = false,
+  submits = false,
   onPress,
   className = "",
   describedBy,
@@ -51,7 +53,9 @@ export function Button({
   step?: string | null;
   /** It cannot be pressed yet. */
   waiting?: boolean;
-  onPress: () => void;
+  /** It sends the form it stands in: the press is the form's, and a press while it is doing or done sends nothing. */
+  submits?: boolean;
+  onPress?: () => void;
   className?: string;
   describedBy?: string;
   children: ReactNode;
@@ -62,7 +66,7 @@ export function Button({
   return (
     <>
       <button
-        type="button"
+        type={submits ? "submit" : "button"}
         className={`${LOOKS[look]} ${className}`.trim()}
         data-state={state}
         aria-busy={doing ? true : undefined}
@@ -70,8 +74,10 @@ export function Button({
         aria-describedby={failed && failedId ? failedId : describedBy}
         disabled={waiting && !state}
         {...marks}
-        onClick={() => {
-          if (!state) onPress();
+        onClick={(event) => {
+          // A press while it works is dropped here, a form's own included: the form is sent once.
+          if (state) event.preventDefault();
+          else onPress?.();
         }}
       >
         {doing ? (

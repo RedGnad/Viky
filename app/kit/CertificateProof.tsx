@@ -5,10 +5,10 @@ import { CONSENT } from "@/src/sentences";
 import { proveCertificateGift, readCertificate } from "@/src/client/certificate-gift";
 import { ApiError } from "@/src/client/api";
 import { certificateById, type CertificateCondition } from "@/src/milestone-conditions";
-import { CARD, FIELD, HELP, PRIMARY_BUTTON } from "../components/ui";
+import { CARD, FIELD, HELP } from "../components/ui";
 import { FieldRefusal } from "./FieldRefusal";
-import { ButtonWords, StepInProgress } from "./Waiting";
 import { WAITS } from "@/src/sentences";
+import { Button } from "./Button";
 
 /**
  * The recipient's half of a gift on a supervised result (U3, C3): they paste the link of their own certificate.
@@ -130,12 +130,9 @@ export function CertificateProof({
         <FieldRefusal id="certificate-refusal">{state.at === "refused" ? state.message : undefined}</FieldRefusal>
         {/* What is read, and what is not kept: said before the link is pasted, not after. */}
         <p className={HELP}>{words.whatIsRead}</p>
-        <button type="submit" disabled={busy || link.trim() === ""} className={PRIMARY_BUTTON}>
-          <ButtonWords busy={state.at === "reading" || state.at === "proving"} doing={words.checking}>
-            {words.check}
-          </ButtonWords>
-        </button>
-        <StepInProgress busy={state.at === "reading" || state.at === "proving"} step={WAITS.proof} />
+        <Button submits doing={busy ? words.checking : null} step={WAITS.proof} waiting={link.trim() === ""}>
+          {words.check}
+        </Button>
       </form>
     </section>
   );
