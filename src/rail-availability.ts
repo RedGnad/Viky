@@ -1,5 +1,5 @@
 import { countryCode, type RailReach } from "./rail-country";
-import { MERCURYO_CLOSED_IN, swapperIntegratorId, WAY_IN_CHAIN_COIN, WAY_IN_EMBEDDED, WAY_IN_GIFT_COIN, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT, type WayOut } from "./rails";
+import { MERCURYO_CLOSED_IN, RAMP_CLOSED_IN, swapperIntegratorId, WAY_IN_CHAIN_COIN, WAY_IN_EMBEDDED, WAY_IN_GIFT_COIN, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT, type WayOut } from "./rails";
 
 /**
  * Whether a rail serves a country, asked of that rail at the moment it matters (R1). Server only.
@@ -217,7 +217,9 @@ export async function reachOfWaysOut(country: string | null): Promise<Readonly<R
   if (!asked) return Object.fromEntries(WAYS_OUT.map((way) => [way.name, "unknown" as RailReach]));
   const [euro, restricted] = await Promise.all([euroRailCountries(), cardRailRestricted()]);
   const reach: Record<string, RailReach> = {};
-  reach[WAY_OUT_EURO.name] = euro === null ? "unknown" : euro.includes(asked) ? "serves" : "does-not";
+  // The bank service's own list of countries it serves nobody in comes first too (the audit of 9 Oct 2026): its list
+  // of payout methods names thirty-two of them, where a person had their money changed before its page refused them.
+  reach[WAY_OUT_EURO.name] = RAMP_CLOSED_IN.includes(asked) ? "does-not" : euro === null ? "unknown" : euro.includes(asked) ? "serves" : "does-not";
   reach[WAY_OUT_CARD.name] = MERCURYO_CLOSED_IN.includes(asked) ? "does-not" : restricted === null ? "unknown" : restricted.includes(asked) ? "does-not" : "serves";
   for (const way of WAYS_OUT) reach[way.name] ??= "unknown";
   return reach;
