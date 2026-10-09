@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { chainMarginEur, eurosNeededOn, roughlyInDollars, serviceChargeDollars, serviceChargeEur, serviceChargeIsCeiling, wayInFor } from "../src/gift-amount";
+import { askByRule, floorOf, paidIn } from "../src/card-ask";
+import { chainMarginEur, eurosNeededOn, eurosToBuyOn, roughlyInDollars, serviceChargeDollars, serviceChargeEur, serviceChargeIsCeiling, smallestEurOn, wayInFor } from "../src/gift-amount";
 import { lastNameGiven } from "../src/gift-names";
 import { upToTheCent } from "../src/euro-cents";
-import { cardSum, dollarsSaidIn, giftAsTyped, giftTyped, heldIn, moneyIn, moneyTypedIn, smallestGiftByCard } from "../src/pay-sum";
+import { across, cardSum, dollarsSaidIn, giftAsTyped, giftTyped, heldIn, moneyIn, moneyTypedIn, smallestGiftByCard } from "../src/pay-sum";
 import type { Rates } from "../src/rates";
 import { FUND, PAY } from "../src/sentences";
 import { feeInALine, rampnowPage, WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAY_IN_USDC, WAYS_IN, type WayIn } from "../src/rails";
@@ -45,7 +46,8 @@ test("lines that add up, and the last is that Viky keeps nothing", () => {
 
 test("what this person pays is their own figure, in the money they typed, and the fold says the fee in a short line", () => {
   assert.match(sheet, /wayInFor\(short, waysIn\(\), money\.rates\?\.usdPerEur, railIn\)/, "the euros are the offer's, on the one way chosen for the person");
-  assert.match(sheet, /cardSum\(\{ code, gift, cardEuros: euros, feeEuros: serviceChargeEur\(euros, way\.fee\), rates: money\.rates \}\)/, "the lines are worked out from them, with the service's own fee");
+  assert.match(sheet, /const ask = byCard && euros \? askByRule\(way, euros, money\.rates\?\.usdPerEur\) : undefined;/, "what the card is asked, with the service's own fee, in the currency its page is opened in");
+  assert.match(sheet, /cardSum\(\{ code, gift, charged: ask, fee: ask\.fee, rates: money\.rates \}\)/, "the lines are worked out from it");
   // The fold says the fee in a short line, with the service's name (the founder, 4 Oct 2026). The rate's day and what
   // the card is charged in euros were sentences of that fold, and a fold holds no sentence any more.
   assert.equal(feeInALine(WAY_IN_USDC, 12), "Rampnow, 7 % + €0.40");
@@ -68,8 +70,11 @@ test("the lines add up to what the card pays, in one money, and what stays in th
   // To the cent since 9 Oct 2026, where the service's page takes cents: it asked 12, and 0.61 of it was a whole euro's rest.
   const euros = eurosNeededOn(units - 10_000_000n, WAY_IN_USDC, rates.usdPerEur)!;
   assert.equal(euros, 11.39);
-  const sum = cardSum({ code: "EUR", gift, cardEuros: euros, feeEuros: serviceChargeEur(euros, WAY_IN_USDC.fee), rates })!;
-  assert.deepEqual(sum, { code: "EUR", gift: 19, card: 11.39, fee: 1.2, cardEuros: 11.39, fromAccount: 8.81, stays: 0 });
+  const charged = (amount: number) => ({ currency: "EUR", amount });
+  const sum = cardSum({ code: "EUR", gift, charged: charged(euros), fee: serviceChargeEur(euros, WAY_IN_USDC.fee), rates })!;
+  assert.deepEqual(sum, { code: "EUR", gift: 19, card: 11.39, fee: 1.2, charged: { currency: "EUR", amount: 11.39 }, fromAccount: 8.81, stays: 0 });
+  // The same sum from what the rule asks of the card: its amount and its fee, in the currency its page is opened in.
+  assert.deepEqual(askByRule(WAY_IN_USDC, euros, rates.usdPerEur), { currency: "EUR", amount: 11.39, fee: serviceChargeEur(euros, WAY_IN_USDC.fee) });
   assert.equal(moneyIn(sum.card, "EUR"), "€11.39");
   // The part of the gift the card pays, and its fee: the card's figure, to the cent.
   assert.equal(Math.round((sum.gift - sum.fromAccount + sum.fee + sum.stays) * 100), Math.round(sum.card * 100));
@@ -77,18 +82,18 @@ test("the lines add up to what the card pays, in one money, and what stays in th
   const eight = BigInt(Math.round(8 * rates.usdPerEur * 1_000_000));
   const asked = eurosNeededOn(eight, WAY_IN_USDC, rates.usdPerEur)!;
   assert.equal(asked, 9.12);
-  const said = cardSum({ code: "EUR", gift: 8, cardEuros: asked, feeEuros: serviceChargeEur(asked, WAY_IN_USDC.fee), rates })!;
+  const said = cardSum({ code: "EUR", gift: 8, charged: charged(asked), fee: serviceChargeEur(asked, WAY_IN_USDC.fee), rates })!;
   assert.deepEqual([said.card, said.fee, said.stays, said.fromAccount], [9.12, 1.04, 0.08, 0]);
   assert.equal(
     PAY.cardSum({ gift: moneyIn(said.gift - said.fromAccount, "EUR"), part: said.fromAccount > 0, fee: moneyIn(said.fee, "EUR"), stays: said.stays > 0 ? moneyIn(said.stays, "EUR") : null }),
     "€8.00 gift, €1.04 card fee, €0.08 stays yours.",
   );
   // The arithmetic holds as well for a card that brings far more than the gift and its fee: what is left over stays.
-  const floor = cardSum({ code: "EUR", gift: 2, cardEuros: 5, feeEuros: serviceChargeEur(5, WAY_IN_USDC.fee), rates })!;
+  const floor = cardSum({ code: "EUR", gift: 2, charged: charged(5), fee: serviceChargeEur(5, WAY_IN_USDC.fee), rates })!;
   assert.deepEqual([floor.fromAccount, floor.fee, floor.stays], [0, 1, 2]);
   assert.equal(floor.gift - floor.fromAccount + floor.fee + floor.stays, floor.card);
   // Typed in dollars: the card's euros said in dollars at the day's rate, and the fold says what the card is charged.
-  const dollars = cardSum({ code: "USD", gift: 23, cardEuros: 15, feeEuros: serviceChargeEur(15, WAY_IN_USDC.fee), rates })!;
+  const dollars = cardSum({ code: "USD", gift: 23, charged: charged(15), fee: serviceChargeEur(15, WAY_IN_USDC.fee), rates })!;
   assert.deepEqual([dollars.card, dollars.fee, dollars.fromAccount], [16.84, 1.63, 7.79]);
   assert.equal(Math.round((dollars.gift - dollars.fromAccount + dollars.fee) * 100), Math.round(dollars.card * 100));
   // Not typed in this money: the dollars signed, in it, to its decimals; and what the account holds the same way.
@@ -96,7 +101,13 @@ test("the lines add up to what the card pays, in one money, and what stays in th
   assert.equal(heldIn(10_000_000n, "EUR", rates), 8.91);
   assert.match(moneyIn(12000, "XOF"), /^12\s000\sFCFA$/, "a currency without cents, whole");
   // No rate for the money: no sum, and the sheet says only "Pay".
-  assert.equal(cardSum({ code: "GBP", gift: 19, cardEuros: 12, feeEuros: 1.24, rates }), undefined);
+  assert.equal(cardSum({ code: "GBP", gift: 19, charged: charged(12), fee: 1.24, rates }), undefined);
+  // A card charged in the sheet's own money is said exactly, whatever that money is: nothing is converted.
+  assert.equal(across("USD", "USD", undefined), 1);
+  assert.deepEqual(cardSum({ code: "USD", gift: 10, charged: { currency: "USD", amount: 11.35 }, fee: 1.24, rates: undefined }), { code: "USD", gift: 10, card: 11.35, fee: 1.24, charged: { currency: "USD", amount: 11.35 }, fromAccount: 0, stays: 0.11 });
+  // Charged in dollars and read in euros: the dollars at the day's rate, and what is charged kept as it is.
+  const read = cardSum({ code: "EUR", gift: 8.91, charged: { currency: "USD", amount: 11.35 }, fee: 1.24, rates })!;
+  assert.deepEqual([read.card, read.fee, read.charged], [10.11, 1.1, { currency: "USD", amount: 11.35 }]);
 });
 
 test("the name comes first, as the recipient knows the giver, filled with the last one this account gave", () => {
@@ -269,11 +280,11 @@ test("where the sheet is not in euros, the total is said about, and the euros th
   // shows the euros at the day's rate, which is not what the bank will take.
   assert.equal(PAY.cardCharged("€34.00"), "Your card is charged €34.00.");
   assert.equal(PAY.about, "about");
-  assert.match(sheet, /const converted = code !== "EUR";/);
+  assert.match(sheet, /const converted = sum !== undefined && sum\.charged\.currency !== code;/);
   assert.match(sheet, /sum \? \{ label: W\.youPay, amount: say\(sum\.card\), about: converted \}/);
   // "about" stands before the figure in the size of a sentence, never in the figure's own.
   assert.match(sheet, /\{total\.about \? <span className=\{`\$\{BODY\} font-normal`\}>\{W\.about\} <\/span> : null\}\s+\{total\.amount\}/);
-  assert.match(sheet, /\{sum && converted \? \(\s+<p className=\{HELP\} data-card-charged="">\s+\{W\.cardCharged\(moneyIn\(sum\.cardEuros, "EUR"\)\)\}/);
+  assert.match(sheet, /\{sum && converted \? \(\s+<p className=\{HELP\} data-card-charged="">\s+\{W\.cardCharged\(moneyIn\(sum\.charged\.amount, sum\.charged\.currency\)\)\}/);
   const body = sheet.slice(sheet.indexOf("<Sheet "), sheet.indexOf("</Sheet>"));
   // The sheet's order (the founder, 9 Oct 2026): the lines, the total, the code's key, the button, the line that adds
   // up, the euros the card is charged, the card service's own line, the passkey's sentence.
@@ -281,7 +292,8 @@ test("where the sheet is not in euros, the total is said about, and the euros th
   assert.ok(order.every((at) => at > 0), "each is on the sheet");
   assert.deepEqual(order, [...order].sort((a, b) => a - b));
   // The euros are the card page's own: what the link asks of it, to the cent.
-  assert.match(readFileSync("src/rails.ts", "utf8"), /set\("srcCurrency", "EUR"\);/);
+  assert.match(readFileSync("src/rails.ts", "utf8"), /set\("srcCurrency", paid\?\.currency \?\? "EUR"\);/);
+  assert.match(rampnowPage({ euros: 9.12 }), /srcCurrency=EUR&srcAmount=9\.12&/);
 });
 
 test("under the card service's smallest payment no card is offered: the floor is said, and the action is a gift a card can pay for", () => {
@@ -513,4 +525,49 @@ test("the judge credit line says how a funder really pays by card here, with the
   // The same test the pay press makes: the frame where it is on and this browser can keep a sign-in in it.
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   assert.match(sheet, /const cardPaidHow = \(\): "frame" \| "sheet" \| "tab" => \(way\.embedded \? "sheet" : way === WAY_IN_USDC && rampnowFrameOn\(\) && frameKeepsSignIn\(navigator\.userAgent\) \? "frame" : "tab"\);/);
+});
+
+/**
+ * A way whose page is opened in dollars (`WayIn.paidIn`, 9 Oct 2026): the same rule, said in dollars at the day's
+ * rate. No way in the register is paid in dollars here; a copy of Rampnow's entry stands for one.
+ */
+test("a way paid in dollars is asked the same money, written in dollars to the cent, with its floor at the dollar above five euros", () => {
+  const IN_DOLLARS: WayIn = { ...WAY_IN_USDC, paidIn: "USD" };
+  const rate = 1.1186;
+  assert.equal(paidIn(WAY_IN_USDC), "EUR");
+  assert.equal(paidIn(IN_DOLLARS), "USD");
+  // Its floor: five euros are 5.593 dollars, so six dollars, and never Rampnow's own 5.62 of that day or less.
+  assert.deepEqual(floorOf(IN_DOLLARS, rate), { currency: "USD", amount: 6 });
+  assert.deepEqual(floorOf(WAY_IN_USDC, rate), { currency: "EUR", amount: 5 });
+  assert.equal(floorOf(IN_DOLLARS, undefined), undefined, "no rate, no floor to say in dollars");
+  assert.equal(Math.round(smallestEurOn(IN_DOLLARS, rate) * rate * 1_000_000), 6_000_000);
+  assert.equal(smallestEurOn(WAY_IN_USDC, rate), 5);
+  // What gifts of several sizes ask of the card in dollars, by the rule measured on 9 Oct 2026: 7 % and 0.40 euros,
+  // never under 1.00 euro, and one part in a hundred allowed for.
+  const asked = (dollars: number) => {
+    const euros = eurosToBuyOn(BigInt(Math.round(dollars * 1_000_000)), IN_DOLLARS, rate)!;
+    return askByRule(IN_DOLLARS, euros, rate)!;
+  };
+  for (const [gift, card, fee] of [[5, 6.17, 1.12], [8, 9.2, 1.12], [10, 11.35, 1.24], [20, 22.21, 2.0], [50, 54.79, 4.28], [100, 109.1, 8.08]] as const) {
+    const ask = asked(gift);
+    assert.equal(ask.currency, "USD");
+    assert.equal(ask.amount, card, `a gift of ${gift} dollars`);
+    assert.equal(Math.round(ask.fee * 100) / 100, fee, `its fee at ${gift} dollars`);
+    // To the cent of a dollar, where it is paid.
+    assert.equal(Number(ask.amount.toFixed(2)), ask.amount);
+    // And enough arrives: the gift and its one part in a hundred, at a dollar a USDC.
+    assert.ok(ask.amount - ask.fee >= gift / 0.99 - 0.005, `${gift}: ${ask.amount - ask.fee} left of the card`);
+  }
+  // Under the floor: a gift of 4 dollars needs 5.16, under six. No card, and the offer says so.
+  const under = wayInFor(4_000_000n, [IN_DOLLARS], rate, {});
+  assert.equal(under.atFloor, true);
+  assert.deepEqual(askByRule(IN_DOLLARS, under.euros!, rate), { currency: "USD", amount: 6, fee: serviceChargeEur(under.euros!, IN_DOLLARS.fee) * rate });
+  // A gift of 5 dollars needs 6.17: above six, so the card is offered.
+  assert.equal(wayInFor(5_000_000n, [IN_DOLLARS], rate, {}).atFloor, false);
+  // The smallest round gift a card pays for, in dollars and read in euros.
+  assert.equal(smallestGiftByCard({ way: IN_DOLLARS, code: "USD", gift: 3, heldUnits: 0n, rates: { usdPerEur: rate, eurPer: { EUR: 1, USD: rate } } as unknown as Rates }), 5);
+  // With no rate there is nothing to say in dollars.
+  assert.equal(askByRule(IN_DOLLARS, 10, undefined), undefined);
+  // A way paid in euros is asked as it always was.
+  assert.equal(eurosToBuyOn(8_947_000n, WAY_IN_USDC, rate), eurosNeededOn(8_947_000n, WAY_IN_USDC, rate));
 });

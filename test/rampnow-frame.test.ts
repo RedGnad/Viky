@@ -52,6 +52,12 @@ test("nothing counts on the frame's messages: the money arriving closes it, and 
   // The route gives an address whether or not a key is set, once the frame is switched on.
   const route = readFileSync("app/api/fund/rampnow-frame/route.ts", "utf8");
   assert.match(route, /const url = rampnowFrameOn\(\) \? rampnowFrameAddress\(\{ account: getAddress\(auth\.account\), euros: [^}]+\}, key\) : null;/);
+  // In another currency when one is named with its amount (9 Oct 2026): a currency by its letters, an amount above zero.
+  assert.match(route, /const ask = isCurrencyCode\(currency\) && Number\.isFinite\(amount\) && amount > 0 \? \{ currency, amount \} : undefined;/);
+  const inDollars = new URL(rampnowFrameAddress({ account: ACCOUNT, ask: { currency: "USD", amount: 11.35 } }, "pk_live_test123"));
+  assert.equal(inDollars.searchParams.get("srcCurrency"), "USD");
+  assert.equal(inDollars.searchParams.get("srcAmount"), "11.35");
+  assert.equal(inDollars.searchParams.get("apiKey"), "pk_live_test123");
   // A real payment has gone through the frame (the founder's, 3 Oct 2026), and the page says the frame with what that payment showed.
   const judges = readFileSync("app/judges/page.tsx", "utf8").replace(/\s+/g, " ");
   assert.ok(judges.includes("? \"Rampnow's page opens in a frame inside Viky. Its limit: Rampnow finishes a payment from its own page (the card buys USDC on Base, and its page then sends it on to Monad), so the frame has to stay open until the money arrives."));
