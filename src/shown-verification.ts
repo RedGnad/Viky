@@ -38,7 +38,7 @@ export const SHOWN_MAX_SIGNED_JSON_BYTES = 20_000;
  * (portal.reclaimprotocol.org, "is already finalized with status"). A proof that failed to be made is not one of
  * them: the client gives it thirty seconds, because the person can try again inside the session.
  *
- * Seen once for real, session 53800accd7: signed in at 14:34 UTC, nothing more, then `ERROR_SUBMITTED` at 14:48 with
+ * Seen once for real, on 7 Oct 2026: signed in at 14:34 UTC, nothing more, then `ERROR_SUBMITTED` at 14:48 with
  * "Connection lost. The session was disconnected." The gift's page went on waiting and said nothing, and its link led
  * to a verification Reclaim had closed.
  */

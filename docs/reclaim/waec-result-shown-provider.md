@@ -1,5 +1,7 @@
 # Our WAEC provider: WASSCE credits on the person's own result, shown (D217)
 
+> Closed since 4 Oct 2026: Viky is for adults on both sides, and this condition is offered on no page. The note is kept as it was written, for the code it describes, which is kept closed.
+
 Unverified on a live result: the patterns below were checked on a real result published in a public repository
 (Bappa-Kamba/credly, `backend/sample_result.html`, WASSCE for school candidates 2018), and the provider is registered
 from a real result of the checker as it is today.

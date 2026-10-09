@@ -11,8 +11,8 @@ import { AUSD_ADDRESS } from "./monad/chain";
  * under ten of the chain's coin can call no contract, and a funder whose card just bought USDC holds none. So they
  * sign once, the relayer submits, and the router hands them everything that came back.
  *
- * **It is not deployed.** Its address is `NEXT_PUBLIC_USDC_ROUTER_ADDRESS`, which nobody has set, and while it is
- * absent nothing here runs: the waiting screen reads no USDC and both routes answer that Viky is not ready. The
+ * It is deployed since 3 Oct 2026 (the converter of docs/CONTRACTS.md), and ran with real amounts that day. Its
+ * address is `NEXT_PUBLIC_USDC_ROUTER_ADDRESS`, and where that is absent nothing here runs: the waiting screen reads no USDC and both routes answer that Viky is not ready. The
  * address is public on purpose, because the browser signs for the address this code knows and never for one a server
  * answer names (the audit of 29 Sep 2026, as `src/client/exit.ts` does for the way out).
  */
