@@ -2412,6 +2412,13 @@ export const PHONE_OUT = {
  */
 export const ADD_UNIVERSITY = {
   title: "Add your university",
+  /**
+   * The head of the page, for somebody who is paying and whom nobody sent here (the founder's words, 9 Oct 2026; the
+   * audit of that day): the page opened on a student's ten-minute procedure, and a payer who followed "Yours isn't
+   * here?" read that it was theirs to do. Three lines, and the procedure under a fold named by whom it is for.
+   */
+  forAPayer: ["Offer the gift anyway.", "We set your university up within two days.", "You have nothing else to do."],
+  forTheStudent: "Are you the student?",
   intro: "About ten minutes, from home. You make two checks on Reclaim with its AI option, one for the page of your student portal that says you are enrolled and one for your results, each described in a sentence, then send a few things. A gift can then pay when a student of your university shows they are enrolled, passed the year, or reached a grade.",
   /**
    * The AI option, the one that works today (the founder, 29 Sep 2026, D311, D312): Reclaim's manual builder is broken,
