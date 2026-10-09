@@ -268,8 +268,10 @@ test("a missing provider is asked for once, with its instruction, and a witness 
   // Written before anything moves, with no gift: not listed for the operator nor counted for a judge until one exists.
   assert.equal((await openRequests()).length, 0);
   assert.equal((await providerCounts())?.requested, 0);
-  const again = await requestProvider({ portalId: "uni-a-br", sense: "enrolment", instruction, giftId: "1000042" });
+  const again = await requestProvider({ portalId: "uni-a-br", sense: "enrolment", instruction: `${instruction}\nCorrected since.`, giftId: "1000042" });
   assert.equal(again.firstGiftId, "1000042", "the first gift is kept once known");
+  // A request still open says the instruction as it is written today: the operator builds from what it says.
+  assert.match(again.instruction, /Corrected since\.$/);
   assert.equal((await openRequests()).length, 1);
   assert.equal((await providerCounts())?.requested, 1);
   // Built: a witness provider on its own domain, no pin yet.
@@ -298,7 +300,9 @@ test("a missing provider is asked for once, with its instruction, and a witness 
   assert.equal(testedWithAStudent((await loadPortal("ucad-sn"))!), false, "a classic provider was not tested with a student here");
   assert.equal("tested" in portalListed(pinned!), false);
   // Asked again for the same sense once built: the request stays built.
-  assert.notEqual((await requestProvider({ portalId: "uni-a-br", sense: "enrolment", instruction, giftId: null })).builtAt, null);
+  const built = await requestProvider({ portalId: "uni-a-br", sense: "enrolment", instruction, giftId: null });
+  assert.notEqual(built.builtAt, null);
+  assert.match(built.instruction, /Corrected since\.$/, "and one that was built keeps the instruction it was built from");
   assert.deepEqual((await witnessProviders())?.map((one) => [one.portalId, one.sense, one.domain]), [["uni-a-br", "enrolment", "a.br"]]);
   assert.deepEqual(await providerCounts(), { listed: 4, enrolment: 3, results: 1, witness: 1, pinned: 1, requested: 0 });
 
