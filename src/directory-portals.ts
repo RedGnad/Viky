@@ -11,7 +11,19 @@ import type { PortalInput } from "./portal-store";
  * account alone, which is not a sense since D313: the universities are listed, without a provider. HUJI stays out: its
  * patterns carry one student's own name and number. docs/reclaim/directory-universities.md says each one.
  */
-export type DirectoryPortal = Omit<PortalInput, "provenBy" | "unverified" | "provenAt" | "results"> & Readonly<{ usedBy: number; read: string }>;
+export type DirectoryPortal = Omit<PortalInput, "provenBy" | "unverified" | "provenAt" | "results"> &
+  Readonly<{
+    usedBy: number;
+    read: string;
+    /**
+     * The day Reclaim's own record of the provider was read saying Reclaim approved it (`isApproved`, on
+     * `api.reclaimprotocol.org/api/providers/<id>`, its `/configs` and the directory's own listing). Absent for a
+     * provider that is not approved, or not read: a university is then never said ready on Reclaim's check.
+     */
+    approved?: string;
+    /** How the judges page names the university in a line of its own: "Rome". */
+    said?: string;
+  }>;
 
 export const DIRECTORY_PORTALS: readonly DirectoryPortal[] = [
   {
@@ -27,6 +39,11 @@ export const DIRECTORY_PORTALS: readonly DirectoryPortal[] = [
     // carry). The configuration also publishes a `requestHash` field, 0xe754...f18c, which is not that hash: this row
     // held it until 9 Oct 2026, and a proof from Rome would not have fitted it. No student of Rome has shown one yet.
     requestHash: "0x19bf1b0a18b2f66b9612b82348e97e070fd076db972d279131cdaf15beba11c2",
+    // Approved by Reclaim and active, by its own record of the provider, its configuration and the directory's listing,
+    // all three read on 9 Oct 2026 (`isApproved: true`, `isActive: true`). Not "verified", which is another mark of
+    // Reclaim's (`isVerified: false`).
+    approved: "9 Oct 2026",
+    said: "Rome",
     loginUrl: "https://my.aur.edu/ics",
     // `GET https://my.aur.edu/ICS/Student/`: the student's own course schedule page, "Course Schedule for <name>", and
     // the term it is for, "<term> - All Divisions". A schedule of this academic year is what says enrolled now.

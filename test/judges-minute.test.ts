@@ -80,7 +80,7 @@ test("the minute says what Viky is, for whom, who used it, where it runs, why Mo
   assert.doesNotMatch(minute, /cheaper than a bank|nobody does this|no licen[cs]e/i);
 });
 
-test("the universities are three lines a judge reads in a minute, and Rome's waits on its own checks (the UI pass of 8 Oct 2026)", () => {
+test("the universities are lines a judge reads in a minute, and Rome's is written once its row holds the right hash (the UI pass of 8 Oct 2026)", () => {
   const minute = read("app/judges/JudgesMinute.tsx");
   assert.ok(minute.includes('<span className="block">Toulouse: a real student showed their enrolment, and the gift paid.</span>'));
   assert.ok(minute.includes("more: each set up within two days of a first gift.</span>"));
@@ -92,12 +92,18 @@ test("the universities are three lines a judge reads in a minute, and Rome's wai
   assert.ok(minute.includes("{countInWords(moreUniversities)} more: each set up within two days of a first gift."));
   assert.doesNotMatch(minute, /11,000/);
   const page = read("app/judges/page.tsx");
-  assert.ok(page.includes("moreUniversities={portals && witnessLines ? Math.max(0, portals.listed - new Set(witnessLines.filter((line) => line.pin).map((line) => line.portalId)).size) : null}"));
+  assert.ok(page.includes("moreUniversities={portals && witnessLines ? Math.max(0, portals.listed - new Set([...witnessLines.filter((line) => line.pin).map((line) => line.portalId), ...readyOnReclaim.map((one) => one.portalId)]).size) : null}"));
   // The gift Toulouse's line speaks of is the one the README gives the three transactions of.
   assert.match(read("README.md"), /Gift 1000006 on\s+the second `MilestoneGift`, 8\.98 AUSD for staying enrolled/);
-  // Rome's line is written only once its three checks pass: on 8 Oct 2026 the request hash its row holds was not the
-  // one Reclaim's own SDK derives from the provider's published configuration.
+  // Rome's line (the founder, 9 Oct 2026), after Toulouse's: written from its row as it stands, so only once the row
+  // holds the hash Reclaim's own library derives from the provider's published configuration, which it did not on
+  // 8 Oct 2026. Its name comes from the directory's entry, never typed into the page.
   assert.doesNotMatch(minute, /Rome/);
+  assert.match(minute, /\{readyOnReclaim\.map\(\(name\) => \(\s+<span className="block" key=\{name\} data-ready-on-reclaim="">\s+\{name\}: ready today, on a check approved by Reclaim\.\s+<\/span>\s+\)\)\}/);
+  assert.ok(minute.indexOf("Toulouse: a real student showed their enrolment") < minute.indexOf("{readyOnReclaim.map("));
+  assert.ok(minute.indexOf("{readyOnReclaim.map(") < minute.indexOf("more: each set up within two days of a first gift."));
+  assert.ok(page.includes("const readyOnReclaim = await readyOnReclaimsCheck(loadPortal);"));
+  assert.ok(page.includes("readyOnReclaim={readyOnReclaim.map((one) => one.said)}"));
 });
 
 test("what a first proof meets is said in both cases: held and read, or paid on a rule fixed ahead (the audit of 8 Oct 2026)", () => {

@@ -19,7 +19,8 @@ import { JudgesAccount } from "../components/JudgesAccount";
 import { MilestoneJudges } from "../components/MilestoneJudges";
 import { DISPLAY } from "../components/ui";
 import { readOwnership, ownershipWords } from "@/src/judges-owner";
-import { portalsListedAndRead, providerCounts, witnessProviders } from "@/src/portal-store";
+import { loadPortal, portalsListedAndRead, providerCounts, witnessProviders } from "@/src/portal-store";
+import { readyOnReclaimsCheck } from "@/src/university-ready";
 import { countryInWords } from "@/src/university-shown";
 import { pinInWords } from "@/src/witness-portal";
 import { usesDelivered } from "@/src/phone-order-store";
@@ -109,6 +110,8 @@ export default async function JudgesPage() {
   // by its university, with how many carry a pin.
   const counts = await providerCounts();
   const witnessLines = await witnessProviders();
+  // The universities ready on a check that is Reclaim's own (the founder, 8 Oct 2026): from their rows as they stand.
+  const readyOnReclaim = await readyOnReclaimsCheck(loadPortal);
   // How many times each Bitrefill use was used (D271): said here, as for the conditions, and never in the flow.
   const uses = await usesDelivered();
   // Mobile money and Rampnow, said as Bitrefill is (the founder, 3 Oct 2026): open and unused, then their first use.
@@ -201,8 +204,10 @@ export default async function JudgesPage() {
       {/* For a judge in a hurry (the audit of 1 Oct 2026, D-11): the page in one minute, then its contents. */}
       <JudgesMinute
         index={index}
-        // The universities beyond the ones a student can show from today: listed, less those whose rule is pinned.
-        moreUniversities={portals && witnessLines ? Math.max(0, portals.listed - new Set(witnessLines.filter((line) => line.pin).map((line) => line.portalId)).size) : null}
+        // The universities beyond the ones a student can show from today: listed, less those whose rule is pinned and
+        // those ready on Reclaim's own check.
+        moreUniversities={portals && witnessLines ? Math.max(0, portals.listed - new Set([...witnessLines.filter((line) => line.pin).map((line) => line.portalId), ...readyOnReclaim.map((one) => one.portalId)]).size) : null}
+        readyOnReclaim={readyOnReclaim.map((one) => one.said)}
         // Where a gift is made today: the third daily contract once it is set, with the second version's two others.
         contracts={
           secondVersionSet

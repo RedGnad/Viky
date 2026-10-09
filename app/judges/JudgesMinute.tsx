@@ -39,11 +39,14 @@ export function JudgesMinute({
   index,
   contracts,
   moreUniversities,
+  readyOnReclaim,
 }: Readonly<{
   index: IndexRead | null;
   contracts: Readonly<{ daily: string | null; milestone: string | null; anchor: string | null; version: 1 | 2 | 3 }>;
   /** How many universities are listed beyond the ones a student can show from today, or nothing when not counted. */
   moreUniversities: number | null;
+  /** The universities ready on a check approved by Reclaim, each by the name the directory's entry gives its line. */
+  readyOnReclaim: readonly string[];
 }>) {
   const usage = index ? usageOf(index.gifts, founderAccounts(operatorAccounts())) : null;
   return (
@@ -80,11 +83,17 @@ export function JudgesMinute({
           </a>
           .
         </dd>
-        {/* The universities in lines (the UI pass of 8 Oct 2026): what has run, how many more, and what happens to a
-            first proof. A university ready on a check of Reclaim's alone gets its line when that check passes. */}
+        {/* The universities in lines (the UI pass of 8 Oct 2026): what has run, what is ready on a check of Reclaim's
+            alone, how many more, and what happens to a first proof. */}
         <dt className={MUTED}>Universities</dt>
         <dd className={HELP} data-minute="universities">
           <span className="block">Toulouse: a real student showed their enrolment, and the gift paid.</span>
+          {/* A university ready on Reclaim's own check, from its row as it stands (src/university-ready.ts). */}
+          {readyOnReclaim.map((name) => (
+            <span className="block" key={name} data-ready-on-reclaim="">
+              {name}: ready today, on a check approved by Reclaim.
+            </span>
+          ))}
           {moreUniversities !== null && moreUniversities > 0 ? <span className="block">{countInWords(moreUniversities)} more: each set up within two days of a first gift.</span> : null}
           <span className="block">A first proof that fits a rule set ahead for its university is paid at once.</span>
           <span className="block">Any other first proof is reviewed by hand, within the hour.</span>

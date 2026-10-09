@@ -8,7 +8,8 @@ import { configurePortalStore, ensurePortalSchema, FOLD_FROM, FOLD_TO, foldForSe
 import type { SqlExecutor } from "../src/proof-session-store";
 import { ADD_UNIVERSITY, SHOW_PROOF, UNIVERSITY_CHOICE } from "../src/sentences";
 import { countInWords, indexUniversities, inGroups, matching, senseOfCondition, shownUniversities, sortName, type ListedUniversity } from "../src/university-choice";
-import { readySenses } from "../src/university-ready";
+import { DIRECTORY_PORTALS } from "../src/directory-portals";
+import { readyByTheDirectory, readyOnReclaimsCheck, readySenses } from "../src/university-ready";
 
 /**
  * "Which university?" (D247, D313, the founder, 29 and 30 Sep 2026): the world's list, read whole, opens on every
@@ -60,8 +61,36 @@ test("which universities are ready: a witness provider with its rule pinned, mad
   // A witness provider no proof has pinned yet, a provider being built, and none at all.
   assert.deepEqual(readySenses({ enrolment: witness({ pin: null }) }), []);
   assert.deepEqual(readySenses({}), []);
-  // A provider taken from Reclaim's directory, as Rome's is, is not said ready by a rule: it goes up on its own checks.
+  // A provider read with the enclave that is not the directory's own is not said ready by this.
   assert.deepEqual(readySenses({ enrolment: witness({ verification: "tee", pin: null, requestHash: `0x${"22".repeat(32)}` }) }), []);
+});
+
+test("a university whose check is Reclaim's own, approved, is ready once its row carries the hash worked out again (the founder, 8 Oct 2026)", async () => {
+  const rome = DIRECTORY_PORTALS.find((one) => one.portalId === "aur-it")!;
+  assert.deepEqual([rome.approved, rome.said, rome.providerVersion], ["9 Oct 2026", "Rome", "1.0.0"]);
+  const row = (over: Record<string, unknown> = {}) => ({ portalId: "aur-it", sense: "enrolment", providerId: rome.providerId, verification: "tee", domain: null, providerVersion: "1.0.0", requestHash: rome.requestHash, extract: null, pin: null, addedBy: "0x", ...over }) as never;
+  // The row as the operator's command writes it since 9 Oct 2026: ready for enrolment, and for that sense alone.
+  assert.deepEqual(readySenses({ enrolment: row() }), ["enrolment"]);
+  assert.equal(readyByTheDirectory(row())?.portalId, "aur-it");
+  assert.deepEqual(readySenses({ enrolment: row({ requestHash: rome.requestHash!.toUpperCase().replace("0X", "0x") }) }), ["enrolment"], "a hash is the same in either case");
+  // The row as production held it until then: the field Reclaim's configuration also publishes, which no proof carries.
+  const field = "0xe7543349" + "0".repeat(52) + "f18c";
+  assert.notEqual(rome.requestHash, field);
+  assert.deepEqual(readySenses({ enrolment: row({ requestHash: field }) }), []);
+  // Another version, another provider, a provider read through a witness, or no row: not this check.
+  assert.deepEqual(readySenses({ enrolment: row({ providerVersion: "1.0.1" }) }), []);
+  assert.deepEqual(readySenses({ enrolment: row({ providerId: "another-provider" }) }), []);
+  assert.deepEqual(readySenses({ enrolment: row({ verification: "witness" }) }), []);
+  assert.equal(readyByTheDirectory(null), null);
+  // An entry Reclaim's record was not read as approving is never ready on it: the four listed without a provider.
+  for (const entry of DIRECTORY_PORTALS.filter((one) => one.portalId !== "aur-it")) assert.deepEqual([entry.approved, entry.said, entry.providerId], [undefined, undefined, undefined], entry.portalId);
+  // The hash the entry holds is the one worked out again from the request Reclaim publishes.
+  assert.match(readFileSync("test/reclaim-pins.test.ts", "utf8"), /DIRECTORY_PORTALS/);
+  // The judges page names it from the rows as they stand: with the right hash, and never before.
+  assert.deepEqual(await readyOnReclaimsCheck(async (portalId) => (portalId === "aur-it" ? { enrolment: row() } : null)), [{ portalId: "aur-it", said: "Rome" }]);
+  assert.deepEqual(await readyOnReclaimsCheck(async () => ({ enrolment: row({ requestHash: field }) })), []);
+  assert.deepEqual(await readyOnReclaimsCheck(async () => null), []);
+  assert.deepEqual(await readyOnReclaimsCheck(async () => Promise.reject(new Error("the database did not answer"))), []);
 });
 
 test("the second group's heading counts what it holds, by the thousand once there are thousands", () => {

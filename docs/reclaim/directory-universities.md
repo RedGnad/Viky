@@ -31,9 +31,12 @@ enrolment.
 PROVEN_BY=<the operator account> VIKY_ALLOW_PRODUCTION_DATABASE=1 DATABASE_URL=<production, from the Neon console> pnpm portal:directory
 ```
 
-The row is marked unverified (D193): no student has shown a proof from it to Viky, so the chooser says
-"(unverified)" beside the university and the funder reads, before paying, that nobody has shown a proof from it yet
-(D195). The pattern sits on the label the page prints for the student, "<term> - All Divisions"; the terms' exact
+The row is marked unverified (D193): no student of Rome has shown a proof from it to Viky. Since 9 Oct 2026 the
+university is listed under "Ready today" for a gift on enrolment once its row carries the hash a proof of that version
+carries (`readyByTheDirectory` in `src/university-ready.ts`): the check is Reclaim's own provider, which Reclaim
+approved (`isApproved` on its record, read that day), and the hash is worked out again from the request it publishes.
+The row first held the `requestHash` field that configuration also publishes, which is not that hash; the command
+above writes the right one. The pattern sits on the label the page prints for the student, "<term> - All Divisions"; the terms' exact
 wording ("Fall 2026" or "2026 Fall") is not known, so both orders are accepted, and the years are this academic year's.
 A page that does not carry it fails by its name (`NOT_ENROLLED`), nothing lost, the journal carrying the event. What the
 proof also carries (the name, the major) is read by the attestor and dropped by Viky, the verdict rule (D185).
