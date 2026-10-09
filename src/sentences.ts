@@ -1185,6 +1185,8 @@ export const GIFT_LIVE = {
   /** Opened, and the source it counts is not connected yet: the one moment the whole agreement is read. */
   notConnected: {
     yours: (source: string) => `Connect ${source} and it starts.`,
+    /** The source is connected and counting is one press away: the title says the first, the button the second (10 Oct 2026). */
+    connected: (source: string) => `${source} is connected.`,
     theirs: (recipient: string | null, source: string) =>
       `${recipient ?? "They"} opened it, and ${source} is not connected yet.`,
     /** Opened and nothing started: it goes back 14 days after it was opened (both contracts), said to each side. */

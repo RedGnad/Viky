@@ -22,6 +22,7 @@ import { contractRefusal, DAY_ONE_IS_READ_TOMORROW } from "../src/gift-api";
 import type { GiftState } from "../src/gift-reader";
 import { configureGiftStore, ensureGiftSchema, markBound, markClaimed, recordRelayed, saveGift } from "../src/gift-store";
 import { GOAL_TYPE_STRAVA_DISTANCE } from "../src/gift-terms";
+import { GIFT_LIVE } from "../src/sentences";
 import { firstDayIsTheStart } from "../src/v2";
 import type { SqlExecutor } from "../src/proof-session-store";
 
@@ -148,16 +149,25 @@ test("what is said of the first day is true of the contract the gift is on (the 
     assert.equal(condition.link.kind, "connect");
     if (condition.link.kind !== "connect") continue;
     const { connected, connectedDayOne, notReached, start } = condition.link.consent;
-    assert.equal(connected, `${condition.source} is connected. From tomorrow, every day with your ${unit} is yours, counted each morning.`);
-    assert.equal(connectedDayOne, `${condition.source} is connected. Start counting: today is day one, and its ${unit} are read tomorrow morning.`);
-    assert.ok(connectedDayOne.includes(start), "it names the press by the button's own words");
+    // The card's title says the source is connected, so neither line says it again, and neither repeats the button.
+    assert.equal(connected, `From tomorrow, every day with your ${unit} is yours, counted each morning.`);
+    assert.equal(connectedDayOne, `Today is day one. Its ${unit} are read tomorrow morning.`);
+    assert.equal(start, "Start counting");
+    for (const line of [connected, connectedDayOne]) assert.doesNotMatch(line, /is connected|Start counting/);
     assert.equal(notReached, `Yesterday's ${unit} did not reach your target. Nothing was counted.`);
   }
   // The screen takes the sentence of the gift's own contract, on the way back from the source and afterwards.
   const screen = readFileSync("app/kit/ConnectTheAccount.tsx", "utf8");
-  assert.match(screen, /get\("connect"\) === "done" \? \(dayOneIsTheStart \? link\.consent\.connectedDayOne : link\.consent\.connected\) : null/);
   assert.match(screen, /\{said \?\? \(dayOneIsTheStart \? words\.connectedDayOne : words\.connected\)\}/);
-  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /<ConnectTheAccount giftId=\{giftId\} conditionId=\{condition\.id\} yours=\{mine\} dayOneIsTheStart=\{firstDayIsTheStart\(status\.version\)\} onChanged=\{reloadAll\} \/>/);
+  // On the way back from the source the address says it is connected, and the block is drawn so from its first image.
+  assert.match(screen, /get\("connect"\) === "done" \? \{ connected: true, since: null, bound: false, configured: true \} : null/);
+  // Connected, the block's own title, which asks to connect, is gone: the card's title says the source is connected.
+  assert.match(screen, /\{status\?\.connected \? null : <p className="font-medium">\{words\.title\}<\/p>\}/);
+  const page = readFileSync("app/components/GiftPage.tsx", "utf8");
+  assert.match(page, /<ConnectTheAccount giftId=\{giftId\} conditionId=\{condition\.id\} yours=\{mine\} dayOneIsTheStart=\{firstDayIsTheStart\(status\.version\)\} onConnection=\{setSourceConnected\} onChanged=\{reloadAll\} \/>/);
+  assert.equal(GIFT_LIVE.notConnected.connected("Strava"), "Strava is connected.");
+  const live = readFileSync("src/gift-live.ts", "utf8");
+  assert.match(live, /headline: yours \? \(input\.sourceConnected \? L\.notConnected\.connected\(source\) : L\.notConnected\.yours\(source\)\) : L\.notConnected\.theirs\(recipientName, source\),/);
 
   // A press on "Count now": before the first day the gift starts tomorrow; on it, the gift has started.
   assert.equal(contractRefusal("OutsideWindow")?.message, "Your gift starts counting tomorrow.");

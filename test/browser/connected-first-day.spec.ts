@@ -22,8 +22,8 @@ const UTC_DAY = () => Math.floor(Date.now() / 86_400_000);
 const TERMS = { reads: "your activities on Strava, each morning, for the day before: whether they add up to the kilometres", funderSees: "for each day, whether it counted", what: "your activities", things: 1 } as const;
 const NOT_STARTED = { goalType: STRAVA, dailyTarget: 3, connected: false, startDay: 0, endDay: 0, creditedDays: 0, daysLeft: 7, days: [], earned: "0", earnedDisplay: "$0.00", alreadyTheirs: "0", alreadyTheirsDisplay: "$0.00", todayDayIndex: 0, goalAccount: { username: null, source: "funder", bound: false, code: null, codeExpiresAt: null } };
 
-const DAY_ONE = "Strava is connected. Start counting: today is day one, and its kilometres are read tomorrow morning.";
-const FROM_TOMORROW = "Strava is connected. From tomorrow, every day with your kilometres is yours, counted each morning.";
+const DAY_ONE = "Today is day one. Its kilometres are read tomorrow morning.";
+const FROM_TOMORROW = "From tomorrow, every day with your kilometres is yours, counted each morning.";
 
 test.describe("a connected source, and the first day of its gift", () => {
   test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each case opens its own window");
@@ -42,14 +42,34 @@ test.describe("a connected source, and the first day of its gift", () => {
       await page.goto(`/g/${GIFT}`);
       const says = page.locator("[data-connected-says]");
       await expect(says).toHaveText(sentence);
+      // The card's title says it is connected, nothing on the card still asks to connect, and the button starts.
+      await expect(page.getByText("Strava is connected.", { exact: true })).toHaveCount(1);
+      await expect(page.getByText("Connect Strava and it starts.")).toHaveCount(0);
+      await expect(page.getByText("Connect your Strava")).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Start counting" })).toBeVisible();
       await shot(page, `1-connected-on-contract-${version}`);
-      // On the way back from Strava's own page the same sentence is said, from the first image.
+      // On the way back from Strava's own page the same is said, from the first image.
       await page.goto(`/g/${GIFT}?connect=done`);
       await expect(says).toHaveText(sentence);
+      await expect(page.getByText("Strava is connected.", { exact: true })).toHaveCount(1);
       await device.context.close();
     });
   }
+
+  test("not connected yet, the card still asks to connect, by its title and by its block", async ({ browser, baseURL }) => {
+    const device = await aWindow(browser, baseURL);
+    const { page } = device;
+    await serve(page, GIFT, () => daily(GIFT, "recipient", { ...NOT_STARTED, version: 3 }), TERMS as never);
+    await page.route("**/api/connect/strava/status*", (route) => route.fulfill(json({ connected: false, since: null, bound: false, configured: true })));
+    await makeAnAccount(device);
+    await page.goto(`/g/${GIFT}`);
+    await expect(page.getByText("Connect Strava and it starts.")).toBeVisible();
+    await expect(page.getByText("Connect your Strava")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Connect Strava" })).toBeVisible();
+    await expect(page.getByText("Strava is connected.")).toHaveCount(0);
+    await shot(page, "0-not-connected-yet");
+    await device.context.close();
+  });
 
   for (const [code, message, name] of [
     ["NOT_STARTED", "Today is day one. It is read tomorrow morning.", "2-count-now-on-day-one"],

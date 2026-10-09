@@ -186,11 +186,15 @@ export type ConnectConsent = Readonly<{
   /** The button that opens the source's own page. */
   connect: string;
   connecting: string;
-  /** Once connected: what is now true, and the gesture that starts the counting. */
+  /**
+   * Once connected, the line under the card's title, which then says that the source is connected (the founder,
+   * 10 Oct 2026: the card still said "Connect Strava and it starts.", and the sentence repeated its button). On the
+   * first two daily contracts the first day is the day after counting starts.
+   */
   connected: string;
   /**
-   * The same, on the third daily contract, where the day counting starts is the gift's first day (the audit of 9 Oct
-   * 2026): "From tomorrow" was said to somebody whose first day was already running.
+   * The same line on the third daily contract, where the day counting starts is the gift's first day (the audit of
+   * 9 Oct 2026): "From tomorrow" was said to somebody whose first day was already running.
    */
   connectedDayOne: string;
   /** A reading of yesterday's page that did not reach the target, in the source's own unit: what was read, and what happened. */
@@ -1027,8 +1031,8 @@ export const FITBIT_DAILY: Condition = {
       erase: "You can disconnect and erase from this page at any time. Viky then gives Google's key back and keeps nothing of yours; the gift goes on, with each day counted as not done until you connect again.",
       connect: "Connect Fitbit",
       connecting: "Opening Fitbit",
-      connected: "Fitbit is connected. From tomorrow, every day with your minutes is yours, counted each morning.",
-      connectedDayOne: "Fitbit is connected. Start counting: today is day one, and its minutes are read tomorrow morning.",
+      connected: "From tomorrow, every day with your minutes is yours, counted each morning.",
+      connectedDayOne: "Today is day one. Its minutes are read tomorrow morning.",
       notReached: "Yesterday's minutes did not reach your target. Nothing was counted.",
       start: "Start counting",
       disconnect: "Disconnect and erase",
@@ -1210,8 +1214,8 @@ export const STRAVA_DAILY: Condition = {
       erase: "You can disconnect and erase from this page at any time. Viky then gives Strava's key back and keeps nothing of yours; the gift goes on, with each day counted as not done until you connect again.",
       connect: "Connect Strava",
       connecting: "Opening Strava",
-      connected: "Strava is connected. From tomorrow, every day with your kilometres is yours, counted each morning.",
-      connectedDayOne: "Strava is connected. Start counting: today is day one, and its kilometres are read tomorrow morning.",
+      connected: "From tomorrow, every day with your kilometres is yours, counted each morning.",
+      connectedDayOne: "Today is day one. Its kilometres are read tomorrow morning.",
       notReached: "Yesterday's kilometres did not reach your target. Nothing was counted.",
       start: "Start counting",
       disconnect: "Disconnect and erase",
