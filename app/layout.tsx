@@ -33,6 +33,7 @@ import { Pressed } from "./kit/Pressed";
 import { Register } from "./serwist/Register";
 import { preload } from "react-dom";
 import { CHARACTERS_FILE } from "./kit/character-file";
+import { rampnowQuotesOn } from "@/src/rampnow-quote";
 
 const APP_NAME = "Viky";
 const APP_DEFAULT_TITLE = "Viky";
@@ -170,7 +171,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <script dangerouslySetInnerHTML={{ __html: MOVES_BOOT_SCRIPT }} />
         <style dangerouslySetInnerHTML={{ __html: introGroundStyle(FIGURE_ICON_SVG) }} />
       </head>
-      <body className="antialiased">
+      {/* Whether Rampnow is asked its quote here, for the screens that pay by card (src/client/card-ask.ts). */}
+      <body className="antialiased" data-card-quotes={rampnowQuotesOn() ? "on" : undefined}>
         {/* Before anything is painted, so a chosen appearance never flashes the other one first (D97). */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         {/* Before the browser restores a scroll position: the landing always opens at its top (D250). */}

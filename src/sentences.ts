@@ -330,6 +330,11 @@ export const PAY = {
   pay: "Pay",
   /** Under the button while the account is being read (the founder, 5 Oct 2026): the button names no way until then. */
   readingAccount: "Reading what your account holds.",
+  /**
+   * While the card service is asked what it charges, in the money the screen is read in (the founder's words, 9 Oct
+   * 2026): what the person waits for is their own total, and no service is named.
+   */
+  workingOutTotal: "Working out your total.",
   /** The reading failed: what happened, and the small button under it reads again. Never the card in its place. */
   accountUnread: "What your account holds could not be read.",
   readAgain: "Read it again",
@@ -351,7 +356,6 @@ export const PAY = {
    * card service is opened in euros, so the euros are what the card is charged, and the figures above are their
    * conversion at the day's rate.
    */
-  cardCharged: (euros: string) => `Your card is charged ${euros}.`,
   cardStartsAt: (amount: string) => `Card payments start at ${amount}.`,
   makeTheGift: (amount: string) => `Make the gift ${amount}`,
   payFromAccount: (amount: string, recipient: string) => `Put ${amount} in ${their(recipient)} name`,

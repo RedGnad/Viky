@@ -7,6 +7,7 @@ import { formatAusd } from "@/src/gift-reader";
 import { JUDGE_CREDIT_ENDS, judgeCreditConfig, judgeCreditsStanding, standingInWords } from "@/src/judge-credit";
 import { rampHostApiKey, rampnowWayIn, WAY_OUT_CARD, WAY_OUT_EURO, waysIn } from "@/src/rails";
 import { rampnowFrameOn } from "@/src/rampnow-frame";
+import { rampnowQuotesOn } from "@/src/rampnow-quote";
 import { usdcRouterAddress } from "@/src/usdc-router";
 import { USDC_ROUTER } from "@/src/viky-contracts";
 import { conversionsSent, exchangesSentInto } from "@/src/exit-store";
@@ -182,6 +183,15 @@ export default async function JudgesPage() {
         </>
       ) : null}
       . A conversion promises at least ninety-nine for a hundred, or nothing moves.{" "}
+      {/* The currency its page is opened in (9 Oct 2026), said as this deployment does it. */}
+      <span data-rampnow-currency>
+        {rampnowQuotesOn()
+          ? "Its page is opened in the currency the funder reads Viky in, for the amount Rampnow's own quote gives, where Rampnow takes a card in that currency; the quote is asked by Viky's server with a public partner key. Otherwise, and whenever the quote does not answer within three seconds: in euros for a funder who reads Viky in euros, in dollars for every other."
+          : "Its page is opened in euros for a funder who reads Viky in euros, and in dollars for every other. Rampnow's own quote is not asked on this deployment: no partner key of Rampnow's is set."}{" "}
+        The amount is then worked out by a rule, not by Rampnow: it keeps 7 % plus 0.40 EUR, never under 1.00 EUR, and takes no
+        card payment under 5 EUR, read on its page without paying on 1 Oct 2026 in euros and on 9 Oct 2026 in dollars, where those
+        figures are said in dollars at the day&apos;s rate.
+      </span>{" "}
       {rampnowOn
         ? rampnowFrameOn()
           ? "Rampnow's page opens in a frame inside Viky. Its limit: Rampnow finishes a payment from its own page (the card buys USDC on Base, and its page then sends it on to Monad), so the frame has to stay open until the money arrives. The frame has no cross: one way out under it while no payment is known, \"Go back without paying\", and one after five minutes without the money. Left before the end, the payment waits at Rampnow: the screen that waits leads back to it, and opens another only when the person answers that they did not pay. Seen on the first payment through the frame, on 3 Oct 2026: 6 EUR paid at 21:23 UTC, the frame closed, the money held on Base for 14 minutes, then 5.60 USDC on the account at 21:38 UTC, once Rampnow's page was opened in a tab. Where the frame cannot keep the person signed in at Rampnow, it is never shown: \"Pay by card\" opens Rampnow's page in a tab of its own, and the payment is followed as one started from a tab. That is Safari's engine before 18.4 and from 18.5 to 26.1, so every browser on an iPhone at those versions: Rampnow's session in a frame lives in cookies set \"Partitioned\", which that engine reads in 18.4 and from 26.2. Measured on Safari 17.6 on 4 Oct 2026, on a neutral page holding the same frame: after the code received by e-mail, Rampnow's page went back to its sign-in form. It is read from what the browser says of itself; it was not measured on viky.cash in Safari, nor on the versions in between. "
