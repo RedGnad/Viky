@@ -179,8 +179,9 @@ function ClosedEye({ x, y }: Readonly<{ x: number; y: number }>) {
 
 /**
  * The juice (the founder, 20 Sep 2026, on a sheet of glossy jelly shapes): the fills stay flat, and each character
- * gains one highlight of two circles at its upper left and one soft shade lying at its foot. No gradient, no outline,
- * no new colour in the range: two tints of white and of the ink, kept as their own variables.
+ * gains one highlight of two circles at its upper left. No gradient, no outline, no new colour in the range: one tint
+ * of white, kept as its own variable. The soft shade that lay at each one's foot went on 9 Oct 2026 (the founder, on
+ * a mockup of the five shapes with and without it).
  */
 function Gloss({ cx, cy, r, dot }: Readonly<{ cx: number; cy: number; r: number; dot?: Readonly<{ cx: number; cy: number; r: number }> }>) {
   return (
@@ -191,11 +192,6 @@ function Gloss({ cx, cy, r, dot }: Readonly<{ cx: number; cy: number; r: number;
   );
 }
 
-/** The shade a body rests in: a pill, never an oval, because an eye is the only round thing that may be an outline. */
-function Shade({ cx, cy, rx, ry }: Readonly<{ cx: number; cy: number; rx: number; ry: number }>) {
-  return <rect data-part="shade" x={cx - rx} y={cy - ry} width={rx * 2} height={ry * 2} rx={ry} style={{ fill: "var(--character-shade)" }} />;
-}
-
 const bodyFill = (fill: string): CSSProperties => ({ fill });
 
 function drawing(
@@ -203,7 +199,7 @@ function drawing(
   face: boolean,
   variant: number,
   tone: Readonly<{ box: string; ribbon: string; face: string }>,
-): { body: ReactNode; face: ReactNode; lean?: string; bow?: ReactNode; gloss?: ReactNode; shade?: ReactNode; defs?: ReactNode } {
+): { body: ReactNode; face: ReactNode; lean?: string; bow?: ReactNode; gloss?: ReactNode; defs?: ReactNode } {
   const gaze = gazeOf(variant);
   switch (state) {
     case "toCome":
@@ -212,7 +208,6 @@ function drawing(
         // line rather than as a character, which is what the founder could not see in the card's row.
         body: <rect x={8} y={25} width={48} height={FLOOR - 25} rx={15} style={bodyFill(THREE)} />,
         gloss: <Gloss cx={19} cy={33} r={4.4} dot={{ cx: 27, cy: 30, r: 2.2 }} />,
-        shade: <Shade cx={32} cy={51} rx={16} ry={2.4} />,
         face: face ? (
           <>
             <ClosedEye x={24} y={39} />
@@ -225,7 +220,6 @@ function drawing(
       return {
         body: <path d={TRIANGLE} style={bodyFill(TWO)} />,
         gloss: <Gloss cx={25} cy={27} r={3.4} dot={{ cx: 30, cy: 22, r: 1.7 }} />,
-        shade: <Shade cx={32} cy={51} rx={15} ry={2.4} />,
         face: face ? (
           <>
             <Eye x={26 + gaze} y={37} r={3.1} />
@@ -238,7 +232,6 @@ function drawing(
       return {
         body: <path d={TRIANGLE} style={bodyFill(TWO)} />,
         gloss: <Gloss cx={25} cy={27} r={3.4} dot={{ cx: 30, cy: 22, r: 1.7 }} />,
-        shade: <Shade cx={32} cy={51} rx={15} ry={2.4} />,
         lean: "rotate(-9 32 55)",
         face: face ? (
           <>
@@ -252,7 +245,6 @@ function drawing(
       return {
         body: <circle cx={32} cy={FLOOR - 22} r={22} style={bodyFill(ONE)} />,
         gloss: <Gloss cx={18} cy={24} r={4.4} dot={{ cx: 25, cy: 18, r: 2.2 }} />,
-        shade: <Shade cx={32} cy={49} rx={14} ry={2.6} />,
         face: face ? (
           <>
             <Eye x={24 + gaze} y={29} />
@@ -265,7 +257,6 @@ function drawing(
       return {
         body: <circle cx={32} cy={FLOOR - 19} r={19} style={bodyFill(THREE)} />,
         gloss: <Gloss cx={26} cy={26} r={3.6} dot={{ cx: 32, cy: 21, r: 1.8 }} />,
-        shade: <Shade cx={32} cy={51} rx={12} ry={2.4} />,
         // In profile, facing left: one eye and a small mouth at the leading edge.
         face: face ? (
           <>
@@ -288,8 +279,7 @@ function drawing(
           </defs>
         ),
         /* The one outline in the product, asked for by the founder, in the two colours he chose on the image: the
-           ink at night, a light yellow by day. The shade that lay at its foot is gone: on a shape this wide it read
-           as a beard rather than as a shadow. */
+           ink at night, a light yellow by day. */
         body: <path d={DIAMOND} style={{ fill: `url(#${DIAMOND_BLEND})`, stroke: "var(--character-hero-edge)", strokeWidth: 2.2, strokeLinejoin: "round" }} />,
         gloss: <Gloss cx={23} cy={13} r={4.4} dot={{ cx: 31, cy: 10, r: 2.2 }} />,
         face: face ? (
@@ -312,7 +302,6 @@ function drawing(
           </>
         ),
         gloss: <Gloss cx={17} cy={28} r={3} dot={{ cx: 23, cy: 26, r: 1.6 }} />,
-        shade: <Shade cx={32} cy={51} rx={13} ry={2.4} />,
         // A bow tied on the lid: two loops leaning out from a knot, drawn over the lid.
         bow: (
           <g data-part="bow" style={FROM_FLOOR}>
@@ -454,7 +443,6 @@ export function Character({
       {was ? (
         <g data-part="was">
           {was.body}
-          {was.shade}
           {was.gloss}
           {was.face}
         </g>
@@ -465,9 +453,8 @@ export function Character({
         <g transform={parts.lean} {...(withLimbs || state === "earned" ? { "data-part": "whirl", style: FROM_MIDDLE } : {})}>
           {withLimbs ? <Limbs pose={pose} /> : null}
           <g data-part="body">{parts.body}</g>
-          {/* The shade lies in the body, the highlight sits on it, and the face stays on top of both (D132). */}
-          {parts.shade}
-          {parts.gloss}
+          {/* The highlight sits on the body, and the face stays on top of it (D132). */}
+          {state === "earned" ? null : parts.gloss}
           {parts.bow}
           {parts.face ? (
             <g data-part="face" style={FROM_MIDDLE}>
@@ -476,6 +463,10 @@ export function Character({
             </g>
           ) : null}
         </g>
+        {/* A day earned is the one shape that turns on itself, and a highlight is where the light is, not where the
+            body has turned to: it is drawn outside the group that turns, so it follows the day and never the turn
+            (the founder, 9 Oct 2026). */}
+        {state === "earned" ? parts.gloss : null}
       </g>
     </svg>
   );

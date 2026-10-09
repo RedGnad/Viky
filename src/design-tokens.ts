@@ -290,10 +290,10 @@ export const CHARACTERS: Record<Appearance, Record<string, string>> = {
 
 /**
  * The juice inside a character (D132, the founder on a sheet of glossy jelly shapes, 20 Sep 2026): the fills stay
- * flat, and each one gains a highlight of two white circles at its upper left and a shade lying at its foot. Kept
- * low on purpose: enough to read as an object under a light, never enough to become a gradient.
+ * flat, and each one gains a highlight of two white circles at its upper left. Kept low on purpose: enough to read
+ * as an object under a light, never enough to become a gradient. The shade that lay at its foot went on 9 Oct 2026.
  */
-export const CHARACTER_JUICE = { gloss: "rgba(255, 255, 255, 0.45)", shade: "rgba(30, 22, 51, 0.12)" } as const;
+export const CHARACTER_JUICE = { gloss: "rgba(255, 255, 255, 0.45)" } as const;
 
 /** How much of the shadow's colour shows under a character: a tint of the ink by day, a deeper one at night. */
 export const CHARACTER_SHADOW_OPACITY: Record<Appearance, number> = { light: 0.12, dark: 0.45 };
@@ -553,14 +553,15 @@ export const MOTION = {
     drift: { px: 160, catchUpS: 0.5 },
     acts: {
       catchUpS: 0.35,
-      /** The day earned rolls across its place: a turn and a half, three tenths of an em each way. */
-      roll: { turn: 270, shift: "0.3em", origin: "50% 50%" },
+      /**
+       * The day earned rolls across its place: a turn and a half, three tenths of an em each way. Its body and its
+       * face turn, from the middle the drawing itself names; its highlight does not (app/kit/Character.tsx).
+       */
+      roll: { turn: 270, shift: "0.3em" },
       /** Today hops three times, half an em up, stretching as it rises and squashing where it lands. */
       hop: { times: 3, height: "-0.5em", turn: 8, stretch: { x: 0.94, y: 1.1 }, squash: { x: 1.12, y: 0.82 }, upS: 1, downS: 1, settleS: 0.35, upEase: "power2.out", downEase: "power2.in", settleEase: "power1.out", origin: "50% 100%" },
       /** The day missed comes back from the right, from the moment its title is in until it reaches mid screen. */
       back: { from: "4.4em", fromTurn: 50, startAt: 0.96, homeAt: 0.48, ease: "power2.out", origin: "50% 60%" },
-      /** The day that can still be caught nods, wide, three times, each a little less. */
-      nod: { turns: [20, 18, 14], eachS: 1, ease: "sine.inOut", origin: "50% 100%" },
       /** The sunglasses come down onto the face as the title reaches mid screen, and the head tilts as it goes by. */
       shades: { drop: -15, fromTurn: -22, startAt: 0.72, onAt: 0.46, ease: "back.out(2.4)", origin: "50% 50%", tilt: 12, tiltOrigin: "50% 60%" },
     },
