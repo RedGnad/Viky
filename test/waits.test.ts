@@ -134,6 +134,27 @@ test("the gift's own path uses the one button too: the connection, the proofs, t
   assert.equal((readFileSync("app/kit/SignInDoor.tsx", "utf8").match(/<ButtonWords/g) ?? []).length, 1, "the header's door, one width whatever it says");
 });
 
+test("the ways out use the one button for the price, the order and the send", () => {
+  // Where money leaves: a press that waited faded, and three of them changed their words with nothing moving.
+  const uses: Record<string, readonly RegExp[]> = {
+    "app/components/CashOut.tsx": [
+      /<Button doing=\{busy \? W\.asking : null\} step=\{WAITS\.amount\} waiting=\{changing\.units === undefined\} onPress=\{\(\) => void askPrice\(\)\}>/,
+      /<Button doing=\{stage === "getting" \? W\.gettingReady\(/,
+      /<Button doing=\{stage === "sending" \? W\.sending\(amount!\.lead, chosen\.name\) : null\} waiting=\{busy && stage !== "sending"\} onPress=\{\(\) => void send\(\)\}>/,
+      /<Button doing=\{stage === "ownSending" \? W\.sending\(ownNumber, "your other account"\) : null\} waiting=\{busy && stage !== "ownSending"\} onPress=\{\(\) => void sendOwn\(\)\}>/,
+    ],
+    "app/components/PhoneTopUp.tsx": [/<Button doing=\{busy \? W\.confirming : null\} onPress=\{\(\) => void topUp\(\)\}>/, /<Button doing=\{busy \? W\.pricing : null\} step=\{WAITS\.price\("Bitrefill"\)\}/, /<Button doing=\{busy \? W\.finding : null\} step=\{WAITS\.operator\}/],
+    "app/components/GiftCardOut.tsx": [/<Button doing=\{busy \? W\.confirming : null\} onPress=\{\(\) => void buy\(\)\}>/, /<Button doing=\{busy \? W\.pricing : null\} step=\{WAITS\.price\("Bitrefill"\)\}/],
+    "app/components/MobileMoneyOut.tsx": [/<Button doing=\{busy \? doing : null\} onPress=\{\(\) => void send\(\)\}>/],
+  };
+  for (const [file, patterns] of Object.entries(uses)) {
+    const source = readFileSync(file, "utf8");
+    for (const use of patterns) assert.match(source, use, file);
+    assert.doesNotMatch(source, /<ButtonWords/, `${file} draws no wheel of its own`);
+    assert.doesNotMatch(source, /\{busy \? W\.confirming : W\.confirm\}/, `${file}: no press only changes its words`);
+  }
+});
+
 test("the screens of the person who pays use the one button for every press that waits", () => {
   const uses: Record<string, RegExp> = {
     "app/kit/TakeItBack.tsx": /<Button doing=\{busy \? W\.takingBack : null\} step=\{WAITS\.takingBack\} waiting=\{working\} failed=\{refusal\}/,

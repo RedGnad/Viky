@@ -40,9 +40,10 @@ import { latestMobilePayout, mobileMoneyOffer, payableFor, type AccountOffer, ty
 import { delayInWords, localInWords, MOBILE_REFUSALS, operatorsInWords } from "@/src/mobile-money";
 import { GiftCardOut } from "./GiftCardOut";
 import { AMOUNT_IN_TITLE, BODY, CARD, CARD_LABEL, CARD_TITLE, FIELD, HELP, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE, TITLE_IN_FACE } from "./ui";
-import { ButtonWords, StepInProgress, WaitLine } from "../kit/Waiting";
+import { WaitLine } from "../kit/Waiting";
 import { WAITS } from "@/src/sentences";
 import { Working } from "../kit/Working";
+import { Button } from "../kit/Button";
 
 /**
  * The way out, rebuilt from docs/design/flows.md (states W1 to W13) on 17 Sep 2026.
@@ -964,12 +965,9 @@ export function CashOut() {
               )}
               {alert("amount")}
               <div className="flex flex-wrap gap-[var(--tap-gap)]">
-                <button type="button" onClick={() => void askPrice()} disabled={busy || changing.units === undefined} className={PRIMARY_BUTTON}>
-                  <ButtonWords busy={busy} doing={W.asking}>
-                    {W.seeWhatYouWillGet}
-                  </ButtonWords>
-                </button>
-                <StepInProgress busy={busy} step={WAITS.amount} />
+                <Button doing={busy ? W.asking : null} step={WAITS.amount} waiting={changing.units === undefined} onPress={() => void askPrice()}>
+                  {W.seeWhatYouWillGet}
+                </Button>
                 <button type="button" onClick={() => { setStage("base"); setChosen(null); setProblem(null); }} className={SMALL_BUTTON}>
                   {W.notNow}
                 </button>
@@ -1019,19 +1017,17 @@ export function CashOut() {
               {alert("review")}
               <div className="flex flex-wrap gap-[var(--tap-gap)]">
                 {problem?.where === "review" && problem.code === "RATE_MOVED" ? (
-                  <button type="button" onClick={() => void askPrice(true)} disabled={busy} className={PRIMARY_BUTTON}>
+                  <Button doing={busy ? W.asking : null} onPress={() => void askPrice(true)}>
                     {W.failures.seeTheNewPrice}
-                  </button>
+                  </Button>
                 ) : problem?.where === "review" && problem.code === "QUOTE_STALE" ? (
-                  <button type="button" onClick={() => void askPrice(true)} disabled={busy} className={PRIMARY_BUTTON}>
+                  <Button doing={busy ? W.asking : null} onPress={() => void askPrice(true)}>
                     {W.failures.tryAgain}
-                  </button>
+                  </Button>
                 ) : (
-                  <button type="button" onClick={() => void getReady()} disabled={busy || stage === "getting"} className={PRIMARY_BUTTON}>
-                    <ButtonWords busy={stage === "getting"} doing={W.gettingReady(bank ? `$${orderNumber}` : formatAusd(changing.units ?? 0n))}>
-                      {W.getReady(bank ? `$${orderNumber}` : formatAusd(changing.units ?? 0n))}
-                    </ButtonWords>
-                  </button>
+                  <Button doing={stage === "getting" ? W.gettingReady(bank ? `$${orderNumber}` : formatAusd(changing.units ?? 0n)) : null} waiting={busy && stage !== "getting"} onPress={() => void getReady()}>
+                    {W.getReady(bank ? `$${orderNumber}` : formatAusd(changing.units ?? 0n))}
+                  </Button>
                 )}
                 {stage !== "getting" ? (
                   <button type="button" onClick={() => { setStage("amount"); setQuote(null); setProblem(null); }} className={SMALL_BUTTON}>
@@ -1169,9 +1165,9 @@ export function CashOut() {
                 <p className="break-all text-[length:var(--type-help)] tabular-nums">{deposit.trim()}</p>
                 {alert("send")}
                 <div className="flex flex-wrap gap-[var(--tap-gap)]">
-                  <button type="button" onClick={() => void send()} disabled={busy || stage === "sending"} className={PRIMARY_BUTTON}>
-                    {stage === "sending" ? W.sending(amount!.lead, chosen.name) : W.sendButton}
-                  </button>
+                  <Button doing={stage === "sending" ? W.sending(amount!.lead, chosen.name) : null} waiting={busy && stage !== "sending"} onPress={() => void send()}>
+                    {W.sendButton}
+                  </Button>
                   {stage !== "sending" ? (
                     <button type="button" onClick={() => { setStage("ready"); setProblem(null); }} className={SMALL_BUTTON}>
                       {W.notNow}
@@ -1254,9 +1250,9 @@ export function CashOut() {
                 <p className="break-all text-[length:var(--type-help)] tabular-nums">{ownCode.trim()}</p>
                 {alert("own")}
                 <div className="flex flex-wrap gap-[var(--tap-gap)]">
-                  <button type="button" onClick={() => void sendOwn()} disabled={busy || stage === "ownSending"} className={PRIMARY_BUTTON}>
-                    {stage === "ownSending" ? W.sending(ownNumber, "your other account") : W.sendButton}
-                  </button>
+                  <Button doing={stage === "ownSending" ? W.sending(ownNumber, "your other account") : null} waiting={busy && stage !== "ownSending"} onPress={() => void sendOwn()}>
+                    {W.sendButton}
+                  </Button>
                   {stage !== "ownSending" ? (
                     <button type="button" onClick={() => { setStage("own"); setProblem(null); }} className={SMALL_BUTTON}>
                       {W.notNow}
