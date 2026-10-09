@@ -115,7 +115,7 @@ test.describe("a device that remembers a passkey, and a passkey a computer keeps
     await page.locator('[data-decide="sign-out"]').click();
     await page.waitForURL((url) => url.pathname === "/", { timeout: 60_000 });
     await expect.poll(() => signedIn(context)).toBe(false);
-    // The door the sign-out asked for is shut by a reload: what is measured is the header's own press.
+    // Signing out opened nothing; the reload puts the watch in the page: what is measured is the header's own press.
     await context.addInitScript(WATCH);
     await page.reload();
     await expect(page.getByRole("dialog", DOOR)).toHaveCount(0);

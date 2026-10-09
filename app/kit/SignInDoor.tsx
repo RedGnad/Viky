@@ -64,7 +64,7 @@ export function SignInDoor() {
     }
   };
 
-  // The page just left asked for the door, by signing out or by asking for another account (src/account/door-asked.ts):
+  // The page just left asked for the door, by asking for another account (src/account/door-asked.ts):
   // it stands open on arrival, with nothing tried yet. Past the body of the effect, as the screen's other readings are.
   useEffect(() => {
     let live = true;

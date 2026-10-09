@@ -30,13 +30,16 @@ test("the gifts answered 401 are a sign-out, not gifts that could not be loaded"
   assert.match(gifts, /if \(error instanceof ApiError && error\.status === 401\) return serverForgot\(\);/);
 });
 
-test("signing out and asking for another account both lead straight to the account's door", () => {
+test("asking for another account leads straight to the account's door; signing out lands with nothing opened", () => {
   // "You, not signed in on this device" showed for a moment at a sign-out, and "Other account" left the person on it,
-  // one more press from anywhere (the founder, 4 Oct 2026).
-  for (const way of ["leave: async () => {", "useAnotherAccount: async () => {"]) {
-    const body = provider.slice(provider.indexOf(way), provider.indexOf("},", provider.indexOf(way)) + 2);
-    assert.match(body, /askForTheDoor\(\);[\s\S]*window\.location\.assign\("\/"\);/, `${way} asks for the door, then loads the landing`);
-  }
+  // one more press from anywhere (the founder, 4 Oct 2026). Both then opened the door, and did the same thing on the
+  // screen: since 9 Oct 2026 signing out closes the session and arrives on the landing, and the door is the other's.
+  const way = (name: string) => provider.slice(provider.indexOf(name), provider.indexOf("},", provider.indexOf(name)) + 2);
+  assert.match(way("useAnotherAccount: async () => {"), /askForTheDoor\(\);[\s\S]*window\.location\.assign\("\/"\);/, "another account asks for the door, then loads the landing");
+  const out = way("leave: async () => {");
+  assert.doesNotMatch(out, /askForTheDoor/, "signing out asks for nothing");
+  assert.match(out, /await signOutOfServer\(\);[\s\S]*mera\.signOut\(\{ quiet: true \}\);[\s\S]*window\.location\.assign\("\/"\);/, "it closes the session, then loads the landing");
+  assert.equal((provider.match(/askForTheDoor\(\);/g) ?? []).length, 1);
   // The landing's door opens as it arrives, once, with nothing tried yet: its second key says "Sign in".
   const door = readFileSync("app/kit/SignInDoor.tsx", "utf8");
   assert.match(door, /if \(live && doorWasAskedFor\(\)\) setOpen\(true\);/);
