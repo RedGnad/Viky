@@ -259,8 +259,9 @@ test("the card is asked to the cent and said in one line under its button, which
   assert.match(body, /\) : sum && sum\.fromAccount > 0 \? \(\s+\/\/[^\n]+\n\s+line\(W\.rows\.fromAccount, less\(sum\.fromAccount\)\)/);
   assert.match(sheet, /const cardSaid = sum\s+\? W\.cardSum\(\{ gift: say\(toDecimals\(sum\.gift - sum\.fromAccount, code\)\), part: sum\.fromAccount > 0, fee: feeCeiling \? W\.upTo\(say\(sum\.fee\)\) : say\(sum\.fee\), stays: sum\.stays > 0 \? say\(sum\.stays\) : null \}\)\s+: null;/);
   assert.ok(body.indexOf("data-card-sum") > body.indexOf("data-pays="), "under the button");
-  assert.ok(body.indexOf("data-card-sum") < body.indexOf('{codeFirst ? null : theCode("under")}'), "before the code's key");
   assert.ok(body.indexOf("data-card-sum") < body.indexOf("<CardLine way={way} />"), "and before the line of terms");
+  // The code's key is above the button, so nothing stands between the button and the line that adds up.
+  assert.ok(body.indexOf('theCode("key")') < body.indexOf("data-pays="));
 });
 
 test("where the sheet is not in euros, the total is said about, and the euros the card is charged are said under the button", () => {
@@ -274,10 +275,11 @@ test("where the sheet is not in euros, the total is said about, and the euros th
   assert.match(sheet, /\{total\.about \? <span className=\{`\$\{BODY\} font-normal`\}>\{W\.about\} <\/span> : null\}\s+\{total\.amount\}/);
   assert.match(sheet, /\{sum && converted \? \(\s+<p className=\{HELP\} data-card-charged="">\s+\{W\.cardCharged\(moneyIn\(sum\.cardEuros, "EUR"\)\)\}/);
   const body = sheet.slice(sheet.indexOf("<Sheet "), sheet.indexOf("</Sheet>"));
-  // Under the button and the line that adds up, and before the code's key and the card service's own line.
-  assert.ok(body.indexOf("data-card-sum") < body.indexOf("data-card-charged"));
-  assert.ok(body.indexOf("data-card-charged") < body.indexOf('{codeFirst ? null : theCode("under")}'));
-  assert.ok(body.indexOf('{codeFirst ? null : theCode("under")}') < body.indexOf("<CardLine way={way} />"));
+  // The sheet's order (the founder, 9 Oct 2026): the lines, the total, the code's key, the button, the line that adds
+  // up, the euros the card is charged, the card service's own line, the passkey's sentence.
+  const order = ["data-pay-lines", "data-pay-total", 'theCode("key")', "data-pays=", "data-card-sum", "data-card-charged", "<CardLine way={way} />", "W.passkeyMakesTheAccountEitherWay"].map((mark) => body.indexOf(mark));
+  assert.ok(order.every((at) => at > 0), "each is on the sheet");
+  assert.deepEqual(order, [...order].sort((a, b) => a - b));
   // The euros are the card page's own: what the link asks of it, to the cent.
   assert.match(readFileSync("src/rails.ts", "utf8"), /set\("srcCurrency", "EUR"\);/);
 });
