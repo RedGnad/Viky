@@ -2,7 +2,7 @@ import { BEFORE_THE_JOURNAL, cycleInWords, cycleUse, dailyCeilings, JUDGING, lef
 import { LIMIT } from "@/src/sentences";
 import { PROOF_EVERY_SECONDS } from "@/src/milestone-reading";
 import { formatAusd } from "@/src/gift-reader";
-import { judgeCreditConfig, judgeCreditsStanding, standingInWords } from "@/src/judge-credit";
+import { JUDGE_CREDIT_ENDS, judgeCreditConfig, judgeCreditsStanding, standingInWords } from "@/src/judge-credit";
 import { rampHostApiKey, rampnowWayIn, waysIn } from "@/src/rails";
 import { rampnowFrameOn } from "@/src/rampnow-frame";
 import { usdcRouterAddress } from "@/src/usdc-router";
@@ -56,6 +56,11 @@ function Tx({ hash }: Readonly<{ hash: string }>) {
       {hash.slice(0, 10)}…{hash.slice(-4)}
     </a>
   );
+}
+
+/** The last day a judge's code works, from the moment the route refuses it (src/judge-credit.ts): "4 Nov 2026". */
+function lastDayOfTheCode(): string {
+  return new Date(JUDGE_CREDIT_ENDS - 1).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 /** The mobile money ceilings in words, from the constants the routes check (src/mobile-money.ts). */
@@ -216,7 +221,8 @@ export default async function JudgesPage() {
             passkey. Your account receives {judgeCredit ? formatAusd(judgeCredit.units) : "a set amount"}: a judge credit from
             Viky&apos;s treasury, once per account. A real funder pays by card instead, on the page of the card service
             their country is served by (&quot;How money comes in&quot;, below). Without the link, press &quot;Have a code?&quot; under
-            the card&apos;s button and type the code from those instructions.
+            the card&apos;s button and type the code from those instructions.{" "}
+            <span data-judge-code-until>The code works until {lastDayOfTheCode()}, UTC.</span>
             {judgeCredit ? <span data-judge-standing> {standingInWords(judgeStanding)}</span> : null}
           </li>
           <li>
