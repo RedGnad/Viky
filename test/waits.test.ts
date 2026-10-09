@@ -160,7 +160,7 @@ test("the screens of the person who pays use the one button for every press that
     "app/kit/TakeItBack.tsx": /<Button doing=\{busy \? W\.takingBack : null\} step=\{WAITS\.takingBack\} waiting=\{working\} failed=\{refusal\}/,
     "app/kit/LinkAgain.tsx": /<Button doing=\{busy \? W\.gettingLink : null\} step=\{WAITS\.newLink\} failed=\{refusal\}/,
     "app/kit/offer/JudgeCode.tsx": /<Button look="small" className="self-start" doing=\{busy \? W\.code\.using : null\} step=\{WAITS\.code\}/,
-    "app/kit/offer/PaySheet.tsx": /<Button waiting=\{!ready \|\| !settled \|\| status === "busy"\} doing=\{busy \? W\.paying : null\} step=\{WAITS\.account\}/,
+    "app/kit/offer/PaySheet.tsx": /<Button waiting=\{!ready \|\| !settled \|\| quoteAwaited \|\| status === "busy"\} doing=\{busy \? W\.paying : null\} step=\{WAITS\.account\}/,
   };
   for (const [file, use] of Object.entries(uses)) {
     const source = readFileSync(file, "utf8");
