@@ -345,8 +345,9 @@ test("the foot of the landing: the one way to what Viky can check, who it is not
   assert.equal(TRADEMARKS.ets.notice, "TOEFL is a registered trademark of ETS. This product is not endorsed or approved by ETS.");
   for (const page of ["app/legal/page.tsx", "app/judges/page.tsx", "app/what-viky-can-check/page.tsx"]) assert.match(readFileSync(page, "utf8"), /<MarkNotice \/>\n\s*<\/Shell>/, page);
   assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /<MarkNotice naming=\{\[condition\?\.name\]\} \/>\n\s*<\/Shell>/);
-  assert.match(readFileSync("app/kit/Gifts.tsx", "utf8"), /<MarkNotice naming=\{\[\.\.\.given, \.\.\.received\]\.map\(conditionNameOf\)\} \/>/);
-  assert.match(readFileSync("app/kit/Home.tsx", "utf8"), /<MarkNotice naming=\{moving\.map\(conditionNameOf\)\} \/>/);
+  assert.match(readFileSync("app/kit/Gifts.tsx", "utf8"), /<Place open=\{namesTheMark\(\[\.\.\.given, \.\.\.received\]\.map\(conditionNameOf\)\)\}>\n\s*<MarkNotice \/>/);
+  // On Home the notice has a place of its own, opened when a card that names the mark lands (app/kit/Place.tsx).
+  assert.match(readFileSync("app/kit/Home.tsx", "utf8"), /<Place open=\{namesTheMark\(moving\.map\(conditionNameOf\)\)\}>\n\s*<MarkNotice \/>/);
   assert.match(readFileSync("app/kit/offer/WillSheet.tsx", "utf8"), /<MarkNotice naming=\{lines\(shownSection\.conditions\)\.map\(\(line\) => line\.name\)\} \/>/);
   // Every page whose own source names it carries the notice.
   for (const path of sources("app").filter((one) => /page\.tsx$/.test(one))) {

@@ -308,6 +308,8 @@
   --page-enter-stagger: 80ms;
   --page-enter-most-staggered: 240ms;
   --page-enter-last-turn: 240ms;
+  /* What lands on a screen that has arrived comes up in place (MOTION.place.fadeMs). */
+  --come-up-duration: 180ms;
 
   color-scheme: light;
 }
@@ -1048,6 +1050,63 @@ dialog.sheet[open] {
   animation-delay: var(--page-enter-last-turn);
 }
 
+/*
+ * A screen that has arrived (the founder, 9 Oct 2026; app/kit/Place.tsx). A block put on it after it was drawn never
+ * plays the entrance: it opens its place by its height, which the script does, and under less movement it is simply
+ * there. What lands in a place that was held comes up where it stands, 180 ms, with no rise and no turn to wait for:
+ * the whole of it (`.comes-up`), or what a frame already there holds (`.comes-up-within`). A late place that holds a
+ * list does not let the list's blocks enter either, and a place that holds a list leaves the entrance to its blocks.
+ */
+.page-enters > [data-late],
+.page-enters .arrives-in-turn > [data-late],
+.page-enters [data-late] .arrives-in-turn > *,
+.page-enters > [data-turns] {
+  animation: none !important;
+}
+/* An open place whose block has nothing to show yet takes no room and no gap, as if it were not there. */
+[data-place]:has(> :empty) {
+  display: none;
+}
+.comes-up,
+.comes-up-within > * {
+  animation: come-up var(--come-up-duration) ease-out backwards;
+}
+@keyframes come-up {
+  from {
+    opacity: 0;
+  }
+}
+/* A figure this device remembers goes from full ink to the faint one, and back, as softly as anything comes up. */
+.ink-while-read {
+  transition: color var(--come-up-duration) ease-out;
+}
+/*
+ * A gift's place while the list is read (app/kit/GiftCard.tsx, GiftPlace): the card's own frame, and quiet bars where
+ * its words will come up, the ink laid thin. Who it is for at the head, what for under it, and its state at the foot.
+ */
+.gift-place {
+  display: flex;
+  flex-direction: column;
+}
+.gift-place-bar {
+  display: block;
+  flex: none;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+}
+.gift-place-who {
+  width: 46%;
+  height: var(--type-card-who);
+}
+.gift-place-what {
+  width: 68%;
+  height: var(--type-body);
+}
+.gift-place-state {
+  width: 54%;
+  height: var(--type-body);
+  margin-top: auto !important;
+}
 /* From 60 % rather than from nothing (D196): a screen that goes almost blank after a press reads as a blink. */
 /*
  * A block under the screen when its screen is drawn waits at its starting state until a quarter of it is in view

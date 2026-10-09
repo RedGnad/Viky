@@ -13,6 +13,7 @@ import { rampnowFrameOn } from "@/src/rampnow-frame";
 import { FUND, HOME, PAY } from "@/src/sentences";
 import { BODY, CARD, SECONDARY_BUTTON } from "../components/ui";
 import { useMinute } from "./clock";
+import { Place } from "./Place";
 
 /**
  * The way back to a gift whose payment was started and which was never made (D74, and the audit of 1 Oct 2026).
@@ -52,20 +53,25 @@ export function FinishTheGift() {
   // Whether the person paid is asked there and nowhere else, and nothing here could start another payment.
   if (waiting.byRampnow && rampnowFrameOn() && pending) {
     return (
-      <section className={`${CARD} w-full`} data-finish-gift="" data-rampnow-started="">
-        <p className={BODY}>{PAY.rampnow.giftStarted(waiting.amount, waiting.recipient, Math.max(0, Math.floor((minute - pending.sinceMs) / 60_000)))}</p>
-        <Link href="/fund?step=paying" className={`${SECONDARY_BUTTON} block text-center no-underline`}>
-          {PAY.rampnow.finish}
-        </Link>
-      </section>
+      <Place>
+        <section className={`${CARD} w-full`} data-finish-gift="" data-rampnow-started="">
+          <p className={BODY}>{PAY.rampnow.giftStarted(waiting.amount, waiting.recipient, Math.max(0, Math.floor((minute - pending.sinceMs) / 60_000)))}</p>
+          <Link href="/fund?step=paying" className={`${SECONDARY_BUTTON} block text-center no-underline`}>
+            {PAY.rampnow.finish}
+          </Link>
+        </section>
+      </Place>
     );
   }
+  // Kept on the device, so the server's image has no place for it: it opens its own where the screen is drawn (Place).
   return (
-    <section className={`${CARD} w-full`} data-finish-gift="">
-      <p className={BODY}>{waiting.recipient ? FUND.waitingGift.which(waiting.amount, waiting.recipient) : FUND.waitingGift.whichUnnamed(waiting.amount)}</p>
-      <Link href="/fund?step=paying" className={`${SECONDARY_BUTTON} block text-center no-underline`}>
-        {HOME.finish}
-      </Link>
-    </section>
+    <Place>
+      <section className={`${CARD} w-full`} data-finish-gift="">
+        <p className={BODY}>{waiting.recipient ? FUND.waitingGift.which(waiting.amount, waiting.recipient) : FUND.waitingGift.whichUnnamed(waiting.amount)}</p>
+        <Link href="/fund?step=paying" className={`${SECONDARY_BUTTON} block text-center no-underline`}>
+          {HOME.finish}
+        </Link>
+      </section>
+    </Place>
   );
 }
