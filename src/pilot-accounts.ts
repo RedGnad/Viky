@@ -31,12 +31,17 @@ export function shortOf(account: string): string {
   return `${whole.slice(0, 6)}…${whole.slice(-4)}`;
 }
 
-/** Which of the three a gift is, by who funded it and who opened it. A gift nobody opened yet is judged by its funder alone. */
-export type GiftBetween = "two others" | "founder to another" | "another to founder" | "the founder's own try";
+/**
+ * Which a gift is, by who funded it and who opened it. A gift nobody opened yet is a class of its own (the audit of
+ * 9 Oct 2026): judged by its funder alone, one funded by somebody who is not the founder was counted "between two
+ * people", which takes two, and the judges page said three such gifts where two had been opened.
+ */
+export type GiftBetween = "two others" | "founder to another" | "another to founder" | "the founder's own try" | "not opened yet";
 
 export function between(gift: Pick<IndexedGift, "funder" | "recipient">, founders: ReadonlySet<string>): GiftBetween {
+  if (gift.recipient === null) return "not opened yet";
   const funderIsFounder = founders.has(gift.funder.toLowerCase());
-  const recipientIsFounder = gift.recipient === null ? funderIsFounder : founders.has(gift.recipient.toLowerCase());
+  const recipientIsFounder = founders.has(gift.recipient.toLowerCase());
   if (funderIsFounder && recipientIsFounder) return "the founder's own try";
   if (funderIsFounder) return "founder to another";
   if (recipientIsFounder) return "another to founder";
@@ -62,7 +67,7 @@ export type Usage = Readonly<{
 export function usageOf(gifts: readonly IndexedGift[], founders: ReadonlySet<string>): Usage {
   const funders = new Set(gifts.map((gift) => gift.funder.toLowerCase()));
   const recipients = new Set(gifts.flatMap((gift) => (gift.recipient ? [gift.recipient.toLowerCase()] : [])));
-  const counted: Record<GiftBetween, number> = { "two others": 0, "founder to another": 0, "another to founder": 0, "the founder's own try": 0 };
+  const counted: Record<GiftBetween, number> = { "two others": 0, "founder to another": 0, "another to founder": 0, "the founder's own try": 0, "not opened yet": 0 };
   for (const gift of gifts) counted[between(gift, founders)] += 1;
   const sum = (pick: (gift: IndexedGift) => bigint) => gifts.reduce((total, gift) => total + pick(gift), 0n);
   return {

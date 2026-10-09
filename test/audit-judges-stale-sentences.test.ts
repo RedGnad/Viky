@@ -7,7 +7,8 @@ import test from "node:test";
 import { followsThirdDailyContract } from "../src/envio-index";
 import { MILESTONE_GOALS } from "../src/milestone-goals";
 import { waysIn } from "../src/rails";
-import { ME } from "../src/sentences";
+import { JUDGE_CREDIT_ENDS } from "../src/judge-credit";
+import { ME, NAV, YOU_DECIDE } from "../src/sentences";
 
 const page = readFileSync(new URL("../app/judges/page.tsx", import.meta.url), "utf8").replace(/\s+/g, " ");
 
@@ -232,7 +233,28 @@ test("the judges' path names the button as Me draws it, and says what each path 
   assert.equal(ME.otherAccount, "Other account");
   assert.ok(read("app/kit/Me.tsx").includes("name={W.otherAccount}"));
   assert.ok(page.includes("Each path asks something of you: Duolingo, an account there, and a lesson done after you connect it; Chess.com, an account there, and one rating point won."));
-  assert.ok(page.includes("With no account of a source, the path is the link of a gift already made, where the portal&apos;s instructions give one (the next step)."));
-  // The next step is that link.
-  assert.ok(page.indexOf("With no account of a source") < page.indexOf("If the portal&apos;s instructions give you the link of a gift made for you"));
+  // With no account of a source, the short path (the audit of 9 Oct 2026): open the gift, "Stop", "End the gift". The
+  // page sent that judge to a link the portal's instructions might give.
+  assert.ok(page.includes("With no account of a source, the short path is two steps down: open the gift, then end it."));
+  assert.ok(page.includes("Press &quot;Stop&quot;, then &quot;End the gift&quot;, and confirm: all of it goes back to the account that paid."));
+  assert.ok(page.indexOf("With no account of a source") < page.indexOf("data-try-short-path"));
+  assert.ok(!page.includes("give you the link of a gift made for you"));
+  // The two words are the gift page's own.
+  assert.deepEqual([YOU_DECIDE.stop, YOU_DECIDE.endTheGift], ["Stop", "End the gift"]);
+});
+
+test("three sentences the audit of 9 Oct 2026 found late: two equal delays, the destination's name, and how long the code works", () => {
+  // "between 10 minutes and 10 minutes": two delays that differ by seconds and are said in the same words are one.
+  const reliability = read("app/judges/JudgesReliability.tsx");
+  assert.ok(reliability.includes("if (delay(plan.soonestSeconds) === delay(plan.latestSeconds)) return `They began ${delay(plan.latestSeconds)} after that minute.`;"));
+  assert.ok(reliability.indexOf("delay(plan.soonestSeconds) === delay(plan.latestSeconds)") < reliability.indexOf("They began between"));
+  // The destination is called Me: the judges' own account said "You".
+  assert.equal(NAV.me, "Me");
+  const account = read("app/components/JudgesAccount.tsx");
+  assert.ok(account.includes("come back here through Me, For judges, to read it.") && account.includes("then come back through Me, For judges."));
+  assert.doesNotMatch(account, /through You,/);
+  // Until when the code works, from the moment the route refuses it: the last day before it, in UTC.
+  assert.equal(new Date(JUDGE_CREDIT_ENDS - 1).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }), "4 Nov 2026");
+  assert.ok(page.includes("<span data-judge-code-until>The code works until {lastDayOfTheCode()}, UTC.</span>"));
+  assert.ok(page.includes("return new Date(JUDGE_CREDIT_ENDS - 1).toLocaleDateString("));
 });
