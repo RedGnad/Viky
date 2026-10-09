@@ -15,7 +15,7 @@ import type { ProofSession } from "../src/proof-session-store";
 import { portalProviderFor, SHOWN_CONDITIONS, UNIVERSITY_SHOWN, type ShownEntry } from "../src/shown-conditions";
 import { settleHeldReview, verifyShownSession, type ShownVerificationDeps } from "../src/shown-verification";
 import { UNIVERSITY_ENROLLED, universitySubject } from "../src/university-shown";
-import { canonical, onAnyDomain, onDomain, pinFromPublished, pinInWords, pinOf, PublishedRuleError, READING_METHODS, sameRule, verifyWitnessProof, WitnessProofError, type PublishedRequest, type WitnessPin } from "../src/witness-portal";
+import { matchesAsTheyCount, redactionsAsTheyCount, canonical, onAnyDomain, onDomain, pinFromPublished, pinInWords, pinOf, PublishedRuleError, READING_METHODS, sameRule, verifyWitnessProof, WitnessProofError, type PublishedRequest, type WitnessPin } from "../src/witness-portal";
 
 /**
  * A university read through a Reclaim AI provider (D312): the proof carries no enclave, so it is verified by the
@@ -202,6 +202,42 @@ test("a pin worked out from a version's published request is the pin a real clai
   assert.throws(() => pinFromPublished(PUBLISHED, "1.0.1", () => ["0x" + "11".repeat(32), "0x" + "22".repeat(32)]), (error: unknown) => error instanceof PublishedRuleError && /not one hash/.test(error.message));
   // Said on the judges' page for what it is.
   assert.match(pinInWords(ahead, { field: "status", matches: "^Inscrit 2026" }), /^version 1\.0\.1, no proof shown on it yet, reads POST studentcenter\.ucad\.sn\/api\/me /);
+});
+
+test("a claim that carries the editor's defaults beside its rule fits the pin of that rule; an inversion that is set does not", async () => {
+  // A version saved by hand in Reclaim's editor publishes, and its claims may carry, the editor's defaults beside the
+  // rule: "invert": false, "description": null, "order": null, "isOptional": false on a match, null paths on a
+  // redaction. The hash of the request ignores them, so the same rule has the same hash with and without them.
+  const ahead = pinFromPublished(PUBLISHED, "4.0.0", hashOf);
+  const withDefaults = await witnessProof({
+    method: "POST",
+    body: BODY_TEMPLATE,
+    matches: [{ value: '"status":"{{status}}"', type: "contains", invert: false, description: null, order: null, isOptional: false }],
+    redactions: [{ xPath: null, jsonPath: "$.status", regex: null, hash: null, order: 0 }],
+  });
+  const bare = await witnessProof({ method: "POST", body: BODY_TEMPLATE });
+  const under = (pin: WitnessPin) => ({ domain: "ucad.sn", method: pin.method, pin, providerVersion: "4.0.0", witness: WITNESS.address });
+  const read = verifyWitnessProof(withDefaults, under(ahead));
+  // Compared as written it was another pattern, and a proof of the pinned rule would have been held (9 Oct 2026).
+  assert.equal(read.specHash, ahead.specHash, "the same request, by its hash");
+  assert.equal(read.responseMatches, ahead.responseMatches);
+  assert.equal(read.responseRedactions, ahead.responseRedactions);
+  assert.equal(read.responseMatches, verifyWitnessProof(bare, under(ahead)).responseMatches, "with the defaults or without, one rule");
+  // The pin such a claim gives is the same pin, so a university pinned from it holds the bare claims too.
+  assert.equal(sameRule(pinOf(read, "4.0.0"), ahead), true);
+  assert.equal(matchesAsTheyCount([{ value: "x", type: "contains", invert: false }]), '[{"type":"contains","value":"x"}]');
+  assert.equal(matchesAsTheyCount([{ value: "x" }]), '[{"type":"contains","value":"x"}]', "a match with no type is a contains, as the hash takes it");
+  assert.equal(redactionsAsTheyCount([{ xPath: "", jsonPath: null, regex: "y", hash: null, order: 3 }]), '[{"regex":"y"}]');
+  assert.equal(matchesAsTheyCount(undefined), "[]");
+  assert.equal(redactionsAsTheyCount("not a list"), "[]");
+
+  // An inversion that is set turns the rule round: it is kept, it changes the hash, and the pin refuses it.
+  assert.equal(matchesAsTheyCount([{ value: "x", type: "contains", invert: true }]), '[{"invert":true,"type":"contains","value":"x"}]');
+  const inverted = await witnessProof({ method: "POST", body: BODY_TEMPLATE, matches: [{ value: '"status":"{{status}}"', type: "contains", invert: true }] });
+  assert.notEqual(verifyWitnessProof(inverted, { domain: "ucad.sn", method: null, pin: null, providerVersion: "4.0.0", witness: WITNESS.address }).specHash, ahead.specHash);
+  assert.throws(() => verifyWitnessProof(inverted, under(ahead)), refusedAs("WITNESS_OTHER_PATTERN"));
+  // And a pin worked out from a published rule that inverts says so.
+  assert.match(pinFromPublished({ ...PUBLISHED, responseMatches: [{ value: "x", type: "contains", invert: true }] }, "4.0.0", hashOf).responseMatches, /"invert":true/);
 });
 
 test("once pinned, another pattern, another request or another version of the provider is refused", async () => {

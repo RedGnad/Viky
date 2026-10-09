@@ -145,8 +145,9 @@ export function verifyWitnessProof(
   if (!onAnyDomain(url, expected.domain)) throw new WitnessProofError("WITNESS_OTHER_DOMAIN", "The proof read another site than this university's portal");
   const methods = expected.method ? [expected.method.toUpperCase()] : READING_METHODS;
   if (!methods.includes(method)) throw new WitnessProofError("WITNESS_OTHER_METHOD", "The proof asked the portal in another way than this university's pin");
-  const responseMatches = canonical(parameters.responseMatches ?? []);
-  const responseRedactions = canonical(parameters.responseRedactions ?? []);
+  // Compared as they count, not as they are written (9 Oct 2026): see `matchesAsTheyCount`.
+  const responseMatches = matchesAsTheyCount(parameters.responseMatches);
+  const responseRedactions = redactionsAsTheyCount(parameters.responseRedactions);
   const specHash = String(context.providerHash ?? "").toLowerCase();
   let computed: string[] = [];
   try {
@@ -193,9 +194,36 @@ export class PublishedRuleError extends Error {
   }
 }
 
-/** What a claim keeps of a published match or redaction: the keys that say something, and none of the defaults. */
-function asAClaimHoldsIt(entries: readonly Readonly<Record<string, unknown>>[] | undefined, keys: readonly string[]): string {
-  return canonical((entries ?? []).map((entry) => Object.fromEntries(keys.filter((key) => typeof entry[key] === "string" && entry[key] !== "").map((key) => [key, entry[key]]))));
+/**
+ * A rule's matches as they count: what the hash of a request keeps of each (`hashProofClaimParams` in Reclaim's
+ * library: the value, the type, and an inversion only when it is set), and nothing else.
+ *
+ * A claim made under a version saved by hand in Reclaim's editor carries the editor's defaults beside its rule,
+ * `"invert": false`, `"description": null`, `"order": null`, `"isOptional": false`, where a claim made under a
+ * version the agent wrote carries none. The hash is the same for both. Compared as written, the first would not have
+ * fitted a pin worked out from the same rule, and a proof of the rule would have been held as another pattern
+ * (found before any such proof was shown, 9 Oct 2026). An inversion that is set is part of the rule, and is kept.
+ */
+export function matchesAsTheyCount(entries: unknown): string {
+  const rows = Array.isArray(entries) ? (entries as ReadonlyArray<Readonly<Record<string, unknown>> | null>) : [];
+  return canonical(
+    rows.map((entry) => ({
+      type: typeof entry?.type === "string" && entry.type !== "" ? entry.type : "contains",
+      ...(typeof entry?.value === "string" && entry.value !== "" ? { value: entry.value } : {}),
+      ...(entry?.invert === true ? { invert: true } : {}),
+    })),
+  );
+}
+
+/** A rule's redactions as they count: the path or pattern each names, a hash when one is set, and none of the defaults. */
+export function redactionsAsTheyCount(entries: unknown): string {
+  const rows = Array.isArray(entries) ? (entries as ReadonlyArray<Readonly<Record<string, unknown>> | null>) : [];
+  return canonical(
+    rows.map((entry) => ({
+      ...Object.fromEntries(["jsonPath", "regex", "xPath"].filter((key) => typeof entry?.[key] === "string" && entry[key] !== "").map((key) => [key, entry?.[key]])),
+      ...(typeof entry?.hash === "string" && entry.hash !== "" ? { hash: entry.hash } : {}),
+    })),
+  );
 }
 
 /**
@@ -218,8 +246,8 @@ export function pinFromPublished(request: PublishedRequest, providerVersion: str
     providerVersion,
     url: request.url,
     method: String(request.method).toUpperCase(),
-    responseMatches: asAClaimHoldsIt(request.responseMatches, ["type", "value"]),
-    responseRedactions: asAClaimHoldsIt(request.responseRedactions, ["jsonPath", "regex", "xPath"]),
+    responseMatches: matchesAsTheyCount(request.responseMatches),
+    responseRedactions: redactionsAsTheyCount(request.responseRedactions),
     specHash: hashes[0],
     ahead: true,
     fixed: true,
