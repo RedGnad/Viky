@@ -29,6 +29,12 @@ import { rampnowPage } from "./rails";
 export const RAMPNOW_ORIGIN = "https://app.rampnow.io";
 
 /**
+ * What Rampnow's public key looks like ("Keys are prefixed with pk_live_", its widget documentation): the only kind
+ * of key that is ever put in an address, the frame's or a quote's (src/rampnow-quote.ts).
+ */
+export const RAMPNOW_PUBLIC_KEY = /^pk_[A-Za-z0-9_]+$/;
+
+/**
  * One gift, one payment (the founder, 3 Oct 2026), from what the first payment through the frame showed that day: 6 EUR
  * paid in the frame at 21:23 UTC, 5.600948 USDC on the account at 21:38:57, gift 1000 made at 21:44:32.
  *
@@ -132,7 +138,7 @@ export function safariEngineVersion(userAgent: string): Readonly<{ major: number
 export function rampnowFrameAddress(fill: Readonly<{ account?: string; euros?: number }>, apiKey: string = ""): string {
   const page = `${rampnowPage(fill)}&hideOrderTabs=true`;
   const key = apiKey.trim();
-  return /^pk_[A-Za-z0-9_]+$/.test(key) ? `${page}&apiKey=${encodeURIComponent(key)}` : page;
+  return RAMPNOW_PUBLIC_KEY.test(key) ? `${page}&apiKey=${encodeURIComponent(key)}` : page;
 }
 
 /**
