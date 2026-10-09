@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { MarkNotice } from "../kit/MarkNotice";
 import { Shell } from "../kit/Shell";
 import Link from "next/link";
-import { cardServices } from "@/src/rails";
+import { MOBILE_CEILINGS, mobileMoneyOn } from "@/src/mobile-money";
+import { cardServices, sourceOfIts, WAYS_OUT } from "@/src/rails";
 import { giftEscrowV2Address } from "@/src/v2";
 import { DISPLAY, TITLE } from "../components/ui";
 
@@ -18,6 +19,8 @@ export default function LegalPage() {
   // The contracts gifts are made on since 2 Oct 2026 bound their owner where the earlier ones did not: each is said of
   // the version it is true of, and of the second only once it is set (src/v2.ts).
   const second = giftEscrowV2Address() !== null;
+  // Mobile money is said only where it is offered: the one setting that opens it (src/mobile-money.ts).
+  const mobileMoney = mobileMoneyOn();
   return (
     <Shell kind="document" back="/me">
       <header className="space-y-[var(--space-lg)]">
@@ -109,21 +112,29 @@ export default function LegalPage() {
             : "A pause only stops the readings of a daily gift: a day whose time to be caught up has passed still goes back to the person who offered it, pause or not."}{" "}
           A pause never sends money anywhere else.
         </p>
+        {/* The ways out, from their registers (the audit of 9 Oct 2026): WAYS_OUT for the two that pay money out, each
+            with where it pays, its service and the day its figures were read; mobile money where it is switched on,
+            with the ceilings its routes check. No country is named here: each service's list is its own, and the
+            screen that sends money out says where a way is shut. */}
         <p>
-          Where money can leave depends on the service that pays it, and the way out names each one as it
-          publishes itself. Today the bank route pays in euros and does not serve Senegal or Ivory Coast;
-          the card route pays onto a Visa or Mastercard card, makes no payout in France, the rest of the
-          European Economic Area or the United States, and cannot sell at all in the United Kingdom.
-          Those are their own published lists, read on 16 September 2026, and neither of them is ours to
-          change.
+          Where money can leave depends on the service that pays it, and each way out names its service as that service
+          publishes itself.{" "}
+          {WAYS_OUT.map((out) => `${out.title}: ${out.where.charAt(0).toLowerCase()}${out.where.slice(1, -1)}, through ${out.name}; from ${sourceOfIts(out)}, read ${out.read}.`).join(" ")}{" "}
+          Which countries a service pays in is its own published list and not ours to change; the screen that sends
+          money out says, on each way, where it is shut.
         </p>
+        {mobileMoney ? (
+          <p data-legal-mobile-money="">
+            Mobile money: a payout to a mobile money number, through Switch Labs, {`$${MOBILE_CEILINGS.usdPerPayout}.00`} at most
+            per payout and {`$${MOBILE_CEILINGS.usdPerAccountPerDay}.00`} a day per account. The countries and the operators are
+            Switch&apos;s own, read when the person chooses.
+          </p>
+        ) : null}
         <p>
-          What Viky does not have: no payout to mobile money such as Orange Money or Wave, and no bank transfer in
-          Africa. A third route: a phone top-up, credit or data, or a gift card, bought on Bitrefill for the person
-          with their own money and sent to the number they give, or shown to them as a code. It is offered wherever
-          Bitrefill sells a top-up for the number&apos;s phone company, or lists a gift card that works in the
-          person&apos;s country, Senegal and Ivory Coast among them: Bitrefill&apos;s own lists, read when the person
-          chooses, and the gift cards of those two countries read on its site on 26 September 2026.
+          One more way: a phone top-up, credit or data, or a gift card, bought on Bitrefill for the person with their
+          own money and sent to the number they give, or shown to them as a code. It is offered wherever Bitrefill
+          sells a top-up for the number&apos;s phone company, or lists a gift card that works in the person&apos;s
+          country: Bitrefill&apos;s own lists, read when the person chooses.
         </p>
         <p>
           This route is the one exception to what is said above about money, and it is bounded. For a top-up or a

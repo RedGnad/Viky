@@ -353,9 +353,17 @@ test("the legal notice says exactly what the program lets the operator do, and n
     assert.ok(rails.includes(said), `the way out no longer publishes "${said}"`);
   }
   assert.match(rails, /`restricted_countries_offramp` is exactly \["gb"\]/, "the United Kingdom is read live from the endpoint named here (D124)");
-  assert.match(legal, /does not serve Senegal or Ivory Coast/);
-  assert.match(legal, /makes no payout in France, the rest of the\s+European Economic Area or the United States/);
-  assert.match(legal, /cannot sell at all in the United Kingdom/);
+  // The notice says the ways out from their registers (the audit of 9 Oct 2026): it said "no payout to mobile money"
+  // after one was open, named two countries twice, and quoted lists by a date typed by hand.
+  const ways = legal.slice(legal.indexOf("{/* The ways out, from their registers"), legal.indexOf("This route is the one exception"));
+  assert.match(ways, /\{WAYS_OUT\.map\(\(out\) => `\$\{out\.title\}: \$\{out\.where\.charAt\(0\)\.toLowerCase\(\)\}\$\{out\.where\.slice\(1, -1\)\}, through \$\{out\.name\}; from \$\{sourceOfIts\(out\)\}, read \$\{out\.read\}\.`\)\.join\(" "\)\}/);
+  assert.doesNotMatch(ways, /Senegal|Ivory Coast|France|United States|United Kingdom|European Economic Area|Africa/, "no country is named: each service's list is its own");
+  assert.doesNotMatch(ways, /\b\d{1,2} (January|February|March|April|May|June|July|August|September|October|November|December) 20\d\d\b/, "no date typed by hand");
+  assert.doesNotMatch(legal, /What Viky does not have|no payout to mobile money|Orange Money|Wave/);
+  // Mobile money only where its one setting opens it, with the ceilings its routes check.
+  assert.match(legal, /const mobileMoney = mobileMoneyOn\(\);/);
+  assert.match(ways, /\{mobileMoney \? \(\s+<p data-legal-mobile-money="">/);
+  for (const ceiling of ["{`$${MOBILE_CEILINGS.usdPerPayout}.00`} at most", "{`$${MOBILE_CEILINGS.usdPerAccountPerDay}.00`} a day per account"]) assert.ok(ways.includes(ceiling), ceiling);
 });
 
 /**

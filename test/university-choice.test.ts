@@ -6,7 +6,7 @@ import { GET as listGet } from "../app/api/portals/route";
 import { GET as searchGet } from "../app/api/portals/search/route";
 import { configurePortalStore, ensurePortalSchema, FOLD_FROM, FOLD_TO, foldForSearch, savePortalRows } from "../src/portal-store";
 import type { SqlExecutor } from "../src/proof-session-store";
-import { SHOW_PROOF, UNIVERSITY_CHOICE } from "../src/sentences";
+import { ADD_UNIVERSITY, SHOW_PROOF, UNIVERSITY_CHOICE } from "../src/sentences";
 import { countInWords, indexUniversities, inGroups, matching, senseOfCondition, shownUniversities, sortName, type ListedUniversity } from "../src/university-choice";
 import { readySenses } from "../src/university-ready";
 
@@ -137,6 +137,15 @@ test("the chooser lists names alone, says nothing about checking, and invites th
   // The question, and beside it a small button to the page a student adds theirs from: never a link in the text.
   assert.match(chooser, /<p className=\{HELP\}>\{W\.notListed\}<\/p>\n\s*<Link href="\/add-your-university" className=\{`\$\{SMALL_BUTTON\} no-underline`\}>/);
   assert.ok(existsSync("app/add-your-university/page.tsx"), "the page the link opens");
+  // The page opens on three lines for somebody who is paying (the founder's words, 9 Oct 2026): it opened on a
+  // student's procedure, which a payer read as theirs to do. The procedure is under a fold named by whom it is for.
+  const page = readFileSync("app/add-your-university/page.tsx", "utf8");
+  assert.deepEqual(ADD_UNIVERSITY.forAPayer, ["Offer the gift anyway.", "We set your university up within two days.", "You have nothing else to do."]);
+  assert.equal(ADD_UNIVERSITY.forTheStudent, "Are you the student?");
+  assert.ok(page.indexOf("W.forAPayer.map") < page.indexOf(`<details className="said-fold" data-for-the-student="">`), "the three lines, then the fold");
+  const fold = page.slice(page.indexOf(`<details className="said-fold" data-for-the-student="">`), page.indexOf("</details>"));
+  for (const inside of ["{W.forTheStudent}", "<FoldChevron />", "{W.intro}", "W.steps.map", "{W.never}", "{W.next}"]) assert.ok(fold.includes(inside), inside);
+  assert.ok(!page.slice(0, page.indexOf("<details")).includes("W.intro"), "nothing of the procedure stands in the open");
   assert.doesNotMatch(card, /UNIVERSITY_CHOICE/, "no coming-soon line on the card since D258");
 });
 
