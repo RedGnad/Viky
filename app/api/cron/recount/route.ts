@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { recountPass } from "@/src/daily-pass";
+import { passStopped, recountPass } from "@/src/daily-pass";
 import { NO_STORE } from "@/src/gift-api";
 
 export const runtime = "nodejs";
@@ -20,6 +20,8 @@ export async function GET(request: Request) {
     const report = await recountPass();
     return NextResponse.json(report, { headers: NO_STORE });
   } catch (error) {
+    // A pass that stops is told, not only answered: nobody reads the scheduler's answers (the final audit of 9 Oct 2026).
+    await passStopped("recount", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : "The second reading failed" }, { status: 500, headers: NO_STORE });
   }
 }

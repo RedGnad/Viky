@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { dailyPass, SETTLING_PASS } from "@/src/daily-pass";
+import { dailyPass, passStopped, SETTLING_PASS } from "@/src/daily-pass";
 import { NO_STORE } from "@/src/gift-api";
 import { followUnsettledOrders } from "@/src/phone-order";
 
@@ -24,6 +24,8 @@ export async function GET(request: Request) {
     const phoneOrders = await followUnsettledOrders().catch((error: unknown) => [{ orderId: "all", state: `not followed: ${error instanceof Error ? error.message : String(error)}` }]);
     return NextResponse.json({ ...report, phoneOrders }, { headers: NO_STORE });
   } catch (error) {
+    // A pass that stops is told, not only answered: nobody reads the scheduler's answers (the final audit of 9 Oct 2026).
+    await passStopped("settling", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : "The settling pass failed" }, { status: 500, headers: NO_STORE });
   }
 }
