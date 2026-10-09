@@ -46,6 +46,7 @@ test.describe("a connected source, and the first day of its gift", () => {
       await expect(page.getByText("Strava is connected.", { exact: true })).toHaveCount(1);
       await expect(page.getByText("Connect Strava and it starts.")).toHaveCount(0);
       await expect(page.getByText("Connect your Strava")).toHaveCount(0);
+      await expect(page.getByText(/^Start by \d+ \w+ \d{4}, or it goes back to Mom\.$/)).toBeVisible();
       await expect(page.getByRole("button", { name: "Start counting" })).toBeVisible();
       await shot(page, `1-connected-on-contract-${version}`);
       // On the way back from Strava's own page the same is said, from the first image.

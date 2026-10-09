@@ -166,6 +166,9 @@ test("what is said of the first day is true of the contract the gift is on (the 
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
   assert.match(page, /<ConnectTheAccount giftId=\{giftId\} conditionId=\{condition\.id\} yours=\{mine\} dayOneIsTheStart=\{firstDayIsTheStart\(status\.version\)\} onConnection=\{setSourceConnected\} onChanged=\{reloadAll\} \/>/);
   assert.equal(GIFT_LIVE.notConnected.connected("Strava"), "Strava is connected.");
+  // The day it goes back still stands under that title, and what is left to do by then is to start.
+  assert.equal(GIFT_LIVE.notConnected.startBy("20 Oct 2026", "Mom"), "Start by 20 Oct 2026, or it goes back to Mom.");
+  assert.equal(GIFT_LIVE.notConnected.connectBy("20 Oct 2026", "Mom"), "By 20 Oct 2026, or it goes back to Mom.");
   const live = readFileSync("src/gift-live.ts", "utf8");
   assert.match(live, /headline: yours \? \(input\.sourceConnected \? L\.notConnected\.connected\(source\) : L\.notConnected\.yours\(source\)\) : L\.notConnected\.theirs\(recipientName, source\),/);
 

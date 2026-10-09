@@ -226,7 +226,9 @@ export function liveOf(input: LiveInput): Live {
           input.connectBy === null
             ? null
             : yours
-              ? L.notConnected.connectBy(input.connectBy, funderName)
+              ? input.sourceConnected
+                ? L.notConnected.startBy(input.connectBy, funderName)
+                : L.notConnected.connectBy(input.connectBy, funderName)
               : voice === "funder"
                 ? L.notConnected.connectByTheirs(input.connectBy)
                 : null,
