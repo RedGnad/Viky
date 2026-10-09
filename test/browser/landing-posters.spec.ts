@@ -131,7 +131,7 @@ test.describe("the posters under the landing's card", () => {
     const icon = page.locator('[data-landing-story] svg[data-character="icon"]');
     await expect(icon).toHaveCount(1);
     expect(await icon.evaluate((drawn) => { const box = drawn.getBoundingClientRect(); return [Math.round(box.width), Math.round(box.height)]; })).toEqual([110, 110]);
-    const colours = `(() => { const style = getComputedStyle(document.querySelector('[data-landing-story] svg[data-character="icon"]')); return ["--character-hero-from", "--character-hero-to", "--character-halftone", "--character-face"].map((name) => style.getPropertyValue(name).trim()); })()`;
+    const colours = `(() => { const style = getComputedStyle(document.querySelector('[data-landing-story] svg[data-character="icon"]')); return ["--character-hero-from", "--character-hero-to", "--character-halftone", "--character-face"].map((name) => style.getPropertyValue(name).trim().toUpperCase()); })()`;
     expect(await page.evaluate(colours)).toEqual(["#FF7F8E", "#B79BFF", "#835EFF", "#1E1633"]);
     await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "dark" });
     expect(await page.evaluate(colours), "the same image after dark").toEqual(["#FF7F8E", "#B79BFF", "#835EFF", "#1E1633"]);
@@ -145,6 +145,9 @@ test.describe("the posters under the landing's card", () => {
       // The window's new width is the page's before anything is measured: an emulated phone takes a moment over it.
       await expect.poll(() => page.evaluate(`innerWidth === ${width} && matchMedia("(min-width: 600px)").matches === ${width >= 600}`)).toBe(true);
       await page.evaluate("new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))");
+      // And the title's new size has reached the character it holds: for an image after the resize an emulated phone has
+      // given it to the title and not yet to what the title holds (measured 9 Oct 2026: 49 px on one, 48 on the other).
+      await expect.poll(() => page.evaluate(`[...document.querySelectorAll("[data-landing-story] [data-ch]")].every((held) => getComputedStyle(held).fontSize === getComputedStyle(held.closest("h2")).fontSize)`)).toBe(true);
       // A title in the hero's own size, and its character on the line of the word before it: it never starts a line.
       const read = (await page.evaluate(`(() => {
         const hero = getComputedStyle(document.querySelector("main h1")).fontSize;
