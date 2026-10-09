@@ -68,7 +68,7 @@ test.describe("the path of the person a gift is for", () => {
       await expect(link).toHaveAttribute("href", "https://share.reclaimprotocol.org/verify/?template=recipient-path");
       await expect(link).toHaveAttribute("target", "_blank");
       await expect(link).toHaveAttribute("rel", "noopener");
-      await expect(page.getByText("Waiting for the proof. Come back to this page when you are done there.")).toBeVisible();
+      await expect(page.getByText("Sign in there and stay on that page. It brings you back here.")).toBeVisible();
       await expect(page.getByRole("button", { name: "Stop waiting" })).toBeVisible();
       await shot(page, size.name, "3b-the-link-and-the-wait");
       expect(looks, "nothing is asked before the first look is due").toBe(0);

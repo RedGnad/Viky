@@ -1825,7 +1825,13 @@ export const SHOW_PROOF = {
   preparing: "Preparing the verification",
   /** The link the person presses themselves, named after where they sign in: it opens the verification page in a new tab. */
   signInTo: (source: string) => `Sign in to ${spokenTo(source)}`,
-  waiting: "Waiting for the proof. Come back to this page when you are done there.",
+  /**
+   * While the verification page is open in its own tab (the founder, 9 Oct 2026). It said "Waiting for the proof. Come
+   * back to this page when you are done there.", and on 8 Oct a student came back to Viky 69 seconds in, which closed
+   * the session. The verification page says "Keep this page open." and brings the person back to the gift by itself
+   * once the proof is made (`setRedirectUrl`, app/api/proof/session/route.ts): both screens now say the same thing.
+   */
+  waiting: "Sign in there and stay on that page. It brings you back here.",
   /** While the page asks the server what became of the proof: no link is offered until the answer, since it may be dead. */
   checking: "Checking for your proof",
   stopWaiting: "Stop waiting",
