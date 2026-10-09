@@ -2377,7 +2377,8 @@ export const PHONE_OUT = {
   choose: "Top up a phone",
   whereTitle: "Which phone?",
   number: "The number, with its country code",
-  numberHelp: "Like +221 77 123 45 67. This phone remembers it for next time. Viky erases its own copy once the top-up arrives or is refunded.",
+  // No example of a number (the founder, 9 Oct 2026): it was one country's. What every number starts with.
+  numberHelp: "Start with + and your country code. This phone remembers it for next time. Viky erases its own copy once the top-up arrives or is refunded.",
   find: "Find the phone company",
   finding: "Looking",
   whichCompany: "Which phone company?",

@@ -100,9 +100,6 @@ Tools for keeping a commitment already exist (Beeminder, StickK, Forfeit): there
 money and loses it to somebody else. What Viky does differently is the third-party funder, the money allocated in
 the recipient's name, the release on a verified reading, and the automatic return of the rest.
 
-Two things Viky does not claim: that a habit lasts once the money stops, and that a transfer through Viky costs
-less than a bank's.
-
 ## Why Monad
 
 Only what was measured, or what Monad's own documentation states.
@@ -153,9 +150,8 @@ index, and the testers' figures come with the submission.
 
   What that proof read is narrow, and is said as it is: signed in to his own file, the answer to one click carried the
   academic year 2026-2027. The rule was written by Reclaim's agent during his pass: it names no person, no number and
-  no faculty, and was pinned that day. Since 8 Oct 2026 the rule in force for that university is one written by hand,
-  the same at every pass, pinned before any proof was made on it. The judges page prints the rule in force for each
-  university.
+  no faculty, and it was pinned on 7 Oct 2026; since 9 Oct the rule in force is one fixed ahead, which the judges page
+  prints.
 
 What has not run on the third daily contract yet: a missed day going back, and a gift reaching its last day.
 
@@ -180,7 +176,7 @@ Beeminder, with two communities it did not own ([its blog](https://blog.beeminde
 | Channel | Why there | Who proposes it | First target |
 |---|---|---|---|
 | Student associations | The family already funds, and the student is already a member. The condition is read on the university's own portal: enrolled, then the year passed. | The association's treasurer or president, for the term | One association, ten families |
-| Clubs where effort is already measured | A chess rating or a race result is already what the club looks at. Chess.com counts 280 million members ([its counter](https://www.chess.com/members), read 5 Oct 2026). | A club officer, to adult members and the relatives who back them | Two clubs, ten funders |
+| Clubs where effort is already measured | A chess rating or a race result is already what the club looks at. Chess.com counts 280 million members ([its counter](https://www.chess.com/members), read 5 Oct 2026). | A club officer, to members and the relatives who back them | Two clubs, ten funders |
 | Communities that already keep commitments | Language learners first: Duolingo reports 58.7 million daily users ([Q2 2026 shareholder letter](https://www.sec.gov/Archives/edgar/data/1562088/000162828026053299/q2fy26duolingo6-30x26share.htm)). | A member who tells one real gift, with its page. No advertising. | Ten funders. The least certain of the three. |
 
 <!-- [The student channel opens once a first student has passed the condition with a real gift: say where that stands.] -->
@@ -199,7 +195,7 @@ them (`pnpm check:words`, whose list of files is `scripts/check-consumer-words.t
 (`test/browser/screens.spec.ts`). The routes of the way out, `app/api/exit`, are read too: the one line there that
 carries one of those words is written for the operator's log, and is marked as that.
 
-**What is not claimed.** No market size, no conversion rate, no viral loop. One recipient who earned a gift used that
+One recipient who earned a gift used that
 money to offer one to someone else: it has happened once.
 
 ## Architecture
@@ -334,8 +330,8 @@ Viky was built with an AI coding tool, Claude Code (Anthropic). It wrote most of
 documentation in this repository from the author's written briefs, and it ran the checks before each merge: types,
 lint, the policy tests, the build and the browser tests. The author directed all of it: what the product is, how it
 looks, what every screen says, and every decision that touches money. Nothing was deployed to mainnet and no real
-payment was made without his explicit decision. Two people from outside the project have each opened a gift, one
-of them on an iPhone, from Instagram.
+payment was made without his explicit decision. People from outside the project have opened gifts, one of them on
+an iPhone, from Instagram: the judges page counts them, under "Who has used Viky".
 
 A second AI is in the product itself, and is not Viky's: Reclaim's agent. The first time a student shows a page of a
 university's portal, that agent finds the page in the student's own signed-in session and writes the rule the proof

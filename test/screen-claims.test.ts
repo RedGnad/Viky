@@ -349,9 +349,13 @@ test("the legal notice says exactly what the program lets the operator do, and n
 
   // The countries are the rails' own words, not a claim of our own.
   const rails = readFileSync("src/rails.ts", "utf8");
-  for (const said of ["Not in Senegal or Ivory Coast.", "Not in France, the rest of Europe, or the United States."]) {
-    assert.ok(rails.includes(said), `the way out no longer publishes "${said}"`);
-  }
+  // The register's two lines named countries and were printed on no screen (the founder, 9 Oct 2026): a way that does
+  // not pay in the person's country is not shown, and the screen names that country when nothing reaches it
+  // (test/gift-amount.test.ts). Neither sentence is left, and no screen reads a way out's line.
+  assert.ok(!rails.includes("Not in Senegal or Ivory Coast.") && !rails.includes("Not in France, the rest of Europe, or the United States."));
+  for (const screen of ["app/components/CashOut.tsx", "app/legal/page.tsx", "app/judges/page.tsx"]) assert.doesNotMatch(readFileSync(screen, "utf8"), /WAY_OUT_(EURO|CARD)\.line|\bout\.line\b|\bway\.line\b/, screen);
+  // The legal notice prints where each way pays, and no currency with it: the bank pays in the country's own money.
+  assert.ok(rails.includes(`where: "To your bank account.",`));
   assert.match(rails, /`restricted_countries_offramp` is exactly \["gb"\]/, "the United Kingdom is read live from the endpoint named here (D124)");
   // The notice says the ways out from their registers (the audit of 9 Oct 2026): it said "no payout to mobile money"
   // after one was open, named two countries twice, and quoted lists by a date typed by hand.
