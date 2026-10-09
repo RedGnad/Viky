@@ -174,6 +174,16 @@ export function holdsAnything(holdings: Holdings, gifts?: ReadonlyArray<Readonly
  */
 export const SAW_MONEY = "viky.seen.holds";
 
+/**
+ * Whether the way out is drawn, on Home and on Me (the founder, 9 Oct 2026). Once the account and its gifts are read,
+ * when there is something to take; until then, when what has been read already says so, or when this device saw money
+ * here last time.
+ */
+export function useSomethingToTake(holdings: Holdings | null, gifts: ReadonlyArray<Readonly<{ takeable?: string }>> | null, giftsRead: boolean): boolean {
+  const sawMoney = useSawMoney(holdings, gifts, giftsRead);
+  return holdings !== null && giftsRead ? holdsAnything(holdings, gifts) : (holdings !== null && holdsAnything(holdings)) || sawMoney;
+}
+
 export function useSawMoney(holdings: Holdings | null, gifts: ReadonlyArray<Readonly<{ takeable?: string }>> | null = null, giftsRead = true): boolean {
   const saw = useSeen(SAW_MONEY) === 1;
   useEffect(() => {

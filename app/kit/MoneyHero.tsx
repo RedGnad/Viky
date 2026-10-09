@@ -1,6 +1,7 @@
 "use client";
-import { useState, type CSSProperties } from "react";
-import { useDisplayCurrency } from "@/src/client/display-currency";
+import { useEffect, useState, type CSSProperties } from "react";
+import { MOTION } from "@/src/design-tokens";
+import { useDisplayCurrency, type DisplayMoney } from "@/src/client/display-currency";
 import { HOME as W } from "@/src/sentences";
 import { AMOUNT_IN_TITLE, CARD_LABEL, HELP } from "../components/ui";
 import { amountText, ArrivalAmount, useLastSeen } from "./Motion";
@@ -45,6 +46,37 @@ import { useMoneyHeld, type Holdings } from "./money";
  */
 const AMOUNT = `money-display ${AMOUNT_IN_TITLE} tracking-[-0.02em]`;
 
+/**
+ * The account's figure while it is read, for Home and for Me (the founder, 9 Oct 2026): the figure once it is read, and
+ * until then the last one this device saw for this account in this currency.
+ *
+ * Never a zero it remembers: a zero is said when it is read and at no other time, or it could stand over money that
+ * has just arrived and whose worth is still being asked (the rule of 4 Oct 2026, `useMoneyHeld`).
+ *
+ * A reading that does not land: after four seconds the figure remembered goes to the faint ink of the three dots, so
+ * a figure that may be old is not said as firmly as one just read, and it is back in full ink when the reading lands.
+ */
+export function useFigureWhileRead(address: string | undefined, money: DisplayMoney, dollars: bigint | undefined) {
+  const figure = dollars === undefined ? undefined : money.figure(dollars);
+  // What this device last saw of this account's money, so a change counts to its value once (brief, section 6).
+  const seen = useLastSeen(`viky.seen.money.${address}.${money.currency}`, figure?.value);
+  const value = figure?.value ?? (seen || undefined);
+  /** How this currency writes an amount, which is known before the amount is. */
+  const written = figure ?? money.figure(0n);
+  /** Whether the first image had no figure at all: the one that lands then comes up in place, and counts nothing. */
+  const [startedWithout] = useState(value === undefined);
+  /** A remembered figure is standing in for one that is awaited. */
+  const awaited = figure === undefined && value !== undefined;
+  const [pale, setPale] = useState(false);
+  if (!awaited && pale) setPale(false);
+  useEffect(() => {
+    if (!awaited) return;
+    const timer = setTimeout(() => setPale(true), MOTION.place.paleAfterMs);
+    return () => clearTimeout(timer);
+  }, [awaited]);
+  return { figure, seen, value, written, startedWithout, pale };
+}
+
 export function MoneyHero({
   address,
   holdings,
@@ -60,19 +92,7 @@ export function MoneyHero({
 }>) {
   const money = useDisplayCurrency(address);
   const dollars = useMoneyHeld(holdings, gifts, giftsUnread);
-  const figure = dollars === undefined ? undefined : money.figure(dollars);
-  // What this device last saw of this account's money, so a change counts to its value once (brief, section 6).
-  const seen = useLastSeen(`viky.seen.money.${address}.${money.currency}`, figure?.value);
-  /**
-   * What stands under "Yours": the figure once it is read, and until then the last one this device saw. Never a zero
-   * it remembers: a zero is said when it is read and at no other time, or it could stand over money that has just
-   * arrived and whose worth is still being asked (the rule of 4 Oct 2026, `useMoneyHeld`).
-   */
-  const value = figure?.value ?? (seen || undefined);
-  /** How this currency writes an amount, which is known before the amount is. */
-  const written = figure ?? money.figure(0n);
-  /** Whether the first image had no figure at all: the one that lands then comes up in place, and counts nothing. */
-  const [startedWithout] = useState(value === undefined);
+  const { figure, seen, value, written, startedWithout, pale } = useFigureWhileRead(address, money, dollars);
 
   if (value === undefined) {
     return (
@@ -90,7 +110,7 @@ export function MoneyHero({
   return (
     <section className="money-display-box flex flex-col gap-[var(--space-xs)]">
       <h1 className={CARD_LABEL}>{W.yours}</h1>
-      <p data-amount className={`${AMOUNT}${startedWithout ? " comes-up" : ""}`} style={chars(amountText(value, written).length)}>
+      <p data-amount {...(pale ? { "data-pale": "" } : {})} className={`${AMOUNT} ink-while-read${pale ? " text-[var(--on-surface-faint)]" : ""}${startedWithout ? " comes-up" : ""}`} style={chars(amountText(value, written).length)}>
         <ArrivalAmount from={seen ?? value} to={value} symbol={written.symbol} decimals={written.decimals} after={written.after} thousands={written.thousands} />
       </p>
       {figure && !figure.rateDate && money.unavailable ? <p className={HELP}>{money.unavailable}</p> : null}

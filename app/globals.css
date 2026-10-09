@@ -1054,10 +1054,13 @@ dialog.sheet[open] {
  * A screen that has arrived (the founder, 9 Oct 2026; app/kit/Place.tsx). A block put on it after it was drawn never
  * plays the entrance: it opens its place by its height, which the script does, and under less movement it is simply
  * there. What lands in a place that was held comes up where it stands, 180 ms, with no rise and no turn to wait for:
- * the whole of it (`.comes-up`), or what a frame already there holds (`.comes-up-within`).
+ * the whole of it (`.comes-up`), or what a frame already there holds (`.comes-up-within`). A late place that holds a
+ * list does not let the list's blocks enter either, and a place that holds a list leaves the entrance to its blocks.
  */
 .page-enters > [data-late],
-.page-enters .arrives-in-turn > [data-late] {
+.page-enters .arrives-in-turn > [data-late],
+.page-enters [data-late] .arrives-in-turn > *,
+.page-enters > [data-turns] {
   animation: none !important;
 }
 .comes-up,
@@ -1068,6 +1071,10 @@ dialog.sheet[open] {
   from {
     opacity: 0;
   }
+}
+/* A figure this device remembers goes from full ink to the faint one, and back, as softly as anything comes up. */
+.ink-while-read {
+  transition: color var(--come-up-duration) ease-out;
 }
 /*
  * A gift's place while the list is read (app/kit/GiftCard.tsx, GiftPlace): the card's own frame, and quiet bars where

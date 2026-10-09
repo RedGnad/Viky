@@ -608,7 +608,8 @@ export function useRevealOnScroll(main: RefObject<HTMLElement | null>): void {
     const root = main.current;
     if (!root) return;
     const blocks = [...root.querySelectorAll<HTMLElement>(":scope > *:not(header, dialog), :scope .arrives-in-turn > *")].filter(
-      (block) => !block.classList.contains("arrives-in-turn") && !block.querySelector("[data-reveal]") && !block.closest("[data-reveal]"),
+      // A place that holds a box whose blocks take their own turns is left to those blocks, as the box itself is.
+      (block) => !block.classList.contains("arrives-in-turn") && !block.hasAttribute("data-turns") && !block.querySelector("[data-reveal]") && !block.closest("[data-reveal]"),
     );
     return waitUnderTheScreen(blocks);
   }, [main]);

@@ -2,15 +2,14 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAccount } from "@/src/account/provider";
-import { MOTION } from "@/src/design-tokens";
 import { HOME as W, NAV } from "@/src/sentences";
 import { BODY, HERO, LEAD, PRIMARY_BUTTON, SMALL_BUTTON, TITLE } from "../components/ui";
-import { Arrival, Reveal, type ArrivalGift } from "./Motion";
+import { Arrival, type ArrivalGift } from "./Motion";
 import { Place, PlacesOf } from "./Place";
-import { forgetOnThisScreen, useSeen, useSeenMany, writeSeen } from "./seen";
+import { GiftRows, listMemory, useListPlaces } from "./GiftRows";
 import { SignInDoor } from "./SignInDoor";
 import { EmptyState } from "./EmptyState";
-import { conditionNameOf, GiftCard, GiftPlace } from "./GiftCard";
+import { conditionNameOf } from "./GiftCard";
 import { MarkNotice, namesTheMark } from "./MarkNotice";
 import { HeadCharacter } from "./HeadCharacter";
 import { dropStaleCardFragment, goToTheCard } from "./WayToTheCard";
@@ -32,7 +31,7 @@ import { Shell } from "./Shell";
 import { useMyGifts } from "./my-gifts";
 import { useMinute } from "./clock";
 import { charactersOf } from "./DayStrip";
-import { holdsAnything, useHoldings, useSawMoney, type Holdings } from "./money";
+import { useHoldings, useSomethingToTake, type Holdings } from "./money";
 import type { HeldAmounts } from "@/src/reader-holdings";
 import type { GiftSummary } from "@/src/client/gift";
 import { WaitLine } from "./Waiting";
@@ -55,13 +54,8 @@ export const ROOM = { aboveWords: 1, beforeAction: 0.9, beforeCharacter: 1.1 } a
 
 /** How many gifts Home shows under the card. */
 const SHOWN = 3;
-/**
- * What this device last saw of Home's list, kept with what else it saw (app/kit/seen.tsx): how many gifts the account
- * had, and how tall each of the cards shown stood. It is what holds their places while the list is read (the founder,
- * 9 Oct 2026). Numbers only, for the device and not per account, as the memory of the way out is.
- */
-export const SEEN_GIFTS = "viky.seen.home.gifts";
-export const SEEN_GIFT_HEIGHTS: readonly string[] = Array.from({ length: SHOWN }, (_, at) => `viky.seen.home.gift.${at}`);
+/** What this device last saw of Home's list: what holds its places while it is read (app/kit/GiftRows.tsx). */
+export const HOME_LIST = listMemory("home.gifts");
 
 export function Home({
   initialHoldings,
@@ -102,28 +96,13 @@ export function Home({
   const nowMs = useMinute();
   /** Whether the list has answered at all, with gifts or with a reading that failed. */
   const giftsRead = gifts !== null || problem !== null;
-  /** Whether the way out is drawn while the balance is read (app/kit/money.ts): this device saw money here last time. */
-  const sawMoney = useSawMoney(holdings, gifts, giftsRead);
+  /** Whether the way out is drawn (app/kit/money.ts): from the first image where this device saw money last time. */
+  const toTake = useSomethingToTake(holdings, gifts, giftsRead);
   /** How many gifts this device last saw here, and how tall the cards shown stood: their places while they are read. */
-  const sawGifts = useSeen(SEEN_GIFTS);
-  const sawHeights = useSeenMany(SEEN_GIFT_HEIGHTS);
+  const list = useRef<HTMLElement>(null);
+  const { saw: sawGifts, heights: sawHeights } = useListPlaces(HOME_LIST, list, gifts === null ? null : gifts.length);
   /** Whether the list was still to be read in this screen's first image: its cards then come up in place. */
   const [listLands] = useState(gifts === null);
-  const list = useRef<HTMLElement>(null);
-  // What the list is now, kept for the next visit: how many, and how tall each card shown stands once it has settled.
-  useEffect(() => {
-    if (!address || gifts === null) return;
-    writeSeen(SEEN_GIFTS, gifts.length);
-    const settled = window.setTimeout(() => {
-      list.current?.querySelectorAll<HTMLElement>("[data-gift-row] a").forEach((card, at) => {
-        if (SEEN_GIFT_HEIGHTS[at]) writeSeen(SEEN_GIFT_HEIGHTS[at], Math.round(card.getBoundingClientRect().height));
-      });
-    }, MOTION.arrival.budgetMs);
-    return () => {
-      window.clearTimeout(settled);
-      [SEEN_GIFTS, ...SEEN_GIFT_HEIGHTS].forEach(forgetOnThisScreen);
-    };
-  }, [address, gifts]);
 
   // A "#offer" an earlier press left in the address is dropped on arrival, so the next launch starts at the top (D240).
   useEffect(() => {
@@ -201,12 +180,7 @@ export function Home({
   const moving = gifts?.slice(0, SHOWN) ?? [];
   /** While the list is read: as many places as this device saw gifts, held at the heights their cards had. */
   const held = gifts === null && !problem ? Math.min(SHOWN, sawGifts ?? 0) : 0;
-  const rows = gifts === null ? held : moving.length;
-  /**
-   * Whether the way out is drawn. Once the account and its gifts are read, when there is something to take; until
-   * then, when what has been read already says so, or when this device saw money here last time.
-   */
-  const toTake = holdings !== null && giftsRead ? holdsAnything(holdings, gifts) : (holdings !== null && holdsAnything(holdings)) || sawMoney;
+
   // Every reached gift this account has not had the moment of, played over Home once it has loaded (the founder).
   const owed = (gifts ?? []).filter((gift) => gift.reachedSeen === false).map(reachedOfSummary).filter((gift): gift is ReachedGift => gift !== null);
   // What changed since the last visit, per gift, which the arrival replays once and in order (brief, section 6).
@@ -263,13 +237,7 @@ export function Home({
             </Place>
             {/* One place for each gift shown, the same from the first image to the last: the card comes up in the place
                 that was held for it, and a place held for nothing closes. */}
-            {Array.from({ length: SHOWN }, (_, at) => (
-              <Place key={at} open={at < rows}>
-                <div data-gift-row="">
-                  <Reveal>{moving[at] ? <GiftCard gift={moving[at]} landed={listLands} /> : <GiftPlace height={sawHeights[at]} />}</Reveal>
-                </div>
-              </Place>
-            ))}
+            <GiftRows gifts={gifts === null ? null : moving} held={held} heights={sawHeights} landed={listLands} />
             <Place open={gifts === null ? held > 0 : gifts.length > 0}>
               <Link href="/gifts" className={`${SMALL_BUTTON} self-start no-underline`}>
                 {W.seeAll}

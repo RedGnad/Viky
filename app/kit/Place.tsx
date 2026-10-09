@@ -64,7 +64,16 @@ const gapAbove = (box: HTMLElement) => parseFloat(getComputedStyle(box.parentEle
  * to the other. A place that is not open and not closing is not in the page at all: no room, no gap, and no turn
  * taken in the entrance.
  */
-export function Place({ open = true, children }: Readonly<{ open?: boolean; children: ReactNode }>) {
+export function Place({
+  open = true,
+  turns = false,
+  children,
+}: Readonly<{
+  open?: boolean;
+  /** It holds a box whose own blocks enter in turn (`.arrives-in-turn`): the place itself then does not enter, or the two would stack. */
+  turns?: boolean;
+  children: ReactNode;
+}>) {
   const drawn = useContext(Drawn);
   const [there, setThere] = useState(open);
   const [late, setLate] = useState(open && drawn);
@@ -139,7 +148,7 @@ export function Place({ open = true, children }: Readonly<{ open?: boolean; chil
 
   if (!there) return null;
   return (
-    <div ref={outer} data-place="" {...(late ? { "data-late": "" } : {})}>
+    <div ref={outer} data-place="" {...(late ? { "data-late": "" } : {})} {...(turns ? { "data-turns": "" } : {})}>
       {/* A column like the page's own, so what stands in it is laid out as it would be on the page itself. */}
       <div ref={inner} className="flex flex-col">
         {children}
