@@ -423,18 +423,35 @@ function Case({ id }: Readonly<{ id: string }>) {
 // Less fine since D261 (the founder: "moins fin les points"): 1.6 apart and 0.08 to 0.56, a third larger than D260's
 // 1.2 and 0.06 to 0.42, half way to the coarse screen of D255.
 const HALFTONE = { step: 1.6, from: 0.08, to: 0.56, sizes: 8 } as const;
-function Halftone() {
+/** The rows of the grid are this far apart: the dots of one row stand between the dots of the row above. */
+const HALFTONE_ROW = HALFTONE.step * 0.866;
+/** The body's own region of the grid: every other region starts on one of its rows and one of its columns. */
+const BODY_DOTS = { left: 3, right: 61, top: 4, bottom: 36 } as const;
+
+/**
+ * The rule of the dots, for any region of the one grid: a list of dots for each size, kept where `inside` says. A
+ * region whose top is an even number of rows from the body's and whose left is one of its columns continues the
+ * body's grid, so the same dots fall on the same places whatever wears them.
+ */
+function dotsOf(region: Readonly<{ left: number; right: number; top: number; bottom: number }>, inside: (x: number, y: number) => boolean): string[][] {
   const paths = Array.from({ length: HALFTONE.sizes }, () => [] as string[]);
-  for (let row = 0, y = 4; y <= 36; row += 1, y += HALFTONE.step * 0.866) {
-    for (let x = 3 + (row % 2) * (HALFTONE.step / 2); x <= 61; x += HALFTONE.step) {
-      // Inside the diamond, a dot's centre at most on its edge, and short of its four rounded tips: the edge drawn
-      // again over the dots (2.2 wide) covers the half of a dot that passes it, so no clip is needed (D288).
-      if (Math.abs(x - CENTRE.x) / 29 + Math.abs(y - CENTRE.y) / 16 > 1 || Math.abs(x - CENTRE.x) > 25.5 || Math.abs(y - CENTRE.y) > 14) continue;
+  for (let row = 0, y = region.top; y <= region.bottom; row += 1, y += HALFTONE_ROW) {
+    for (let x = region.left + (row % 2) * (HALFTONE.step / 2); x <= region.right; x += HALFTONE.step) {
+      if (!inside(x, y)) continue;
       // 0 where the light falls (top left), 1 on the far side, as the gloss reads the same light.
       const along = Math.min(1, Math.max(0, 0.5 + ((x - CENTRE.x) / 29 + (y - CENTRE.y) / 16) / 4));
       paths[Math.min(HALFTONE.sizes - 1, Math.floor(along * HALFTONE.sizes))].push(`M${round(x)} ${round(y)}h0`);
     }
   }
+  return paths;
+}
+
+// Inside the diamond, a dot's centre at most on its edge, and short of its four rounded tips: the edge drawn again
+// over the dots (2.2 wide) covers the half of a dot that passes it, so no clip is needed (D288).
+const inTheBody = (x: number, y: number) => !(Math.abs(x - CENTRE.x) / 29 + Math.abs(y - CENTRE.y) / 16 > 1 || Math.abs(x - CENTRE.x) > 25.5 || Math.abs(y - CENTRE.y) > 14);
+
+function Halftone({ region = BODY_DOTS, inside = inTheBody }: Readonly<{ region?: Parameters<typeof dotsOf>[0]; inside?: Parameters<typeof dotsOf>[1] }>) {
+  const paths = dotsOf(region, inside);
   return (
     // No blend mode and no group opacity (D263): on a phone, while the figure is animated, it is painted in a layer
     // of its own, and a multiply there blends against a transparent backdrop, which showed the dots over nothing and
@@ -522,6 +539,31 @@ function Speed() {
   );
 }
 
+type Shine = ReturnType<typeof lit>;
+
+/** The body's blend, running from the corner the light falls on. */
+function Blend({ id, shine }: Readonly<{ id: string; shine: Shine }>) {
+  return (
+    <linearGradient id={`${id}-body`} x1={round(shine.gradient.x1)} y1={round(shine.gradient.y1)} x2={round(shine.gradient.x2)} y2={round(shine.gradient.y2)}>
+      <stop offset="0" style={{ stopColor: "var(--character-hero-from)" }} />
+      <stop offset="1" style={{ stopColor: "var(--character-hero-to)" }} />
+    </linearGradient>
+  );
+}
+
+/**
+ * The gloss: where the surface faces halfway between the light and the eye, slanted along the lit edge, and one dot
+ * beside it. A third, smaller spot inside the gloss read as a second, lighter circle and was taken off (D243).
+ */
+function GlossOf({ shine }: Readonly<{ shine: Shine }>) {
+  return (
+    <g data-part="gloss">
+      <ellipse cx={round(shine.gloss.cx)} cy={round(shine.gloss.cy)} rx={GLOSS_RX} ry={GLOSS_RY} transform={`rotate(${shine.gloss.angle} ${round(shine.gloss.cx)} ${round(shine.gloss.cy)})`} style={{ fill: GLOSS }} />
+      <circle cx={round(shine.dot.cx)} cy={round(shine.dot.cy)} r={DOT_R} style={{ fill: GLOSS }} />
+    </g>
+  );
+}
+
 /** The figure as a group, for a scene that composes several in one drawing. */
 export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", legs = "rest", lean = 0, gaze = { x: 0, y: 0 }, props = [], light = LIGHT, id = "figure", whirl = false, limbs = true, halftone = false }: FigureProps) {
   const shine = lit(light, lean);
@@ -529,10 +571,7 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
     <g data-part="figure" style={lean ? { ...FROM_FLOOR, transform: `rotate(${lean}deg)` } : FROM_FLOOR}>
       <g {...(whirl ? { "data-part": "whirl", style: FROM_MIDDLE } : {})}>
       <defs>
-        <linearGradient id={`${id}-body`} x1={round(shine.gradient.x1)} y1={round(shine.gradient.y1)} x2={round(shine.gradient.x2)} y2={round(shine.gradient.y2)}>
-          <stop offset="0" style={{ stopColor: "var(--character-hero-from)" }} />
-          <stop offset="1" style={{ stopColor: "var(--character-hero-to)" }} />
-        </linearGradient>
+        <Blend id={id} shine={shine} />
         <linearGradient id={`${id}-edge`} x1={round(shine.gradient.x1)} y1={round(shine.gradient.y1)} x2={round(shine.gradient.x2)} y2={round(shine.gradient.y2)}>
           <stop offset="0" style={{ stopColor: "var(--character-hero-edge-light)" }} />
           <stop offset="1" style={{ stopColor: "var(--character-hero-edge-deep)" }} />
@@ -542,12 +581,7 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
       <g data-part="body">
         <path d={DIAMOND} style={{ fill: `url(#${id}-body)`, stroke: `url(#${id}-edge)`, strokeWidth: 2.2, strokeLinejoin: "round" }} />
         {halftone ? <Halftone /> : null}
-        {/* The gloss: where the surface faces halfway between the light and the eye, slanted along the lit edge, and one
-            dot beside it. A third, smaller spot inside the gloss read as a second, lighter circle and was taken off (D243). */}
-        <g data-part="gloss">
-          <ellipse cx={round(shine.gloss.cx)} cy={round(shine.gloss.cy)} rx={GLOSS_RX} ry={GLOSS_RY} transform={`rotate(${shine.gloss.angle} ${round(shine.gloss.cx)} ${round(shine.gloss.cy)})`} style={{ fill: GLOSS }} />
-          <circle cx={round(shine.dot.cx)} cy={round(shine.dot.cy)} r={DOT_R} style={{ fill: GLOSS }} />
-        </g>
+        <GlossOf shine={shine} />
         {/* The edge again over the dots and the gloss, so both stop at its inner side (the founder, 29 and 30 Sep 2026: the
             gloss lay on the coloured edge; the edge over it, cutting it), without a clip (D288). Inside the body's group, so what the figure holds in front of
             it, a book, crossed or raised arms, stays in front of the edge. */}
@@ -587,6 +621,45 @@ export function Figure({ className, ...figure }: FigureProps & Readonly<{ classN
       {/* The speed lines trail the runner on the ground's own level: outside the group that leans (D268). */}
       {figure.props?.includes("speed") ? <Speed /> : null}
       <FigureGroup {...figure} />
+    </svg>
+  );
+}
+
+/**
+ * The app's icon as a drawing on a page (the founder, 9 Oct 2026, on a mockup): a square rounded as a phone rounds an
+ * icon, 22.4 % of its side, the body's material over all of it, its blend, its dots and its gloss, and the face a
+ * quarter larger. It is made of the figure's own pieces in the figure's own coordinates, never drawn apart: the square
+ * is the forty units around the face, so the gloss and the face stand in it where they stand on the body.
+ *
+ * It is the one drawing here that is clipped, the dots having no edge to stop under. Nothing moves it, which is what
+ * made a clip costly on the body (D288).
+ */
+const ICON = { left: 12, top: 1.5, side: 40, round: 0.224, face: { scale: 1.25, x: 32, y: 21.23 } } as const;
+/** The icon's region of the grid: two rows above the body's and five columns in, out to just past the square. */
+const ICON_DOTS = { left: BODY_DOTS.left + 5 * HALFTONE.step, right: ICON.left + ICON.side + 1.5, top: BODY_DOTS.top - 2 * HALFTONE_ROW, bottom: ICON.top + ICON.side + 1.5 } as const;
+const everywhere = () => true;
+
+export function FaceIcon({ id = "face-icon", className }: Readonly<{ id?: string; className?: string }>) {
+  const shine = lit();
+  const square = { x: ICON.left, y: ICON.top, width: ICON.side, height: ICON.side };
+  const { scale, x, y } = ICON.face;
+  return (
+    <svg aria-hidden focusable="false" viewBox={`${ICON.left} ${ICON.top} ${ICON.side} ${ICON.side}`} data-character="icon" className={className}>
+      <defs>
+        <Blend id={id} shine={shine} />
+        <clipPath id={`${id}-clip`}>
+          <rect {...square} rx={round(ICON.side * ICON.round)} />
+        </clipPath>
+      </defs>
+      <g clipPath={`url(#${id}-clip)`}>
+        <rect {...square} style={{ fill: `url(#${id}-body)` }} />
+        <Halftone region={ICON_DOTS} inside={everywhere} />
+        <GlossOf shine={shine} />
+        <g data-part="face" transform={`translate(${x} ${y}) scale(${scale}) translate(${-x} ${-y})`}>
+          <EyesOf eyes="open" gaze={{ x: 0, y: 0 }} id={id} />
+          <MouthOf mouth="soft" />
+        </g>
+      </g>
     </svg>
   );
 }

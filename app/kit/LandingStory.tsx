@@ -8,7 +8,8 @@ import { CATALOGUE, HOME, LANDING_STORY as W, ME } from "@/src/sentences";
 import { BODY, CARD, HELP, HERO, PRIMARY_BUTTON, SAY } from "../components/ui";
 import { Character, type CharacterState } from "./Character";
 import { ConditionIcon } from "./ConditionIcon";
-import { Figure, Scene } from "./Figure";
+import { FAMILY_FIGURES } from "./FamilyArt";
+import { FaceIcon, Figure, Scene } from "./Figure";
 import { Install, isStandalone } from "./Install";
 import { MarkNotice } from "./MarkNotice";
 import { reduced } from "./Motion";
@@ -35,19 +36,25 @@ import { CARD_NOTE, goToTheCard } from "./WayToTheCard";
  */
 type Key = (typeof W.blocks)[number]["key"];
 /** A character's act, tied to the scroll (`MOTION.poster.acts`). */
-type Act = keyof typeof MOTION.poster.acts & ("roll" | "hop" | "back" | "nod" | "shades");
+type Act = keyof typeof MOTION.poster.acts & ("roll" | "hop" | "back" | "shades");
+/** How far the day earned has turned, which the scroll sets and the stylesheet turns it by (app/globals.css). */
+const TURN = "--poster-turn";
 
 /**
- * The character each poster holds, and its act. Four are days: the one earned, today, the one missed, which comes
- * back, and the one that can still be caught, which is the yes. The fifth is the one who wears sunglasses on Me.
+ * The character each poster holds, and its act (the founder, 9 Oct 2026, on a mockup). Three are days: the one earned,
+ * the one missed, which comes back, and today, which hops at the yes. What is checked holds the hero reading its book,
+ * the figure of the family that learns, which lands in its word like the others and has no act. The fifth is the one
+ * who wears sunglasses on Me.
  */
-const HELD: Readonly<Record<Key, Readonly<{ state: CharacterState | "shades"; act: Act }>>> = {
+const HELD: Readonly<Record<Key, Readonly<{ state: CharacterState | "book" | "shades"; act?: Act }>>> = {
   theirs: { state: "earned", act: "roll" },
-  checked: { state: "today", act: "hop" },
+  checked: { state: "book" },
   back: { state: "toCome", act: "back" },
-  yes: { state: "catchable", act: "nod" },
+  yes: { state: "today", act: "hop" },
   key: { state: "shades", act: "shades" },
 };
+/** The box a held character takes in its title, where it is not a day's (app/globals.css). */
+const BOX: Readonly<Record<string, string>> = { book: " poster-character-book", shades: " poster-character-wide" };
 
 /** The ground of each poster, and what it rises over. */
 const GROUND: Readonly<Record<Key, Readonly<{ band: string; under: string }>>> = {
@@ -106,12 +113,22 @@ function Poster({ title, after, character, firstUnderTheCard = false }: Readonly
   );
 }
 
-/** A character in a title: no floor under it, taller than the letters. The one in sunglasses is the head of Me's figure. */
+/**
+ * A character in a title: no floor under it, taller than the letters. The one in sunglasses is the head of Me's
+ * figure, and the one with the book is the chooser's, whole. The day that rolls is written into the page, since a
+ * part of it turns and a named drawing's parts cannot be reached (D206).
+ */
 function Held({ poster }: Readonly<{ poster: Key }>) {
   const { state, act } = HELD[poster];
   return (
-    <span data-ch={act === "back" ? "back" : "lands"} data-act={act} aria-hidden className={`poster-character${state === "shades" ? " poster-character-wide" : ""}`}>
-      {state === "shades" ? <Figure id="story-key" limbs={false} eyes="shades" mouth="grin" halftone /> : <Character state={state} standing={false} className="block h-full w-full" />}
+    <span data-ch={act === "back" ? "back" : "lands"} {...(act ? { "data-act": act } : {})} aria-hidden className={`poster-character${BOX[state] ?? ""}`}>
+      {state === "shades" ? (
+        <Figure id="story-key" limbs={false} eyes="shades" mouth="grin" halftone />
+      ) : state === "book" ? (
+        <Figure id="story-book" halftone {...FAMILY_FIGURES.learn} />
+      ) : (
+        <Character state={state} standing={false} drawn={act === "roll" ? "inline" : "referenced"} className="block h-full w-full" />
+      )}
     </span>
   );
 }
@@ -219,8 +236,10 @@ function usePosters(root: { readonly current: HTMLElement | null }): void {
           if (!drawn) continue;
           const act = held.dataset.act;
           if (act === "roll") {
-            // The day earned rolls across its place.
-            gsap.fromTo(drawn, { rotate: -A.roll.turn, x: `-${A.roll.shift}` }, { rotate: A.roll.turn, x: A.roll.shift, ease: "none", transformOrigin: A.roll.origin, scrollTrigger: whole(held) });
+            // The day earned rolls across its place. The scroll moves the drawing and says how far it has turned; the
+            // stylesheet turns its body and its face by that much, and its highlight, drawn outside what turns, only
+            // follows the way across: a highlight is where the light is.
+            gsap.fromTo(drawn, { x: `-${A.roll.shift}`, [TURN]: `${-A.roll.turn}deg` }, { x: A.roll.shift, [TURN]: `${A.roll.turn}deg`, ease: "none", scrollTrigger: whole(held) });
           } else if (act === "hop") {
             // Today hops, squashing where it lands.
             const hops = gsap.timeline({ scrollTrigger: whole(held), defaults: { transformOrigin: A.hop.origin } });
@@ -237,13 +256,6 @@ function usePosters(root: { readonly current: HTMLElement | null }): void {
               { x: A.back.from, rotate: A.back.fromTurn, opacity: 0 },
               { x: 0, rotate: 0, opacity: 1, ease: A.back.ease, transformOrigin: A.back.origin, scrollTrigger: { trigger: held, start: `top ${A.back.startAt * 100}%`, end: `top ${A.back.homeAt * 100}%`, scrub: A.catchUpS } },
             );
-          } else if (act === "nod") {
-            // The yes: it nods, each time a little less.
-            const nod = gsap.timeline({ scrollTrigger: whole(held), defaults: { transformOrigin: A.nod.origin, ease: A.nod.ease, duration: A.nod.eachS } });
-            A.nod.turns.forEach((turn, index) => {
-              if (index === 0) nod.fromTo(drawn, { rotate: -turn }, { rotate: turn });
-              else nod.to(drawn, { rotate: -turn }).to(drawn, { rotate: turn });
-            });
           } else if (act === "shades") {
             // The sunglasses come down onto the face as the title reaches mid screen, and the head tilts as it goes by.
             const shades = drawn.querySelector('[data-prop="shades"]');
@@ -297,8 +309,8 @@ export function LandingStory() {
       {standalone ? null : (
         <section className="poster-band poster-band-ground poster-band-follows">
           <div className={`${CARD} mx-auto flex max-w-[720px] flex-col items-center gap-[var(--space-lg)] text-center [@media(min-width:1024px)]:flex-row [@media(min-width:1024px)]:text-left`}>
-            {/* A soft smile, this one in particular (D303, the founder, 28 Sep 2026). */}
-            <Figure id="story-phone" arms="wave" mouth="soft" halftone className="h-auto w-[110px] flex-none" />
+            {/* The app's icon, as it stands on a home screen, where the figure waved (the founder, 9 Oct 2026). */}
+            <FaceIcon id="story-phone" className="face-icon h-auto w-[110px] flex-none" />
             <div className="flex w-full flex-col gap-[var(--space-sm)]">
               <h2 className={`${SAY} [text-wrap:balance]`}>{W.phone.title}</h2>
               <p className={`${BODY} text-[var(--muted)]`}>{W.phone.body}</p>

@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { Character } from "../app/kit/Character";
+import { FAMILY_FIGURES } from "../app/kit/FamilyArt";
+import { FaceIcon, Figure } from "../app/kit/Figure";
 import { CONDITION_ICONS } from "../src/condition-icons";
 import { CHOICE_GROUPS, liveConditions } from "../src/conditions";
 import { MOTION } from "../src/design-tokens";
@@ -54,10 +59,18 @@ test("the landing lays five posters under its column, then the phone, then the w
   for (const block of LANDING_STORY.blocks) assert.ok(block.title.split(" ").includes(block.characterAfter), `${block.key}: after a word of its own title`);
   assert.match(
     story,
-    /theirs: \{ state: "earned", act: "roll" \},\n\s*checked: \{ state: "today", act: "hop" \},\n\s*back: \{ state: "toCome", act: "back" \},\n\s*yes: \{ state: "catchable", act: "nod" \},\n\s*key: \{ state: "shades", act: "shades" \},/,
+    /theirs: \{ state: "earned", act: "roll" \},\n\s*checked: \{ state: "book" \},\n\s*back: \{ state: "toCome", act: "back" \},\n\s*yes: \{ state: "today", act: "hop" \},\n\s*key: \{ state: "shades", act: "shades" \},/,
   );
   assert.match(story, /<span className="whitespace-nowrap">\n\s*\{said\} \{character\}\n\s*<\/span>/, "tied to the word before it");
-  assert.match(story, /<Character state=\{state\} standing=\{false\} className="block h-full w-full" \/>/, "the days' own character, with no floor under it");
+  // The days' own character, with no floor under it; the one that rolls is written into the page, since a part of it turns.
+  assert.match(story, /<Character state=\{state\} standing=\{false\} drawn=\{act === "roll" \? "inline" : "referenced"\} className="block h-full w-full" \/>/);
+  // What is checked holds the hero with its book (the founder, 9 Oct 2026): the figure of the family that learns, whole,
+  // the chooser's own, taller than a shape in its title. It lands in its word like the others and has no act.
+  assert.match(story, /<Figure id="story-book" halftone \{\.\.\.FAMILY_FIGURES\.learn\} \/>/);
+  assert.deepEqual(FAMILY_FIGURES.learn, { arms: "read", props: ["book"], mouth: "soft", gaze: { x: 0, y: 0.7 } });
+  assert.match(story, /<span data-ch=\{act === "back" \? "back" : "lands"\} \{\.\.\.\(act \? \{ "data-act": act \} : \{\}\)\}/, "no act, no act named");
+  assert.match(css, /\.poster-character-book \{\n  width: 2\.25em;\n  height: 1\.86em;\n  margin: 0 0\.1em;\n  vertical-align: -0\.5em;\n\}/);
+  assert.match(story, /const BOX: Readonly<Record<string, string>> = \{ book: " poster-character-book", shades: " poster-character-wide" \};/);
   // The one in sunglasses is the head of Me's figure: the same eyes, the same mouth, the same material.
   assert.match(story, /<Figure id="story-key" limbs=\{false\} eyes="shades" mouth="grin" halftone \/>/);
   assert.match(readFileSync("app/kit/Figure.tsx", "utf8"), /return <Figure className=\{className\} id="me" eyes="shades" mouth="grin" arms="crossed" halftone \/>;/);
@@ -66,9 +79,11 @@ test("the landing lays five posters under its column, then the phone, then the w
   // A title in the hero's own size, lines under it, and nothing of the card drawn again: it appears once, at the top.
   assert.match(story, /<h2 data-poster="" className=\{`\$\{HERO\} poster-title`\}/);
   assert.doesNotMatch(story, /GiftCard|OfferCard|DayStrip/, "nothing of the card is drawn again");
-  // The figures: the phone's, the head in a title, and at the foot the two of Gifts, one with an arm on the other's
-  // shoulder, where a runner and its speed lines stood (the founder, 5 Oct 2026).
-  assert.deepEqual(story.match(/<Figure id="[a-z-]+"/g), ['<Figure id="story-key"', '<Figure id="story-phone"']);
+  // The figures: the head in a title, the one with its book, and at the foot the two of Gifts, one with an arm on the
+  // other's shoulder, where a runner and its speed lines stood (the founder, 5 Oct 2026). On the phone's card, the
+  // app's icon stands where a figure waved (the founder, 9 Oct 2026), at the same place and the same width.
+  assert.deepEqual(story.match(/<Figure id="[a-z-]+"/g), ['<Figure id="story-key"', '<Figure id="story-book"']);
+  assert.match(story, /<FaceIcon id="story-phone" className="face-icon h-auto w-\[110px\] flex-none" \/>/);
   assert.match(story, /<div data-figure=""[^>]*>\n\s*<Scene which="gifts" className="h-auto w-full" \/>/);
   assert.doesNotMatch(story, /props=\{\["speed"\]\}|arms="run"/);
   // The phone keeps its card and its button, and the last block its way to the card.
@@ -202,7 +217,7 @@ test("each character's act is tied to the scroll, with the mockup's values, and 
   assert.deepEqual({ turn: A.roll.turn, shift: A.roll.shift }, { turn: 270, shift: "0.3em" }, "the day earned rolls a turn and a half");
   assert.deepEqual({ times: A.hop.times, height: A.hop.height, squash: A.hop.squash }, { times: 3, height: "-0.5em", squash: { x: 1.12, y: 0.82 } }, "today hops three times and squashes where it lands");
   assert.deepEqual({ from: A.back.from, homeAt: A.back.homeAt }, { from: "4.4em", homeAt: 0.48 }, "the day missed comes back from the right, and is home by mid screen");
-  assert.deepEqual(A.nod.turns, [20, 18, 14], "the yes nods three times, twenty degrees each way at first");
+  assert.equal("nod" in A, false, "the yes hops since 9 Oct 2026: no character nods, and no act is kept that none plays");
   assert.deepEqual({ drop: A.shades.drop, onAt: A.shades.onAt }, { drop: -15, onAt: 0.46 }, "the sunglasses come down as the title reaches mid screen");
   const moving = story.slice(story.indexOf("function usePosters("), story.indexOf("export function LandingStory()"));
   // Tied to the scroll: every act is scrubbed, none has a clock, and none is played once.
@@ -210,8 +225,24 @@ test("each character's act is tied to the scroll, with the mockup's values, and 
   assert.match(acts, /const whole = \(held: Element\) => \(\{ trigger: held, start: "top bottom", end: "bottom top", scrub: A\.catchUpS \}\);/);
   assert.equal(acts.match(/scrub: A\.catchUpS/g)?.length, 3, "the whole pass, the way back and the sunglasses");
   assert.doesNotMatch(acts, /once: true|delay:/);
-  for (const act of ["roll", "hop", "back", "nod", "shades"]) assert.match(acts, new RegExp(`act === "${act}"`), act);
-  assert.match(acts, /gsap\.fromTo\(drawn, \{ rotate: -A\.roll\.turn, x: `-\$\{A\.roll\.shift\}` \}, \{ rotate: A\.roll\.turn, x: A\.roll\.shift, ease: "none"/);
+  for (const act of ["roll", "hop", "back", "shades"]) assert.match(acts, new RegExp(`act === "${act}"`), act);
+  assert.doesNotMatch(acts, /act === "nod"/);
+  // The day earned rolls, and its highlight does not turn with it (the founder, 9 Oct 2026): the scroll moves the drawing
+  // and says how far it has turned, the stylesheet turns the group that holds its body and its face, and the highlight
+  // is drawn outside that group.
+  assert.match(acts, /gsap\.fromTo\(drawn, \{ x: `-\$\{A\.roll\.shift\}`, \[TURN\]: `\$\{-A\.roll\.turn\}deg` \}, \{ x: A\.roll\.shift, \[TURN\]: `\$\{A\.roll\.turn\}deg`, ease: "none", scrollTrigger: whole\(held\) \}\);/);
+  assert.match(story, /const TURN = "--poster-turn";/);
+  assert.match(css, /\.poster-character \[data-part="whirl"\] \{\n  transform: rotate\(var\(--poster-turn, 0deg\)\);\n\}/);
+  const ball = renderToStaticMarkup(createElement(Character, { state: "earned", standing: false, drawn: "inline" }));
+  const turns = ball.slice(ball.indexOf('<g data-part="whirl"'), ball.indexOf('<g data-part="gloss"'));
+  assert.ok(turns.includes('data-part="body"') && turns.includes('data-part="face"'), "the body and the face turn");
+  assert.ok(turns.endsWith("</g></g></g>"), "and the group that turns is closed before the highlight is drawn");
+  assert.match(ball, /<g data-part="gloss"[^>]*><circle[^>]*><\/circle><circle[^>]*><\/circle><\/g><\/g><\/svg>$/, "the highlight, last in what jumps, outside what turns");
+  // Every other shape keeps its highlight under its face: none of them turns on itself.
+  for (const state of ["toCome", "today", "catchable", "returned"] as const) {
+    const other = renderToStaticMarkup(createElement(Character, { state, standing: false, drawn: "inline" }));
+    assert.ok(other.indexOf('data-part="gloss"') < other.indexOf('data-part="face"'), state);
+  }
   assert.match(acts, /\{ x: A\.back\.from, rotate: A\.back\.fromTurn, opacity: 0 \},\n\s*\{ x: 0, rotate: 0, opacity: 1, ease: A\.back\.ease/);
   assert.match(acts, /const shades = drawn\.querySelector\('\[data-prop="shades"\]'\);/);
   assert.match(readFileSync("app/kit/Figure.tsx", "utf8"), /<g data-part="eyes" data-prop="shades"/);
@@ -226,7 +257,60 @@ test("each character's act is tied to the scroll, with the mockup's values, and 
   // None of it where less movement is asked for: the posters' script does not run at all there.
   assert.match(moving, /if \(!story \|\| reduced\(\)/);
   // And on paper everything is at rest, what an act had moved included.
-  assert.match(css, /:is\(\[data-w\], \[data-ch\], \[data-ch\] svg, \[data-ch\] \[data-prop\], \[data-line\], \[data-strip\], \[data-pills\], \[data-figure\], \[data-offer\]\) \{\n    opacity: 1 !important;\n    transform: none !important;/);
+  assert.match(css, /:is\(\[data-w\], \[data-ch\], \[data-ch\] svg, \[data-ch\] \[data-prop\], \[data-ch\] \[data-part="whirl"\], \[data-line\], \[data-strip\], \[data-pills\], \[data-figure\], \[data-offer\]\) \{\n    opacity: 1 !important;\n    transform: none !important;/);
+});
+
+test("the phone's card shows the app's icon, made of the figure's own pieces, one image by day and by night", () => {
+  const icon = renderToStaticMarkup(createElement(FaceIcon, { id: "story-phone" }));
+  const figure = renderToStaticMarkup(createElement(Figure, { id: "story-phone", limbs: false, mouth: "soft", halftone: true }));
+  const part = (html: string, from: string, to: string) => html.slice(html.indexOf(from), html.indexOf(to, html.indexOf(from)) + to.length);
+  // A square of forty units around the face, rounded as a phone rounds an icon: 22.4 % of its side.
+  assert.match(icon, /^<svg aria-hidden="true" focusable="false" viewBox="12 1\.5 40 40" data-character="icon">/);
+  assert.match(icon, /<clipPath id="story-phone-clip"><rect x="12" y="1\.5" width="40" height="40" rx="8\.96"><\/rect><\/clipPath>/);
+  assert.equal(Math.round(40 * 0.224 * 100) / 100, 8.96);
+  assert.match(icon, /<g clip-path="url\(#story-phone-clip\)"><rect x="12" y="1\.5" width="40" height="40" style="fill:url\(#story-phone-body\)"><\/rect>/);
+  // The hero's blend, its gloss and its face are the figure's own, letter for letter.
+  assert.equal(part(icon, "<linearGradient", "</linearGradient>"), part(figure, "<linearGradient", "</linearGradient>"), "the blend");
+  assert.equal(part(icon, '<g data-part="gloss">', "</g>"), part(figure, '<g data-part="gloss">', "</g>"), "the gloss");
+  assert.match(icon, /<g data-part="face" transform="translate\(32 21\.23\) scale\(1\.25\) translate\(-32 -21\.23\)">/, "a quarter larger");
+  assert.ok(icon.includes(part(figure, '<g data-part="eyes"', "</g></g></g>")), "the eyes");
+  assert.ok(icon.includes(part(figure, '<g data-part="mouth"', "</g>")), "the soft mouth");
+  // The dots: the body's rule, its eight sizes, its colour and its grid, laid over the whole square.
+  const dots = (html: string) => [...part(html, '<g data-part="halftone">', "</g>").matchAll(/<path d="([^"]*)" style="([^"]*)"/g)].map((match) => ({ at: [...match[1].matchAll(/M(-?[\d.]+) (-?[\d.]+)h0/g)].map((dot) => [Number(dot[1]), Number(dot[2])]), style: match[2] }));
+  const [onIcon, onBody] = [dots(icon), dots(figure)];
+  assert.deepEqual(onIcon.map((size) => size.style), onBody.map((size) => size.style), "eight sizes, the same strokes");
+  assert.equal(onIcon.length, 8);
+  const all = onIcon.flatMap((size) => size.at);
+  for (const [x, y] of [[13, 2.5], [51, 2.5], [13, 40.5], [51, 40.5], [32, 21.5]]) {
+    assert.ok(all.some(([dx, dy]) => Math.hypot(dx - x, dy - y) < 1.2), `a dot by (${x}, ${y})`);
+  }
+  // Where the body has a dot inside the square, the icon has the same one, of the same size: one grid, one rule.
+  onBody.forEach((size, index) => {
+    for (const [x, y] of size.at.filter(([dx]) => dx >= 12 && dx <= 52)) assert.ok(onIcon[index].at.some(([dx, dy]) => dx === x && dy === y), `size ${index}: (${x}, ${y})`);
+  });
+  // One image whatever the hour: the five colours it is drawn in are the day's own, said again on the icon.
+  const day = css.slice(css.indexOf(":root {"), css.indexOf("\n}", css.indexOf(":root {")));
+  const rule = css.slice(css.indexOf(".face-icon {"), css.indexOf("}", css.indexOf(".face-icon {")));
+  for (const name of ["--character-hero-from", "--character-hero-to", "--character-halftone", "--character-gloss", "--character-face"]) {
+    const said = new RegExp(`${name}: ([^;]+);`);
+    assert.ok(said.exec(rule)?.[1], name);
+    assert.equal(said.exec(rule)?.[1], said.exec(day)?.[1], `${name} is the day's`);
+  }
+  for (const name of [...icon.matchAll(/var\((--[a-z0-9-]+)\)/g)].map((match) => match[1])) assert.ok(rule.includes(`${name}:`), `${name} is said on the icon`);
+  assert.equal(css.match(/\.face-icon \{/g)?.length, 1, "said once, for day and night alike");
+});
+
+test("no shape carries a shade under its face any more", () => {
+  // The founder, 9 Oct 2026, on the five shapes drawn with and without it: the small pill of ink at each one's foot goes,
+  // from the drawings, from the file every named character is read from, and from the look.
+  assert.doesNotMatch(readFileSync("app/kit/Character.tsx", "utf8"), /data-part="shade"|<Shade|shade:/);
+  const file = readFileSync("public/characters.svg", "utf8");
+  assert.equal((file.match(/<symbol /g) ?? []).length, 32);
+  assert.doesNotMatch(file, /shade/);
+  assert.doesNotMatch(css, /--character-shade/);
+  for (const state of ["toCome", "today", "catchable", "earned", "returned", "gift"] as const) {
+    assert.doesNotMatch(renderToStaticMarkup(createElement(Character, { state, drawn: "inline" })), /shade/, state);
+  }
 });
 
 test("gsap is loaded by the landing alone, and its licence is said for what it is", () => {

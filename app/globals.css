@@ -157,7 +157,7 @@
      the face's ink is the ground's colour there and a limb in it could not be seen at all. */
   --character-limb: #1E1633;
   --character-shadow: #1E1633;
-  /* The juice (D132): one highlight of white and one shade of ink inside every character, and no gradient anywhere. */
+  /* The juice (D132): one highlight of white inside every character. */
   --character-gloss: rgba(255, 255, 255, 0.45);
   /*
    * The head of the page is the one character with an edge (D132), and the founder chose its two colours himself on
@@ -179,7 +179,6 @@
   --character-hero-to: #B79BFF;
   /* The halftone's dots (D263): the body's deeper colour multiplied by itself, which a multiply blend gave on its far side. */
   --character-halftone: #835EFF;
-  --character-shade: rgba(30, 22, 51, 0.12);
   --character-shadow-opacity: 0.12;
 
   /* Material's 8dp scale, the steps we use. */
@@ -2247,6 +2246,33 @@ html[data-intro] .launch-intro.launch-intro-leaving {
 .poster-character-wide {
   width: 2.05em;
 }
+/* The hero with its book: taller than a shape, since it has a body and legs (the founder, 9 Oct 2026). */
+.poster-character-book {
+  width: 2.25em;
+  height: 1.86em;
+  margin: 0 0.1em;
+  vertical-align: -0.5em;
+}
+/*
+ * The day earned rolls: the scroll says how far it has turned (app/kit/LandingStory.tsx), and its body and its face
+ * turn by that much, from their own middle. Its highlight is drawn outside this group and stays where the light is.
+ */
+.poster-character [data-part="whirl"] {
+  transform: rotate(var(--poster-turn, 0deg));
+}
+/*
+ * The app's icon drawn on the landing (app/kit/Figure.tsx, FaceIcon): one image by day and by night, as an icon on a
+ * home screen is (the founder, 9 Oct 2026). The five colours are the day's own, said again here because a variable set
+ * for the night cannot be read as it was by day; test/landing-story.test.ts refuses one that has left the day's.
+ */
+.face-icon {
+  --character-hero-from: #FF7F8E;
+  --character-hero-to: #B79BFF;
+  --character-halftone: #835EFF;
+  --character-gloss: rgba(255, 255, 255, 0.45);
+  --character-face: #1E1633;
+  filter: drop-shadow(0 6px 14px rgba(30, 22, 51, 0.22));
+}
 .poster-character svg {
   display: block;
   width: 100%;
@@ -2354,7 +2380,7 @@ html[data-moves] [data-landing-story]:not([data-still]) [data-band] :is([data-w]
 }
 @media print {
   /* On paper everything is there and at rest: the parts that play once, and what a character's act had moved. */
-  html[data-moves] [data-landing-story] [data-band] :is([data-w], [data-ch], [data-ch] svg, [data-ch] [data-prop], [data-line], [data-strip], [data-pills], [data-figure], [data-offer]) {
+  html[data-moves] [data-landing-story] [data-band] :is([data-w], [data-ch], [data-ch] svg, [data-ch] [data-prop], [data-ch] [data-part="whirl"], [data-line], [data-strip], [data-pills], [data-figure], [data-offer]) {
     opacity: 1 !important;
     transform: none !important;
   }
