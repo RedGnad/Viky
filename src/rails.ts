@@ -7,10 +7,9 @@ import { moneyIn } from "./pay-sum";
  * The rails that turn euros into what a gift holds, and back.
  *
  * Adding money never names a company: a person adds money, and Viky does the rest (D42). Taking it out does
- * name them, and that is the change D77 makes. No single payout service covers everybody: one serves the euro
- * area and refuses West Africa outright, the other pays by card across West Africa and pays nothing in France
- * or the rest of the EEA. Between them the pilot's corridors are covered, so the way out shows what exists,
- * each with where it pays, its source and the date that source was read, and the person chooses.
+ * name them, and that is the change D77 makes. No single payout service covers everybody: each pays in the
+ * countries of its own list, and where one is shut another may serve. So the way out shows what exists, each
+ * with where it pays, its source and the date that source was read, and the person chooses.
  *
  * **No country list is copied into this file, deliberately.** One of these lists changed on 15 Sep and the
  * other dates from June. A list frozen here would be wrong within weeks, and a false sentence about somebody's
@@ -23,9 +22,6 @@ import { moneyIn } from "./pay-sum";
  * Where Mercuryo serves nobody, by the names its own availability page gives them, read on 14 Sep 2026 and again on
  * 29 Sep 2026 (updated there 15 Sep). `MERCURYO_CLOSED_IN` below is the same list as codes, which is what decides; Ramp
  * has its own (`RAMP_CLOSED_IN`).
- *
- * Senegal and Ivory Coast are deliberately absent and were checked for: the cross-border gifts of the pilot
- * are aimed there, and at France and the rest of the union outside Hungary and Iceland.
  */
 export const RAIL_CLOSED_IN: readonly string[] = [
   "Abkhazia", "Afghanistan", "Algeria", "Angola", "Antarctica", "Aland Islands", "Bangladesh", "Barbados",
@@ -364,7 +360,8 @@ export const WAY_IN_USDC: WayIn = {
 export const WAYS_IN: readonly [WayIn, ...WayIn[]] = [WAY_IN_GIFT_COIN, WAY_IN_CHAIN_COIN];
 
 /**
- * Whether Rampnow is offered (the founder, 1 Oct 2026: nothing is turned on before a real payment has run). Two
+ * Whether Rampnow is offered. It was written off (the founder, 1 Oct 2026: nothing is turned on before a real
+ * payment has run), a rule he replaced on 3 Oct 2026: a way whose code is complete is open at its deployment. Two
  * settings, and both are needed: `NEXT_PUBLIC_RAMPNOW_WAY_IN` set to "on", and the address of the contract that changes
  * the USDC that arrives into what a gift holds (`NEXT_PUBLIC_USDC_ROUTER_ADDRESS`). Without that contract a new
  * account could do nothing with its USDC: it holds none of the chain's coin, and under ten of it an account can call no

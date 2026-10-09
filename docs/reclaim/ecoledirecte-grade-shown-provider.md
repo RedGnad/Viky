@@ -1,5 +1,7 @@
 # Our EcoleDirecte provider: the overall average on the pupil's own account, shown (D179)
 
+> Closed since 4 Oct 2026: Viky is for adults on both sides, and this condition is offered on no page. The note is kept as it was written, for the code it describes, which is kept closed.
+
 No provider of the Reclaim directory reads EcoleDirecte (the directory searched by its API on 23 Sep 2026: nothing).
 So this one is ours, registered on the Reclaim dashboard from a real pupil's or family's session: nothing below has
 been captured yet, every field is **to confirm**, and the code reads `average` and nothing else (`readSchoolAverage`

@@ -1,5 +1,7 @@
 # Our PRONOTE provider: the overall average in the family's own space, shown (D203)
 
+> Closed since 4 Oct 2026: Viky is for adults on both sides, and this condition is offered on no page. The note is kept as it was written, for the code it describes, which is kept closed.
+
 The founder's decision of 23 Sep 2026: PRONOTE is built as EcoleDirecte is (D179), its publisher's terms and the risk
 written on the judges' page. No provider of the Reclaim directory reads PRONOTE's grades, so this one is ours,
 registered on the Reclaim dashboard from a real family's session; every field below is **unverified** until then, and

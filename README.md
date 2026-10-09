@@ -108,11 +108,11 @@ less than a bank's.
 Only what was measured, or what Monad's own documentation states.
 
 - **Nobody but Viky pays a fee, and it is small enough to be Viky's.** Every step of a gift is submitted and paid for
-  by one relayer, so neither person ever holds MON or reads a fee. Read from the chain on 1 Oct 2026 at 08:22 UTC
-  with `pnpm relayer:fees`: 111 transactions sent since the first one, 2.070270 MON of fees in all, 0.0187 MON a
+  by one relayer, so neither person ever holds MON or reads a fee. Read from the chain on 2 Oct 2026 at 12:11 UTC
+  with `pnpm relayer:fees`: 120 transactions sent since the first one, 2.196190 MON of fees in all, 0.0183 MON a
   transaction on average. A credited day costs 0.017544 MON (transaction
   `0x5aa6752fc8c7db2526a5e5bafe6aeb91e09bd1cbe0cf3d4a6bc5e8f65f664ffd`: a limit of 172,000 at 102 gwei).
-- **A person waits about a second.** A block every 302 ms, measured over the last million blocks on 1 Oct 2026, and a
+- **A person waits about a second.** A block every 302 ms, measured over 10,000 blocks on 2 Oct 2026, and a
   block is final after two ([docs](https://docs.monad.xyz/developer-essentials/summary)). Nothing is shown as done
   before the block that holds it is at or below the `finalized` tag (`waitForFinality`, `src/monad/chain.ts`).
 - **One signature funds a gift.** AUSD is on Monad with EIP-3009: the funder signs once, and that signature is both
@@ -152,8 +152,10 @@ index, and the testers' figures come with the submission.
      operator had read what it had read ([`0x9c55…c4fd`](https://monadvision.com/tx/0x9c5508e83b0dd20668bb6a8c683faa047820734d6938387f8b6f516c3467c4fd)).
 
   What that proof read is narrow, and is said as it is: signed in to his own file, the answer to one click carried the
-  academic year 2026-2027. The rule was written by Reclaim's agent during his pass, it names no person, no number and
-  no faculty, and it is the one pinned on 7 Oct 2026. The judges page prints the rule in force for each university.
+  academic year 2026-2027. The rule was written by Reclaim's agent during his pass: it names no person, no number and
+  no faculty, and was pinned that day. Since 8 Oct 2026 the rule in force for that university is one written by hand,
+  the same at every pass, pinned before any proof was made on it. The judges page prints the rule in force for each
+  university.
 
 What has not run on the third daily contract yet: a missed day going back, and a gift reaching its last day.
 

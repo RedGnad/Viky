@@ -2,8 +2,9 @@
  * The mobile money way out, in words and rules the browser and the server share (the founder, 2 Oct 2026). Browser safe:
  * no fetch, no key.
  *
- * It is off until a real payout has reached a real number in one of the countries Switch covers: the switch is the
- * server setting `MOBILE_MONEY_OUT=on`, unset at the merge, and nothing about the way is offered while it is off.
+ * It is switched by the server setting `MOBILE_MONEY_OUT=on`, with Switch's key, and nothing about the way is offered
+ * while it is off. On in production since 3 Oct 2026, by the founder's rule of that day: a way whose code is complete
+ * is open at its deployment, and the setting that opens it also closes it.
  */
 import { amountIn, currencyOf } from "./currencies";
 

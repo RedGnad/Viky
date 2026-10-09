@@ -1,5 +1,7 @@
 # Our Bac Digital provider: the baccalauréat passed, Morocco, shown (D176)
 
+> Closed since 4 Oct 2026: Viky is for adults on both sides, and this condition is offered on no page. The note is kept as it was written, for the code it describes, which is kept closed.
+
 The Ministry of National Education's Bac Digital service, `https://bac.t3.technology/verify` ("Diplômes et Relevés
 Digitalisés du Baccalauréat", read 23 Sep 2026): the candidate types their CNE and CIN and the service shows their
 digitalised diploma and transcript. There is no account. The service sits behind Cloudflare, which answered 403 to a

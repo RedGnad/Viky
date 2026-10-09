@@ -1,5 +1,7 @@
 # Our Cyclades provider: the baccalauréat passed, France, shown (D176)
 
+> Closed since 4 Oct 2026: Viky is for adults on both sides, and this condition is offered on no page. The note is kept as it was written, for the code it describes, which is kept closed.
+
 Cyclades, the Ministry's examination service, candidate space at
 `https://candidat.examens-concours.gouv.fr/cyccandidat/portal/login` (the older `cyclades.education.gouv.fr` address
 redirects there, read 23 Sep 2026). The candidate signs in with their Cyclades identifier and password, or through

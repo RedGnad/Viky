@@ -1,5 +1,7 @@
 # Our Epim-Exam provider: the baccalauréat passed, Cameroon, shown (D176)
 
+> Closed since 4 Oct 2026: Viky is for adults on both sides, and this condition is offered on no page. The note is kept as it was written, for the code it describes, which is kept closed.
+
 Epim-Exam, `https://epimexam.cm/`, "Centralisation des Opérations de l'Office du Baccalauréat du Cameroun", read
 23 Sep 2026: three doors, "Candidat(e)s" ("effectuer une requête sur votre candidature et consulter vos résultats"),
 establishments, and payment partners, each behind "Accéder", with "Connexion" at the top. The candidate's space is

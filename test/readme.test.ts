@@ -6,6 +6,7 @@
 // what the README and docs/ name to the tree and the contracts they describe.
 
 import assert from "node:assert/strict";
+import { BLOCK_TIME, RELAYER_FEES } from "../src/measured";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import test from "node:test";
@@ -392,3 +393,23 @@ test("the README says the passes that run, what the word check reads, and what c
   // Mobile money is not said switched off where the judges page says it is offered.
   assert.doesNotMatch(readFileSync("docs/PAGES-AND-ROUTES.md", "utf8"), /switched off until a first real payout/);
 });
+
+test("the README's measured figures are src/measured.ts's own, and the documents say what the audit of 9 Oct 2026 found late", () => {
+  const readme = readFileSync("README.md", "utf8").replace(/\s+/g, " ");
+  const average = (Number(RELAYER_FEES.totalMon) / RELAYER_FEES.transactions).toFixed(4);
+  assert.ok(readme.includes(`Read from the chain on ${RELAYER_FEES.readAt.replace(", ", " at ")} with \`${RELAYER_FEES.command}\`: ${RELAYER_FEES.transactions} transactions sent since the first one, ${RELAYER_FEES.totalMon} MON of fees in all, ${average} MON a transaction on average.`));
+  assert.ok(readme.includes(`A block every ${BLOCK_TIME.seconds * 1_000} ms, measured over ${BLOCK_TIME.blocks.toLocaleString("en-US")} blocks on ${BLOCK_TIME.readOn}`));
+  // The rule in force at Toulouse is no longer the one its first proof was read by.
+  assert.ok(readme.includes("Since 8 Oct 2026 the rule in force for that university is one written by hand, the same at every pass, pinned before any proof was made on it."));
+  assert.doesNotMatch(readme, /it is the one pinned on 7 Oct 2026/);
+  // The one dev page that opens to anybody is said to.
+  assert.match(readFileSync("docs/PAGES-AND-ROUTES.md", "utf8"), /One exception, `\/dev\/rampnow`, opens to anybody, in production too/);
+  assert.match(readFileSync("app/dev/rampnow/page.tsx", "utf8"), /Unlike the other dev pages it is not held to the operator's account/);
+  // The six notes of conditions for pupils say at their head that they are closed.
+  for (const name of ["bac-cameroon", "bac-france", "bac-morocco", "ecoledirecte-grade", "pronote-grade", "waec-result"]) {
+    const lines = readFileSync(`docs/reclaim/${name}-shown-provider.md`, "utf8").split("\n");
+    assert.match(lines[0]!, /^# /, name);
+    assert.match(lines[2]!, /^> Closed since 4 Oct 2026: Viky is for adults on both sides, and this condition is offered on no page\./, name);
+  }
+});
+
