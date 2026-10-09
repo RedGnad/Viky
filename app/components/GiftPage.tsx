@@ -32,6 +32,8 @@ import { MarkNotice } from "../kit/MarkNotice";
 import { dayNow, lessonWouldPay } from "@/src/day-now";
 import { stripFromRecord } from "@/src/day-states";
 import { spokenAmount } from "@/src/display-currency";
+import { followGiftLinks, giftLinkOnThisDevice } from "@/src/gift-link-memory";
+import { forgetJustMade, wasJustMade } from "@/src/just-made";
 import { giftOfMilestone, giftOfSummary, funderMayTakeItBack, readAs } from "@/src/gift-moment";
 import { asItGoesNow, eyebrowOf, liveOf, titleOf } from "@/src/gift-live";
 import { notTheirs, voiceOf, type Voice } from "@/src/gift-voice";
@@ -73,7 +75,8 @@ import type { ToldAbout } from "../kit/MorningMessage";
 import { LiveLine, useLiveReading } from "../kit/LiveReading";
 import { openDayLine } from "@/src/client/limit";
 import { contactEmail } from "@/src/contact";
-import { Arrival, ArrivalAmount, Reacts, useLastSeen } from "../kit/Motion";
+import { Figure } from "../kit/Figure";
+import { Arrival, ArrivalAmount, Reacts, Success, useLastSeen } from "../kit/Motion";
 import { Shell } from "../kit/Shell";
 import { ButtonWords, StepInProgress, WaitLine } from "../kit/Waiting";
 import { YouDecide } from "../kit/YouDecide";
@@ -165,14 +168,14 @@ export function GiftPage({
 
   if (loadError) {
     return (
-      <Shell kind="task" back="/" backLabel={W.aboutViky} backFollows>
+      <Shell kind="task" card back="/" backLabel={W.aboutViky} backFollows>
         <p className={BODY}>{loadError}</p>
       </Shell>
     );
   }
   if (!status) {
     return (
-      <Shell kind="task" back="/gifts" backLabel={W.backToGifts}>
+      <Shell kind="task" card back="/gifts" backLabel={W.backToGifts}>
         <WaitLine>{W.loading}</WaitLine>
       </Shell>
     );
@@ -229,6 +232,13 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
   const milestone = status.kind === "milestone" ? status : null;
   const daily = status.kind === "milestone" ? null : status;
   const giftId = status.giftId;
+  /** Whether the reader arrives from the payment that made this gift: read once, as the page is first drawn in the browser. */
+  const [justMade] = useState(() => typeof window !== "undefined" && wasJustMade(status.giftId));
+  useEffect(() => {
+    if (justMade) forgetJustMade();
+  }, [justMade]);
+  // Whether this device holds the gift's link, read in the browser and followed: the funder's card says "Send it" then.
+  const linkHere = useSyncExternalStore(followGiftLinks, () => giftLinkOnThisDevice(giftId) !== null, () => false);
   const names = status.names ?? null;
   const funderName = names?.funderName ?? null;
 
@@ -379,6 +389,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
     shown: condition?.nature === "shown",
     shape: milestone ? (milestone.shape === "certificate" ? "stamp" : "climb") : "days",
     openBy,
+    linkHere,
     connectBy,
     endedOnInWords: milestone?.reachedAtMs ? dateInWords(milestone.reachedAtMs, zone) : daily && daily.finished && daily.endDay > 0 ? contractDayInWords(daily.endDay) : null,
     deadlineInWords: milestone?.deadlineMs ? dateInWords(milestone.deadlineMs, zone) : null,
@@ -578,7 +589,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
   // The session closed while they were here: nothing is lost and the door is the whole page (D74, D80).
   if (!address && hadAccount) {
     return (
-      <Shell kind="task" back="/" backLabel={W.aboutViky} backFollows step={W.closedTitle}>
+      <Shell kind="task" card back="/" backLabel={W.aboutViky} backFollows step={W.closedTitle}>
         <p className={BODY}>{W.closedBody}</p>
         <AccountPanel returning signInOnly />
       </Shell>
@@ -737,6 +748,12 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
    */
   const backToFunder = readerIsFunder ? W.lines.backToYou : W.lines.backTo(funderName);
   const eachDay = daily ? ((readerIsFunder || voice === "reader" ? words?.eachDayTheirs : words?.eachDayYours) ?? condition?.words.eachDay ?? "") : "";
+  // When it was made and its number, to the person who offered it (rule 5 of the UI pass of 8 Oct 2026: never in the
+  // open, here). Before the opening this page is the screen after paying, where they stood under the title: the line
+  // then comes straight after what the gift is, so the fold's four lines never cut it. It was the last line always,
+  // and a gift of today has more than four.
+  const madeRow: Row | null = readerIsFunder ? ([W.lines.made, W.lines.madeOn(dateInWords(status.createdAtChain * 1000, zone), giftId)] as const) : null;
+  const madeBeforeOpening = status.opened ? null : madeRow;
   const agreedRows: Row[] = [
     ...(milestone
       ? [
@@ -753,12 +770,13 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
           [M.lines.when, milestoneBy(milestone, zone)] as const,
           // What was not proved in time goes back two weeks later: the time left to show it (MILESTONE_LATE_PROOF_SECONDS).
           [M.lines.ifNot, hadOrNot ? M.lines.twoWeeksLater(backToFunder) : backToFunder] as const,
+          madeBeforeOpening,
           // A marathon's bib and the line read, to whoever is not at the moment of entering or reading them (D273).
           milestone.marathon && read.action !== "shareProof" ? marathonLine(milestone.marathon) : null,
           milestone.wca && read.action !== "shareProof" ? wcaLine(milestone.wca) : null,
         ]
       : daily
-        ? [[eachDay.charAt(0).toUpperCase() + eachDay.slice(1), daily.perDayDisplay] as const, [W.lines.days, agreedWhen(daily)] as const, [W.lines.missedDay, backToFunder] as const]
+        ? [[eachDay.charAt(0).toUpperCase() + eachDay.slice(1), daily.perDayDisplay] as const, [W.lines.days, agreedWhen(daily)] as const, [W.lines.missedDay, backToFunder] as const, madeBeforeOpening]
         : []),
     // The ending (the audit of 1 Oct 2026): only a gift of the second version of the contracts has one. The funder
     // reads here that it can happen; the person it is for has the gesture, under the card, in "You decide".
@@ -769,7 +787,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
     // or ended, where "Take $2.00" stood until 4 Oct 2026.
     mine && earned > 0n ? ([W.lines.yoursAlready, W.lines.fromHome] as const) : null,
     milestone && milestone.startReading !== null ? ([M.lines.startedAt, String(milestone.startReading)] as const) : null,
-    readerIsFunder ? ([W.lines.made, W.lines.madeOn(dateInWords(status.createdAtChain * 1000, zone), giftId)] as const) : null,
+    status.opened ? madeRow : null,
   ]
     .filter((row): row is Row => Boolean(row))
     .slice(0, MOST_LINES_IN_A_FOLD);
@@ -834,7 +852,11 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
   /** The gift is the reader's own and still theirs to decide about: opened, and neither over nor taken back. */
   const decides = mine && status.opened && !gift.finished && !gift.cancelled;
   /** What this gift's messages are about now: each morning for a habit, one moment for everything else. */
-  const about: ToldAbout | null = !status.opened || gift.finished || gift.cancelled
+  // Before it is opened, the person who offered it is the only one told anything. Being told was offered under the
+  // link they had just been given, on the screen after paying (the founder, 1 Oct 2026: it is how "what they miss
+  // comes back to you" reaches them without opening Viky); that screen is this page since 8 Oct 2026, so it is here.
+  const unopenedForItsFunder = readerIsFunder && !status.opened;
+  const about: ToldAbout | null = (!status.opened && !unopenedForItsFunder) || gift.finished || gift.cancelled
     ? null
     : daily
       ? { kind: "morning" }
@@ -842,7 +864,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
         ? { kind: "review" }
         : hadOrNot
           ? { kind: "hadOrNot" }
-          : readsLive && milestone
+          : milestone && (readsLive || unopenedForItsFunder)
             ? { kind: "reach", target: String(milestone.targetWords ?? milestone.target) }
             : null;
   // The funder's page as the funder reads it now, for the sheet that says what they see: the same moment in their
@@ -872,9 +894,18 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
     >
       <Shell
         kind="task"
+        card
         /* No hero on a gift in progress (the founder, 29 Sep 2026): its one character is the drawing's, the climb or the days. */
         character={
-          moment === "counting" || moment === "climbing" || moment === "awaitingProof" ? null : (
+          justMade ? (
+            // Arriving from the payment that made it: the app's own character, waving, on the expressive spring, once,
+            // and no confetti (V4, decision B). It stood on a screen of its own until 8 Oct 2026.
+            <Success>
+              <span className="block w-[72px] shrink-0">
+                <Figure id="made" arms="wave" mouth="soft" halftone />
+              </span>
+            </Success>
+          ) : moment === "counting" || moment === "climbing" || moment === "awaitingProof" ? null : (
             // The opening, made on this page: the gift's own character answers it, once. The days do not move.
             <Reacts gesture={openings}>
               <HeadCharacter />

@@ -51,6 +51,8 @@ export type LiveInput = Readonly<{
    * has started goes back (14 days after it was opened).
    */
   openBy: string | null;
+  /** Whether this device holds the gift's link, for the person who offered it: then the state is "send it". */
+  linkHere?: boolean;
   connectBy: string | null;
   nextReadingInWords: string | null;
   /** The hour of the next reading alone, in the reader's clock: "20:30". Drawn as a figure where nothing has gone back. */
@@ -193,16 +195,22 @@ export function liveOf(input: LiveInput): Live {
         headline: yours
           ? L.unopened.yours(funderName)
           : voice === "funder"
-            ? L.unopened.theirs(recipientName)
+            ? input.linkHere
+              ? L.unopened.sendIt(recipientName)
+              : L.unopened.theirs(recipientName)
             : L.unopened.reading(funderName, recipientName),
-        figure: { label: promiseOf(input.shape ?? "days", yours, input.target), value: input.amountDisplay },
+        // To the person who offered it, the amount is what they put in the other's name: said under it, where the
+        // screen after paying said it as a title (the UI pass of 8 Oct 2026). The rule it pays by is in what was agreed.
+        figure: { label: voice === "funder" ? L.unopened.inTheirName : promiseOf(input.shape ?? "days", yours, input.target), value: input.amountDisplay },
         next:
           input.openBy === null
             ? null
             : yours
               ? W.openBy(input.openBy, funderName)
               : voice === "funder"
-                ? L.unopened.openByTheirs(input.openBy)
+                ? input.linkHere
+                  ? L.unopened.whoeverOpens
+                  : L.unopened.openByTheirs(input.openBy)
                 : null,
         back,
       };

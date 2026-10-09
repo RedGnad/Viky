@@ -145,13 +145,16 @@ test("the next moment is only said where there is one, and it is the reader's ow
   assert.equal(liveOf(input({ moment: "counting" })).next, "Next reading: tomorrow at 9:00 AM your time.");
   assert.equal(liveOf(input({ moment: "unopened" })).next, "By 3 Oct 2026, or it goes back to Mom.");
   // The headline already says who has not opened or connected what: the next line says the date and nothing again.
-  assert.equal(liveOf(input({ moment: "unopened", voice: "funder" })).next, "If not by 3 Oct 2026, it comes back to you.");
+  assert.equal(liveOf(input({ moment: "unopened", voice: "funder" })).next, "By 3 Oct 2026, or it comes back to you.");
   assert.equal(liveOf(input({ moment: "openedNotConnected" })).next, "By 7 Oct 2026, or it goes back to Mom.");
   assert.equal(liveOf(input({ moment: "openedNotConnected", voice: "funder" })).next, "If not by 7 Oct 2026, it comes back to you.");
   assert.equal(liveOf(input({ moment: "openedNotConnected", voice: "reader" })).next, null, "a reader is told no deadline that is not theirs to meet");
   // The promise's rule under the money, so the headline's "in your name" is said once.
   assert.equal(liveOf(input({ moment: "unopened" })).figure?.label, "Yours day by day");
-  assert.equal(liveOf(input({ moment: "unopened", shape: "climb", voice: "funder" })).figure?.label, "Theirs at 1500");
+  // To the person who offered it, the amount is what they put in the other's name (the UI pass of 8 Oct 2026); the
+  // rule it pays by stays under the money for a reader who is neither of the two.
+  assert.equal(liveOf(input({ moment: "unopened", shape: "climb", voice: "funder" })).figure?.label, "In their name");
+  assert.equal(liveOf(input({ moment: "unopened", shape: "climb", voice: "reader" })).figure?.label, "Theirs at 1500");
   assert.equal(liveOf(input({ moment: "unopened", shape: "stamp" })).figure?.label, "Yours with the proof");
   for (const moment of ["awaitingProof", "startTooHigh", "won"] as const) {
     assert.equal(liveOf(input({ moment })).next, null, `${moment} points at a next moment it does not have`);
