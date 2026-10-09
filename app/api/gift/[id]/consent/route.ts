@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { assertSameOrigin } from "@/src/api-guard";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { consentBytes, fromHex } from "@/src/consent";
 import { giftConsent, giftConsentText, termsFor } from "@/src/consent-server";
@@ -78,6 +79,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    assertSameOrigin(request);
     const auth = readAccountAuthSession(request);
     const rate = checkRateLimit("status", request, auth.account);
     if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });

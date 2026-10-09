@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { assertSameOrigin } from "@/src/api-guard";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readAsTheDayGoes, readDailyGift } from "@/src/daily-count";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
@@ -22,6 +23,7 @@ export const maxDuration = 120;
  */
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    assertSameOrigin(request);
     const { id } = await context.params;
     const look = new URL(request.url).searchParams.get("look") === "1";
     // A milestone is read live while its page is open, once a minute (src/rate-limit.ts, `reading`), and so is the

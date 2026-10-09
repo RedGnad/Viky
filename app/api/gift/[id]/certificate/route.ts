@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { refusedFromElsewhere } from "@/src/api-guard";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { proveCertificate } from "@/src/certificate-reading";
 import { NO_STORE } from "@/src/gift-api";
@@ -21,6 +22,8 @@ export const dynamic = "force-dynamic";
  * rather than showing a refusal from a contract.
  */
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+  const elsewhere = refusedFromElsewhere(request);
+  if (elsewhere) return elsewhere;
   const rate = checkRateLimit("relay", request);
   if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
   const { id } = await context.params;

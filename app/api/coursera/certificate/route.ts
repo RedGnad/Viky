@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { refusedFromElsewhere } from "@/src/api-guard";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { courseraCodeOf } from "@/src/coursera-certificate";
 import { CourseraReadError, readCourseraCertificate } from "@/src/coursera-reading";
@@ -20,6 +21,8 @@ export const dynamic = "force-dynamic";
  * certificates: it answers the person holding a link, on their own gift.
  */
 export async function POST(request: Request) {
+  const elsewhere = refusedFromElsewhere(request);
+  if (elsewhere) return elsewhere;
   const rate = checkRateLimit("verify", request);
   if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
   try {

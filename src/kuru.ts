@@ -39,7 +39,10 @@ export async function kuruQuote(input: { userAddress: Hex; tokenIn: string; toke
     transaction?: { to?: string; calldata?: string; value?: string };
   };
   if (!quoteResponse.ok || quote.status !== "success" || !quote.transaction?.to || !quote.transaction.calldata) {
-    throw new GiftApiError("QUOTE_UNAVAILABLE", quote.message || "No route for this right now. Try again shortly.", 503);
+    // What the exchange says of its refusal is nobody's sentence here (the audit of 9 Oct 2026): it reached the
+    // withdrawal's screen as it came. It is kept for whoever reads the log, and the person reads ours.
+    console.error(`exchange refused a quote (${quoteResponse.status}): ${String(quote.message ?? "no message").slice(0, 300)}`);
+    throw new GiftApiError("QUOTE_UNAVAILABLE", "No route for this right now. Try again shortly.", 503);
   }
   return {
     output: String(quote.output ?? "0"),
