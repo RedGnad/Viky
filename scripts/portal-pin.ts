@@ -13,7 +13,7 @@ import { settleHeldReview, type SettleDeps } from "../src/shown-verification";
 import { tellAboutMilestone, tellAboutReview } from "../src/morning-send";
 import { liveTellingDeps } from "../src/morning-send-live";
 import { VerificationError } from "../src/duolingo-verification";
-import { enrolledBy, gradeScaleOf, gradeShownBy, LETTER_GRADES, letterRank, type PortalExtract } from "../src/university-shown";
+import { enrolledBy, gradeScaleOf, gradeShownBy, LETTER_GRADES, letterRank, resultsYearProblem, type PortalExtract } from "../src/university-shown";
 import { pinDoesNotCover, pinFromPublished, sameRule, type PublishedRequest, type WitnessPin } from "../src/witness-portal";
 
 /**
@@ -26,9 +26,11 @@ import { pinDoesNotCover, pinFromPublished, sameRule, type PublishedRequest, typ
  *   pnpm portal:pin
  *     lists the held proofs: the portal, the sense, the gift, the request and the fields the pattern read.
  *   PROVEN_BY=0x… pnpm portal:pin <session> --matches "<regex>" --keeps "<words>"                     (enrolment)
- *   PROVEN_BY=0x… pnpm portal:pin <session> --admitted "<regex>" --scale 20 [--year "<regex>"]         (results)
+ *   PROVEN_BY=0x… pnpm portal:pin <session> --admitted "<regex>" --scale 20 --year "<regex>"           (results)
  *     `--scale` is the scale the page shows: 20, 4, 100, 20/0.5, or letters:A,B,C,D,E,F. A grade gift made on another
- *     scale before this pin is refused with its own sentence; one made on it is read.
+ *     scale before this pin is refused with its own sentence; one made on it is read. `--year` is what this year's
+ *     page carries in its year field: without it, last year's page would pay a gift made today, so a results page is
+ *     not pinned without it (the audit of 8 Oct 2026). A page that shows no year takes `--any-year` in its place.
  *     checks the fields against what was read, pins the provider (version, request, match, redaction, spec hash)
  *     from this proof, whether or not the provider had a pin, relays the held proof to the milestone contract, then
  *     settles every other proof held for the same provider that the new pin covers. One it does not cover stays
@@ -130,7 +132,7 @@ async function settle(review: PortalReview): Promise<void> {
     // A proof of another version, pattern or method than the pin's is not refused for it (10 Oct 2026): the pin was
     // born of another proof, and this one is pinned from in its turn. It stays held, and the person reads nothing new.
     if (error instanceof VerificationError && pinDoesNotCover(error.code)) {
-      console.log(JSON.stringify({ step: "still held: the pin does not cover it", session: review.sessionId, gift: review.giftId, reason: error.message, next: `pin from it: pnpm portal:pin ${review.sessionId} ${review.sense === "enrolment" ? '--matches "<regex>" --keeps "<words>"' : '--admitted "<regex>" --scale <scale> [--year "<regex>"]'}` }));
+      console.log(JSON.stringify({ step: "still held: the pin does not cover it", session: review.sessionId, gift: review.giftId, reason: error.message, next: `pin from it: pnpm portal:pin ${review.sessionId} ${review.sense === "enrolment" ? '--matches "<regex>" --keeps "<words>"' : '--admitted "<regex>" --scale <scale> --year "<regex>"'}` }));
       return;
     }
     // A page without the field, a result that is not the gift's, a gift already over: refused by its code, said to the
@@ -246,6 +248,9 @@ async function main() {
     // Letters are ranked in one order whatever the university (LETTER_GRADES): a letter outside it could not be compared.
     if (scale.kind === "letters" && scale.grades.some((grade) => letterRank(grade) === undefined)) throw new Error(`--scale letters must be among ${LETTER_GRADES.join(", ")}`);
     const yearMatches = flag("year")?.trim();
+    // A results page pinned with no year would pay on last year's page: refused, unless said in so many words.
+    const yearProblem = resultsYearProblem(yearMatches, process.argv.includes("--any-year"));
+    if (yearProblem) throw new Error(`${yearProblem}: nothing pinned`);
     const results: ResultsFields = {
       admitted: { field: flag("admitted-field")?.trim() || RESULTS_FIELDS.decision, matches: need("admitted") },
       grade: { field: flag("grade-field")?.trim() || RESULTS_FIELDS.average, scale },
