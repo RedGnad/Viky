@@ -349,6 +349,18 @@ export function resultsProblem(results: unknown): string | undefined {
 /** What a results page said, by the row's own rule: a number for the contract and the words for the person, or why not. */
 export type ResultsVerdict = Readonly<{ kind: "read"; metricValue: number; inWords: string }> | Readonly<{ kind: "refused"; code: string; message: string }>;
 
+/**
+ * Why a results page cannot be pinned as the operator asked, or nothing (the audit of 8 Oct 2026). With no pattern for
+ * the year, a page that says "Admis" for last year pays a gift made today on this year's, so the pattern is asked
+ * for. A page that shows no year at all is pinned only on the operator's own word, `--any-year`, since the day of the
+ * proof is then all that dates it.
+ */
+export function resultsYearProblem(yearMatches: string | undefined, anyYear: boolean): string | null {
+  if (yearMatches && anyYear) return "--year and --any-year say opposite things: keep one";
+  if (!yearMatches && !anyYear) return '--year "<regex>" is asked for a results page: without it, last year\'s page would pay a gift made today. For a page that shows no year, say --any-year';
+  return null;
+}
+
 /** A page of another year than the row names does not pay, whichever of the two conditions asks (D174). */
 function wrongTerm(results: ResultsExtract, fields: Readonly<Record<string, string>>): ResultsVerdict | undefined {
   if (!results.year) return undefined;
