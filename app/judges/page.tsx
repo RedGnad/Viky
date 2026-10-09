@@ -194,7 +194,7 @@ export default async function JudgesPage() {
       </span>{" "}
       {rampnowOn
         ? rampnowFrameOn()
-          ? "Rampnow's page opens in a frame inside Viky. Its limit: Rampnow finishes a payment from its own page (the card buys USDC on Base, and its page then sends it on to Monad), so the frame has to stay open until the money arrives. The frame has no cross: one way out under it while no payment is known, \"Go back without paying\", and one after five minutes without the money. Left before the end, the payment waits at Rampnow: the screen that waits leads back to it, and opens another only when the person answers that they did not pay. Seen on the first payment through the frame, on 3 Oct 2026: 6 EUR paid at 21:23 UTC, the frame closed, the money held on Base for 14 minutes, then 5.60 USDC on the account at 21:38 UTC, once Rampnow's page was opened in a tab. Where the frame cannot keep the person signed in at Rampnow, it is never shown: \"Pay by card\" opens Rampnow's page in a tab of its own, and the payment is followed as one started from a tab. That is Safari's engine before 18.4 and from 18.5 to 26.1, so every browser on an iPhone at those versions: Rampnow's session in a frame lives in cookies set \"Partitioned\", which that engine reads in 18.4 and from 26.2. Measured on Safari 17.6 on 4 Oct 2026, on a neutral page holding the same frame: after the code received by e-mail, Rampnow's page went back to its sign-in form. It is read from what the browser says of itself; it was not measured on viky.cash in Safari, nor on the versions in between. "
+          ? "Rampnow's page opens in a frame inside Viky. Its limit: Rampnow finishes a payment from its own page (the card buys USDC on Base, and its page then sends it on to Monad), so the frame has to stay open until the money arrives. The frame has no cross: one way out under it while no payment is known, \"Go back without paying\", and one after five minutes without the money. Left before the end, the payment waits at Rampnow: for a day, on the device that paid, the screen that waits leads back to it, and opens another only when the person answers that they did not pay. Seen on the first payment through the frame, on 3 Oct 2026: 6 EUR paid at 21:23 UTC, the frame closed, the money held on Base for 14 minutes, then 5.60 USDC on the account at 21:38 UTC, once Rampnow's page was opened in a tab. Where the frame cannot keep the person signed in at Rampnow, it is never shown: \"Pay by card\" opens Rampnow's page in a tab of its own, and the payment is followed as one started from a tab. That is Safari's engine before 18.4 and from 18.5 to 26.1, so every browser on an iPhone at those versions: Rampnow's session in a frame lives in cookies set \"Partitioned\", which that engine reads in 18.4 and from 26.2. Measured on Safari 17.6 on 4 Oct 2026, on a neutral page holding the same frame: after the code received by e-mail, Rampnow's page went back to its sign-in form. It is read from what the browser says of itself; it was not measured on viky.cash in Safari, nor on the versions in between. "
           : "Rampnow's page opens in a tab of its own. "
         : null}
       <UseLine use={conversion} name="rampnow" />
@@ -244,8 +244,8 @@ export default async function JudgesPage() {
             makes a passkey on your device, which is your account. Viky keeps no account for you, and you keep the
             passkey. Your account receives {judgeCredit ? formatAusd(judgeCredit.units) : "a set amount"}: a judge credit from
             Viky&apos;s treasury, once per account. A real funder pays by card instead, on the page of the card service
-            their country is served by (&quot;How money comes in&quot;, below). Without the link, press &quot;Have a code?&quot; under
-            the card&apos;s button and type the code from those instructions.{" "}
+            their country is served by (&quot;How money comes in&quot;, below). Without the link, press &quot;Have a code?&quot;,
+            right above the pay button, and type the code from those instructions.{" "}
             <span data-judge-code-until>The code works until {lastDayOfTheCode()}, UTC.</span>
             {judgeCredit ? <span data-judge-standing> {standingInWords(judgeStanding)}</span> : null}
           </li>
@@ -260,8 +260,9 @@ export default async function JudgesPage() {
           </li>
           <li data-try-paths>
             What to offer. Each path asks something of you: Duolingo, an account there, and a lesson done after you
-            connect it; Chess.com, an account there, and one rating point won. With no account of a source, the short
-            path is two steps down: open the gift, then end it. And what each costs of the month&apos;s attested
+            connect it; Chess.com, an account there, and one rating point won. For Duolingo, type your own Duolingo name
+            on the card, under &quot;Their Duolingo name&quot;, and connecting is one press. With no account of a source,
+            the short path is the next step: open the gift, then end it. And what each costs of the month&apos;s attested
             readings, which are few and counted under &quot;How a day is read&quot;, below.
             {reclaimUse ? <span data-readings-left> {readingsLeftInWords(reclaimUse)}</span> : null}
             <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)] pt-[var(--space-xs)]">
@@ -302,8 +303,10 @@ export default async function JudgesPage() {
             paid. Money leaves a gift for the person it is for only once a reading has credited it.
           </li>
           <li>
-            Mera&apos;s stateless test runs on this same account: sign out, then sign in from another browser or device
-            with the same passkey. The account and its money come back; nothing was kept on the first device.
+            Mera&apos;s stateless test runs on this same account: sign out, clear this site&apos;s storage or take another
+            device, and sign in with the same passkey. The account, its gifts and its money come back from the passkey
+            alone. What the first device kept (which passkey to offer, a gift&apos;s link, the theme) is a convenience the
+            account does not need.
           </li>
           <li>
             One Passkey, Many Keys: the same sign-in asks the passkey&apos;s PRF for a second salt,

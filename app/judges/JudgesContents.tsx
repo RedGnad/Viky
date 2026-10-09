@@ -33,6 +33,10 @@ function openSection(id: string): void {
  * plain anchor, so it leads to its section without a script; with one, the section it leads to is opened too, here and
  * when the page is opened on an address that already names a section. A section this deployment does not draw (a
  * contract that is not set) has no link.
+ *
+ * Any other link of the page that names a section opens it as well (the final audit of 9 Oct 2026): the four links of
+ * the first block led to a fold that stayed shut, so "who has used Viky" showed a title and nothing under it. The page
+ * listens to the address changing, which every such link does.
  */
 export function JudgesContents() {
   const list = useRef<HTMLOListElement>(null);
@@ -46,6 +50,10 @@ export function JudgesContents() {
       openSection(named);
       document.getElementById(named)?.scrollIntoView();
     }
+    // The browser has already gone to the section: opening its fold is all that is left to do.
+    const followed = () => openSection(decodeURIComponent(window.location.hash.slice(1)));
+    window.addEventListener("hashchange", followed);
+    return () => window.removeEventListener("hashchange", followed);
   }, []);
   return (
     <nav aria-label="On this page" className="space-y-[var(--space-sm)]" id="contents">
