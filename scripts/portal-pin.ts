@@ -14,7 +14,7 @@ import { tellAboutMilestone, tellAboutReview } from "../src/morning-send";
 import { liveTellingDeps } from "../src/morning-send-live";
 import { VerificationError } from "../src/duolingo-verification";
 import { enrolledBy, gradeScaleOf, gradeShownBy, LETTER_GRADES, letterRank, type PortalExtract } from "../src/university-shown";
-import { pinFromPublished, sameRule, type PublishedRequest, type WitnessPin } from "../src/witness-portal";
+import { pinDoesNotCover, pinFromPublished, sameRule, type PublishedRequest, type WitnessPin } from "../src/witness-portal";
 
 /**
  * The operator's review of a witness provider's first proof (D312). A first proof from a university read through a
@@ -29,12 +29,15 @@ import { pinFromPublished, sameRule, type PublishedRequest, type WitnessPin } fr
  *   PROVEN_BY=0x… pnpm portal:pin <session> --admitted "<regex>" --scale 20 [--year "<regex>"]         (results)
  *     `--scale` is the scale the page shows: 20, 4, 100, 20/0.5, or letters:A,B,C,D,E,F. A grade gift made on another
  *     scale before this pin is refused with its own sentence; one made on it is read.
- *     checks the fields against what was read, pins the provider (version, request, match, redaction, spec hash),
- *     relays the held proof to the milestone contract, then settles every other proof held for the same provider,
- *     refusing by its code any that the pin does not fit. `--field`, `--admitted-field`, `--grade-field` and
- *     `--year-field` name another field than the instruction's.
+ *     checks the fields against what was read, pins the provider (version, request, match, redaction, spec hash)
+ *     from this proof, whether or not the provider had a pin, relays the held proof to the milestone contract, then
+ *     settles every other proof held for the same provider that the new pin covers. One it does not cover stays
+ *     held: Reclaim's agent writes a version for each pass, so two proofs shown before any pin are of two versions,
+ *     and each is pinned from in its turn with this same command (10 Oct 2026: one student, two gifts, two passes).
+ *     `--field`, `--admitted-field`, `--grade-field` and `--year-field` name another field than the instruction's.
  *   pnpm portal:pin <session>
- *     for a proof held before its provider was pinned by another: settles it on that pin.
+ *     with no pattern named, for a proof held before its provider was pinned by another: settles it on that pin, and
+ *     leaves it held when that pin does not cover it.
  *   pnpm portal:pin <session> --refuse "<note for the journal>"
  *     closes the review: the person reads that the page did not show what the gift is for, and nothing moves.
  *   PROVEN_BY=0x… pnpm portal:pin --portal <id> --sense enrolment --run <version>
@@ -124,7 +127,13 @@ async function settle(review: PortalReview): Promise<void> {
       await told(review.giftId, "notYet");
       return;
     }
-    // A proof the pin does not fit, a page without the field, a gift already over: refused by its code, said to the
+    // A proof of another version, pattern or method than the pin's is not refused for it (10 Oct 2026): the pin was
+    // born of another proof, and this one is pinned from in its turn. It stays held, and the person reads nothing new.
+    if (error instanceof VerificationError && pinDoesNotCover(error.code)) {
+      console.log(JSON.stringify({ step: "still held: the pin does not cover it", session: review.sessionId, gift: review.giftId, reason: error.message, next: `pin from it: pnpm portal:pin ${review.sessionId} ${review.sense === "enrolment" ? '--matches "<regex>" --keeps "<words>"' : '--admitted "<regex>" --scale <scale> [--year "<regex>"]'}` }));
+      return;
+    }
+    // A page without the field, a result that is not the gift's, a gift already over: refused by its code, said to the
     // person as the review's refusal. Anything else (the network, the chain) leaves it held for the next run.
     const final = error instanceof VerificationError && !["NOT_CONFIGURED", "UNKNOWN_GIFT"].includes(error.code);
     if (final) await decideReview(review.sessionId, "refused", (error as VerificationError).code);
@@ -214,8 +223,11 @@ async function main() {
   const provider = portal?.[review.sense];
   if (!portal || !provider || provider.verification !== "witness") throw new Error(`${review.portalId} has no witness provider for ${review.sense}`);
   // Held before the pin was set by another proof: settled on the pin the provider has. A pin made ahead is not one a
-  // proof gave: a proof held under it did not fit it, and the provider is pinned from that proof instead.
-  if (provider.pin && provider.extract && !provider.pin.ahead) {
+  // proof gave: a proof held under it did not fit it, and the provider is pinned from that proof instead. And when the
+  // operator names what to read, the provider is pinned from this proof whatever pin it has (10 Oct 2026): the
+  // patterns given used to be dropped without a word, and the proof settled on a pin it could not fit.
+  const pinsFromThis = review.sense === "enrolment" ? flag("matches") !== undefined : flag("admitted") !== undefined || flag("scale") !== undefined;
+  if (provider.pin && provider.extract && !provider.pin.ahead && !pinsFromThis) {
     console.log(JSON.stringify({ step: dry ? "would settle on the pin" : "settling on the pin", ...shown(review) }, null, 2));
     if (!dry) await settle(review);
     return;
