@@ -1,4 +1,4 @@
-import { rampnowPage } from "./rails";
+import { rampnowPage, type CardAsked } from "./rails";
 
 /**
  * Rampnow inside Viky (the founder, 3 Oct 2026): its widget in a frame of our own sheet instead of its page in another
@@ -135,7 +135,7 @@ export function safariEngineVersion(userAgent: string): Readonly<{ major: number
  * none with it. A key that does not look public (`pk_`) is never put in an address a browser shows: Rampnow's other
  * key, its secret, signs its webhooks and must stay on the server. With no public key the page goes without one.
  */
-export function rampnowFrameAddress(fill: Readonly<{ account?: string; euros?: number }>, apiKey: string = ""): string {
+export function rampnowFrameAddress(fill: Readonly<{ account?: string; euros?: number; ask?: CardAsked }>, apiKey: string = ""): string {
   const page = `${rampnowPage(fill)}&hideOrderTabs=true`;
   const key = apiKey.trim();
   return RAMPNOW_PUBLIC_KEY.test(key) ? `${page}&apiKey=${encodeURIComponent(key)}` : page;

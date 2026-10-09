@@ -58,6 +58,16 @@ test("the page arrives filled in and locked: the amount, the euro, the card, USD
   assert.match(wayInPage(WAY_IN_USDC, { account: ACCOUNT, euros: 29.123 }), /srcAmount=29\.13&/);
   assert.equal(wayInPage(WAY_IN_USDC, { account: ACCOUNT, euros: 30 }), rampnowPage({ account: ACCOUNT, euros: 30 }));
   // Nothing is locked empty: without an account or an amount, that field stays the person's.
+  // In another currency when one is asked (9 Oct 2026): the amount as it is written in it, locked like the euro's.
+  assert.equal(
+    rampnowPage({ account: ACCOUNT, ask: { currency: "USD", amount: 11.35 } }),
+    `https://app.rampnow.io/order/quote?orderType=buy&srcChain=fiat&srcCurrency=USD&srcAmount=11.35&paymentMode=card&dstCurrency=USDC&dstChain=monad&walletAddress=${ACCOUNT}&lockFields=srcAsset,srcAmount,dstAsset,paymentMode,walletAddress&prefill=true`,
+  );
+  assert.match(rampnowPage({ ask: { currency: "JPY", amount: 1620 } }), /srcCurrency=JPY&srcAmount=1620&/);
+  assert.equal(wayInPage(WAY_IN_USDC, { account: ACCOUNT, ask: { currency: "GBP", amount: 8.9 } }), rampnowPage({ account: ACCOUNT, ask: { currency: "GBP", amount: 8.9 } }));
+  // What is asked wins over euros named beside it, and an amount of nothing asks nothing.
+  assert.match(rampnowPage({ euros: 30, ask: { currency: "USD", amount: 33.07 } }), /srcCurrency=USD&srcAmount=33\.07&/);
+  assert.match(rampnowPage({ ask: { currency: "USD", amount: 0 } }), /srcCurrency=EUR&paymentMode=card/);
   assert.match(rampnowPage({}), /lockFields=srcAsset,dstAsset,paymentMode&prefill=true$/);
   assert.doesNotMatch(rampnowPage({}), /walletAddress=|srcAmount=|apiKey/);
   assert.equal(wayInFillsIn(WAY_IN_USDC), true);

@@ -178,8 +178,6 @@ test("the route reads a currency and an amount of USDC, and nothing of a person;
   } finally {
     if (saved !== undefined) process.env.RAMPNOW_API_KEY = saved;
   }
-  // No screen asks the route yet: it is in production first, so the key can be asked once for real.
-  for (const screen of ["app/kit/offer/PaySheet.tsx", "app/components/PayGift.tsx"]) assert.doesNotMatch(readFileSync(screen, "utf8"), /card-quote/, screen);
   // No session is read, and what leaves for Rampnow is a currency, an amount and the server's key.
   const route = readFileSync("app/api/rails/card-quote/route.ts", "utf8");
   assert.doesNotMatch(route, /readAccountAuthSession|headers\.get\("cookie"\)/);

@@ -11,10 +11,8 @@ export const dynamic = "force-dynamic";
  * what the card pays, what Rampnow keeps of it, and the USDC that arrive; or that the gift is under its smallest
  * payment; or that there is no quote, and the sheet then asks the card in dollars by the rule measured.
  *
- * It reads no session, since the pay sheet will ask it before anybody has an account: a currency and an amount of
- * USDC say nothing of a person, and nothing else is sent to Rampnow. The key that asks is the server's, and stays there.
- *
- * No screen asks it yet (9 Oct 2026): it is here first so that the founder's own key can be asked once for real.
+ * Asked by the pay sheet before anybody has an account, so it reads no session: a currency and an amount of USDC say
+ * nothing of a person, and nothing else is sent to Rampnow. The key that asks is the server's, and stays there.
  */
 export async function GET(request: Request) {
   const rate = checkRateLimit("status", request);

@@ -281,7 +281,8 @@ test("where the sheet is not in euros, the total is said about, and the euros th
   assert.ok(order.every((at) => at > 0), "each is on the sheet");
   assert.deepEqual(order, [...order].sort((a, b) => a - b));
   // The euros are the card page's own: what the link asks of it, to the cent.
-  assert.match(readFileSync("src/rails.ts", "utf8"), /set\("srcCurrency", "EUR"\);/);
+  assert.match(readFileSync("src/rails.ts", "utf8"), /set\("srcCurrency", paid\?\.currency \?\? "EUR"\);/);
+  assert.match(rampnowPage({ euros: 9.12 }), /srcCurrency=EUR&srcAmount=9\.12&/);
 });
 
 test("under the card service's smallest payment no card is offered: the floor is said, and the action is a gift a card can pay for", () => {
