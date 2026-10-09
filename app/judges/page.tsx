@@ -412,7 +412,7 @@ export default async function JudgesPage() {
               <dd className="[overflow-wrap:anywhere]">
                 {earlierEscrow}{" "}
                 (<a className="underline" href={`https://monadvision.com/address/${earlierEscrow}`}>MonadVision</a>, source verified through Sourcify).
-                It holds the gifts created before the day-counting corrections of DECISIONS.md D30 and keeps running
+                It holds the gifts created before the day-counting corrections and keeps running
                 them to the end. Gift ids never restart: the newer contract continues the sequence, and every gift
                 record names the contract that holds it.
               </dd>
@@ -587,23 +587,23 @@ export default async function JudgesPage() {
           </li>
           <li>
             <strong>University portals&apos; terms.</strong> A proof of enrolment is shown by the person from their own
-            student portal, in a verification tab where they sign in themselves (D165). What each portal&apos;s terms of
+            student portal, in a verification tab where they sign in themselves. What each portal&apos;s terms of
             use say about a program reading its pages once a student has signed in is not read portal by portal:
             Reclaim, whose attestor proves the page, treats those terms as its own question and does not answer it
             for us. The risk is the same kind as Duolingo&apos;s above, spread one portal at a time, and each portal is
             named in the gift the funder signs, so a portal that changes its page stops proving until it is proved
-            again with a student present. The year passed and a grade reached (D174) are shown the same way from the
+            again with a student present. The year passed and a grade reached are shown the same way from the
             same portal&apos;s results page, a second page proved with a student and pinned on the same row, under the
             same unread terms; the grade is read on the scale the row declares and compared in hundredths, and a page of
             another year pays nothing where the portal dates its page. A row can be defined from a portal&apos;s public
-            pages, or taken from Reclaim&apos;s directory, before any student has shown it to Viky (D193): its patterns
+            pages, or taken from Reclaim&apos;s directory, before any student has shown it to Viky: its patterns
             sit on what the page prints, and a page that does not carry them fails by its name, the person told nothing
             is lost and the miss written in the gift&apos;s journal. Whether a university has been read yet is said here
             and not in the flow (the founder, 26 Sep 2026):{" "}
             {portals ? `${portals.listed} universities listed, ${portals.read} read at least once.` : "the count could not be read right now."}
           </li>
           <li>
-            <strong>The world&apos;s universities, a provider per sense.</strong> Since D313 the list is every university of
+            <strong>The world&apos;s universities, a provider per sense.</strong> The list is every university of
             Reclaim&apos;s directory whose student portal answered a plain request on 28 Sep 2026, wherever it is, placed in
             its country by the world universities list and, failing that, by its domain&apos;s country code. What reads a
             portal is a provider per sense: one for enrolment, one for the results page, each with its own domain, since a
@@ -620,7 +620,7 @@ export default async function JudgesPage() {
               : "The counts could not be read right now."}
           </li>
           <li>
-            <strong>Providers read through a witness, no enclave.</strong> An AI provider (D311, D312) carries no enclave
+            <strong>Providers read through a witness, no enclave.</strong> An AI provider carries no enclave
             attestation. Viky verifies its proof the way it verifies its own readings: the claim must be signed by
             Viky&apos;s pinned witness and by nobody else, and must have read the provider&apos;s own domain. An AI provider
             names no request until Reclaim&apos;s agent writes one at the first real run, so it has no pattern until a
@@ -648,7 +648,7 @@ export default async function JudgesPage() {
           </li>
           <li>
             <strong>Exam results services&apos; terms.</strong> Two examination results are shown by the person from
-            their own account with the examining body (D176), the way the TOEFL score is: Cambridge English&apos;s
+            their own account with the examining body, the way the TOEFL score is: Cambridge English&apos;s
             Results Service for Candidates and the British Council&apos;s IELTS Test Taker Portal. Each provider is ours,
             registered from a real candidate&apos;s session, and none exists yet; the definitions in docs/reclaim say
             the page, the sign-in the candidate types in their own browser, and the fields. The terms read on 23 Sep
@@ -661,7 +661,7 @@ export default async function JudgesPage() {
           <li>
             <strong>What the number read is worth to anybody else.</strong> For a result the person shows from their
             own account (an exam, the Study rail, a course), the number is seen once, on their own screen, and
-            by nobody else (D185): under the target nothing is relayed and they are told with the number; at or over
+            by nobody else: under the target nothing is relayed and they are told with the number; at or over
             it the attestation the contract receives carries the target as its value, which is the verdict. The
             readings table keeps no number and no proof for these lines, and the session row keeps the verdict alone.
             The cost, written here: nobody, us included, can re-verify such a proof from our rows afterwards; what
@@ -671,7 +671,7 @@ export default async function JudgesPage() {
           </li>
           <li>
             <strong>Google Health&apos;s terms, and the one risk.</strong> Active minutes each day on Fitbit is connected by
-            the person once, on Google&apos;s own page (D188): the legacy Fitbit Web API closes in September 2026, and the
+            the person once, on Google&apos;s own page: the legacy Fitbit Web API closes in September 2026, and the
             line reads its successor, the Google Health API, which reads Fitbit trackers and Pixel Watches. Each morning the
             keeper asks the daily roll-up of active minutes for yesterday through the attested fetch with their key as a
             secret the attestor never sees, from wearables only, judges the moderate and vigorous minutes against the target,
@@ -689,7 +689,7 @@ export default async function JudgesPage() {
           </li>
           <li>
             <strong>Strava&apos;s API Agreement, and the same risk.</strong> Kilometres a day on Strava is connected by
-            the person once, on Strava&apos;s own page (D191), read each morning the way Fitbit is: yesterday&apos;s
+            the person once, on Strava&apos;s own page, read each morning the way Fitbit is: yesterday&apos;s
             activities through the attested fetch with their key as a secret, the distances added, the verdict signed,
             the list dropped. Strava&apos;s API Agreement (read 23 Sep 2026) asks that Strava Data serve the person who
             authorised it and nobody else, that it be neither aggregated across people nor shown to others, and that it
@@ -703,14 +703,14 @@ export default async function JudgesPage() {
           </li>
           <li>
             <strong>edX&apos;s terms.</strong> An edX verified certificate is read from the public page edX publishes for
-            it, once per shared link and again at each reading (D212). edX&apos;s terms (11.6, updated 3 Nov 2025) forbid
+            it, once per shared link and again at each reading. edX&apos;s terms (11.6, updated 3 Nov 2025) forbid
             accessing its service through &quot;spiders, robots, crawlers, and data mining tools&quot; other than its
             own. The risk is the one Duolingo&apos;s and Coursera&apos;s lines carry, written here rather than decided: a
             person shares their own certificate, and Viky reads that one page.
           </li>
           <li>
             <strong>Accredible&apos;s record.</strong> A credential issued on Accredible is read from the public record its
-            page is drawn from (D213), once per shared link and again at each reading. Accredible&apos;s terms (April 2026)
+            page is drawn from, once per shared link and again at each reading. Accredible&apos;s terms (April 2026)
             are a contract with issuers and name no automated access; nothing about a reader is claimed. The funder names
             the credential by its title and its issuer&apos;s website, because Accredible&apos;s course search is not open to a
             reader: an issuer that names its credential like another&apos;s and lists another&apos;s website would pass, which
@@ -718,7 +718,7 @@ export default async function JudgesPage() {
           </li>
           <li>
             <strong>CHSI&apos;s terms.</strong> Enrolment in a Chinese university is shown by the person from their own
-            CHSI report (D215), in a verification tab, because the report&apos;s page can put an image captcha in front of
+            CHSI report, in a verification tab, because the report&apos;s page can put an image captcha in front of
             a server, and Viky does not answer captchas. CHSI&apos;s copyright statement forbids using its content and
             services &quot;用于其他用途，包含但不限于商业行为&quot; without its consent, which Viky does not have. Its own pages
             say the report is there for other organisations and people to check, free; whether that covers a gift is
@@ -726,14 +726,14 @@ export default async function JudgesPage() {
           </li>
           <li>
             <strong>MITx Online&apos;s terms.</strong> An MIT course certificate is read from the page MITx Online publishes
-            for it (D222), once each time the person shares its link. Its terms forbid scraping or downloading its content
+            for it, once each time the person shares its link. Its terms forbid scraping or downloading its content
             in bulk, and allow &quot;personal, noncommercial use&quot; of the site&apos;s content; Viky reads one certificate its
             holder shares, for a gift, which is written here with the risk assumed as for edX. The line proves a course
             passed on MITx Online, never a place at MIT, and Viky is not affiliated with MIT.
           </li>
           <li>
             <strong>Breizh Chrono&apos;s terms.</strong> A marathon finished is read from the runner&apos;s own page on the
-            timing company&apos;s public results site (D273), once each time the person asks after the race: the name
+            timing company&apos;s public results site, once each time the person asks after the race: the name
             and the bib in its title, the official time in its cell. The site is run by Klikego, whose terms of use
             (CGU of 26 Jun 2026) and legal notice claim the site&apos;s content and its database, forbid reproduction
             without written consent, and count the use of robots among the reasons to close a member&apos;s account;
