@@ -3,7 +3,7 @@ import { answerTheChain, json, makeAnAccount, profile, type Holdings, type Profi
 
 /**
  * The pay sheet after the founder's mockup of 3 Oct 2026: the name first, lines that add up to what the card pays, in
- * the one money the gift was typed in, the code above the total, one button, one line under it, and one fold.
+ * the one money the gift was typed in, the code's small key above the one button, one line under it, and one fold.
  *
  * The reader counts in euros here (the currency's own cookie) and types 19 for a gift; the account holds $10.00. Which
  * card service stands depends on the build's settings, so the sum is read off the screen and checked as a sum.
@@ -304,8 +304,8 @@ test.describe("the pay sheet of 3 Oct 2026", () => {
 
 /**
  * A judge's code on the pay sheet (the founder, 9 Oct 2026): visible, and never put forward in the card's place. The
- * card stays the sheet's one action. The code stands above the total: its field, small, when the link carried a
- * code; otherwise a small "Have a code?" that opens the field in that same place.
+ * card stays the sheet's one action. When the link carried a code, its field comes first, above the total, small;
+ * otherwise a small "Have a code?" stands under the price, right above the card's button, and opens the field there.
  *
  * The judge credit is answered here as the server would: open, one code, three dollars, once, and the account's
  * balance changed by it. Everything else is the built app: the account is made by the code's press, with a passkey
@@ -428,37 +428,39 @@ test.describe("a judge's code on the pay sheet: visible, and small beside the ca
       await funder.context.close();
     });
 
-    test(`without the link: the card, and a small 'Have a code?' above the total that opens the code's field in that place, the card's button still the one action (${size.width})`, async ({ browser, baseURL }) => {
+    test(`without the link: the card, and a small 'Have a code?' under the price and right above the card's button, which opens the code's field there (${size.width})`, async ({ browser, baseURL }) => {
       const holdings: Holdings = { ausd: 0n, mon: 0n, usdc: 0n };
       let sent: string[] = [];
       const funder = await toTheSheet(browser, baseURL, { ausd: 0n, holdings, signedIn: true, gifts: [], size, beforeTheSheet: async (judge) => void (sent = await answerTheCode(judge, holdings)) });
       const { page } = funder;
       const card = sheet(page).locator('[data-pays="card"]');
       await expect(card).toHaveText(/^Pay €\d+\.\d{2} by card$/);
-      // The key is small, under the gift's lines and above the total, where the field stands when the link carries
-      // a code. Under it: the total, the card's button, then the card service's line.
+      // The key is small, under the price and right above the card's button: nothing stands between the two. Under
+      // the button, the card service's line.
       const key = sheet(page).locator("[data-have-a-code]");
       await expect(key).toHaveText("Have a code?");
-      const lines = sheet(page).locator("[data-pay-lines]");
       const total = sheet(page).locator("[data-pay-total]");
       const terms = sheet(page).getByText(/takes your card/);
       const keyAt = (await key.boundingBox())!;
-      const linesAt = (await lines.boundingBox())!;
-      expect(keyAt.y).toBeGreaterThanOrEqual(linesAt.y + linesAt.height);
-      expect(keyAt.y + keyAt.height).toBeLessThanOrEqual((await total.boundingBox())!.y);
-      expect((await total.boundingBox())!.y).toBeLessThan((await card.boundingBox())!.y);
-      expect((await card.boundingBox())!.y).toBeLessThan((await terms.boundingBox())!.y);
-      expect(keyAt.height).toBeLessThan((await card.boundingBox())!.height);
-      await shotAt(page, "C-the-key-above-the-total");
+      const totalAt = (await total.boundingBox())!;
+      const cardAt = (await card.boundingBox())!;
+      expect(keyAt.y).toBeGreaterThanOrEqual(totalAt.y + totalAt.height);
+      expect(keyAt.y + keyAt.height).toBeLessThanOrEqual(cardAt.y);
+      expect(cardAt.y - (keyAt.y + keyAt.height), "right above the button").toBeLessThan(40);
+      expect(cardAt.y).toBeLessThan((await terms.boundingBox())!.y);
+      expect(keyAt.height).toBeLessThan(cardAt.height);
+      await shotAt(page, "C-the-key-above-the-button");
 
       await key.click();
-      // The field opens where the key stood, above the total; the card's button is under it and still the one action.
+      // The field opens where the key stood, between the price and the card's button, which is still the one action.
+      // Read against its neighbours as they now stand: a sheet that grew for the field moved up with all it holds.
       const field = sheet(page).getByLabel("Code", { exact: true });
       await expect(field).toHaveValue("");
       await expect(card).toHaveText(/^Pay €\d+\.\d{2} by card$/);
       const use = await drawn(page, "Use the code");
-      expect((await field.boundingBox())!.y).toBeGreaterThanOrEqual(keyAt.y);
-      expect(use.y + use.height).toBeLessThanOrEqual((await total.boundingBox())!.y);
+      const totalNow = (await total.boundingBox())!;
+      expect((await field.boundingBox())!.y).toBeGreaterThanOrEqual(totalNow.y + totalNow.height);
+      expect(use.y + use.height).toBeLessThanOrEqual((await card.boundingBox())!.y);
       expect(use.height).toBeLessThan((await card.boundingBox())!.height);
       await expect(sheet(page).getByText(/without a code/i)).toHaveCount(0);
       await shotAt(page, "B3-opened-by-the-key");

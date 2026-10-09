@@ -205,14 +205,14 @@ export function PaySheet({
   // Whether a code can be used: credits are open, and this account, or nobody yet, has not had one. Not known until
   // the server has said.
   const codeOffered = credits === null || credits === "unread" ? null : credits.open && !credits.credited;
-  // The code's shape, in its one place above the total: its field from the start when the link carried one, a small
-  // key that opens the field otherwise.
+  // The code's shape and its place: its field from the start, above the total, when the link carried one; otherwise a
+  // small key between the total and the card's button, which opens the field there.
   const codeFromLink = codeGiven === "link" || (codeGiven === null && linkCode !== "");
   // Drawn only for an account that cannot pay, once that is known, and kept while it is being used. A code the link
   // carried is shown before the server has said credits are open; the key waits for its answer.
   const codeInReach = !enough && (pays === "card" || codeStarted) && (codeFromLink ? codeOffered !== false : codeOffered === true);
-  // While the key waits for that answer its place is kept, so the total and the card's button under it do not move
-  // when it is drawn.
+  // While the key waits for that answer its place is kept, so the card's button under it does not move when it is
+  // drawn.
   const codeAwaited = !codeFromLink && !enough && pays === "card" && credits === null;
   // The credit was given a moment ago and the account, read before it, is being read again: no card is named meanwhile.
   const creditArriving = codeGiven !== null && pays === "card";
@@ -402,10 +402,9 @@ export function PaySheet({
         {line(W.rows.viky, W.nothing)}
       </div>
 
-      {/* The code comes above the total, whichever its shape (the founder, 9 Oct 2026): the field when the link
-          carried one, a small "Have a code?" that opens it in that same place otherwise. Visible, and small beside the
-          card's button, which stays the sheet's one action. */}
-      {theCode(codeFromLink ? "link" : "key")}
+      {/* A code the link carried comes first, above what the card is asked (9 Oct 2026): visible, and small beside
+          the card's button, which stays the sheet's one action. */}
+      {codeFromLink ? theCode("link") : null}
 
       {total ? (
         <div>
@@ -415,6 +414,10 @@ export function PaySheet({
           </p>
         </div>
       ) : null}
+
+      {/* When the link carried no code: a small "Have a code?" under the price and right above the card's button (the
+          founder, 9 Oct 2026, who had it under the button, then above the price). It opens its field there. */}
+      {codeFromLink ? null : theCode("key")}
 
       {/* Only when the credit is all the account holds (D295, `paidFromCredit`). */}
       {paidFromCredit ? <p className={HELP}>{W.fromJudgeCredit(cardPaidHow(), way.name)}</p> : null}

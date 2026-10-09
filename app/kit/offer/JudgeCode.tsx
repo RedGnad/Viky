@@ -24,7 +24,8 @@ export function centsDown(units: bigint): string {
  *
  * Always small beside what pays (the founder, 9 Oct 2026: a code is visible, never put forward in the place of the
  * card): a small key that opens a field and a small button. On the pay sheet, when the link carried a code, the field
- * is shown from the start with that code in it, under the question as its name. The sheet says when it is drawn
+ * is shown from the start with that code in it, under the question as its name, above the total; the key stands
+ * between the total and the card's button. The sheet says when it is drawn
  * (`offered`), having asked the server itself, keeps the key's place while it waits for that answer (`awaited`), and
  * makes the account of somebody who has none before the code is sent (`before`).
  */
