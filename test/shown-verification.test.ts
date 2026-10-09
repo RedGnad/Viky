@@ -151,6 +151,40 @@ test("a session Reclaim ended with no proof is said as stopped and closed, so no
   }
 });
 
+test("a session of a pinned rule that Reclaim ended with no proof is said to the operator, once, by the call that closed it", async () => {
+  // The founder, 9 Oct 2026: the one way to know a rule written by hand gives nothing any more. The university, the
+  // gift and the state Reclaim ended the session in.
+  const pin = { providerVersion: "5.0.0", url: "https://portal.example/file", method: "POST", responseMatches: "[]", responseRedactions: "[]", specHash: REQUEST, ahead: true, fixed: true };
+  const witness = (pinned: typeof pin | null) => ({ portalId: "utoulouse-fr", sense: "enrolment" as const, domain: "portal.example", pin: pinned });
+  const PINNED: ShownEntry = {
+    ...SHOWN,
+    condition: { ...SHOWN.condition, conditionId: "test-shown-pinned" },
+    providerOf: async (record) => ({ providerId: "provider-university", providerVersion: "5.0.0", requestHashes: [REQUEST], read: SHOWN.condition.read, witness: witness(record.portal === "pinned" ? pin : null) }),
+  };
+  (SHOWN_CONDITIONS as ShownEntry[]).push(PINNED);
+  const record = (portal: string) => async () => ({ giftId: "1000009", conditionId: "test-shown-pinned", mode: "shown", standingAtOffer: 0, standingReadAt: new Date(0), portal });
+  const ended = async () => ({ session: { sessionId: SESSION_ID, appId: APP_ID, providerId: "provider-university", providerVersionString: "5.0.0", statusV2: "SESSION_CANCELLED", proofs: [] } as never });
+  const run = async (overrides: Partial<ShownVerificationDeps>) => {
+    const told: unknown[] = [];
+    const d = deps({ loadSession: async () => session({ conditionId: "test-shown-pinned", giftId: "1000009" }), fetchStatus: ended, milestoneRecordOf: record("pinned"), pinnedRuleStopped: async (stop) => void told.push(stop), ...overrides });
+    await refuses("VERIFICATION_STOPPED", () => verifyShownSession(d, { sessionId: SESSION_ID, account: ACCOUNT }));
+    return told;
+  };
+  assert.deepEqual(await run({}), [{ portalId: "utoulouse-fr", sense: "enrolment", giftId: "1000009", providerVersion: "5.0.0", state: "SESSION_CANCELLED" }]);
+  // A second page that asks about the same session closed nothing, and tells nobody again.
+  assert.deepEqual(await run({ consumeShownSession: async () => false }), []);
+  // A university with no pin yet has no rule to report on: the agent writes one at its first proof.
+  assert.deepEqual(await run({ milestoneRecordOf: record("no-pin") }), []);
+  // An alert that fails changes nothing for the person: the session is closed and said as stopped all the same.
+  await refuses("VERIFICATION_STOPPED", () =>
+    verifyShownSession(deps({ loadSession: async () => session({ conditionId: "test-shown-pinned", giftId: "1000009" }), fetchStatus: ended, milestoneRecordOf: record("pinned"), pinnedRuleStopped: async () => Promise.reject(new Error("no email")) }), { sessionId: SESSION_ID, account: ACCOUNT }),
+  );
+  // And a condition that is no university's tells nobody either.
+  const told: unknown[] = [];
+  await refuses("VERIFICATION_STOPPED", () => verifyShownSession(deps({ fetchStatus: ended, pinnedRuleStopped: async (stop) => void told.push(stop) }), { sessionId: SESSION_ID, account: ACCOUNT }));
+  assert.deepEqual(told, []);
+});
+
 test("what the contract would refuse is refused before anything is signed, each with its reason", async () => {
   await refuses("NOT_RECIPIENT", () => verifyShownSession(deps({ milestoneOf: async () => ({ contract: CONTRACT, recipient: "0x000000000000000000000000000000000000b0b0", opened: true, settled: false, target: 90n }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
   await refuses("NOT_OPENED", () => verifyShownSession(deps({ milestoneOf: async () => ({ contract: CONTRACT, recipient: ACCOUNT as Hex, opened: false, settled: false, target: 90n }) }), { sessionId: SESSION_ID, account: ACCOUNT }));

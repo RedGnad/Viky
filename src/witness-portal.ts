@@ -259,6 +259,32 @@ export function sameRule(one: WitnessPin, other: WitnessPin): boolean {
   return one.providerVersion === other.providerVersion && one.url === other.url && one.method.toUpperCase() === other.method.toUpperCase() && one.responseMatches === other.responseMatches && one.responseRedactions === other.responseRedactions && one.specHash.toLowerCase() === other.specHash.toLowerCase();
 }
 
+/**
+ * What a session asks Reclaim for, from the provider alone: which version of it, and whether proofs made with
+ * Reclaim's agent are taken.
+ *
+ * Under a pin, the pinned version at every press (the founder, 9 Oct 2026). For a day, a pass of a rule pinned ahead
+ * that came back with no proof was followed by one with the agent, from the provider's first version: a session
+ * closed for inactivity in front of the form, or a page left, counted as the trial of the fixed rule, and the next
+ * press led somewhere else, longer, whose proof was held. The person who comes back to "Show it again" now does the
+ * same thing again. Nothing of an earlier session is read here, so nothing of one can change what is asked.
+ *
+ * The agent keeps its one place: the first proof of a university that has no rule yet (no pin, and no version the
+ * operator set), and a pin a first proof gave under the agent, whose sessions go on as that proof was made.
+ */
+export function ruleAsked(provider: Readonly<{ providerVersion?: string; witness?: Readonly<{ pin: WitnessPin | null }> }>): Readonly<{ providerVersion?: string; acceptAiProviders: boolean }> {
+  const { providerVersion, witness } = provider;
+  return {
+    // Before a pin: no version, so Reclaim's agent writes one, unless the operator set the one to run on.
+    ...(witness && !witness.pin && !providerVersion ? {} : { providerVersion }),
+    // Everywhere else the portal can substitute AI-witnessed proofs while still reporting success. We refuse AI
+    // there, and the verify route refuses anything without a verified TEE attestation anyway. A university takes
+    // it where Reclaim's agent has the rule to write or wrote it: with no pin, or under a pin its proof gave. A pin
+    // on a fixed rule runs no agent (8 Oct 2026, `fixed`).
+    acceptAiProviders: Boolean(witness) && !witness?.pin?.fixed,
+  };
+}
+
 /** An agent-written version of an AI provider: its base and "-ai.N". */
 export function isAgentVersion(version: string): boolean {
   return /^\d+\.\d+\.\d+-ai\.\d+$/.test(version);
