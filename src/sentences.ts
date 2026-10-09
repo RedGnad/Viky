@@ -973,6 +973,14 @@ export const GIFT_PAGE = {
   working: "One moment",
   connectNotOpen: "Connecting is not open yet. Nothing was changed.",
   connectFailed: "That did not go through, and nothing was changed. Try again.",
+  /**
+   * Why a source sent the person back with no connection (the audit of 8 Oct 2026), by the reason the return carries
+   * (src/connect-return.ts). Before, each of these read "That did not go through", which told nobody what to do.
+   */
+  connectRefusedThere: (source: string) => `${source} did not accept the connection. Nothing was changed.`,
+  connectWithoutActivities: (source: string) => `${source} was not allowed to read your activities. Connect again and allow it.`,
+  connectOtherAccount: "You are signed in to Viky under another account than this gift's. Nothing was changed.",
+  connectTookTooLong: "That took too long, so nothing was changed. Connect again.",
   notFound: "This gift could not be found.",
 
   /**

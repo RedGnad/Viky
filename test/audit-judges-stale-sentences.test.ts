@@ -273,7 +273,8 @@ test("the sentences the audit of 9 Oct 2026 asked to redo from the code: a provi
   assert.doesNotMatch(page, /ask for the reading from the gift/);
   const gift = read("app/components/GiftPage.tsx");
   assert.ok(gift.includes("A milestone is read as its page opens, so it has no button for it"));
-  assert.ok(gift.includes("{(mine || readerIsFunder) && !milestone && !gift.finished && gift.connected"), "Count now is a habit's button, never a climb's");
+  // And its person's alone (the audit of 8 Oct 2026): the route answers anybody else "Open the gift first."
+  assert.ok(gift.includes("{mine && !milestone && !gift.finished && gift.connected"), "Count now is a habit's button, never a climb's");
   // The races are the register's own count, and no town is named, on the page or in the register it prints.
   assert.ok(page.includes("({RACE_RESULT_KEPT.races} races in {RACE_RESULT_KEPT.countries} countries)"));
   assert.ok(page.includes("const RACE_RESULT_KEPT = { races: RACE_RESULT_RACES.length, countries: new Set(RACE_RESULT_RACES.map((race) => race.country)).size } as const;"));
