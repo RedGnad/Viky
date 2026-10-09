@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { smallestOnTheCard } from "../src/exit-steps";
 import { reachOfWaysOut } from "../src/rail-availability";
 import { MERCURYO_CLOSED_IN, RAMP_CLOSED_IN, WAY_OUT_CARD, WAY_OUT_EURO } from "../src/rails";
 import { payoutMinimum } from "../src/ramp";
@@ -36,10 +37,20 @@ test("the card of the bank's way out says that figure before anything is changed
   assert.match(route, /cardSellMinimum\(\), payoutMinimum\(\)\]\);/);
   assert.match(route, /const out = \{ bank: payoutMethodFor\(guess\.country, methods\), cardSmallest, bankSmallest \};/);
   const screen = readFileSync("app/components/CashOut.tsx", "utf8");
-  assert.match(screen, /const bankSmallest = where\?\.out\?\.bankSmallest \?\? null;/);
-  assert.match(screen, /\{use === "bank" && bankSmallest \? <p className=\{HELP\} data-bank-from>\{U\.bankFrom\(figureIn\(bankSmallest\.amount, bankSmallest\.currency\)\)\}<\/p> : null\}/);
+  assert.match(screen, /smallestOnTheCard\(where\.out\.bankSmallest, \(bankPays\?\.currency \?\? "EUR"\) === "EUR" \? "EUR" : "USD", money\.rates\)/);
+  assert.match(screen, /\{use === "bank" && bankSmallest \? <p className=\{HELP\} data-bank-from>\{U\.bankFrom\(figureIn\(bankSmallest\.amount, bankSmallest\.currency\), bankSmallest\.converted\)\}<\/p> : null\}/);
   assert.equal(USE_MONEY.bankFrom("€6.69"), "From €6.69 at a time.");
   assert.equal(USE_MONEY.bankFrom("€6.69"), USE_MONEY.cardFrom("€6.69"), "one sentence for the same fact");
+  // No figure in euros on a card that says dollars (the founder, 10 Oct 2026): the money of the figure above it, with
+  // "about" where it was converted, and never under the service's real floor.
+  const published = { amount: 6.69, currency: "EUR" };
+  assert.deepEqual(smallestOnTheCard(published, "EUR", { eurPerUsd: 1 / 1.1355 }), { amount: 6.69, currency: "EUR", converted: false });
+  assert.deepEqual(smallestOnTheCard(published, "USD", { eurPerUsd: 1 / 1.1355 }), { amount: 7.6, currency: "USD", converted: true });
+  assert.ok(7.6 * (1 / 1.1355) >= 6.69, "rounded up: what is said is at least the floor");
+  assert.equal(USE_MONEY.bankFrom("$7.60", true), "From about $7.60 at a time.");
+  // With no rate read nothing is said, rather than euros under a figure in dollars.
+  assert.equal(smallestOnTheCard(published, "USD", undefined), undefined);
+  assert.deepEqual(smallestOnTheCard(published, "EUR", undefined), { amount: 6.69, currency: "EUR", converted: false });
   // The press stays: the figure is said, and the service's own refusal still answers an amount under it.
   const card = screen.slice(screen.indexOf("data-bank-from"), screen.indexOf("{W.nothingToSend}"));
   assert.match(card, /<button type="button" onClick=\{act\} disabled=\{holdings === null \|\| changeable === 0n\}/);

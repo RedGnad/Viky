@@ -126,6 +126,23 @@ export function netOfEverything(
 }
 
 /**
+ * A payout service's smallest payout, in the money its card is read in (the founder, 10 Oct 2026: no figure in euros
+ * on a card that says dollars). As the service publishes it where that is the card's money; converted at the rate
+ * read otherwise, and said so by "about", as the pay sheet says a converted total. Rounded up to the cent: a figure
+ * under the real floor would be refused. Nothing when it would have to be converted and no rate was read.
+ */
+export function smallestOnTheCard(
+  smallest: Readonly<{ amount: number; currency: string }>,
+  cardCurrency: string,
+  rates: { eurPerUsd: number } | undefined,
+): Readonly<{ amount: number; currency: string; converted: boolean }> | undefined {
+  if (smallest.currency === cardCurrency) return { amount: smallest.amount, currency: smallest.currency, converted: false };
+  // The services publish in euros, and a card that is not in euros is read in dollars (`netOfEverything`).
+  if (smallest.currency !== "EUR" || cardCurrency !== "USD" || !rates || rates.eurPerUsd <= 0) return undefined;
+  return { amount: Math.ceil((smallest.amount / rates.eurPerUsd) * 100 - 1e-9) / 100, currency: "USD", converted: true };
+}
+
+/**
  * The ways out in the order the screen shows them (D124): a way whose own service says it does not serve this
  * country goes last (R1, and that is the only thing a country may do), and among the rest the one that leaves the
  * most reaches the top. A way with no figure, because no rate was read, keeps its place after those with one.

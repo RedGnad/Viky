@@ -175,6 +175,8 @@ test.describe("taking money out", () => {
       // A hundred dollars less the service's 1.99 EUR minimum, counted back at the day's rate: said in dollars.
       await expect(bank.getByText("$97.74")).toBeVisible();
       await bank.scrollIntoViewIfNeeded();
+      // Its smallest payout is in the card's own money: dollars here, converted, so "about" (the founder, 10 Oct 2026).
+      await expect(american.page.locator("[data-bank-from]")).toHaveText("From about $7.60 at a time.");
       await shot(american.page, size.name, "3a-a-bank-in-the-united-states");
       await american.context.close();
 

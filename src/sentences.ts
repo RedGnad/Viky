@@ -2106,8 +2106,8 @@ export const USE_MONEY = {
   },
   /** The card service's smallest payout, as it publishes it today, said on its card before anything is changed. */
   cardFrom: (figure: string) => `From ${figure} at a time.`,
-  /** The bank service's, the same way: in the money it publishes it in, whatever money it then pays in. */
-  bankFrom: (figure: string) => `From ${figure} at a time.`,
+  /** The bank service's, in the money of the figure above it: "about" where it was converted (the founder, 10 Oct 2026). */
+  bankFrom: (figure: string, converted = false) => (converted ? `From about ${figure} at a time.` : `From ${figure} at a time.`),
   /** Mobile money's smallest payout in the country, in its own money, said on its card before the form is opened. */
   mobileFrom: (figure: string) => `From ${figure} at a time.`,
   /** No bank and no card reaches the person's country: said, rather than left to be found out (the audit of 1 Oct 2026). */
