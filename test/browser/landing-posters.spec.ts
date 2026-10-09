@@ -115,9 +115,27 @@ test.describe("the posters under the landing's card", () => {
       "No password to invent. Nothing to download.",
     ]);
     await expect(story.locator("[data-ch] svg")).toHaveCount(5);
-    for (const [band, state] of [["theirs", "earned"], ["checked", "today"], ["back", "toCome"], ["yes", "catchable"], ["key", "diamond"]]) {
+    for (const [band, state] of [["theirs", "earned"], ["checked", "diamond"], ["back", "toCome"], ["yes", "today"], ["key", "diamond"]]) {
       await expect(story.locator(`[data-band="${band}"] [data-ch] svg`)).toHaveAttribute("data-character", state);
     }
+    // What is checked holds the hero reading its book, on its legs; it has no act of its own.
+    const reader = story.locator('[data-band="checked"] [data-ch]');
+    await expect(reader.locator('[data-prop="book"]')).toHaveCount(1);
+    await expect(reader.locator('[data-part="leg"]')).toHaveCount(2);
+    await expect(reader).not.toHaveAttribute("data-act", /.*/);
+    // No shape carries a shade under its face, here or in the file the named ones are read from.
+    await expect(story.locator('[data-part="shade"]')).toHaveCount(0);
+    expect(await page.evaluate(`fetch(document.querySelector("[data-landing-story] [data-ch] use").getAttribute("href")).then((file) => file.text()).then((file) => [(file.match(/<symbol /g) || []).length, /shade/.test(file)])`)).toEqual([32, false]);
+    // On the phone's card the app's icon stands where a figure waved: a square, 110 wide, rounded, in the day's colours
+    // whatever the hour.
+    const icon = page.locator('[data-landing-story] svg[data-character="icon"]');
+    await expect(icon).toHaveCount(1);
+    expect(await icon.evaluate((drawn) => { const box = drawn.getBoundingClientRect(); return [Math.round(box.width), Math.round(box.height)]; })).toEqual([110, 110]);
+    const colours = `(() => { const style = getComputedStyle(document.querySelector('[data-landing-story] svg[data-character="icon"]')); return ["--character-hero-from", "--character-hero-to", "--character-halftone", "--character-face"].map((name) => style.getPropertyValue(name).trim().toUpperCase()); })()`;
+    expect(await page.evaluate(colours)).toEqual(["#FF7F8E", "#B79BFF", "#835EFF", "#1E1633"]);
+    await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "dark" });
+    expect(await page.evaluate(colours), "the same image after dark").toEqual(["#FF7F8E", "#B79BFF", "#835EFF", "#1E1633"]);
+    await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "light" });
     // The one in the last title wears Me's sunglasses.
     await expect(story.locator('[data-band="key"] [data-ch] [data-prop="shades"]')).toHaveCount(1);
     // At the foot, the two of Gifts, where a runner stood.
@@ -127,6 +145,9 @@ test.describe("the posters under the landing's card", () => {
       // The window's new width is the page's before anything is measured: an emulated phone takes a moment over it.
       await expect.poll(() => page.evaluate(`innerWidth === ${width} && matchMedia("(min-width: 600px)").matches === ${width >= 600}`)).toBe(true);
       await page.evaluate("new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))");
+      // And the title's new size has reached the character it holds: for an image after the resize an emulated phone has
+      // given it to the title and not yet to what the title holds (measured 9 Oct 2026: 49 px on one, 48 on the other).
+      await expect.poll(() => page.evaluate(`[...document.querySelectorAll("[data-landing-story] [data-ch]")].every((held) => getComputedStyle(held).fontSize === getComputedStyle(held.closest("h2")).fontSize)`)).toBe(true);
       // A title in the hero's own size, and its character on the line of the word before it: it never starts a line.
       const read = (await page.evaluate(`(() => {
         const hero = getComputedStyle(document.querySelector("main h1")).fontSize;
@@ -138,13 +159,15 @@ test.describe("the posters under the landing's card", () => {
         });
       })()`)) as { size: string; hero: string; sameLine: boolean; tall: number; wide: number }[];
       expect(read.length).toBe(5);
-      for (const one of read) {
+      // 1.3 em tall and 1.3 wide for a day, 2.05 wide for the head in sunglasses; the hero with its book has a body
+      // and legs, 1.86 em tall and 2.25 wide. To two pixels: a phone's engine snaps a box to its grid.
+      const boxes = [[1.3, 1.3], [1.86, 2.25], [1.3, 1.3], [1.3, 1.3], [1.3, 2.05]];
+      read.forEach((one, at) => {
         expect(one.size, `at ${width}: the hero's own size`).toBe(one.hero);
         expect(one.sameLine, `at ${width}: the character stands after its word, on its line`).toBe(true);
-        // 1.3 em tall; 1.3 em wide, or 2.05 for the diamond. To two pixels: a phone's engine snaps a box to its grid.
-        expect(Math.abs(one.tall - 1.3), `at ${width}: 1.3 em tall`).toBeLessThan(0.045);
-        expect(Math.min(Math.abs(one.wide - 1.3), Math.abs(one.wide - 2.05)), `at ${width}: its width`).toBeLessThan(0.045);
-      }
+        expect(Math.abs(one.tall - boxes[at][0]), `at ${width}: ${boxes[at][0]} em tall`).toBeLessThan(0.045);
+        expect(Math.abs(one.wide - boxes[at][1]), `at ${width}: ${boxes[at][1]} em wide`).toBeLessThan(0.045);
+      });
       // The lines: in the title's own ink and not in grey, 18 px on a phone and 26 px from 600, weight 500.
       const lines = (await page.evaluate(`[...document.querySelectorAll("[data-landing-story] [data-line]")].map((line) => { const style = getComputedStyle(line); return { size: style.fontSize, weight: style.fontWeight, ink: style.color === getComputedStyle(line.closest("[data-band]").querySelector("h2")).color, words: line.textContent.trim().split(/\\s+/).length }; })`)) as { size: string; weight: string; ink: boolean; words: number }[];
       expect(lines.length).toBe(12);
@@ -209,25 +232,36 @@ test.describe("the posters under the landing's card", () => {
     await scrollToTheFoot(page, 500);
     await page.evaluate("window.scrollTo(0, 0)");
     await page.waitForTimeout(600);
-    // What a character's drawing shows at this moment: its turn, where it stands and how much of it is there.
+    // What a character's drawing shows at this moment: its turn, where it stands and how much of it is there. For the
+    // one that rolls: how far its body has turned, and where its highlight and an eye stand from the body's middle.
     const READ = `(() => Object.fromEntries([...document.querySelectorAll("[data-landing-story] [data-ch][data-act]")].map((held) => {
       const drawn = held.querySelector("svg");
       const m = new DOMMatrixReadOnly(getComputedStyle(drawn).transform);
       const shades = held.querySelector('[data-prop="shades"]');
-      return [held.dataset.act, { turn: Math.round(Math.atan2(m.b, m.a) * 180 / Math.PI), x: Math.round(m.e), y: Math.round(m.f), shown: Number(getComputedStyle(drawn).opacity), shades: shades ? Number(getComputedStyle(shades).opacity) : null }];
+      const whirl = held.querySelector('[data-part="whirl"]');
+      const w = whirl ? new DOMMatrixReadOnly(getComputedStyle(whirl).transform) : null;
+      const middle = (part) => { const box = part.getBoundingClientRect(); return [box.left + box.width / 2, box.top + box.height / 2]; };
+      const from = (part) => { const [x, y] = middle(part); const [bx, by] = middle(held.querySelector('[data-part="body"]')); return [Math.round(x - bx), Math.round(y - by)]; };
+      return [held.dataset.act, { turn: Math.round(Math.atan2(m.b, m.a) * 180 / Math.PI), x: Math.round(m.e), y: Math.round(m.f), shown: Number(getComputedStyle(drawn).opacity), shades: shades ? Number(getComputedStyle(shades).opacity) : null, body: w ? Math.round(Math.atan2(w.b, w.a) * 180 / Math.PI) : null, gloss: whirl ? from(held.querySelector('[data-part="gloss"]')) : null, eye: whirl ? from(held.querySelector('[data-part="eye"]')) : null }];
     })))()`;
-    type Seen = Record<string, { turn: number; x: number; y: number; shown: number; shades: number | null }>;
+    type Seen = Record<string, { turn: number; x: number; y: number; shown: number; shades: number | null; body: number | null; gloss: [number, number] | null; eye: [number, number] | null }>;
     /** Puts a character's title at a share of the screen's height, and lets the movement catch up with the scroll. */
     const put = async (act: string, share: number) => {
       await page.evaluate(`(() => { const held = document.querySelector('[data-landing-story] [data-act="${act}"]'); window.scrollTo({ top: held.getBoundingClientRect().top + window.scrollY - innerHeight * ${share}, behavior: "instant" }); })()`);
       await page.waitForTimeout(1300);
       return ((await page.evaluate(READ)) as Seen)[act];
     };
-    // The day earned rolls: its turn follows the scroll, and comes back to where it was when the page does.
+    // The day earned rolls: its turn follows the scroll, and comes back to where it was when the page does. Its body
+    // and its face turn; its highlight stays where the light is, up and to the left, and only goes across with it.
     const low = await put("roll", 0.85);
     const high = await put("roll", 0.25);
-    expect(high.turn, "it turned as the page went up").not.toBe(low.turn);
+    expect(high.body, "its body turned as the page went up").not.toBe(low.body);
+    expect(high.eye, "and its face with it").not.toEqual(low.eye);
+    expect([low.turn, high.turn], "the drawing itself is never turned").toEqual([0, 0]);
     expect(high.x).toBeGreaterThan(low.x);
+    expect(high.gloss, "the highlight is where it was on the ball").toEqual(low.gloss);
+    expect(low.gloss![0], "to the left of its middle").toBeLessThan(0);
+    expect(low.gloss![1], "and above it").toBeLessThan(0);
     const lowAgain = await put("roll", 0.85);
     expect(lowAgain, "scrolled back, it is where it was").toEqual(low);
     // The day that was missed is not there when its title comes in, and is home by mid screen. Scrolled back, it goes.
@@ -242,15 +276,28 @@ test.describe("the posters under the landing's card", () => {
     const eyes = page.locator('[data-landing-story] [data-act="shades"] [data-part="under-shades"] circle');
     await expect(eyes).toHaveCount(2);
     expect(await eyes.evaluateAll((all) => all.map((eye) => `${getComputedStyle(eye).opacity} ${getComputedStyle(eye).visibility}`)), "two eyes, there to see").toEqual(["1 visible", "1 visible"]);
+    // As they come down they turn from their own middle: seen along the head's own axis, they stay over the eyes and
+    // never come in from the side.
+    await put("shades", 0.69);
+    const aside = (await page.evaluate(`(() => {
+      const held = document.querySelector('[data-landing-story] [data-act="shades"]');
+      const middle = (part) => { const box = part.getBoundingClientRect(); return [box.left + box.width / 2, box.top + box.height / 2]; };
+      const [sx, sy] = middle(held.querySelector('[data-prop="shades"]'));
+      const [ex, ey] = middle(held.querySelector('[data-part="under-shades"]'));
+      const m = new DOMMatrixReadOnly(getComputedStyle(held.querySelector("svg")).transform);
+      const tilt = Math.atan2(m.b, m.a);
+      return { aside: Math.abs((sx - ex) * Math.cos(tilt) + (sy - ey) * Math.sin(tilt)), above: -(sy - ey) * Math.cos(tilt) + (sx - ex) * Math.sin(tilt) };
+    })()`)) as { aside: number; above: number };
+    expect(aside.above, "they are on their way down").toBeGreaterThan(2);
+    expect(aside.aside, "and straight above the eyes").toBeLessThan(1.5);
     expect((await put("shades", 0.4)).shades).toBe(1);
     // Once the sunglasses are on, each lens covers its eye whole.
     expect(await page.evaluate(`(() => { const held = document.querySelector('[data-landing-story] [data-act="shades"]'); const lenses = [...held.querySelectorAll('[data-prop="shades"] rect')].slice(0, 2).map((one) => one.getBoundingClientRect()); return [...held.querySelectorAll('[data-part="under-shades"] circle')].map((eye) => eye.getBoundingClientRect()).every((eye, index) => eye.left >= lenses[index].left && eye.right <= lenses[index].right && eye.top >= lenses[index].top && eye.bottom <= lenses[index].bottom); })()`)).toBe(true);
-    // Today is off the ground at some point of its way up the screen, and the yes leans one way then the other.
+    // The yes is today, and it hops: it is off the ground at some point of its way up the screen.
+    await expect(page.locator('[data-landing-story] [data-band="yes"] [data-ch]')).toHaveAttribute("data-act", "hop");
     const hops = [await put("hop", 0.8), await put("hop", 0.6), await put("hop", 0.45), await put("hop", 0.3)];
     expect(Math.min(...hops.map((one) => one.y)), "it left the ground").toBeLessThan(-5);
-    const nods = [await put("nod", 0.95), await put("nod", 0.7), await put("nod", 0.5), await put("nod", 0.3), await put("nod", 0.1)];
-    expect(Math.min(...nods.map((one) => one.turn))).toBeLessThan(-5);
-    expect(Math.max(...nods.map((one) => one.turn))).toBeGreaterThan(5);
+    await expect(page.locator('[data-landing-story] [data-act="nod"]'), "no character nods any more").toHaveCount(0);
     // The rows of names drift opposite ways with the scroll, and with nothing else.
     const drift = async () => (await page.evaluate(`[...document.querySelectorAll("[data-strip] .pill-rows")].filter((rows) => getComputedStyle(rows).display !== "none").flatMap((rows) => [...rows.querySelectorAll("[data-pills]")]).map((row) => Math.round(new DOMMatrixReadOnly(getComputedStyle(row).transform).e))`)) as number[];
     await page.evaluate(`(() => { const strip = document.querySelector("[data-strip]"); window.scrollTo({ top: strip.getBoundingClientRect().top + window.scrollY - innerHeight * 0.9, behavior: "instant" }); })()`);
@@ -279,6 +326,7 @@ test.describe("the posters under the landing's card", () => {
     const acts = (await page.evaluate(`[...document.querySelectorAll("[data-landing-story] :is([data-ch] svg, [data-ch] [data-prop], [data-pills])")].map((one) => getComputedStyle(one).opacity + " " + (one.tagName === "g" ? one.getAttribute("transform") ?? "none" : getComputedStyle(one).transform))`)) as string[];
     expect(acts.length).toBeGreaterThan(8);
     expect(new Set(acts)).toEqual(new Set(["1 none"]));
+    expect(await page.evaluate(`new DOMMatrixReadOnly(getComputedStyle(document.querySelector('[data-landing-story] [data-act="roll"] [data-part="whirl"]')).transform).isIdentity`), "the day earned is upright").toBe(true);
     // Without scripts the document never says movement is welcome, and nothing is hidden.
     const plain = await browser.newContext({ baseURL, javaScriptEnabled: false, viewport: page.viewportSize() ?? undefined });
     const still = await plain.newPage();

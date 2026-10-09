@@ -140,7 +140,9 @@ test("the landing's figure wears a fine halftone in the body's own colour, drawn
   assert.doesNotMatch(screened, /mix-blend-mode|mixBlendMode/);
   assert.match(part, /stroke:var\(--character-halftone\);stroke-opacity:0\.45/, "the body's deeper colour, never the ink");
   const css = readFileSync("app/globals.css", "utf8");
-  assert.equal((css.match(/--character-halftone: #/g) ?? []).length, 3, "day and both night blocks");
+  // A fourth place since 9 Oct 2026: the app's icon on the landing says the day's again, to wear it by night too.
+  assert.equal((css.match(/--character-halftone: #/g) ?? []).length, 4, "day, both night blocks, and the icon that keeps the day's");
+  assert.match(css.slice(css.indexOf(".face-icon {")), /^\.face-icon \{[^}]*--character-halftone: #835EFF;/);
   const strokes = [...part.matchAll(/<path d="([^"]*)" style="fill:none;stroke:var\(--character-halftone\);stroke-opacity:0\.45;stroke-width:([\d.]+)/g)];
   assert.equal(strokes.length, 8, "eight paths, one per size");
   const widths = strokes.map((m) => Number(m[2]));
