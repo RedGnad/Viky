@@ -1,6 +1,6 @@
 import { amountIn, currencyOf } from "./currencies";
-import { eurosNeededOn } from "./gift-amount";
-import type { WayIn } from "./rails";
+import { eurosNeededOn, smallestEurOn } from "./gift-amount";
+import type { CardAsked, WayIn } from "./rails";
 import type { Rates } from "./rates";
 
 /**
@@ -53,19 +53,31 @@ export type CardSum = Readonly<{
   fee: number;
   /** What the card brings beyond the gift and its fee, which stays in the account. */
   stays: number;
-  /** What the card pays, in the sheet's money; exactly `cardEuros` when that money is the euro. */
+  /** What the card pays, in the sheet's money; exactly what it is charged when that money is the card's own. */
   card: number;
-  cardEuros: number;
+  /** What the card is charged, in the currency its service's page is opened in. */
+  charged: CardAsked;
 }>;
 
-/** The lines when the card pays: nothing when the sheet's money has no rate today. */
-export function cardSum(input: Readonly<{ code: string; gift: number; cardEuros: number; feeEuros: number; rates: Rates | undefined }>): CardSum | undefined {
-  const rate = perEuro(input.code, input.rates);
+/** How many of one currency a unit of another is, by the day's rates: exactly one for the same currency. */
+export function across(from: string, to: string, rates: Rates | undefined): number | undefined {
+  if (from === to) return 1;
+  const one = perEuro(from, rates);
+  const other = perEuro(to, rates);
+  return one === undefined || other === undefined ? undefined : other / one;
+}
+
+/**
+ * The lines when the card pays, from what the card is charged and the fee its service keeps, both in the currency
+ * its page is opened in (src/card-ask.ts): nothing when that currency or the sheet's money has no rate today.
+ */
+export function cardSum(input: Readonly<{ code: string; gift: number; charged: CardAsked; fee: number; rates: Rates | undefined }>): CardSum | undefined {
+  const rate = across(input.charged.currency, input.code, input.rates);
   if (rate === undefined) return undefined;
-  const card = toDecimals(input.cardEuros * rate, input.code);
-  const fee = toDecimals(input.feeEuros * rate, input.code);
+  const card = toDecimals(input.charged.amount * rate, input.code);
+  const fee = toDecimals(input.fee * rate, input.code);
   const rest = toDecimals(input.gift + fee - card, input.code);
-  return { code: input.code, gift: input.gift, card, fee, cardEuros: input.cardEuros, fromAccount: rest > 0 ? rest : 0, stays: rest < 0 ? toDecimals(-rest, input.code) : 0 };
+  return { code: input.code, gift: input.gift, card, fee, charged: input.charged, fromAccount: rest > 0 ? rest : 0, stays: rest < 0 ? toDecimals(-rest, input.code) : 0 };
 }
 
 /**
@@ -81,12 +93,12 @@ export function smallestGiftByCard(input: Readonly<{ way: WayIn; code: string; g
   const rate = perEuro(input.code, input.rates);
   const usdPerEur = input.rates?.usdPerEur;
   if (rate === undefined || !(usdPerEur && usdPerEur > 0)) return undefined;
-  const step = 10 ** Math.floor(Math.log10(Math.max(1, input.way.smallestEur * rate)));
+  const step = 10 ** Math.floor(Math.log10(Math.max(1, smallestEurOn(input.way, usdPerEur) * rate)));
   for (let rung = Math.floor(input.gift / step) + 1, tried = 0; tried < 40; rung += 1, tried += 1) {
     const gift = toDecimals(rung * step, input.code);
     const units = BigInt(Math.round((gift / rate) * usdPerEur * 1_000_000));
     const needed = units > input.heldUnits ? eurosNeededOn(units - input.heldUnits, input.way, usdPerEur) : 0;
-    if (needed !== undefined && needed >= input.way.smallestEur) return gift;
+    if (needed !== undefined && needed >= smallestEurOn(input.way, usdPerEur) - 1e-6) return gift;
   }
   return undefined;
 }

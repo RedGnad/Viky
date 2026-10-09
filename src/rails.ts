@@ -126,6 +126,11 @@ export type WayIn = Readonly<{
    * euros, and what a whole euro brings beyond the gift and the fee stays in the account.
    */
   cents?: boolean;
+  /**
+   * The currency its page is opened in when nothing quotes it (src/card-ask.ts): the euro when absent. Dollars for a
+   * page that takes a currency and whose fee and floor are then said in dollars at the day's rate.
+   */
+  paidIn?: "USD";
   /** How long they say a payment takes, in their own words, when they say it. Absent rather than guessed. */
   takes?: string;
   /** What they keep, as they publish it. */
