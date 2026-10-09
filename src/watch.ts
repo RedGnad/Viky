@@ -2,7 +2,7 @@ import { formatEther } from "viem";
 import { allowanceAlertsDue, cycleUse } from "./attested-calls";
 import { daysWaiting } from "./days-waiting";
 import { claimPass } from "./pass-guard";
-import { contractsNamingAnotherKey, pinHolds, readEvidenceKeys, readExitPin, RELAYER_ALERT_BELOW, type EvidenceKeys, type ExitPin } from "./health";
+import { contractsNamingAnotherKey, pinHolds, readEvidenceKeys, readExitPin, readHealth, RELAYER_ALERT_BELOW, type EvidenceKeys, type ExitPin, type Health } from "./health";
 import { lastPasses } from "./pass-log";
 import { COUNTING_PASS_UTC } from "./pass-schedule";
 import { sendAlert, type AlertOutcome } from "./provider-alert";
@@ -31,6 +31,8 @@ export type WatchDeps = Readonly<{
   exitPin: () => Promise<ExitPin>;
   evidenceKeys: () => Promise<EvidenceKeys>;
   lastCountingPass: () => Promise<Date | null>;
+  /** The health reading (src/health.ts), for what no pass and no other watch looks at: the database and the reading service. */
+  health: () => Promise<Pick<Health, "database" | "worker">>;
   /** The alerts about Reclaim's allowance that have just become due, each of them once in its cycle. */
   allowanceDue: (nowMs: number) => Promise<readonly Alert[]>;
   alert: (alert: Alert) => Promise<AlertOutcome>;
@@ -43,6 +45,7 @@ export function liveWatchDeps(): WatchDeps {
     exitPin: readExitPin,
     evidenceKeys: () => readEvidenceKeys(),
     lastCountingPass: async () => (await lastPasses()).counting,
+    health: () => readHealth(),
     allowanceDue: (nowMs) => allowanceAlertsDue(nowMs, { use: cycleUse, claim: claimPass, waiting: daysWaiting }),
     alert: (alert) => sendAlert(alert),
   };
@@ -134,6 +137,20 @@ export function absentPassAlert(last: Date | null, nowMs: number): Alert | null 
 }
 
 /** One line of what the watch did: what it looked at, and what came of it. */
+/**
+ * The database or the reading service not holding, as the health reading found them (the audit of 9 Oct 2026): the
+ * monitor's page said it to whoever looked, and nobody was told. One email for both; nothing when both hold. The reason
+ * is in the logs of that minute, where the health reading writes it, and never in the email.
+ */
+export function healthAlert(health: Pick<Health, "database" | "worker">): Alert | null {
+  const down = [...(health.database.ok ? [] : [`the database (${health.database.fault ?? "unreachable"})`]), ...(health.worker.ok ? [] : [`the reading service (${health.worker.fault ?? "unreachable"})`])];
+  if (down.length === 0) return null;
+  return {
+    subject: `Not holding at the nightly watch: ${down.join(", ")}`,
+    text: `The health reading made by the nightly watch found ${down.join(" and ")} not holding. /api/health answers the same reading, and the logs of that minute say why, on the lines that start with "health:".`,
+  };
+}
+
 export type WatchLine = Readonly<{ watched: string; result: "holds" | "not read" | `alert ${AlertOutcome}` }>;
 
 async function look(watched: string, deps: WatchDeps, read: () => Promise<Alert | null>): Promise<WatchLine> {
@@ -190,10 +207,17 @@ export async function watchAtPassStart(relayer: RelayerAtStart, pass: string, de
   return Promise.all([look("relayer", deps, async () => relayerAlert(relayer, pass)), ...standing(deps)]);
 }
 
-/** What is looked at by the watch's own cron: whether the morning pass ran, then the pin and the evidence key. */
+/**
+ * What is looked at by the watch's own cron: whether the morning pass ran, whether the database and the reading
+ * service hold, then the pin and the evidence key.
+ */
 export async function watchAfterMorning(deps: WatchDeps = liveWatchDeps()): Promise<WatchLine[]> {
   const now = deps.now ? deps.now() : Date.now();
-  return Promise.all([look("morning pass", deps, async () => absentPassAlert(await deps.lastCountingPass(), now)), ...standing(deps)]);
+  return Promise.all([
+    look("morning pass", deps, async () => absentPassAlert(await deps.lastCountingPass(), now)),
+    look("database and reading service", deps, async () => healthAlert(await deps.health())),
+    ...standing(deps),
+  ]);
 }
 
 /**
