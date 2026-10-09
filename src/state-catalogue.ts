@@ -150,7 +150,7 @@ export const FUNDER_JOURNEY: readonly CatalogueScreen[] = [
         when: "the check offers a way in, or the way out offers a way out: every figure on those cards is that service's own",
         says: [
           "most payments take 30 to 60 minutes, and sometimes several hours",
-          "To your bank account, in euros.",
+          "To your bank account.",
           "To your card.",
           "Identity check before your first payout, once.",
           "Ramp's own asset list",

@@ -113,10 +113,18 @@ test("what the rules ask of a README is all there (section 4.1), and the licence
   // Description, the problem and who it is for.
   assert.match(FIRST_SCREEN, /Viky is a conditional payment on Monad\./);
   assert.match(section("Who it is for, and the problem"), /the person who pays for somebody else's effort from a distance and cannot check it themselves/);
-  // What is new, with the tools that exist named, and the two things Viky does not claim.
+  // What is new, with the tools that exist named. No paragraph of what is not claimed, anywhere in a text a judge
+  // reads (the founder, 8 Oct 2026; the audit of 9 Oct found two in this file).
   const fresh = section("What is new");
   assert.match(fresh, /Beeminder, StickK, Forfeit/);
-  assert.match(fresh, /Two things Viky does not claim/);
+  assert.doesNotMatch(README, /Two things Viky does not claim|What is not claimed/);
+  // The table's right column says what Viky does, in every row: beside the effect that stops with the money, a gift's
+  // own length and the funder's next choice.
+  assert.doesNotMatch(README, /does not claim/);
+  assert.match(README, /\| A gift covers a set number of days\. After it, the funder chooses whether to offer another\. \|/);
+  // Members, and no segment by age: "adults" is a rule of the product, never a pitch.
+  assert.match(README, /A club officer, to members and the relatives who back them/);
+  assert.doesNotMatch(README, /adult members/);
   // Architecture and stack.
   assert.match(section("Architecture"), /```mermaid\nflowchart LR/);
   assert.match(section("Stack"), /Next\.js 16/);
@@ -400,7 +408,11 @@ test("the README's measured figures are src/measured.ts's own, and the documents
   assert.ok(readme.includes(`Read from the chain on ${RELAYER_FEES.readAt.replace(", ", " at ")} with \`${RELAYER_FEES.command}\`: ${RELAYER_FEES.transactions} transactions sent since the first one, ${RELAYER_FEES.totalMon} MON of fees in all, ${average} MON a transaction on average.`));
   assert.ok(readme.includes(`A block every ${BLOCK_TIME.seconds * 1_000} ms, measured over ${BLOCK_TIME.blocks.toLocaleString("en-US")} blocks on ${BLOCK_TIME.readOn}`));
   // The rule in force at Toulouse is no longer the one its first proof was read by.
-  assert.ok(readme.includes("Since 8 Oct 2026 the rule in force for that university is one written by hand, the same at every pass, pinned before any proof was made on it."));
+  assert.ok(readme.includes("it was pinned on 7 Oct 2026; since 9 Oct the rule in force is one fixed ahead, which the judges page prints."));
+  // People are counted where they are counted, on the judges page: the README gave a number that was two days old.
+  assert.ok(readme.includes('People from outside the project have opened gifts, one of them on an iPhone, from Instagram: the judges page counts them, under "Who has used Viky".'));
+  assert.doesNotMatch(readme, /Two people from outside the project/);
+  assert.match(readFileSync("app/judges/JudgesWhoUsed.tsx", "utf8"), /<Fold id="who" title="Who has used Viky">/);
   assert.doesNotMatch(readme, /it is the one pinned on 7 Oct 2026/);
   // The one dev page that opens to anybody is said to.
   assert.match(readFileSync("docs/PAGES-AND-ROUTES.md", "utf8"), /One exception, `\/dev\/rampnow`, opens to anybody, in production too/);
