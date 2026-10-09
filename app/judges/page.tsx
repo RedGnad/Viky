@@ -11,7 +11,7 @@ import { usdcRouterAddress } from "@/src/usdc-router";
 import { USDC_ROUTER } from "@/src/viky-contracts";
 import { conversionsSent, exchangesSentInto } from "@/src/exit-store";
 import { payoutsArrived } from "@/src/mobile-money-store";
-import { conversionUse, exchangeUse, mobileMoneyUse, type FirstUse } from "@/src/judges-first-use";
+import { conversionUse, exchangeUse, FIRST_BANK_PAYOUT, mobileMoneyUse, type FirstUse } from "@/src/judges-first-use";
 import type { Metadata } from "next";
 import { MarkNotice } from "../kit/MarkNotice";
 import { Shell } from "../kit/Shell";
@@ -119,7 +119,7 @@ export default async function JudgesPage() {
   const conversion = conversionUse(rampnowOn, rampnowOn ? await conversionsSent() : null);
   // The two ways out that need no setting, by the exchanges the journal holds for each (the audit of 9 Oct 2026): the
   // dollars changed into what its payout service buys, USDC for the bank, the chain's coin for the card.
-  const bankUse = exchangeUse(await exchangesSentInto(WAY_OUT_EURO.coin), (minOut) => `${formatAusd(minOut)} of USDC`);
+  const bankUse = exchangeUse(await exchangesSentInto(WAY_OUT_EURO.coin), (minOut) => `${formatAusd(minOut)} of USDC`, FIRST_BANK_PAYOUT);
   const cardUse = exchangeUse(await exchangesSentInto(WAY_OUT_CARD.coin), (minOut) => `${formatEther(minOut)} MON`);
   // What the second version changes for our own key is said only once its contracts are set (src/v2.ts): until then no
   // gift is on them, and this page says nothing it cannot show.

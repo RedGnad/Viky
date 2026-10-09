@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { formatAusd } from "../src/gift-reader";
 import test from "node:test";
-import { conversionUse, exchangeUse, mobileMoneyUse, momentInWords } from "../src/judges-first-use";
+import { conversionUse, exchangeUse, FIRST_BANK_PAYOUT, mobileMoneyUse, momentInWords } from "../src/judges-first-use";
 import { countryInWords } from "../src/university-shown";
 
 // What the judges page says of mobile money and of Rampnow (the founder, 3 Oct 2026): switched off, open and unused,
@@ -51,6 +52,23 @@ test("the bank and the card, which need no setting: unread, open and unused, the
   const first = exchangeUse({ count: 1, first: { at: new Date("2026-09-16T15:40:57Z"), amount: 10_000_000n, minOut: 9_995_586n, txHash: EXIT } }, ofUsdc);
   assert.equal(first.words, "Open. Used once. The first exchange was sent on 16 Sep 2026, 15:40 UTC: $10.00 changed, for at least $9.99 of USDC.");
   assert.deepEqual(first.transactions, [{ label: "the exchange", hash: EXIT }]);
+  // What followed that exchange is said under it alone: the USDC sent on, from the chain, and Ramp's own word, read
+  // on its screen. Never that the money arrived at a bank, which nothing here reads.
+  const bank = exchangeUse({ count: 1, first: { at: new Date("2026-09-16T15:40:57Z"), amount: 10_000_000n, minOut: 9_995_586n, txHash: FIRST_BANK_PAYOUT.exchangeTx } }, ofUsdc, FIRST_BANK_PAYOUT);
+  assert.equal(
+    bank.words,
+    "Open. Used once. The first exchange was sent on 16 Sep 2026, 15:40 UTC: $10.00 changed, for at least $9.99 of USDC. $9.99 of USDC were sent on to Ramp on 16 Sep 2026, 21:41 UTC. Ramp reports the payout completed.",
+  );
+  assert.deepEqual(bank.transactions, [
+    { label: "the exchange", hash: FIRST_BANK_PAYOUT.exchangeTx },
+    { label: "the USDC sent to Ramp", hash: "0xd9f9d8e871f5df6b2914e1afc5bf2a07a22b5974763fd3a5edb2521ee586fe52" },
+  ]);
+  assert.ok(FIRST_BANK_PAYOUT.sent.at.getTime() > new Date("2026-09-16T15:40:57Z").getTime(), "the send follows the exchange");
+  assert.deepEqual(exchangeUse({ count: 1, first: { at: new Date("2026-09-16T15:40:57Z"), amount: 10_000_000n, minOut: 9_995_586n, txHash: EXIT } }, ofUsdc, FIRST_BANK_PAYOUT), first, "another exchange says nothing of it");
+  const page = readFileSync("app/judges/page.tsx", "utf8");
+  assert.match(page, /const bankUse = exchangeUse\(await exchangesSentInto\(WAY_OUT_EURO\.coin\), \(minOut\) => `\$\{formatAusd\(minOut\)\} of USDC`, FIRST_BANK_PAYOUT\);/);
+  assert.match(page, /const cardUse = exchangeUse\(await exchangesSentInto\(WAY_OUT_CARD\.coin\), \(minOut\) => `\$\{formatEther\(minOut\)\} MON`\);/, "the card has none");
+  assert.doesNotMatch(bank.words, /bank|arrived|received/i, "what Ramp reports, and nothing of a bank");
   // A first exchange with no hash kept is said without a link, never with an invented one.
   assert.deepEqual(exchangeUse({ count: 2, first: { at: new Date("2026-09-16T15:40:57Z"), amount: 10_000_000n, minOut: 9_995_586n, txHash: null } }, ofUsdc).transactions, []);
 });
