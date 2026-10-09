@@ -262,7 +262,10 @@ function usePosters(root: { readonly current: HTMLElement | null }): void {
             if (shades) {
               gsap.fromTo(
                 shades,
-                { y: A.shades.drop, rotate: A.shades.fromTurn, opacity: 0 },
+                // The drawing turns the sunglasses from their own box, and the library writes its turn for the drawing's
+                // own corner: for as long as it holds them, their box is the drawing's. Left as it was, they came down
+                // from the side, a third of the way (measured 9 Oct 2026).
+                { y: A.shades.drop, rotate: A.shades.fromTurn, opacity: 0, transformBox: "view-box" },
                 { y: 0, rotate: 0, opacity: 1, ease: A.shades.ease, transformOrigin: A.shades.origin, scrollTrigger: { trigger: held, start: `top ${A.shades.startAt * 100}%`, end: `top ${A.shades.onAt * 100}%`, scrub: A.catchUpS } },
               );
             }

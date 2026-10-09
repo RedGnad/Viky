@@ -245,6 +245,8 @@ test("each character's act is tied to the scroll, with the mockup's values, and 
   }
   assert.match(acts, /\{ x: A\.back\.from, rotate: A\.back\.fromTurn, opacity: 0 \},\n\s*\{ x: 0, rotate: 0, opacity: 1, ease: A\.back\.ease/);
   assert.match(acts, /const shades = drawn\.querySelector\('\[data-prop="shades"\]'\);/);
+  // They come straight down, turning from their own middle: the library is given the drawing's box to turn them in.
+  assert.match(acts, /\{ y: A\.shades\.drop, rotate: A\.shades\.fromTurn, opacity: 0, transformBox: "view-box" \},/);
   assert.match(readFileSync("app/kit/Figure.tsx", "utf8"), /<g data-part="eyes" data-prop="shades"/);
   // The face has its eyes under the sunglasses: while they are not down yet it is not a face with none (the founder,
   // 5 Oct 2026). Each eye is at the centre of its lens and smaller than it, so the sunglasses cover both whole.

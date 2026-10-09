@@ -276,6 +276,20 @@ test.describe("the posters under the landing's card", () => {
     const eyes = page.locator('[data-landing-story] [data-act="shades"] [data-part="under-shades"] circle');
     await expect(eyes).toHaveCount(2);
     expect(await eyes.evaluateAll((all) => all.map((eye) => `${getComputedStyle(eye).opacity} ${getComputedStyle(eye).visibility}`)), "two eyes, there to see").toEqual(["1 visible", "1 visible"]);
+    // As they come down they turn from their own middle: seen along the head's own axis, they stay over the eyes and
+    // never come in from the side.
+    await put("shades", 0.69);
+    const aside = (await page.evaluate(`(() => {
+      const held = document.querySelector('[data-landing-story] [data-act="shades"]');
+      const middle = (part) => { const box = part.getBoundingClientRect(); return [box.left + box.width / 2, box.top + box.height / 2]; };
+      const [sx, sy] = middle(held.querySelector('[data-prop="shades"]'));
+      const [ex, ey] = middle(held.querySelector('[data-part="under-shades"]'));
+      const m = new DOMMatrixReadOnly(getComputedStyle(held.querySelector("svg")).transform);
+      const tilt = Math.atan2(m.b, m.a);
+      return { aside: Math.abs((sx - ex) * Math.cos(tilt) + (sy - ey) * Math.sin(tilt)), above: -(sy - ey) * Math.cos(tilt) + (sx - ex) * Math.sin(tilt) };
+    })()`)) as { aside: number; above: number };
+    expect(aside.above, "they are on their way down").toBeGreaterThan(2);
+    expect(aside.aside, "and straight above the eyes").toBeLessThan(1.5);
     expect((await put("shades", 0.4)).shades).toBe(1);
     // Once the sunglasses are on, each lens covers its eye whole.
     expect(await page.evaluate(`(() => { const held = document.querySelector('[data-landing-story] [data-act="shades"]'); const lenses = [...held.querySelectorAll('[data-prop="shades"] rect')].slice(0, 2).map((one) => one.getBoundingClientRect()); return [...held.querySelectorAll('[data-part="under-shades"] circle')].map((eye) => eye.getBoundingClientRect()).every((eye, index) => eye.left >= lenses[index].left && eye.right <= lenses[index].right && eye.top >= lenses[index].top && eye.bottom <= lenses[index].bottom); })()`)).toBe(true);
