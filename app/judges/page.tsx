@@ -230,10 +230,9 @@ export default async function JudgesPage() {
           </li>
           <li data-try-paths>
             What to offer. Each path asks something of you: Duolingo, an account there, and a lesson done after you
-            connect it; Chess.com, an account there, and one rating point won. With no account of a source, the path
-            is the link of a gift already made, where the portal&apos;s instructions give one (the next step). And what
-            each costs of the month&apos;s attested readings, which are few and counted under &quot;How a day is
-            read&quot;, below.
+            connect it; Chess.com, an account there, and one rating point won. With no account of a source, the short
+            path is two steps down: open the gift, then end it. And what each costs of the month&apos;s attested
+            readings, which are few and counted under &quot;How a day is read&quot;, below.
             {reclaimUse ? <span data-readings-left> {readingsLeftInWords(reclaimUse)}</span> : null}
             <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)] pt-[var(--space-xs)]">
               <li>
@@ -263,10 +262,13 @@ export default async function JudgesPage() {
               </li>
             </ul>
           </li>
-          <li>
-            If the portal&apos;s instructions give you the link of a gift made for you, open it instead of making one. Money
-            leaves a gift only once a reading has credited it: an opened gift with nothing credited has nothing to take
-            out yet.
+          {/* The short path for a judge with no account at a source (the audit of 9 Oct 2026): it sent them to a link
+              the portal's instructions might give. An opened gift has its round buttons before anything is connected
+              (test/browser/you-decide.spec.ts), and ending it sends everything back. */}
+          <li data-try-short-path>
+            With no account at Duolingo or Chess.com: open your gift from the other account, as above, and connect
+            nothing. Press &quot;Stop&quot;, then &quot;End the gift&quot;, and confirm: all of it goes back to the account that
+            paid. Money leaves a gift for the person it is for only once a reading has credited it.
           </li>
           <li>
             Mera&apos;s stateless test runs on this same account: sign out, then sign in from another browser or device
