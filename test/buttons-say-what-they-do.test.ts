@@ -43,7 +43,7 @@ test("what only opens a sentence is a fold named by a question, with its chevron
   assert.equal((fold.match(/<p /g) ?? []).length, 1, "one line, and no paragraph beside it");
   assert.match(fold, /<a href=\{field\.notYetHow\.href\} target="_blank" rel="noopener noreferrer" className=\{`\$\{SMALL_BUTTON\} self-start`\} data-open-the-source="">\n\s*\{field\.notYetHow\.open\}/);
   // "Have a code?" is no fold any more (the founder, 9 Oct 2026): its press opens a field and a button, so it is a
-  // small key, under the card's button. Nothing leads back from it: the card's button never left.
+  // small key, above the total. Nothing leads back from it: the card's button never left.
   const code = readFileSync("app/kit/offer/JudgeCode.tsx", "utf8");
   assert.match(code, /onClick=\{\(\) => setShown\(true\)\} data-have-a-code="">\n\s*\{W\.code\.have\}/);
   assert.doesNotMatch(code, /<details/);

@@ -35,6 +35,6 @@ test("the code is kept for the tab on whichever page the link opens, and forgott
   assert.match(readFileSync("src/visit-counts.ts", "utf8"), /counted\.search = "";/);
   // The sheet forgets it at the credit, and never before: a code that was refused is still in the field's reach.
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
-  assert.match(sheet, /onCredited=\{\(\) => \{\s+setCodeGiven\(where\);\s+forgetJudgeCodeFromTheLink\(\);\s+setBalanceRead\(\(n\) => n \+ 1\);\s+\}\}/);
+  assert.match(sheet, /onCredited=\{\(\) => \{\s+setCodeGiven\(shape\);\s+forgetJudgeCodeFromTheLink\(\);\s+setBalanceRead\(\(n\) => n \+ 1\);\s+\}\}/);
   assert.equal((sheet.match(/forgetJudgeCodeFromTheLink\(\)/g) ?? []).length, 1);
 });

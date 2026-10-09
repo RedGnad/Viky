@@ -153,24 +153,32 @@ test("Home keeps the pay sheet across the account being made, and the page it is
  * A judge's code on the sheet (the founder, 9 Oct 2026): visible, and never put forward in the card's place. The card
  * stays the one action. test/browser/pay-sheet.spec.ts walks it; this pins what decides where the code stands.
  */
-test("a code is small beside the card, which stays the one action: first when the link carried it, under the card's button otherwise", () => {
-  // A link that carried a code puts its field first, from the sheet's first image.
+test("a code is small beside the card, which stays the one action: above the total, its field when the link carried it, a small key otherwise", () => {
+  // A link that carried a code shows its field, from the sheet's first image.
   assert.match(sheet, /const linkCode = open \? judgeCodeFromTheLink\(\) : "";/);
-  assert.match(sheet, /const codeFirst = codeGiven === "first" \|\| \(codeGiven === null && linkCode !== ""\);/);
+  assert.match(sheet, /const codeFromLink = codeGiven === "link" \|\| \(codeGiven === null && linkCode !== ""\);/);
   // Offered while credits are open and the account has had none, as the server says, to an account that cannot pay;
   // a code the link carried is shown before the server has said, and kept while it is being used.
-  assert.match(sheet, /const codeOffered = credits === null \? null : credits\.open && !credits\.credited;/);
-  assert.match(sheet, /const codeInReach = !enough && \(pays === "card" \|\| codeStarted\) && \(codeFirst \? codeOffered !== false : codeOffered === true\);/);
+  assert.match(sheet, /const codeOffered = credits === null \|\| credits === "unread" \? null : credits\.open && !credits\.credited;/);
+  assert.match(sheet, /const codeInReach = !enough && \(pays === "card" \|\| codeStarted\) && \(codeFromLink \? codeOffered !== false : codeOffered === true\);/);
   assert.match(sheet, /setCredits\(\{ open: answer\.open === true, credited: answer\.credited === true \}\);/);
   const body = sheet.slice(sheet.indexOf("<Sheet "), sheet.indexOf("</Sheet>"));
-  // First: after the gift's lines, above what the card is asked and its button. Otherwise: right under the card's
-  // button, before the card service's own line (the founder, 9 Oct 2026). One or the other, and the card's button is
-  // drawn in both.
-  assert.ok(body.indexOf('{codeFirst ? theCode("first") : null}') > body.indexOf("data-pay-lines"));
-  assert.ok(body.indexOf('{codeFirst ? theCode("first") : null}') < body.indexOf("data-pay-total"));
-  assert.ok(body.indexOf('{codeFirst ? null : theCode("under")}') > body.indexOf("data-pays="), "under the button");
-  assert.ok(body.indexOf('{codeFirst ? null : theCode("under")}') < body.indexOf("<CardLine way={way} />"), "and before the card service's line");
-  assert.ok(body.indexOf("<CardLine way={way} />") < body.indexOf("W.passkeyMakesTheAccountEitherWay"), "then the service's line, then the passkey's");
+  // One place for both shapes (the founder, 9 Oct 2026, who first had the key under the card's button): after the
+  // gift's lines, above the total and the card's button. The sheet's order: the lines, the code, the total, the
+  // button, the card service's line, the passkey's.
+  const place = '{theCode(codeFromLink ? "link" : "key")}';
+  assert.equal(body.split("theCode(").length, 2, "drawn once");
+  assert.ok(body.indexOf(place) > body.indexOf("data-pay-lines"));
+  assert.ok(body.indexOf(place) < body.indexOf("data-pay-total"), "above the total");
+  assert.ok(body.indexOf("data-pay-total") < body.indexOf("data-pays="), "the total, then the button");
+  assert.ok(body.indexOf("data-pays=") < body.indexOf("<CardLine way={way} />"), "then the card service's line");
+  assert.ok(body.indexOf("<CardLine way={way} />") < body.indexOf("W.passkeyMakesTheAccountEitherWay"), "then the passkey's");
+  // A shape is its own instance, so the field a link opens starts with the link's code in it.
+  assert.match(sheet, /<JudgeCode\s+key=\{shape\}/);
+  // While the key waits for the server's answer its place is kept, so the total and the button do not move when it
+  // is drawn; an answer that never came gives the place back.
+  assert.match(sheet, /const codeAwaited = !codeFromLink && !enough && pays === "card" && credits === null;/);
+  assert.match(sheet, /setCredits\(\(was\) => was \?\? "unread"\);/);
   assert.doesNotMatch(sheet, /onTheCode|codeWay|codeChosen/, "nothing stands in the card's place any more");
   // Small, in both places: the kit's small key, a field, and a small button. The sheet has one button in the sun.
   const code = readFileSync("app/kit/offer/JudgeCode.tsx", "utf8");
@@ -178,9 +186,11 @@ test("a code is small beside the card, which stays the one action: first when th
   assert.match(code, /<Button look="small" className="self-start"/);
   assert.match(code, /const \[shown, setShown\] = useState\(shownFromTheStart\);/);
   assert.match(code, /const \[code, setCode\] = useState\(startWith\);/, "what the link carried is already in it");
-  // First, its field is named by the question; under the card's button the question is the key, and the field "Code".
+  assert.match(code, /if \(awaited && !shown\) return <div className="invisible h-\[40px\] shrink-0" aria-hidden="true" data-code-place="" \/>;/);
+  assert.match(readFileSync("app/components/ui.ts", "utf8"), /export const SMALL_BUTTON = `[^`]*\bh-\[40px\]/, "the place is as tall as the key");
+  // From the link, its field is named by the question; otherwise the question is the key, and the field "Code".
   assert.match(code, /<Field id="gift-code" label=\{label\} value=\{code\} onChange=\{setCode\}/);
-  assert.match(sheet, /label=\{where === "first" \? W\.code\.have : undefined\}/);
+  assert.match(sheet, /label=\{shape === "link" \? W\.code\.have : undefined\}/);
   assert.equal(PAY.code.have, "Have a code?");
 });
 
@@ -217,9 +227,9 @@ test("one way in, one action, and no button to another (D239)", () => {
   assert.equal((body.match(/<Button [^>]*>/g) ?? []).filter((button) => !/look="/.test(button)).length, 1, "the one action");
   assert.doesNotMatch(body, /PRIMARY_BUTTON/);
   for (const button of body.match(/<button[^>]*>/g) ?? []) assert.match(button, /SMALL_BUTTON/, button);
-  // "Have a code?" stays (D297): since 9 Oct 2026 a small key under the card's button, where it was last and folded.
-  assert.ok(body.indexOf('theCode("under")') < body.indexOf("data-what-happens"), "the key before the fold");
-  assert.equal((sheet.match(/<JudgeCode/g) ?? []).length, 1, "one writing of it, for its two places");
+  // "Have a code?" stays (D297): since 9 Oct 2026 a small key above the total, where it was last and folded.
+  assert.ok(body.indexOf("theCode(") < body.indexOf("data-what-happens"), "the key before the fold");
+  assert.equal((sheet.match(/<JudgeCode/g) ?? []).length, 1, "one writing of it, for its two shapes");
   // Which way refused and why is no longer said: the fold holds short lines, and the way that stands is named under the button.
   assert.doesNotMatch(sheet, /insteadSentence|W\.instead/);
   // The device's language goes with the call itself; the sheet passes nothing as if it were an answer from the person.
