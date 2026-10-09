@@ -22,17 +22,19 @@ export function centsDown(units: bigint): string {
  * `onCredited` reads the balance again, and when the gift is more than the account holds, the gift is brought to what
  * it holds, rounded down to the cent, and a line says so (choice B, D300).
  *
- * Two drawings. On the waiting screen it stays behind a small key. On the pay sheet it is `first` (the founder, 9 Oct
- * 2026: the judges' path): the field open, with what the link carried already in it, and its button the sheet's one
- * action. The sheet says when it is drawn (`offered`), having asked the server itself, and makes the account of
- * somebody who has none before the code is sent (`before`).
+ * Always small beside what pays (the founder, 9 Oct 2026: a code is visible, never put forward in the place of the
+ * card): a small key that opens a field and a small button. On the pay sheet, when the link carried a code, the field
+ * is shown from the start with that code in it, under the question as its name. The sheet says when it is drawn
+ * (`offered`), having asked the server itself, and makes the account of somebody who has none before the code is sent
+ * (`before`).
  */
 export function JudgeCode({
   needed,
   held,
   onCredited,
   onMakeIt,
-  first = false,
+  shownFromTheStart = false,
+  label = W.code.label,
   offered,
   startWith = "",
   before,
@@ -41,8 +43,10 @@ export function JudgeCode({
   held: bigint | null;
   onCredited: () => void;
   onMakeIt: (dollars: string) => void;
-  /** The pay sheet's first choice: the field open and its button the one action, rather than behind a small key. */
-  first?: boolean;
+  /** The field shown from the start, rather than behind the small key: the link carried a code. */
+  shownFromTheStart?: boolean;
+  /** The field's own name: "Code" unless said. */
+  label?: string;
   /** Whether a code can be used here now, when whoever draws this has asked the server already; asked here otherwise. */
   offered?: boolean;
   /** The code the link carried: the field starts on it. */
@@ -53,7 +57,7 @@ export function JudgeCode({
   const covered = needed !== null && held !== null && held >= needed;
   const [open, setOpen] = useState(false);
   const [credited, setCredited] = useState(false);
-  const [shown, setShown] = useState(false);
+  const [shown, setShown] = useState(shownFromTheStart);
   const [code, setCode] = useState(startWith);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -117,19 +121,9 @@ export function JudgeCode({
     );
   }
   if (covered || !(offered ?? (open && !credited))) return null;
-  if (first) {
-    return (
-      <>
-        <Field id="gift-code" label={W.code.label} value={code} onChange={setCode} autoComplete="off" spellCheck={false} />
-        <Button doing={busy ? W.code.using : null} step={WAITS.code} waiting={code.trim().length === 0} failed={problem} failedId="gift-code-refused" onPress={() => void redeem()} data-uses-the-code="">
-          {W.code.use}
-        </Button>
-      </>
-    );
-  }
   const field = (
     <div className="flex flex-col gap-[var(--space-xs)]">
-      <Field id="gift-code" label={W.code.label} value={code} onChange={setCode} autoComplete="off" spellCheck={false} />
+      <Field id="gift-code" label={label} value={code} onChange={setCode} autoComplete="off" spellCheck={false} />
       <Button look="small" className="self-start" doing={busy ? W.code.using : null} step={WAITS.code} waiting={code.trim().length === 0} failed={problem} failedId="gift-code-refused" onPress={() => void redeem()}>
         {W.code.use}
       </Button>
@@ -137,7 +131,7 @@ export function JudgeCode({
   );
   if (!shown) {
     return (
-      <button type="button" className={`${SMALL_BUTTON} self-start`} onClick={() => setShown(true)}>
+      <button type="button" className={`${SMALL_BUTTON} self-start`} onClick={() => setShown(true)} data-have-a-code="">
         {W.code.have}
       </button>
     );

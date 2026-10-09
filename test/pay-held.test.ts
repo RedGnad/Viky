@@ -73,8 +73,8 @@ test("the sheet: one reading that fails whole, a button that does not go while n
   assert.match(sheet, /<Button waiting=\{!ready \|\| !settled \|\| status === "busy"\} doing=\{busy \? W\.paying : null\}/);
   assert.match(sheet, /if \(!ready \|\| units === undefined \|\| !settled\) return;/);
   // The card's lines, its figure and its line of terms are drawn for the card alone.
-  // And never beside a code (9 Oct 2026): not while the code stands in the card's place, nor while its credit is read.
-  assert.match(sheet, /const byCard = pays === "card" && !cardClosed && !onTheCode && !creditArriving;/);
+  // And not in the moment a judge's credit, just given, is being read (9 Oct 2026).
+  assert.match(sheet, /const byCard = pays === "card" && !cardClosed && !creditArriving;/);
   assert.match(sheet, /\{pays !== "card" \? null : cardClosed \? \(/);
   // The wait is said under the button, and the failure with what reads again.
   assert.match(sheet, /\{pays === "reading" \? <WaitLine>\{W\.readingAccount\}<\/WaitLine> : null\}/);

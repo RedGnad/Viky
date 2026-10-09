@@ -158,7 +158,7 @@ test("the code is asked where a person is about to pay: the pay sheet and the wa
   assert.match(code, /W\.code\.adjusted\(formatAusd\(adjustedTo\)\)/);
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   // On the sheet since 9 Oct 2026, for somebody with no account too: the code's press makes it, then sends the code.
-  assert.match(sheet, /\{codeWay \|\| codeGiven \? \(\s*<JudgeCode\s+first\s+offered=\{onTheCode\}\s+startWith=\{linkCode\}\s+before=\{accountForTheCode\}/);
+  assert.match(sheet, /<JudgeCode\s+shownFromTheStart=\{where === "first"\}\s+label=\{where === "first" \? W\.code\.have : undefined\}\s+offered=\{codeInReach\}\s+startWith=\{linkCode\}\s+before=\{accountForTheCode\}/);
   assert.match(code, /if \(before && !\(await before\(\)\)\) return;\s+const answer = await postJson/, "the account first, then the code");
   // Marked as chosen, or the card would go back to its starting figure (D158).
   assert.match(sheet, /onMakeIt=\{\(dollars\) => onChange\(\{ \.\.\.draft, dollars, typedAmount: dollars, typedIn: "USD" \}\)\}/);
