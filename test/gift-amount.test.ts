@@ -1,4 +1,6 @@
 import { strict as assert } from "node:assert";
+import { usesFor } from "../src/use-money";
+import { USE_MONEY } from "../src/sentences";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN } from "../src/rails.js";
@@ -72,14 +74,21 @@ test("the countries the rails will not serve are the ones their own page lists",
  */
 test("the ways out cover each other's gaps, and each says where it pays", () => {
   assert.equal(WAYS_OUT.length, 2);
-  // The one line on the card that decides says where this way is shut (D124); the title says where the money goes.
-  assert.match(WAY_OUT_EURO.line, /Senegal|Ivory Coast/i, "the euro rail says who it cannot serve");
+  // No line of the register names a country or a currency (the founder, 9 Oct 2026): a way that does not pay in the
+  // person's country is not shown, by what its service answers for that country, and the screen names that country
+  // when nothing reaches it. The bank pays in the country's own money, which its card says from the service's answer.
+  assert.equal(WAY_OUT_EURO.line, "A transfer through Ramp, within 2 business days.");
+  assert.equal(WAY_OUT_EURO.where, "To your bank account.");
+  assert.equal(WAY_OUT_CARD.line, "Onto a Visa or Mastercard through Mercuryo.");
+  for (const out of WAYS_OUT) assert.doesNotMatch(`${out.line} ${out.where}`, /Senegal|Ivory Coast|France|Europe|United States|euro/i, out.name);
+  assert.deepEqual(usesFor("sn", { Ramp: "does-not", Mercuryo: "serves" }, false), ["card"]);
+  assert.deepEqual(usesFor("sn", { Ramp: "does-not", Mercuryo: "does-not" }, false), []);
+  assert.equal(USE_MONEY.noWayOutThere("Senegal"), "No way to take money out reaches Senegal yet. It stays yours here.");
   assert.deepEqual(WAYS_OUT.map((out) => out.title), ["Your bank", "Your card"]);
   // Since S4 no rail names the other one on screen: each says where it pays, and the order the screen puts them in
   // is what says which one fits (R1).
   assert.equal(WAY_OUT_CARD.where, "To your card.");
   for (const out of WAYS_OUT) for (const other of WAYS_OUT) if (other !== out) assert.doesNotMatch(out.where, new RegExp(other.name, "i"), `${out.name} names ${other.name}`);
-  assert.match(WAY_OUT_CARD.line, /France|Europe/i, "and where it pays nothing");
   // Each stands on a source with a date, so nobody has to take our word for a sentence about their money.
   for (const out of WAYS_OUT) {
     assert.ok(out.source.length > 0 && /20\d\d/.test(out.read), `${out.name} must say what was read and when`);

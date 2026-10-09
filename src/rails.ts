@@ -548,8 +548,9 @@ export type WayOut = Readonly<{
   /** Where it pays, in one sentence, in the words a person would use. */
   where: string;
   /**
-   * The one line under the figure on the card that decides (out.html, 19 Sep 2026): how it arrives, how soon, and
-   * where this way is shut. Everything else about this way is said on the step where it is met.
+   * How it arrives and how soon, in one line (out.html, 19 Sep 2026). No screen prints it today: the card of the way
+   * out says the method and the money its service pays in the person's country. It names no country and no currency
+   * since 9 Oct 2026: where a way does not pay, it is not shown.
    */
   line: string;
   /** What they keep, as they publish it, and the sentence built from it for the card. */
@@ -632,8 +633,13 @@ export const WAY_OUT_EURO: WayOut = {
   page: "https://app.ramp.network/?swapAsset=MONAD_USDC&flow=offramp",
   sells: "USDC on Monad",
   coin: USDC_ADDRESS,
-  where: "To your bank account, in euros.",
-  line: "A transfer in euros through Ramp, within 2 business days. Not in Senegal or Ivory Coast.",
+  // No currency here (the founder, 9 Oct 2026): the service pays in the money of the person's country, which the
+  // card of the way out says from the service's own answer (`bankBy`, src/sentences.ts). The legal notice prints
+  // this field, and "in euros" was false outside the euro area.
+  where: "To your bank account.",
+  // No country and no currency here either: a way that does not pay in the person's country is not shown
+  // (`usesFor`, src/use-money.ts), and the screen names that country when nothing reaches it (`noWayOutThere`).
+  line: "A transfer through Ramp, within 2 business days.",
   fee: { percent: 0.99, upTo: false, minimum: 1.99, currency: "EUR" },
   pays: "within 2 business days",
   // What stops a person at the service itself, said on the step that opens its page and not on the card that decides.
@@ -664,7 +670,7 @@ export const WAY_OUT_CARD: WayOut = {
   sells: "MON on Monad",
   coin: NATIVE_OUT,
   where: "To your card.",
-  line: "Onto a Visa or Mastercard through Mercuryo. Not in France, the rest of Europe, or the United States.",
+  line: "Onto a Visa or Mastercard through Mercuryo.",
   fee: { percent: 3.95, upTo: true, minimum: 4, currency: "EUR" },
   pays: "onto a Visa or Mastercard card",
   // What stops a person at the service itself, said on the step that opens its page. The United Kingdom, where
