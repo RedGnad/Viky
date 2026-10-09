@@ -22,8 +22,11 @@ test("each hand-written university is a whole row, and only Rome's carries a pro
 test("the American University of Rome: a schedule of this academic year is enrolled, another year's is not", () => {
   const aur = DIRECTORY_PORTALS.find((portal) => portal.portalId === "aur-it")!;
   const pattern = new RegExp(aur.extract!.matches);
-  for (const term of ["Fall 2026", "Spring 2027", "Summer 2027", "2026 Fall Semester"]) assert.ok(pattern.test(term), term);
+  assert.equal(aur.extract!.matches, "Fall.*2026|2026.*Fall|(Spring|Summer).*2027|2027.*(Spring|Summer)");
+  for (const term of ["Fall 2026", "Spring 2027", "Summer 2027", "2026 Fall Semester", "2027 Spring Semester", "Fall 2026 - All Divisions"]) assert.ok(pattern.test(term), term);
   for (const term of ["Fall 2025", "Spring 2024", "", "Undergraduate"]) assert.ok(!pattern.test(term), term);
+  // The spring and the summer of 2026 belong to the year before, and the autumn of 2027 to the year after.
+  for (const term of ["Spring 2026", "Summer 2026", "2026 Spring Semester", "Fall 2027", "2027 Fall Semester"]) assert.ok(!pattern.test(term), term);
 });
 
 test("the corridor's universities: whole rows on https, each once, IHET and MIT Polytech taken out, UNIKIN on its live platform", () => {

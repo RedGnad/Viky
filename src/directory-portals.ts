@@ -46,10 +46,12 @@ export const DIRECTORY_PORTALS: readonly DirectoryPortal[] = [
     said: "Rome",
     loginUrl: "https://my.aur.edu/ics",
     // `GET https://my.aur.edu/ICS/Student/`: the student's own course schedule page, "Course Schedule for <name>", and
-    // the term it is for, "<term> - All Divisions". A schedule of this academic year is what says enrolled now.
+    // the term it is for, "<term> - All Divisions". A schedule of this academic year is what says enrolled now: its
+    // autumn is 2026's, its spring and its summer 2027's. The pattern took any of the three seasons with either year
+    // until 10 Oct 2026, so the spring and the summer of 2026, which are last year's, read as enrolled now.
     extract: {
       field: "Current_semester",
-      matches: "(Fall|Spring|Summer).*20(26|27)|20(26|27).*(Fall|Spring|Summer)",
+      matches: "Fall.*2026|2026.*Fall|(Spring|Summer).*2027|2027.*(Spring|Summer)",
       keeps: "whether the student's own course schedule is for a term of the 2026-2027 academic year, and nothing else",
     },
     usedBy: 3,
