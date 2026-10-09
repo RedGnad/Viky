@@ -1,9 +1,9 @@
 "use client";
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { useDisplayCurrency } from "@/src/client/display-currency";
 import { HOME as W } from "@/src/sentences";
 import { AMOUNT_IN_TITLE, CARD_LABEL, HELP } from "../components/ui";
-import { ArrivalAmount, useLastSeen } from "./Motion";
+import { amountText, ArrivalAmount, useLastSeen } from "./Motion";
 import { useMoneyHeld, type Holdings } from "./money";
 
 /**
@@ -37,6 +37,11 @@ import { useMoneyHeld, type Holdings } from "./money";
  * and while the balance is still being read the amount is a quiet placeholder of the same size. The block used to be
  * two lines with a one character figure at the display size and then three lines with a five character one, so the
  * whole page moved twice before it had said anything.
+ *
+ * **While it is read, it says the last figure this device saw** for this account in this currency, in full ink (the
+ * founder, 9 Oct 2026). The figure waits for the slowest of three readings, and the three dots stood there for all of
+ * them. When the reading lands on the same figure nothing moves; on another, the amount counts to it. A device that
+ * remembers nothing shows the dots, and the figure then comes up in their place.
  */
 const AMOUNT = `money-display ${AMOUNT_IN_TITLE} tracking-[-0.02em]`;
 
@@ -58,8 +63,14 @@ export function MoneyHero({
   const figure = dollars === undefined ? undefined : money.figure(dollars);
   // What this device last saw of this account's money, so a change counts to its value once (brief, section 6).
   const seen = useLastSeen(`viky.seen.money.${address}.${money.currency}`, figure?.value);
+  /** What stands under "Yours": the figure once it is read, and until then the last one this device saw. */
+  const value = figure?.value ?? seen;
+  /** How this currency writes an amount, which is known before the amount is. */
+  const written = figure ?? money.figure(0n);
+  /** Whether the first image had no figure at all: the one that lands then comes up in place, and counts nothing. */
+  const [startedWithout] = useState(value === undefined);
 
-  if (figure === undefined) {
+  if (value === undefined) {
     return (
       <section className="money-display-box flex flex-col gap-[var(--space-xs)]">
         <h1 className={CARD_LABEL}>{W.yours}</h1>
@@ -75,10 +86,10 @@ export function MoneyHero({
   return (
     <section className="money-display-box flex flex-col gap-[var(--space-xs)]">
       <h1 className={CARD_LABEL}>{W.yours}</h1>
-      <p data-amount className={AMOUNT} style={chars(figure.text.length)}>
-        <ArrivalAmount from={seen ?? figure.value} to={figure.value} symbol={figure.symbol} decimals={figure.decimals} after={figure.after} thousands={figure.thousands} />
+      <p data-amount className={`${AMOUNT}${startedWithout ? " comes-up" : ""}`} style={chars(amountText(value, written).length)}>
+        <ArrivalAmount from={seen ?? value} to={value} symbol={written.symbol} decimals={written.decimals} after={written.after} thousands={written.thousands} />
       </p>
-      {!figure.rateDate && money.unavailable ? <p className={HELP}>{money.unavailable}</p> : null}
+      {figure && !figure.rateDate && money.unavailable ? <p className={HELP}>{money.unavailable}</p> : null}
     </section>
   );
 }

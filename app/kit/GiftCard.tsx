@@ -25,7 +25,18 @@ export function conditionNameOf(gift: GiftSummary): string | undefined {
  * and for what; under it the image of progress, the state in words, and one line of amounts. For what comes from the
  * register and never from the card (item 10). A daily gift draws its days, a milestone its meter.
  */
-export function GiftCard({ gift, milestone: given, example = false }: Readonly<{ gift: GiftSummary; milestone?: MilestoneStatus; example?: boolean }>) {
+export function GiftCard({
+  gift,
+  milestone: given,
+  example = false,
+  landed = false,
+}: Readonly<{
+  gift: GiftSummary;
+  milestone?: MilestoneStatus;
+  example?: boolean;
+  /** Read after its screen had arrived: what the card says comes up in place, inside a frame that is already there. */
+  landed?: boolean;
+}>) {
   // On Home and Gifts a milestone gift arrives inside its summary (C2); at the head of its page, beside it.
   const milestone = given ?? gift.milestone;
   /** The clock this reader keeps, so a card drawn by the server says their day and not the server's (D160). */
@@ -76,10 +87,28 @@ export function GiftCard({ gift, milestone: given, example = false }: Readonly<{
   return (
     <Link
       href={`/g/${gift.giftId}`}
-      className={`${CARD} block transition-[border-color] hover:border-[var(--control-border)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]`}
+      className={`${CARD} block transition-[border-color] hover:border-[var(--control-border)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]${landed ? " comes-up-within" : ""}`}
     >
       {body}
     </Link>
+  );
+}
+
+/** The height a gift's place is held at when this device kept none: a daily gift's card on a phone. */
+export const GIFT_PLACE_HEIGHT = 236;
+
+/**
+ * A gift's place while the list is read, on a device that saw one there last time (the founder, 9 Oct 2026): the card's
+ * own frame, at the height the card had, and quiet bars where its words will come up. Nothing in it is read out, and
+ * nothing in it can be pressed.
+ */
+export function GiftPlace({ height }: Readonly<{ height?: number }>) {
+  return (
+    <div aria-hidden data-gift-place="" className={`${CARD} gift-place`} style={{ height: height ?? GIFT_PLACE_HEIGHT }}>
+      <span className="gift-place-bar gift-place-who" />
+      <span className="gift-place-bar gift-place-what" />
+      <span className="gift-place-bar gift-place-state" />
+    </div>
   );
 }
 

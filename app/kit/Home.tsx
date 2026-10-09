@@ -1,14 +1,17 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAccount } from "@/src/account/provider";
+import { MOTION } from "@/src/design-tokens";
 import { HOME as W, NAV } from "@/src/sentences";
 import { BODY, HERO, LEAD, PRIMARY_BUTTON, SMALL_BUTTON, TITLE } from "../components/ui";
 import { Arrival, Reveal, type ArrivalGift } from "./Motion";
+import { Place, PlacesOf } from "./Place";
+import { forgetOnThisScreen, useSeen, useSeenMany, writeSeen } from "./seen";
 import { SignInDoor } from "./SignInDoor";
 import { EmptyState } from "./EmptyState";
-import { conditionNameOf, GiftCard } from "./GiftCard";
-import { MarkNotice } from "./MarkNotice";
+import { conditionNameOf, GiftCard, GiftPlace } from "./GiftCard";
+import { MarkNotice, namesTheMark } from "./MarkNotice";
 import { HeadCharacter } from "./HeadCharacter";
 import { dropStaleCardFragment, goToTheCard } from "./WayToTheCard";
 import { topAfterLongAbsence } from "@/src/launch-top";
@@ -50,6 +53,16 @@ import { WaitLine } from "./Waiting";
  */
 export const ROOM = { aboveWords: 1, beforeAction: 0.9, beforeCharacter: 1.1 } as const;
 
+/** How many gifts Home shows under the card. */
+const SHOWN = 3;
+/**
+ * What this device last saw of Home's list, kept with what else it saw (app/kit/seen.tsx): how many gifts the account
+ * had, and how tall each of the cards shown stood. It is what holds their places while the list is read (the founder,
+ * 9 Oct 2026). Numbers only, for the device and not per account, as the memory of the way out is.
+ */
+export const SEEN_GIFTS = "viky.seen.home.gifts";
+export const SEEN_GIFT_HEIGHTS: readonly string[] = Array.from({ length: SHOWN }, (_, at) => `viky.seen.home.gift.${at}`);
+
 export function Home({
   initialHoldings,
   initialGifts,
@@ -87,8 +100,30 @@ export function Home({
   const holdings = useHoldings(address, fromTheServer);
   const { gifts, problem } = useMyGifts(address, initialGifts);
   const nowMs = useMinute();
-  /** Whether the room the way out takes is held while the balance is read (app/kit/money.ts). */
-  const sawMoney = useSawMoney(holdings);
+  /** Whether the list has answered at all, with gifts or with a reading that failed. */
+  const giftsRead = gifts !== null || problem !== null;
+  /** Whether the way out is drawn while the balance is read (app/kit/money.ts): this device saw money here last time. */
+  const sawMoney = useSawMoney(holdings, gifts, giftsRead);
+  /** How many gifts this device last saw here, and how tall the cards shown stood: their places while they are read. */
+  const sawGifts = useSeen(SEEN_GIFTS);
+  const sawHeights = useSeenMany(SEEN_GIFT_HEIGHTS);
+  /** Whether the list was still to be read in this screen's first image: its cards then come up in place. */
+  const [listLands] = useState(gifts === null);
+  const list = useRef<HTMLElement>(null);
+  // What the list is now, kept for the next visit: how many, and how tall each card shown stands once it has settled.
+  useEffect(() => {
+    if (!address || gifts === null) return;
+    writeSeen(SEEN_GIFTS, gifts.length);
+    const settled = window.setTimeout(() => {
+      list.current?.querySelectorAll<HTMLElement>("[data-gift-row] a").forEach((card, at) => {
+        if (SEEN_GIFT_HEIGHTS[at]) writeSeen(SEEN_GIFT_HEIGHTS[at], Math.round(card.getBoundingClientRect().height));
+      });
+    }, MOTION.arrival.budgetMs);
+    return () => {
+      window.clearTimeout(settled);
+      [SEEN_GIFTS, ...SEEN_GIFT_HEIGHTS].forEach(forgetOnThisScreen);
+    };
+  }, [address, gifts]);
 
   // A "#offer" an earlier press left in the address is dropped on arrival, so the next launch starts at the top (D240).
   useEffect(() => {
@@ -163,7 +198,15 @@ export function Home({
     );
   }
 
-  const moving = gifts?.slice(0, 3) ?? [];
+  const moving = gifts?.slice(0, SHOWN) ?? [];
+  /** While the list is read: as many places as this device saw gifts, held at the heights their cards had. */
+  const held = gifts === null && !problem ? Math.min(SHOWN, sawGifts ?? 0) : 0;
+  const rows = gifts === null ? held : moving.length;
+  /**
+   * Whether the way out is drawn. Once the account and its gifts are read, when there is something to take; until
+   * then, when what has been read already says so, or when this device saw money here last time.
+   */
+  const toTake = holdings !== null && giftsRead ? holdsAnything(holdings, gifts) : (holdings !== null && holdsAnything(holdings)) || sawMoney;
   // Every reached gift this account has not had the moment of, played over Home once it has loaded (the founder).
   const owed = (gifts ?? []).filter((gift) => gift.reachedSeen === false).map(reachedOfSummary).filter((gift): gift is ReachedGift => gift !== null);
   // What changed since the last visit, per gift, which the arrival replays once and in order (brief, section 6).
@@ -172,50 +215,73 @@ export function Home({
     return { id: gift.giftId, days, lastSeen: days.filter((day) => day === "earned" || day === "returned").length };
   });
   return (
-    <Arrival storageKey="viky.seen.days" gifts={arriving} amount>
-      {/* With an account the column is exactly the card's width plus its margins (D128): the money, the button and
-          every gift under the card then share its two edges, and the column centres itself in the room beside the rail. */}
-      {/* With an account the money leads (D139). Every account app people already use puts the balance at the top,
-          Wise, Revolut and Monzo among them, and it is what somebody opens Viky to read; the card is the one action
-          under it. Without an account there is no money to read, and the card leads, which is D129's order. */}
-      {/* Its title, like Gifts and You: without one the head's row was the character's own height and the character
-          stood higher here than on the two other destinations (the founder, 24 Sep 2026, D230). */}
-      <Shell kind="destination" active="home" title={NAV.home} character={<HeadCharacter scene="home" />}>
-        <ReachedMoments gifts={owed} />
-        {/* A key this computer keeps for itself alone, said once (the founder, 5 Oct 2026): nothing on any other device. */}
-        <KeyKeptNotice />
-        {/* A payment started for a gift never made: said first, since the money for it may be what stands below (D74). */}
-        <FinishTheGift />
-        <MoneyHero address={address} holdings={holdings} gifts={gifts} giftsUnread={problem !== null} />
-        {/* The balance's own action, small and under it (the founder, 29 Sep 2026). It keeps its place while the
-            balance is being read (D147), so the card under it does not jump down when the answer lands. The room is
-            held only on a device that saw money here last time: a first visit holds nothing, and an account with
-            nothing to take never keeps a hole where a button is not. */}
-        {holdings === null ? sawMoney ? <SpendOrWithdraw holding /> : null : holdsAnything(holdings, gifts) ? <SpendOrWithdraw /> : null}
-        {/* The gift form under its own title, apart from the money above it: nothing between the two reads as one. */}
-        <h2 className={`${TITLE} mt-[var(--space-lg)]`}>{W.offer}</h2>
-        {/* The card starts on the account's own money when it holds any (D157). */}
-        <OfferCard holdings={holdings} paying={paying} onPaying={setPaying} onMaking={setMaking} />
-        {/* The gifts land one after another rather than all at once (D154). */}
-        <section className="arrives-in-turn flex flex-col gap-[var(--space-md)]">
-          <h2 className={TITLE}>{W.moving}</h2>
-          {problem ? <p className={BODY}>{problem}</p> : null}
-          {!problem && gifts === null ? <WaitLine>{W.loading}</WaitLine> : null}
-          {gifts !== null && gifts.length === 0 ? <EmptyState>{W.empty}</EmptyState> : null}
-          {moving.map((gift) => (
-            <Reveal key={gift.giftId}>
-              <GiftCard gift={gift} />
-            </Reveal>
-          ))}
-          {gifts !== null && gifts.length > 0 ? (
-            <Link href="/gifts" className={`${SMALL_BUTTON} self-start no-underline`}>
-              {W.seeAll}
-            </Link>
-          ) : null}
-        </section>
-        {/* A card that names the TOEFL: what its owner asks at the bottom of a page that names it. */}
-        <MarkNotice naming={moving.map(conditionNameOf)} />
-      </Shell>
-    </Arrival>
+    // Every block of this screen is at its place from the first image, and what is read after it changes in place
+    // (the founder, 9 Oct 2026, app/kit/Place.tsx): no block enters once the screen has arrived.
+    <PlacesOf>
+      <Arrival storageKey="viky.seen.days" gifts={arriving} amount>
+        {/* With an account the column is exactly the card's width plus its margins (D128): the money, the button and
+            every gift under the card then share its two edges, and the column centres itself in the room beside the rail. */}
+        {/* With an account the money leads (D139). Every account app people already use puts the balance at the top,
+            Wise, Revolut and Monzo among them, and it is what somebody opens Viky to read; the card is the one action
+            under it. Without an account there is no money to read, and the card leads, which is D129's order. */}
+        {/* Its title, like Gifts and You: without one the head's row was the character's own height and the character
+            stood higher here than on the two other destinations (the founder, 24 Sep 2026, D230). */}
+        <Shell kind="destination" active="home" title={NAV.home} character={<HeadCharacter scene="home" />}>
+          <ReachedMoments gifts={owed} />
+          {/* A key this computer keeps for itself alone, said once (the founder, 5 Oct 2026): nothing on any other device. */}
+          <KeyKeptNotice />
+          {/* A payment started for a gift never made: said first, since the money for it may be what stands below (D74). */}
+          <FinishTheGift />
+          <MoneyHero address={address} holdings={holdings} gifts={gifts} giftsUnread={problem !== null} />
+          {/* The balance's own action, small and under it (the founder, 29 Sep 2026). It is there while the balance is
+              being read on a device that saw money here last time (D147), so nothing under it moves when the answer
+              lands: a first visit holds nothing, and an account with nothing to take never keeps a hole where a button
+              is not. Where that memory was wrong, its place opens or closes by its height. */}
+          <Place open={toTake}>
+            <SpendOrWithdraw />
+          </Place>
+          {/* The gift form under its own title, apart from the money above it: nothing between the two reads as one. */}
+          <h2 className={`${TITLE} mt-[var(--space-lg)]`}>{W.offer}</h2>
+          {/* The card starts on the account's own money when it holds any (D157). */}
+          <OfferCard holdings={holdings} paying={paying} onPaying={setPaying} onMaking={setMaking} />
+          {/* The gifts land one after another rather than all at once (D154). */}
+          <section ref={list} className="arrives-in-turn flex flex-col gap-[var(--space-md)]">
+            <h2 className={TITLE}>{W.moving}</h2>
+            <Place open={problem !== null}>
+              <p className={BODY}>{problem}</p>
+            </Place>
+            {/* Said only where this device remembers nothing of the list: where it does, the list's places are held. */}
+            <Place open={!problem && gifts === null && sawGifts === undefined}>
+              <WaitLine>{W.loading}</WaitLine>
+            </Place>
+            {/* No gift: the sentence's own card, its place held, and its words not said, while a list that was empty
+                last time is read again. */}
+            <Place open={gifts === null ? !problem && sawGifts === 0 : gifts.length === 0}>
+              <div className={gifts === null ? "invisible" : listLands ? "comes-up" : undefined} aria-hidden={gifts === null}>
+                <EmptyState>{W.empty}</EmptyState>
+              </div>
+            </Place>
+            {/* One place for each gift shown, the same from the first image to the last: the card comes up in the place
+                that was held for it, and a place held for nothing closes. */}
+            {Array.from({ length: SHOWN }, (_, at) => (
+              <Place key={at} open={at < rows}>
+                <div data-gift-row="">
+                  <Reveal>{moving[at] ? <GiftCard gift={moving[at]} landed={listLands} /> : <GiftPlace height={sawHeights[at]} />}</Reveal>
+                </div>
+              </Place>
+            ))}
+            <Place open={gifts === null ? held > 0 : gifts.length > 0}>
+              <Link href="/gifts" className={`${SMALL_BUTTON} self-start no-underline`}>
+                {W.seeAll}
+              </Link>
+            </Place>
+          </section>
+          {/* A card that names the TOEFL: what its owner asks at the bottom of a page that names it. */}
+          <Place open={namesTheMark(moving.map(conditionNameOf))}>
+            <MarkNotice />
+          </Place>
+        </Shell>
+      </Arrival>
+    </PlacesOf>
   );
 }

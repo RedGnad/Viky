@@ -526,6 +526,12 @@ export const MOTION = {
    */
   reveal: { durationMs: 250, easing: EASING.standard, rise: 8, staggerMs: 80, mostStaggeredMs: 240, lastTurnMs: 240, fromOpacity: 0.6 },
   /**
+   * On a screen that has arrived (the founder, 9 Oct 2026): what lands later comes up in place, a fade and nothing
+   * else, and a place that was not held, or was held for nothing, opens or closes by its height on the entrance's own
+   * curve while the blocks under it slide (app/kit/Place.tsx). Never a jump, and never the entrance again.
+   */
+  place: { fadeMs: 180, heightMs: 220, easing: EASING.standard },
+  /**
    * The posters under the landing's card (the founder, 5 Oct 2026, on a living mockup; second pass the same day): each
    * plays once, when its title's top reaches `startAt` of the screen's height. The words rise one after the other,
    * their position overshooting and their opacity never; the character lands in its word out of nothing, on a spring;
