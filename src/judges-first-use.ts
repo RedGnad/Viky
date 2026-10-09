@@ -56,6 +56,31 @@ export const FIRST_BANK_PAYOUT = {
 export type FollowedExchange = typeof FIRST_BANK_PAYOUT;
 
 /**
+ * The two passes a student has made from the Université de Toulouse's portal, as the judges page and the README say
+ * them (the founder, 9 Oct 2026). Both payments are on the chain, made by the second milestone contract to one
+ * account. The first proof was the first from that university: it was held, and paid once the operator had read what
+ * it read. The second ran on the rule fixed ahead of it: the verification opened at Reclaim at 12:54:27 UTC, its
+ * proof was relayed in the block of 12:55:27, and no review holds a line for the gift (Viky's own rows, read the
+ * same day). How long it took is worked out here from those two moments, and never typed.
+ */
+export const TOULOUSE_PASSES = {
+  first: { day: "7 Oct 2026", giftId: "1000006", paidTx: "0x9c5508e83b0dd20668bb6a8c683faa047820734d6938387f8b6f516c3467c4fd" },
+  onTheFixedRule: {
+    day: "9 Oct 2026",
+    giftId: "1000008",
+    opened: new Date("2026-10-09T12:54:27Z"),
+    paid: new Date("2026-10-09T12:55:27Z"),
+    block: 111_901_591,
+    paidTx: "0xd950295c4c3d51480496003fd6547b0fc6c3546ac0c5747d377e6259cd3277e2",
+  },
+} as const;
+
+/** The seconds between a verification opening and the block that paid its gift. */
+export function secondsToPay(pass: Readonly<{ opened: Date; paid: Date }>): number {
+  return Math.round((pass.paid.getTime() - pass.opened.getTime()) / 1_000);
+}
+
+/**
  * A way out that needs no setting, the bank or the card: the first exchange the journal holds for it, the dollars
  * changed and the least they were to give of the coin its payout service buys. What the service then pays is on its
  * side and in no journal here; where it was recorded by hand for that same exchange (`followed`), the page says the

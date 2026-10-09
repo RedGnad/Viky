@@ -3,6 +3,7 @@ import type { IndexRead } from "@/src/envio-index";
 import { formatAusd } from "@/src/gift-reader";
 import { BLOCK_TIME, creditedDayMon, dollarsOf, FINALITY_GAP, monWords, RELAYER_FEES } from "@/src/measured";
 import { PUBLIC_RPC_URL } from "@/src/monad/chain";
+import { secondsToPay, TOULOUSE_PASSES } from "@/src/judges-first-use";
 import { founderAccounts, usageOf } from "@/src/pilot-accounts";
 import { countInWords } from "@/src/university-choice";
 import { CopyLine } from "../kit/CopyLine";
@@ -26,10 +27,10 @@ function Address({ address }: Readonly<{ address: string }>) {
  * for, who has used it in one line, where it runs, why Monad in three lines, and one command. Everything here is said
  * again, at length and with its source, in a section below; this block adds no claim of its own.
  *
- * The universities are three lines: the one a student has shown from, with the gift it paid (its transactions are in
- * the README), how many more are listed, counted from the list as the page is served, and what happens to a first
- * proof. What a first proof meets exactly, held and read or paid on a rule fixed ahead, is said under "Providers read
- * through a witness".
+ * The universities are lines: the one a student has shown from, its last pass first and its first pass under it, each
+ * with the transaction that paid (src/judges-first-use.ts; the README gives the rest), how many more are listed,
+ * counted from the list as the page is served, and what happens to a first proof. What a first proof meets exactly,
+ * held and read or paid on a rule fixed ahead, is said under "Providers read through a witness".
  *
  * The figures of use are counted from the index as the page is served, the same count as "Who has used Viky"; when
  * the index does not answer the line says so and gives no figure. The figures of "Why Monad" are the measured ones
@@ -87,7 +88,21 @@ export function JudgesMinute({
             alone, how many more, and what happens to a first proof. */}
         <dt className={MUTED}>Universities</dt>
         <dd className={HELP} data-minute="universities">
-          <span className="block">Toulouse: a real student showed their enrolment, and the gift paid.</span>
+          {/* The day's fact (the founder, 9 Oct 2026): the pass on the rule fixed ahead, then the first one under it. */}
+          <span className="block" data-toulouse="on-the-fixed-rule">
+            Toulouse, {TOULOUSE_PASSES.onTheFixedRule.day}: a student showed their enrolment, and{" "}
+            <a className="underline" href={`https://monadvision.com/tx/${TOULOUSE_PASSES.onTheFixedRule.paidTx}`}>
+              the gift paid
+            </a>{" "}
+            {secondsToPay(TOULOUSE_PASSES.onTheFixedRule)} seconds after the verification opened, with no review.
+          </span>
+          <span className="block" data-toulouse="first">
+            Toulouse, {TOULOUSE_PASSES.first.day}, the first pass: a real student showed their enrolment, and{" "}
+            <a className="underline" href={`https://monadvision.com/tx/${TOULOUSE_PASSES.first.paidTx}`}>
+              the gift paid
+            </a>{" "}
+            once the proof had been read by hand.
+          </span>
           {/* A university ready on Reclaim's own check, from its row as it stands (src/university-ready.ts). */}
           {readyOnReclaim.map((name) => (
             <span className="block" key={name} data-ready-on-reclaim="">

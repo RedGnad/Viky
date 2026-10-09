@@ -162,18 +162,22 @@ test("what the rules ask of a README is all there (section 4.1), and the licence
 test("what has run with real money is only what has a transaction, each with its link", () => {
   const ran = section("What has run with real money");
   const links = [...ran.matchAll(/\[`0x[0-9a-f]{4}…[0-9a-f]{4}`\]\(https:\/\/monadvision\.com\/tx\/(0x[0-9a-f]{64})\)/g)].map((found) => found[1]);
-  assert.equal(links.length, 11);
-  assert.equal(new Set(links).size, 11, "eleven transactions, none said twice");
+  assert.equal(links.length, 12);
+  assert.equal(new Set(links).size, 12, "twelve transactions, none said twice");
   // Every item of the lists carries one: nothing is said to have run on words alone.
   const items = ran.split("\n").filter((line) => /^\s*(- \*\*|\d\. )/.test(line));
-  assert.equal(items.length, 13, "four things, one of them in six steps and one in three");
+  assert.equal(items.length, 14, "five things, one of them in six steps and one in three");
   const text = ran.replace(/\n\s+/g, " ");
   for (const step of text.split(/(?=\s\d\. )/).slice(1)) assert.match(step, /monadvision\.com\/tx\/0x[0-9a-f]{64}/, step.slice(0, 60));
   // The gift that ran end to end is said for what it is: the author's own, between two of his accounts.
   assert.match(ran, /made by the\s+author between two of his own accounts/);
   // The first gift between two people who are not the author: said with its three transactions, with the review that
   // came before the money, and with what its proof read and no more (7 Oct 2026).
-  assert.match(ran, /\*\*A gift between two people who are not the author, paid on a proof from a university's portal\.\*\*/);
+  assert.match(ran, /\*\*The first pass, two days before: a gift between two people who are not the author, paid on a proof from a\s+university's portal\.\*\*/);
+  // Over it, the day's fact (the founder, 9 Oct 2026): the same account, on the rule fixed ahead, paid with no review.
+  assert.match(ran, /\*\*Toulouse, 9 Oct 2026: a student showed their enrolment, and the gift paid 60 seconds after the verification\s+opened, with no review\.\*\*/);
+  assert.ok(links.includes("0xd950295c4c3d51480496003fd6547b0fc6c3546ac0c5747d377e6259cd3277e2"));
+  assert.ok(ran.indexOf("Toulouse, 9 Oct 2026") < ran.indexOf("The first pass, two days before"));
   assert.match(ran, /created and funded by a third party, in a student's name/);
   assert.match(ran, /it was held, and nothing moved until the\s+operator had read what it had read/);
   assert.match(ran, /What that proof read is narrow, and is said as it is: signed in to his own file, the answer to one click carried the\s+academic year 2026-2027\./);

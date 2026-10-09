@@ -140,7 +140,14 @@ index, and the testers' figures come with the submission.
   6. 03:44: the 0.187 AUSD it earned withdrawn ([`0xf2d4…cf10`](https://monadvision.com/tx/0xf2d4cdb9393dc0e4507a6f282991edccdf93ecd60e18323cd33e1e5f8b59cf10)). The contract holds nothing of it.
 - **A card payment converted.** 3 Oct 2026: the USDC a card service delivered to the funder's own account, changed
   into 7.914524 AUSD on one signature ([`0x533e…1616`](https://monadvision.com/tx/0x533ec0746493e0670029b917887b8e15376380a4a9c7bb82706b2de910ed1616)).
-- **A gift between two people who are not the author, paid on a proof from a university's portal.** Gift 1000006 on
+- **Toulouse, 9 Oct 2026: a student showed their enrolment, and the gift paid 60 seconds after the verification
+  opened, with no review.** Gift 1000008 on the second `MilestoneGift`, 5.02 AUSD for staying enrolled, made out to
+  the same account as the gift below. The verification opened at 12:54:27 UTC, on the rule fixed ahead of the pass,
+  and the gift paid in the block of 12:55:27
+  ([`0xd950…77e2`](https://monadvision.com/tx/0xd950295c4c3d51480496003fd6547b0fc6c3546ac0c5747d377e6259cd3277e2)).
+  Nobody read the proof first: it fitted the rule, so it was paid at once.
+- **The first pass, two days before: a gift between two people who are not the author, paid on a proof from a
+  university's portal.** Gift 1000006 on
   the second `MilestoneGift`, 8.98 AUSD for staying enrolled. All times are UTC.
   1. 5 Oct 2026, 12:19: created and funded by a third party, in a student's name ([`0x7ab3…0690`](https://monadvision.com/tx/0x7ab335573f852af027c034f181c5788f4d38f0c1bc4a4937ef0dc28f787a0690)).
   2. 7 Oct, 12:15: opened by the student ([`0xdf97…a950`](https://monadvision.com/tx/0xdf971f921f2533b984c434d2010e73a08e2012e43532ebc95d54843053c3a950)).
