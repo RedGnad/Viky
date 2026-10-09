@@ -19,7 +19,7 @@ import { endpointOf } from "../src/push-endpoint";
 import { READING_FINGERPRINT } from "../src/reading-fingerprint";
 import { admitJudgeTry, JUDGE_TRIES_PER_CONNECTION } from "../src/relay-admission";
 import { configureRelayCeilingStore, ensureRelayCeilingSchema } from "../src/relay-ceiling-store";
-import { absentPassAlert, announcedSignerAlert, evidenceKeyAlert, pinAlert, relayerAlert, testAlert, watchAfterMorning, watchAtPassStart, type Alert, type WatchDeps } from "../src/watch";
+import { absentPassAlert, announcedSignerAlert, evidenceKeyAlert, healthAlert, pinAlert, relayerAlert, testAlert, watchAfterMorning, watchAtPassStart, type Alert, type WatchDeps } from "../src/watch";
 
 /**
  * Holding during the judging (the audit of 1 Oct 2026, PR 6): the health answer, the alerts, the judge credit's ceiling
@@ -183,6 +183,7 @@ function watchDeps(sent: Alert[], over: Partial<WatchDeps> = {}): WatchDeps {
     exitPin: async () => ({ pinned: PINNED, pointsAt: PINNED }),
     evidenceKeys: async () => ({ ours: KEY, named: [{ contract: A, signer: KEY }] }),
     lastCountingPass: async () => new Date("2026-10-02T00:35:00Z"),
+    health: async () => ({ database: { ok: true }, worker: { ok: true } }),
     allowanceDue: async () => [],
     alert: async (alert) => {
       sent.push(alert);
@@ -223,6 +224,7 @@ test("the watch after the morning sends what it sees, and what it cannot read ne
   const quiet: Alert[] = [];
   assert.deepEqual(await watchAfterMorning(watchDeps(quiet)), [
     { watched: "morning pass", result: "holds" },
+    { watched: "database and reading service", result: "holds" },
     { watched: "exit pin", result: "holds" },
     { watched: "evidence key", result: "holds" },
     { watched: "announced signer", result: "holds" },
@@ -239,8 +241,29 @@ test("the watch after the morning sends what it sees, and what it cannot read ne
       evidenceKeys: async () => ({ ours: KEY, named: [{ contract: A, signer: B }] }),
     }),
   );
-  assert.deepEqual(lines.map((line) => line.result), ["alert sent", "not read", "alert sent", "holds", "holds"]);
+  assert.deepEqual(lines.map((line) => line.result), ["alert sent", "holds", "not read", "alert sent", "holds", "holds"]);
   assert.deepEqual(sent.map((alert) => alert.subject), ["The morning pass has not run today", "The evidence key of this environment is not the one the contracts name"]);
+});
+
+test("the nightly watch reads the health and tells what does not hold of the database and the reading service", async () => {
+  // The audit of 9 Oct 2026: the monitor's page said it to whoever looked, and nobody was told.
+  assert.equal(healthAlert({ database: { ok: true }, worker: { ok: true } }), null);
+  const both = healthAlert({ database: { ok: false, fault: "unreachable" }, worker: { ok: false, fault: "differs" } });
+  assert.equal(both?.subject, "Not holding at the nightly watch: the database (unreachable), the reading service (differs)");
+  assert.match(String(both?.text), /found the database \(unreachable\) and the reading service \(differs\) not holding\. \/api\/health answers the same reading/);
+  assert.equal(healthAlert({ database: { ok: true }, worker: { ok: false, fault: "unreachable" } })?.subject, "Not holding at the nightly watch: the reading service (unreachable)");
+  // No reason of an error is in the email: it can name a host or a key, and it is in the logs.
+  assert.doesNotMatch(String(both?.text), /ECONN|postgres|https?:\/\//);
+  const sent: Alert[] = [];
+  const lines = await watchAfterMorning(watchDeps(sent, { health: async () => ({ database: { ok: false, fault: "unreachable" }, worker: { ok: true } }) }));
+  assert.deepEqual(lines[1], { watched: "database and reading service", result: "alert sent" });
+  assert.deepEqual(sent.map((alert) => alert.subject), ["Not holding at the nightly watch: the database (unreachable)"]);
+  // A health reading that itself fails is a line, and the rest of the watch goes on.
+  const unread = await watchAfterMorning(watchDeps([], { health: async () => Promise.reject(new Error("no answer")) }));
+  assert.deepEqual(unread[1], { watched: "database and reading service", result: "not read" });
+  assert.equal(unread.length, 6);
+  // What reads it when the cron runs: the same reading the monitor's page answers.
+  assert.match(readFileSync("src/watch.ts", "utf8"), /health: \(\) => readHealth\(\),/);
 });
 
 test("a signer announced on a contract of the second version is told while it waits, whoever announced it", async () => {

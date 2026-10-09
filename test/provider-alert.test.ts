@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { attemptFor } from "../src/gift-attempt";
 import { ALERT_TO, providerAlert, sendProviderAlert } from "../src/provider-alert";
@@ -24,6 +25,12 @@ test("the email names the university, the sense, the gift, the instruction and t
 
 test("without Resend's key the email is not sent, and nothing throws", async () => {
   assert.equal(await sendProviderAlert(UCAD, { sense: "enrolment", instruction: "x", firstGiftId: null }, {}), "not configured");
+  // The recipient the example settings announce is the one written to, and the founder's address otherwise (the audit
+  // of 9 Oct 2026: ALERT_TO was announced in .env.example and read nowhere). And a missing key leaves a line.
+  const alert = readFileSync("src/provider-alert.ts", "utf8");
+  assert.match(alert, /to: \[env\.ALERT_TO\?\.trim\(\) \|\| ALERT_TO\]/);
+  assert.match(alert, /if \(!key\) \{[\s\S]{0,260}notSent\(subject, "no sending key is set \(RESEND_API_KEY\)"\);\s+return "not configured";/);
+  assert.match(readFileSync(".env.example", "utf8"), /^ALERT_TO=$/m);
 });
 
 test("a request kept for one university, scale or target is never sent again for another", () => {

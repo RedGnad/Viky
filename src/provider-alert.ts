@@ -14,6 +14,7 @@ import { countryInWords } from "./university-shown";
  * sender needs its domain verified at Resend, and is named in `ALERT_FROM`.
  */
 
+/** Who is written to unless `ALERT_TO` names somebody else (.env.example). It was announced there and read nowhere. */
 export const ALERT_TO = "founder@viky.cash";
 const DEFAULT_FROM = "Viky <onboarding@resend.dev>";
 
@@ -90,9 +91,14 @@ function notSent(subject: string, why: string): void {
  */
 export async function sendAlert({ subject, text }: { subject: string; text: string }, env: Readonly<Record<string, string | undefined>> = process.env): Promise<AlertOutcome> {
   const key = env.RESEND_API_KEY?.trim();
-  if (!key) return "not configured";
+  if (!key) {
+    // Said in the logs as a refusal is (the audit of 9 Oct 2026): an environment with no sending key sent nothing and
+    // left no trace of what it had to say.
+    notSent(subject, "no sending key is set (RESEND_API_KEY)");
+    return "not configured";
+  }
   try {
-    const { error } = await new Resend(key).emails.send({ from: env.ALERT_FROM?.trim() || DEFAULT_FROM, to: [ALERT_TO], subject, text });
+    const { error } = await new Resend(key).emails.send({ from: env.ALERT_FROM?.trim() || DEFAULT_FROM, to: [env.ALERT_TO?.trim() || ALERT_TO], subject, text });
     if (error) notSent(subject, `${error.name ?? "refused"}: ${String(error.message ?? "")}`);
     return error ? "failed" : "sent";
   } catch (failure) {
