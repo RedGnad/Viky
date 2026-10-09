@@ -17,7 +17,8 @@ import { judgeLineIsTrue } from "@/src/judge-line";
 import { formatAusd } from "@/src/gift-reader";
 import { savePendingGift } from "@/src/pending-gift";
 import { heldForTheLines, payWith, type HeldReading } from "@/src/pay-held";
-import { cardSum, giftTyped, heldIn, moneyIn, perEuro } from "@/src/pay-sum";
+import { cardSum, giftTyped, heldIn, moneyIn, perEuro, smallestGiftByCard, toDecimals } from "@/src/pay-sum";
+import { unitsFromTyped } from "@/src/amount-in-currency";
 import type { RailReach } from "@/src/rail-country";
 import { feeInALine, wayInFillsIn, wayInPage, waysIn, WAY_IN_USDC } from "@/src/rails";
 import { frameKeepsSignIn, rampnowFrameOn } from "@/src/rampnow-frame";
@@ -40,9 +41,10 @@ import { WaitLine } from "../Waiting";
  * Paying for the gift (the founder's mockup pay-sheet-2026-10-03, validated 3 Oct 2026, which follows pay.html of
  * 19 Sep 2026 and adds the two things a payer needs since: their name, and the account's share).
  *
- * In this order and nothing else in the open: the name, the one thing to fill in; lines that add up, in the one money
- * the gift was typed in (the gift, what the account puts in, the card's fee, what stays, and that Viky takes nothing);
- * the total; one action; one line under it saying who takes the card and its terms. Then one fold for a careful reader,
+ * In this order and nothing else in the open: the name, the one thing to fill in; the gift, what the account puts in,
+ * and that Viky takes nothing, in the one money the gift was typed in; the total; one action; under it, when a card
+ * pays, one line that adds up to the cent to what the action says (the gift, the card's fee, what stays), then one
+ * line saying who takes the card and its terms. Then one fold for a careful reader,
  * "What happens to my money". The link's warning lives on the link's screen, the rate in the fold, and the passkey's
  * line only where the press makes an account.
  *
@@ -51,6 +53,11 @@ import { WaitLine } from "../Waiting";
  * what the card is asked, open and filled in, with a small button; otherwise a small "Have a code?" stands right
  * under the card's button, before the card service's own line, and opens the field there. Using it makes the account of somebody who has none, and once the credit
  * is in, the sheet's button pays with it, with no card, no fee and no smallest payment.
+ *
+ * The card is asked for the gift and its fee to the cent where its service takes cents (`WayIn.cents`), so what
+ * stays is the few cents a rate needs and no longer the rest of a whole euro. And under the service's smallest
+ * payment no card is offered: the floor is said, and the one action brings the gift to the smallest round amount a
+ * card can pay for. The sheet used to ask five euros for a gift of three and leave two in the account.
  *
  * One way in, chosen for the person (D239, the founder's decision of 25 Sep 2026): the first card service unless it
  * refuses them, by its own answer about their country, its own asset list, or its published floor; then the next, and
@@ -216,18 +223,28 @@ export function PaySheet({
   const codeAwaited = !codeFromLink && !enough && pays === "card" && credits === null;
   // The credit was given a moment ago and the account, read before it, is being read again: no card is named meanwhile.
   const creditArriving = codeGiven !== null && pays === "card";
-  // The card's lines, its figure and its line of terms are drawn for the card alone.
-  const byCard = pays === "card" && !cardClosed && !creditArriving;
+  // Under every card service's smallest payment (9 Oct 2026): no card is offered, and a gift a card can pay for is.
+  const underTheFloor = pays === "card" && !cardClosed && !creditArriving && offer.atFloor;
+  // The card's lines, its figure and its line of terms are drawn for the card alone, and above its service's floor.
+  const byCard = pays === "card" && !cardClosed && !creditArriving && !offer.atFloor;
   const euros = units === undefined || !byCard ? 0 : offer.euros;
   // One money on the whole sheet, the one the gift was typed in (the mockup of 3 Oct 2026); dollars when no rate is read.
   const code = money.rates && perEuro(money.currency, money.rates) !== undefined ? money.currency : "USD";
   const say = (amount: number) => moneyIn(amount, code);
   const gift = units === undefined ? undefined : giftTyped({ typedAmount: draft.typedAmount, typedIn: draft.typedIn, units, code, rates: money.rates });
-  // The card pays whole euros and the account the rest, so the lines add up to the card's figure (src/pay-sum.ts).
+  // The card pays what its service is asked for and the account the rest, so the figures add up to the card's (src/pay-sum.ts).
   const sum = byCard && euros && gift !== undefined ? cardSum({ code, gift, cardEuros: euros, feeEuros: serviceChargeEur(euros, way.fee), rates: money.rates }) : undefined;
   const feeCeiling = Boolean(euros) && serviceChargeIsCeiling(euros ?? 0, way.fee);
   const heldRead = heldIn(inAccount, code, money.rates);
   const giftRead = gift === undefined ? formatAusd(units ?? 0n) : say(gift);
+  // The one line under the card's button: the part of the gift the card pays, its fee, and what stays, which add up
+  // to the card's figure to the cent.
+  const cardSaid = sum
+    ? W.cardSum({ gift: say(toDecimals(sum.gift - sum.fromAccount, code)), part: sum.fromAccount > 0, fee: feeCeiling ? W.upTo(say(sum.fee)) : say(sum.fee), stays: sum.stays > 0 ? say(sum.stays) : null })
+    : null;
+  // Under the floor: the floor in the sheet's money, and the smallest round gift a card can pay for.
+  const floorSaid = underTheFloor ? say(way.smallestEur * (perEuro(code, money.rates) ?? 1)) : null;
+  const floorGift = underTheFloor && gift !== undefined ? smallestGiftByCard({ way, code, gift, heldUnits: inAccount, rates: money.rates }) : undefined;
   // The gift is paid from a balance no larger than the judge credit, with nothing gone out of the account since it
   // arrived (D295): the balance is then the credit alone, and the sheet may say the credit pays.
   const paidFromCredit = judgeLineIsTrue({ gift: units, held: held.state === "read" ? held.parts.ausd : null, untouchedCredit });
@@ -275,6 +292,13 @@ export function PaySheet({
       setProblem(W.notMade);
       setBusy(false);
     }
+  };
+
+  /** Brings the gift to the smallest round amount a card can pay for, in the sheet's own money, as if it had been typed. */
+  const raiseTheGift = () => {
+    if (floorGift === undefined) return;
+    const typed = String(floorGift);
+    onChange({ ...draft, dollars: formatAusd(unitsFromTyped(typed, code, money.rates)).slice(1), typedAmount: typed, typedIn: code });
   };
 
   /**
@@ -367,7 +391,11 @@ export function PaySheet({
   /** What the account puts in, said as the part taken from the gift: "\u2212 €8.24". */
   const less = (amount: number) => `\u2212\u2009${say(amount)}`;
   // The figure the sheet adds up to, and the action that pays it: the card's, the account's, or none to show.
-  const total = enough ? { label: W.rows.fromAccount, amount: giftRead } : sum ? { label: W.youPay, amount: say(sum.card) } : undefined;
+  // The card services are opened in euros for everybody (src/rails.ts). Where the sheet counts in another money, the
+  // card's figure in that money is the euros at the day's rate, not what the bank will take: it is said "about", and
+  // the euros the card is charged are said under the button, to the cent (the audit of 9 Oct 2026, F19).
+  const converted = code !== "EUR";
+  const total = enough ? { label: W.rows.fromAccount, amount: giftRead } : sum ? { label: W.youPay, amount: converted ? `${W.about} ${say(sum.card)}` : say(sum.card) } : undefined;
 
   return (
     <Sheet open={open} title={W.title(recipient)} onClose={close} tall>
@@ -390,12 +418,9 @@ export function PaySheet({
           <>
             {pays !== "card" ? null : cardClosed ? (
               heldRead !== undefined && inAccount > 0n ? line(W.rows.fromAccount, less(heldRead)) : null
-            ) : sum ? (
-              <>
-                {sum.fromAccount > 0 ? line(W.rows.fromAccount, less(sum.fromAccount)) : null}
-                {line(W.rows.fee, feeCeiling ? W.upTo(say(sum.fee)) : say(sum.fee))}
-                {sum.stays > 0 ? line(W.rows.stays, say(sum.stays)) : null}
-              </>
+            ) : sum && sum.fromAccount > 0 ? (
+              // The fee and what stays are said in one line under the card's button (9 Oct 2026), not as lines here.
+              line(W.rows.fromAccount, less(sum.fromAccount))
             ) : null}
           </>
         )}
@@ -431,8 +456,14 @@ export function PaySheet({
             <>
               {/* While what the account holds is not known, the button names no way to pay and does not go (the
                   founder, 5 Oct 2026): it said "by card" to somebody who had the money, and a press led there. */}
-              <Button waiting={!ready || !settled || status === "busy"} doing={busy ? W.paying : null} step={WAITS.account} onPress={() => void pay()} data-pays={pays}>
-                {enough ? (paidFromCredit ? W.code.payWithCredit(giftRead) : W.payFromAccount(giftRead, recipient)) : sum ? W.payByCard(say(sum.card)) : W.pay}
+              {/* Under the card service's smallest payment: the floor is said, and the action is the gift a card can pay for. */}
+              {floorSaid ? (
+                <p className={BODY} data-card-floor="">
+                  {W.cardStartsAt(floorSaid)}
+                </p>
+              ) : null}
+              <Button waiting={!ready || !settled || status === "busy"} doing={busy ? W.paying : null} step={WAITS.account} onPress={() => (underTheFloor ? raiseTheGift() : void pay())} data-pays={underTheFloor ? "floor" : pays}>
+                {underTheFloor ? (floorGift === undefined ? W.pay : W.makeTheGift(say(floorGift))) : enough ? (paidFromCredit ? W.code.payWithCredit(giftRead) : W.payFromAccount(giftRead, recipient)) : sum ? W.payByCard(say(sum.card)) : W.pay}
               </Button>
               {pays === "reading" ? <WaitLine>{W.readingAccount}</WaitLine> : null}
               {/* A reading that failed is said, with what reads it again. Never the card in its place. */}
@@ -443,6 +474,18 @@ export function PaySheet({
                     {W.readAgain}
                   </button>
                 </>
+              ) : null}
+              {/* One line that adds up to the cent to what the button says: the gift, the card's fee, what stays. */}
+              {cardSaid ? (
+                <p className={HELP} data-card-sum="">
+                  {cardSaid}
+                </p>
+              ) : null}
+              {/* What the card is really charged, where the figures above are a conversion. */}
+              {sum && converted ? (
+                <p className={HELP} data-card-charged="">
+                  {W.cardCharged(moneyIn(sum.cardEuros, "EUR"))}
+                </p>
               ) : null}
             </>
           )}
@@ -478,7 +521,7 @@ export function PaySheet({
       {/* Where the card is not offered, an account is what money can be sent to: somebody without one makes it here. */}
       {!creditArriving && pays === "card" && cardClosed && !address ? <AccountPanel /> : null}
       {/* No code where the card is paid inside Viky: that sheet is already told whose account it is. */}
-      {!creditArriving && pays === "card" && (cardClosed || (!wayInFillsIn(way) && !way.embedded)) && address ? (
+      {!creditArriving && !underTheFloor && pays === "card" && (cardClosed || (!wayInFillsIn(way) && !way.embedded)) && address ? (
         <div className="flex flex-col gap-[var(--space-xs)]">
           <p className={CARD_LABEL}>{W.yourCode}</p>
           <p className={`${HELP} select-all break-all tabular-nums`}>{address}</p>
