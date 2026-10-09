@@ -28,7 +28,20 @@ type Busy = "loading" | "connecting" | "starting" | "erasing" | null;
 
 const CARD = "flex flex-col gap-[var(--space-md)]";
 
-export function ConnectTheAccount({ giftId, conditionId, yours, onChanged }: Readonly<{ giftId: string; conditionId: string; yours: boolean; onChanged: () => Promise<void> | void }>) {
+export function ConnectTheAccount({
+  giftId,
+  conditionId,
+  yours,
+  dayOneIsTheStart = false,
+  onChanged,
+}: Readonly<{
+  giftId: string;
+  conditionId: string;
+  yours: boolean;
+  /** The gift's first day is the day counting starts, and not the day after (`firstDayIsTheStart`, src/v2.ts). */
+  dayOneIsTheStart?: boolean;
+  onChanged: () => Promise<void> | void;
+}>) {
   const condition = conditionById(conditionId);
   const link = condition?.link;
   const source = link?.kind === "connect" ? condition?.source.toLowerCase() : null;
@@ -43,7 +56,7 @@ export function ConnectTheAccount({ giftId, conditionId, yours, onChanged }: Rea
   });
   const [said, setSaid] = useState<string | null>(() => {
     if (typeof window === "undefined" || link?.kind !== "connect") return null;
-    return new URLSearchParams(window.location.search).get("connect") === "done" ? link.consent.connected : null;
+    return new URLSearchParams(window.location.search).get("connect") === "done" ? (dayOneIsTheStart ? link.consent.connectedDayOne : link.consent.connected) : null;
   });
 
   // The connection's state, read from the server when the screen is drawn and after each gesture: a promise's
@@ -125,7 +138,9 @@ export function ConnectTheAccount({ giftId, conditionId, yours, onChanged }: Rea
       <p className="font-medium">{words.title}</p>
       {status?.connected ? (
         <>
-          <p className={BODY}>{said ?? words.connected}</p>
+          <p className={BODY} data-connected-says="">
+            {said ?? (dayOneIsTheStart ? words.connectedDayOne : words.connected)}
+          </p>
           {!status.bound ? (
             <>
               <Button doing={busy === "starting" ? W.reading : null} step={WAITS.connecting(condition?.source ?? "")} waiting={working && busy !== "starting"} onPress={() => void start()}>

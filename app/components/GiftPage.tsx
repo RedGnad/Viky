@@ -5,7 +5,7 @@ import { useMinute } from "../kit/clock";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { openWithTheLinkSecret, type StartStep } from "@/src/client/v2";
 import { openingSecretOf } from "@/src/v2-protocol";
-import { opensByItsLink, paysTheSameDay } from "@/src/v2";
+import { firstDayIsTheStart, opensByItsLink, paysTheSameDay } from "@/src/v2";
 import { useMoneySession } from "@/src/account/money-session";
 import { isAccountError } from "@/src/account/errors";
 import { useDoor } from "@/src/account/door";
@@ -787,7 +787,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
         );
       case "connect":
         // A condition of the third nature is connected, not named (D189): the source's own page, one gesture.
-        if (condition?.link.kind === "connect") return <ConnectTheAccount giftId={giftId} conditionId={condition.id} yours={mine} onChanged={reloadAll} />;
+        if (condition?.link.kind === "connect") return <ConnectTheAccount giftId={giftId} conditionId={condition.id} yours={mine} dayOneIsTheStart={firstDayIsTheStart(status.version)} onChanged={reloadAll} />;
         return connectWords ? (
           <ConnectTheSource
             words={connectWords}

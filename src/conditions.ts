@@ -188,6 +188,13 @@ export type ConnectConsent = Readonly<{
   connecting: string;
   /** Once connected: what is now true, and the gesture that starts the counting. */
   connected: string;
+  /**
+   * The same, on the third daily contract, where the day counting starts is the gift's first day (the audit of 9 Oct
+   * 2026): "From tomorrow" was said to somebody whose first day was already running.
+   */
+  connectedDayOne: string;
+  /** A reading of yesterday's page that did not reach the target, in the source's own unit: what was read, and what happened. */
+  notReached: string;
   start: string;
   /** The way out, and what it says once done. */
   disconnect: string;
@@ -1021,6 +1028,8 @@ export const FITBIT_DAILY: Condition = {
       connect: "Connect Fitbit",
       connecting: "Opening Fitbit",
       connected: "Fitbit is connected. From tomorrow, every day with your minutes is yours, counted each morning.",
+      connectedDayOne: "Fitbit is connected. Start counting: today is day one, and its minutes are read tomorrow morning.",
+      notReached: "Yesterday's minutes did not reach your target. Nothing was counted.",
       start: "Start counting",
       disconnect: "Disconnect and erase",
       erased: "Disconnected. Google's key is given back and nothing of yours is kept. Connect again whenever you like.",
@@ -1202,6 +1211,8 @@ export const STRAVA_DAILY: Condition = {
       connect: "Connect Strava",
       connecting: "Opening Strava",
       connected: "Strava is connected. From tomorrow, every day with your kilometres is yours, counted each morning.",
+      connectedDayOne: "Strava is connected. Start counting: today is day one, and its kilometres are read tomorrow morning.",
+      notReached: "Yesterday's kilometres did not reach your target. Nothing was counted.",
       start: "Start counting",
       disconnect: "Disconnect and erase",
       erased: "Disconnected. Strava's key is given back and nothing of yours is kept. Connect again whenever you like.",
