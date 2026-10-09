@@ -2258,6 +2258,14 @@ export const CASH_OUT = {
   comeBack: (name: string) => [`${name} opens in a new tab and uses its own words.`, "Come back to this tab with the code it gives you."],
   /** The way back to money already made ready, from the first screen, now that it no longer opens by itself. */
   continueReady: (name: string) => `Continue with ${name}`,
+  /**
+   * The other way on, beside it (the audit of 9 Oct 2026): a withdrawal started and left held its money "ready to
+   * send" for good, out of every other use of this screen. The press changes it back into the balance.
+   */
+  useAnotherWay: "Use it another way",
+  puttingBack: "Putting it back in your balance, a few seconds.",
+  /** True wherever the step stopped: what was not changed back is still in the account, as it was. */
+  notPutBack: "It could not be put back just now. It is still in your account.",
   giveThisCode: (name: string) => `When ${name} asks where you are sending from, give them this code`,
   copy: "Copy",
   copied: "Copied",

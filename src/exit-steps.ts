@@ -1,4 +1,4 @@
-import { CONVERSION_RESERVE } from "./funding-step";
+import { chainCoinToChange, CONVERSION_RESERVE, USDC_ARRIVAL_FLOOR } from "./funding-step";
 import { AUSD, isNative, type Coin } from "./coins";
 import type { RailReach } from "./rail-country";
 import type { PublishedFee, WayOut } from "./rails";
@@ -73,6 +73,15 @@ export function readyFor(way: WayOut, coin: Coin, held: bigint): Ready | undefin
  */
 export function heldForWithdrawal(open: Readonly<{ coin: string; atLeast: bigint }> | null | undefined, coin: string, held: bigint): boolean {
   return !!open && open.coin.toLowerCase() === coin.toLowerCase() && open.atLeast > 0n && held >= open.atLeast;
+}
+
+/**
+ * How much of a withdrawal's money can be changed back into what a gift holds (the audit of 9 Oct 2026), by the step
+ * a card's delivery of the same coin is already changed by: all of the other dollar coin from the dollar that step
+ * takes, and of the chain's own coin everything above what the account keeps. Nothing under what either step takes.
+ */
+export function changeBackAmount(native: boolean, held: bigint): bigint {
+  return native ? chainCoinToChange(held) : held >= USDC_ARRIVAL_FLOOR ? held : 0n;
 }
 
 export type ChangeAmount = Readonly<{ units: bigint; refusal?: undefined } | { units?: undefined; refusal: string }>;

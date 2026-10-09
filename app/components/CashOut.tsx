@@ -16,7 +16,7 @@ import { isVikyContract } from "@/src/viky-contracts";
 import { AUSD, coinAt, COINS, isNative, MON, USDC, type Coin } from "@/src/coins";
 import { rateDateInWords, spokenAmount, whenInWords, type LedAmount } from "@/src/display-currency";
 import { exitAmount, type ExitAmount } from "@/src/exit-amount";
-import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, heldForWithdrawal, netOfEverything, readyFor, toTheCent, twoDecimalsDown, type Ready } from "@/src/exit-steps";
+import { changeBackAmount, dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, heldForWithdrawal, netOfEverything, readyFor, toTheCent, twoDecimalsDown, type Ready } from "@/src/exit-steps";
 import { chainCoinToChange, USDC_ARRIVAL_FLOOR } from "@/src/funding-step";
 import { usdcRouterAddress } from "@/src/usdc-router";
 import { formatAusd } from "@/src/gift-reader";
@@ -142,6 +142,8 @@ export function CashOut() {
   const [quote, setQuote] = useState<WayOutQuote | null>(null);
   const [refreshed, setRefreshed] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** Set while a withdrawal's money is changed back into the balance: the waiting screen says that, and not a readying. */
+  const [puttingBack, setPuttingBack] = useState(false);
   const [problem, setProblem] = useState<{ where: Where; text: string; code?: string } | null>(null);
   // Set when the passkey session closed under the screen. Not a failure: what the account holds decides the
   // step, so signing in again lands exactly where they were (D74, D80).
@@ -398,6 +400,49 @@ export function CashOut() {
       setStage("base");
       return undefined;
     } finally {
+      setBusy(false);
+    }
+  };
+
+  /** What of an open withdrawal's money can be changed back, and nothing where the step that changes it does not exist. */
+  const backOf = (way: WayOut): bigint => {
+    const coin = coinOf(way);
+    if (!saidReady(way) || (!isNative(coin) && !usdcRouterAddress())) return 0n;
+    return changeBackAmount(isNative(coin), held(coin));
+  };
+
+  /**
+   * A withdrawal started and left (the audit of 9 Oct 2026). The money changed for a service stayed "ready to send"
+   * to it at every visit, out of everything else this screen offers, with no way back: a person the service refused,
+   * or who changed their mind, could only offer a gift with it or send it to another account. This changes it back
+   * into what a gift holds, by the step a card's delivery of the same coin is changed by (`gather`), and the balances
+   * are read again: the account no longer holds what that way out brought, so nothing is said to be ready
+   * (`heldForWithdrawal`, src/exit-steps.ts). Nothing opens by itself afterwards: the first screen, with the money in it.
+   */
+  // Named without "use": it is called from a press, and a name that starts so is read as a hook.
+  const putBack = async (way: WayOut) => {
+    const amount = backOf(way);
+    if (amount === 0n) return;
+    setBusy(true);
+    setPuttingBack(true);
+    setProblem(null);
+    setStage("gathering");
+    try {
+      const account = await ensureSigner();
+      if (isNative(coinOf(way))) {
+        const conversion = await fundingQuote(amount);
+        await sendWithExplicitGas(account, { to: conversion.to, data: conversion.data, value: BigInt(conversion.value) });
+      } else {
+        await changeArrivedUsdc({ account, amount });
+      }
+      await refresh();
+    } catch (error) {
+      if (sessionClosed(error)) closeSession();
+      else setProblem({ where: "gather", text: W.notPutBack, code: error instanceof ApiError ? error.code : undefined });
+      await refresh().catch(() => undefined);
+    } finally {
+      setStage("base");
+      setPuttingBack(false);
       setBusy(false);
     }
   };
@@ -724,6 +769,13 @@ export function CashOut() {
           {W.continueReady(firstReady.name)}
         </button>
       ) : null}
+      {/* And the way out of a withdrawal that was left: the money goes back into the balance (the audit of 9 Oct 2026). */}
+      {stage === "base" && firstReady && backOf(firstReady) > 0n ? (
+        <button type="button" onClick={() => void putBack(firstReady)} disabled={busy} className={`${SMALL_BUTTON} self-start`} data-use-another-way="">
+          {W.useAnotherWay}
+        </button>
+      ) : null}
+      {stage === "base" ? alert("gather") : null}
     </section>
   );
 
@@ -732,7 +784,7 @@ export function CashOut() {
       <div className="flex flex-col gap-[var(--space-xl)]">
         {heading}
         {moneyCard}
-        <Working says={inGifts.length > 0 ? W.gathering : W.readying} />
+        <Working says={puttingBack ? W.puttingBack : inGifts.length > 0 ? W.gathering : W.readying} />
       </div>
     );
   }
@@ -774,9 +826,16 @@ export function CashOut() {
             {firstReady && dollarsHeld > 0n ? (
               <>
                 <p className={HELP}>{W.readyLine(firstReady.name, readyInWords(firstReady))}</p>
-                <button type="button" onClick={() => continueWith(firstReady)} className={`${SMALL_BUTTON} self-start`}>
-                  {W.continueReady(firstReady.name)}
-                </button>
+                <div className="flex flex-wrap gap-[var(--space-sm)]">
+                  <button type="button" onClick={() => continueWith(firstReady)} className={SMALL_BUTTON}>
+                    {W.continueReady(firstReady.name)}
+                  </button>
+                  {backOf(firstReady) > 0n ? (
+                    <button type="button" onClick={() => void putBack(firstReady)} disabled={busy} className={SMALL_BUTTON} data-use-another-way="">
+                      {W.useAnotherWay}
+                    </button>
+                  ) : null}
+                </div>
               </>
             ) : null}
             {/* The gifts' part is in the figure above, and it is taken into the account first (D208). */}

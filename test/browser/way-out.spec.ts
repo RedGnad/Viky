@@ -415,6 +415,29 @@ test.describe("money a card just delivered is money in the account, not a withdr
     await device.context.close();
   });
 
+  test("a withdrawal that was left: 'Use it another way' stands beside the way back, and a change back that fails leaves the money where it was", async ({ browser, baseURL }) => {
+    const device = await profile(browser, baseURL, { width: 390, height: 844 });
+    const { page } = device;
+    // The account of the test above: 138.43 of the card service's coin, made ready for it a minute ago, and left.
+    await person(device, { ausd: 10_000_000n, usdc: 0n, mon: 11n * ONE + (13_843n * ONE) / 100n }, { country: "sn", bank: "does-not", card: "serves" }, { coin: CHAIN_COIN, atLeast: ((13_843n * ONE) / 100n).toString(), sinceMs: Date.now() - 60_000 });
+    await page.goto("/cash-out");
+    const yours = page.locator(".money-display-box");
+    const back = yours.locator("[data-use-another-way]");
+    await expect(back).toHaveText("Use it another way");
+    await expect(yours.getByRole("button", { name: "Continue with Mercuryo" })).toBeVisible();
+    await shot(page, "390", "9a-a-withdrawal-left-and-the-way-back-to-the-balance");
+    // The press changes it back by the exchange. Here the chain refuses every broadcast: nothing moved, the screen says
+    // so in one sentence, and what was ready still is, with both ways on.
+    await back.click();
+    await expect(page.getByText("It could not be put back just now. It is still in your account.")).toBeVisible({ timeout: 60_000 });
+    await expect(yours.getByText(/of it is ready to send to Mercuryo\.$/)).toBeVisible();
+    await expect(yours.getByRole("button", { name: "Continue with Mercuryo" })).toBeVisible();
+    await expect(back).toBeEnabled();
+    await expect(page.getByRole("heading", { name: /^Step \d of 3/ })).toHaveCount(0);
+    await shot(page, "390", "9b-a-change-back-that-did-not-go-through");
+    await device.context.close();
+  });
+
   test("less of the coin than the open withdrawal brought is not that withdrawal's money", async ({ browser, baseURL }) => {
     const device = await profile(browser, baseURL, { width: 390, height: 844 });
     const { page } = device;
