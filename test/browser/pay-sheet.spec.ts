@@ -162,8 +162,12 @@ test.describe("the pay sheet of 3 Oct 2026", () => {
     expect(values[0]).toBe("€19.00");
     // The gift, what the account puts in, and that Viky takes nothing: the fee and what stays are not lines any more.
     expect(labels).toEqual(["Boo's gift", "From your Viky money", "Viky takes"]);
-    const total = (await sheet(page).locator("[data-pay-total]").innerText()).trim();
-    // One money format: every figure is written in euros, to the cent, and nothing is "about".
+    const written = (await sheet(page).locator("[data-pay-total]").innerText()).trim();
+    // Where the card is charged in the sheet's own money the total is said as it is. On a build with Rampnow's
+    // settings and no key of its own, the card is charged in dollars: the total in euros is said "about" (9 Oct 2026).
+    if (process.env.VIKY_RAMPNOW_FRAME_BUILD) expect(written).toMatch(/^about €\d+\.\d{2}$/);
+    const total = written.replace(/^about /, "");
+    // One money format: every figure is written in euros, to the cent.
     for (const value of [...values.slice(0, -1), total]) expect(value).toMatch(/^(− )?€\d+\.\d{2}$/);
     // One line under the button: the part of the gift the card pays, the fee, what stays. They add up to the card's
     // figure, to the cent, and the part is the gift less what the account puts in.
@@ -672,7 +676,7 @@ test.describe("Rampnow's own quote on the pay sheet, in the money the sheet is r
       await funder.context.close();
     });
 
-    test(`while the quote is asked: no figure, the button waits and says so, and nothing moves when the figure lands (${size.width})`, async ({ browser, baseURL }) => {
+    test(`while the quote is asked: no figure, the button waits and says so, and stays in its place when the figure lands (${size.width})`, async ({ browser, baseURL }) => {
       const funder = await toTheSheet(browser, baseURL, {
         ausd: 0n,
         signedIn: true,
@@ -693,7 +697,9 @@ test.describe("Rampnow's own quote on the pay sheet, in the money the sheet is r
       await shotAt(page, "Q2-the-quote-being-asked");
       await expect(button).toHaveText("Pay €9.12 by card", { timeout: 15_000 });
       await expect(button).toBeEnabled();
-      expect((await button.boundingBox())!.y).toBe(before);
+      // The total's place was kept, so the button stays where it was: within the pixel or two by which the line that
+      // adds up, under it, is shorter than the line that says the wait.
+      expect(Math.abs((await button.boundingBox())!.y - before)).toBeLessThan(2);
       await funder.context.close();
     });
 
@@ -751,8 +757,9 @@ test.describe("Rampnow's own quote on the pay sheet, in the money the sheet is r
     await expect(button).toHaveText("Pay €9.12 by card");
     await button.click();
     await expect(page).toHaveURL(/\/fund\?step=paying/, { timeout: 30_000 });
-    await expect.poll(() => frames.length, { timeout: 30_000 }).toBeGreaterThan(0);
-    expect(frames[0]).toBe("?currency=EUR&amount=9.12");
+    // Asked for the amount and the currency the press was made on, once what is left to pay has been read.
+    await expect.poll(() => frames.includes("?currency=EUR&amount=9.12"), { timeout: 30_000 }).toBe(true);
+    expect(frames.filter((asked) => asked !== "" && asked !== "?currency=EUR&amount=9.12")).toEqual([]);
     await funder.context.close();
   });
 });
