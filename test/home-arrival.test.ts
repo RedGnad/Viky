@@ -83,7 +83,8 @@ test("4. where the device's memory was wrong, the place opens or closes by its h
 });
 
 test("5. while it is read, the balance says the last figure this device saw, in full ink", () => {
-  assert.match(hero, /const value = figure\?\.value \?\? seen;/);
+  // Never a zero it remembers: a zero over money that has just arrived is what the rule of 4 Oct 2026 refuses.
+  assert.match(hero, /const value = figure\?\.value \?\? \(seen \|\| undefined\);/);
   assert.match(hero, /<ArrivalAmount from=\{seen \?\? value\} to=\{value\}/);
   // The three dots, in the faint ink, are for a device that remembers nothing; the figure that lands then comes up.
   assert.match(hero, /if \(value === undefined\) \{\n\s*return \(/);

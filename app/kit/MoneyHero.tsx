@@ -41,7 +41,7 @@ import { useMoneyHeld, type Holdings } from "./money";
  * **While it is read, it says the last figure this device saw** for this account in this currency, in full ink (the
  * founder, 9 Oct 2026). The figure waits for the slowest of three readings, and the three dots stood there for all of
  * them. When the reading lands on the same figure nothing moves; on another, the amount counts to it. A device that
- * remembers nothing shows the dots, and the figure then comes up in their place.
+ * remembers nothing, or remembers a zero, shows the dots, and the figure then comes up in their place.
  */
 const AMOUNT = `money-display ${AMOUNT_IN_TITLE} tracking-[-0.02em]`;
 
@@ -63,8 +63,12 @@ export function MoneyHero({
   const figure = dollars === undefined ? undefined : money.figure(dollars);
   // What this device last saw of this account's money, so a change counts to its value once (brief, section 6).
   const seen = useLastSeen(`viky.seen.money.${address}.${money.currency}`, figure?.value);
-  /** What stands under "Yours": the figure once it is read, and until then the last one this device saw. */
-  const value = figure?.value ?? seen;
+  /**
+   * What stands under "Yours": the figure once it is read, and until then the last one this device saw. Never a zero
+   * it remembers: a zero is said when it is read and at no other time, or it could stand over money that has just
+   * arrived and whose worth is still being asked (the rule of 4 Oct 2026, `useMoneyHeld`).
+   */
+  const value = figure?.value ?? (seen || undefined);
   /** How this currency writes an amount, which is known before the amount is. */
   const written = figure ?? money.figure(0n);
   /** Whether the first image had no figure at all: the one that lands then comes up in place, and counts nothing. */
