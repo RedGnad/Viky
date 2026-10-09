@@ -10,7 +10,7 @@ import { shownContextMessage, ShownProofError, validateShownEvidence, type Shown
 
 const ACCOUNT = "0x000000000000000000000000000000000000a11c";
 const SESSION = "session_12345678";
-const REQUEST = "0x881b7539dce87f232902946fa97c9410805b7587bb45d3f8fb5041193f3dee21";
+const REQUEST = "0xd40b146a6c7210c1ee0213ad3e04c424bea780a4d8315d883595cfa1ce12fd3d";
 
 const SCORE: ShownCondition = {
   conditionId: "toefl-mybest",

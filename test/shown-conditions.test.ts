@@ -13,7 +13,7 @@ test("the TOEFL condition is pinned to the provider read on 22 Sep 2026, one req
   assert.equal(TOEFL_SHOWN.kind, "milestone");
   assert.equal(TOEFL_SHOWN.condition.providerId, "67ec1b13-b206-4fac-a78c-fbd5a2af55b3");
   assert.equal(TOEFL_SHOWN.condition.providerVersion, "1.0.0");
-  assert.deepEqual(TOEFL_SHOWN.condition.requestHashes, ["0x881b7539dce87f232902946fa97c9410805b7587bb45d3f8fb5041193f3dee21"]);
+  assert.deepEqual(TOEFL_SHOWN.condition.requestHashes, ["0xd40b146a6c7210c1ee0213ad3e04c424bea780a4d8315d883595cfa1ce12fd3d"]);
   assert.equal(TOEFL_SHOWN.condition.proofCount, 1);
   assert.deepEqual(TOEFL_SHOWN.condition.phases, ["reach"]);
   assert.equal(TOEFL_RECLAIM_PROVIDER.loginUrl, "https://v2.ereg.ets.org/ereg/public/jump?_p=TEL");
