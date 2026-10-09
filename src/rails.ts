@@ -127,8 +127,9 @@ export type WayIn = Readonly<{
    */
   cents?: boolean;
   /**
-   * The currency its page is opened in when nothing quotes it (src/card-ask.ts): the euro when absent. Dollars for a
-   * page that takes a currency and whose fee and floor are then said in dollars at the day's rate.
+   * The currency its page is opened in by the rule, for a reader who does not count in euros (src/card-ask.ts):
+   * dollars, for a page that takes a currency, its fee and its floor then said in dollars at the day's rate. Absent,
+   * the euro for everybody. A reader who counts in euros is asked in euros whatever this says.
    */
   paidIn?: "USD";
   /** How long they say a payment takes, in their own words, when they say it. Absent rather than guessed. */
@@ -323,8 +324,8 @@ export const RAMPNOW_OPEN_IN: readonly string[] = [
 /**
  * Adding money by card through Rampnow's own public page (the founder, 1 Oct 2026), which arrives filled in and locked:
  * the amount and its currency, the card, USDC on Monad and the payer's own account (`wayInPage`). The currency is the
- * one the person reads Viky in when Rampnow's own quote answers in it (src/rampnow-quote.ts), dollars otherwise
- * (9 Oct 2026); it was the euro for everybody until then. The person chooses nothing
+ * one the person reads Viky in when Rampnow's own quote answers in it (src/rampnow-quote.ts); otherwise the euro for
+ * a reader in euros, as it was for everybody until 9 Oct 2026, and dollars for the others. The person chooses nothing
  * and pastes nothing. What arrives is USDC, another dollar coin, which the screen that waits changes into what a gift
  * holds, with nothing to confirm.
  *
@@ -355,8 +356,9 @@ export const WAY_IN_USDC: WayIn = {
   delivers: { coin: "USDC", network: "Monad" },
   smallestEur: 5,
   cents: true,
-  // Opened in dollars when its own quote does not say another currency (the founder, 9 Oct 2026): what a gift is
-  // counted in, so nothing is changed twice. Its fee and its floor are its own, in euros, said in dollars at the rate.
+  // Without its own quote (the founder, 9 Oct 2026): in euros for a reader who counts in euros, to the cent, as it
+  // was for everybody and as the real payments were made; in dollars for every other reader, what a gift is counted
+  // in, so nothing is changed twice. Its fee and its floor are its own, in euros, said in dollars at the day's rate.
   paidIn: "USD",
   fee: { percent: 7, upTo: false, plus: 0.4, minimum: 1, currency: "EUR" },
   conditions: ["The first time: your details, a code by text, and your ID.", "A card in your name."],

@@ -162,12 +162,22 @@ export function eurosToCover(shortfallUnits: bigint, usdPerEur?: number): number
 }
 
 /**
- * A way's smallest payment, in euros, as a need worked out in euros meets it: its published floor; or, for a way whose
- * page is opened in dollars (`WayIn.paidIn`), that floor at the day's rate to the dollar above, said back in euros
+ * Whether the rule asks this way in dollars for a reader who counts in `readIn` (the founder, 9 Oct 2026): a way
+ * whose page takes dollars (`WayIn.paidIn`), and a reader who does not count in euros. A reader in euros is asked in
+ * euros, exactly as before that day: it is the path real payments went through, and a path never paid does not take
+ * its place. With no money named, the way's own.
+ */
+export function ruleInDollars(way: WayIn, readIn?: string): boolean {
+  return way.paidIn === "USD" && readIn !== "EUR";
+}
+
+/**
+ * A way's smallest payment, in euros, as a need worked out in euros meets it: its published floor; or, where the
+ * rule asks in dollars (`ruleInDollars`), that floor at the day's rate to the dollar above, said back in euros
  * (the founder's rule of 9 Oct 2026). Five euros are 5.59 dollars at 1.1186: the floor is six dollars, 5.36 euros.
  */
-export function smallestEurOn(way: WayIn, usdPerEur: number | undefined): number {
-  if (way.paidIn !== "USD" || !(usdPerEur !== undefined && usdPerEur > 0)) return way.smallestEur;
+export function smallestEurOn(way: WayIn, usdPerEur: number | undefined, readIn?: string): number {
+  if (!ruleInDollars(way, readIn) || !(usdPerEur !== undefined && usdPerEur > 0)) return way.smallestEur;
   return Math.ceil(way.smallestEur * usdPerEur - 1e-9) / usdPerEur;
 }
 
@@ -181,11 +191,11 @@ export function smallestEurOn(way: WayIn, usdPerEur: number | undefined): number
  * sells does not move against the dollar: the euros are the dollars at the day's rate, plus that rail's own fee,
  * which is the larger of their share and their minimum, rounded up to the whole euro.
  *
- * A way whose page is opened in dollars is rounded where it is paid, to the cent of a dollar, and said back in euros:
- * the figure here is then the euros those dollars are at the day's rate, and `askByRule` writes the dollars
- * (src/card-ask.ts).
+ * Where the rule asks in dollars (`ruleInDollars`: the way takes them and the reader does not count in euros), the
+ * amount is rounded where it is paid, to the cent of a dollar, and said back in euros: the figure here is then the
+ * euros those dollars are at the day's rate, and `askByRule` writes the dollars (src/card-ask.ts).
  */
-export function eurosNeededOn(shortfallUnits: bigint, way: WayIn, usdPerEur: number | undefined): number | undefined {
+export function eurosNeededOn(shortfallUnits: bigint, way: WayIn, usdPerEur: number | undefined, readIn?: string): number | undefined {
   if (shortfallUnits <= 0n) return 0;
   if (way.arrives === "chain") return eurosToCover(shortfallUnits, usdPerEur);
   if (!(usdPerEur !== undefined && usdPerEur > 0)) return undefined;
@@ -200,7 +210,7 @@ export function eurosNeededOn(shortfallUnits: bigint, way: WayIn, usdPerEur: num
   const withShare = (euros + (way.fee.plus ?? 0)) / (1 - way.fee.percent / 100);
   const withMinimum = euros + way.fee.minimum;
   const needed = Math.max(withShare, withMinimum);
-  if (way.paidIn === "USD") return upToTheCent(needed * usdPerEur) / usdPerEur;
+  if (ruleInDollars(way, readIn)) return upToTheCent(needed * usdPerEur) / usdPerEur;
   return way.cents ? upToTheCent(needed) : Math.ceil(needed);
 }
 
@@ -208,15 +218,15 @@ export function eurosNeededOn(shortfallUnits: bigint, way: WayIn, usdPerEur: num
  * How many euros to pay on the way in the funder chose (D101): what it needs, and never under their floor.
  * Whatever a payment leaves over stays in the person's own account for the next gift.
  */
-export function eurosToBuyOn(shortfallUnits: bigint, way: WayIn, usdPerEur: number | undefined): number | undefined {
-  const needed = eurosNeededOn(shortfallUnits, way, usdPerEur);
+export function eurosToBuyOn(shortfallUnits: bigint, way: WayIn, usdPerEur: number | undefined, readIn?: string): number | undefined {
+  const needed = eurosNeededOn(shortfallUnits, way, usdPerEur, readIn);
   if (needed === undefined) return undefined;
   // Whole euros, as the sheet says them: a floor that is not a whole number is paid at the next one. To the cent
   // where the service takes cents.
   if (needed === 0) return 0;
-  const atLeast = Math.max(smallestEurOn(way, usdPerEur), needed);
+  const atLeast = Math.max(smallestEurOn(way, usdPerEur, readIn), needed);
   // Paid in dollars: already to the cent of a dollar, or its floor, a whole number of them.
-  if (way.paidIn === "USD") return atLeast;
+  if (ruleInDollars(way, readIn)) return atLeast;
   return way.cents ? upToTheCent(atLeast) : Math.ceil(atLeast);
 }
 
@@ -227,8 +237,8 @@ export type WayInRefusal = "country" | "floor" | "paused";
 export type WayInOffer = Readonly<{
   way: WayIn;
   /**
-   * The euros to pay on it, or nothing when no rate was read and this rail's figure needs one. For a way whose page
-   * is opened in dollars, the euros its dollars are at the day's rate (`askByRule` writes the dollars).
+   * The euros to pay on it, or nothing when no rate was read and this rail's figure needs one. Where the rule asks
+   * in dollars, the euros its dollars are at the day's rate (`askByRule` writes the dollars).
    */
   euros: number | undefined;
   /**
@@ -241,11 +251,11 @@ export type WayInOffer = Readonly<{
 }>;
 
 /** What stops a way in from taking this gift, in the order a person would meet it, or nothing when it takes it. */
-function refusalOf(way: WayIn, needed: number | undefined, reach: Readonly<Record<string, RailReach>>, usdPerEur: number | undefined): WayInRefusal | undefined {
+function refusalOf(way: WayIn, needed: number | undefined, reach: Readonly<Record<string, RailReach>>, usdPerEur: number | undefined, readIn: string | undefined): WayInRefusal | undefined {
   if (reach[way.name] === "does-not") return "country";
   if (reach[way.name] === "paused") return "paused";
   // A cent of a euro under is under; less than that is the same floor written in two currencies.
-  if (needed !== undefined && needed !== 0 && needed < smallestEurOn(way, usdPerEur) - 1e-6) return "floor";
+  if (needed !== undefined && needed !== 0 && needed < smallestEurOn(way, usdPerEur, readIn) - 1e-6) return "floor";
   return undefined;
 }
 
@@ -271,17 +281,19 @@ export function wayInFor(
   ways: readonly [WayIn, ...WayIn[]],
   usdPerEur: number | undefined,
   reach: Readonly<Record<string, RailReach>>,
+  /** The money the reader counts in: a way that takes dollars is asked in euros for a reader in euros. */
+  readIn?: string,
 ): WayInOffer {
-  const priced = ways.map((way) => ({ way, needed: eurosNeededOn(shortfallUnits, way, usdPerEur), because: undefined as WayInRefusal | undefined }));
-  for (const entry of priced) entry.because = refusalOf(entry.way, entry.needed, reach, usdPerEur);
+  const priced = ways.map((way) => ({ way, needed: eurosNeededOn(shortfallUnits, way, usdPerEur, readIn), because: undefined as WayInRefusal | undefined }));
+  for (const entry of priced) entry.because = refusalOf(entry.way, entry.needed, reach, usdPerEur, readIn);
   const first = priced[0];
   if (first.because === undefined) return { way: first.way, euros: first.needed, atFloor: false };
   const insteadOf = { way: first.way, because: first.because };
-  const next = priced.slice(1).find((entry) => entry.because === undefined && (first.because !== "floor" || (entry.needed !== undefined && entry.needed <= smallestEurOn(first.way, usdPerEur))));
+  const next = priced.slice(1).find((entry) => entry.because === undefined && (first.because !== "floor" || (entry.needed !== undefined && entry.needed <= smallestEurOn(first.way, usdPerEur, readIn))));
   if (next) return { way: next.way, euros: next.needed, atFloor: false, insteadOf };
-  const lowest = priced.filter((entry) => entry.because === "floor").sort((left, right) => smallestEurOn(left.way, usdPerEur) - smallestEurOn(right.way, usdPerEur))[0];
+  const lowest = priced.filter((entry) => entry.because === "floor").sort((left, right) => smallestEurOn(left.way, usdPerEur, readIn) - smallestEurOn(right.way, usdPerEur, readIn))[0];
   if (!lowest) return { way: first.way, euros: first.needed, atFloor: false };
   // Its floor, in whole euros as it is published, or the euros its floor in dollars is.
-  const floor = lowest.way.paidIn === "USD" ? smallestEurOn(lowest.way, usdPerEur) : Math.ceil(lowest.way.smallestEur);
+  const floor = ruleInDollars(lowest.way, readIn) ? smallestEurOn(lowest.way, usdPerEur, readIn) : Math.ceil(lowest.way.smallestEur);
   return { way: lowest.way, euros: floor, atFloor: true, ...(lowest.way === first.way ? {} : { insteadOf }) };
 }

@@ -120,7 +120,7 @@ test("paying a gift counts what the person's gifts hold for them, and takes it b
   assert.match(taking, /\} catch \{[\s\S]*?setEarned\(\[\]\);\n\s*setProblem\(C\.gatherFailed\);/, "refused: said, and no longer counted on this visit");
   assert.match(taking, /setPhase\(after >= wanted \? "giving" : "waiting"\);/);
   assert.match(screen, /const leftToPay = units === null \|\| balance === null \? 0n : phase === "short" \? units - balance : earned === null \? 0n : units - balance - totalEarned\(earned\);/, "the card is asked for the gift less everything the person pays with");
-  assert.match(screen, /const ruleEuros = cardShort > 0n \? eurosToBuyOn\(cardShort, wayIn, money\.rates\?\.usdPerEur\) : undefined;/);
+  assert.match(screen, /const ruleEuros = cardShort > 0n \? eurosToBuyOn\(cardShort, wayIn, money\.rates\?\.usdPerEur, askMoney\) : undefined;/);
   assert.match(screen, /const toBuy = balance === null \|\| earned === null \? undefined : ruleEuros;/);
   assert.match(screen, /<Working says=\{phase === "taking" \? C\.gathering : /);
 

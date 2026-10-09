@@ -235,9 +235,9 @@ export function PayGift() {
   // been read, and what the person's gifts hold for them: after a payment that fell short, those are taken already.
   const leftToPay = units === null || balance === null ? 0n : phase === "short" ? units - balance : earned === null ? 0n : units - balance - totalEarned(earned);
   const cardShort = leftToPay > 0n ? leftToPay : 0n;
-  /** The euros the rule asks for it, never under the service's floor: a wait must be payable. */
-  const ruleEuros = cardShort > 0n ? eurosToBuyOn(cardShort, wayIn, money.rates?.usdPerEur) : undefined;
   const askMoney = moneyTypedIn(draft.typedAmount !== undefined ? draft : { typedAmount: kept?.typedAmount, typedIn: kept?.typedIn }, money.rates);
+  /** The euros the rule asks for it, for a reader in that money, never under the service's floor: a wait must be payable. */
+  const ruleEuros = cardShort > 0n ? eurosToBuyOn(cardShort, wayIn, money.rates?.usdPerEur, askMoney) : undefined;
   const cardAsked = useCardAsk({ on: step === "paying" && Boolean(address) && cardShort > 0n, offer: { way: wayIn, euros: ruleEuros, atFloor: false }, short: cardShort, code: askMoney, usdPerEur: money.rates?.usdPerEur, kept: true });
   /** While Rampnow is asked its price, no amount is named and no page of it is opened. */
   const askAwaited = cardAsked.state === "asking";

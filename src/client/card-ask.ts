@@ -75,7 +75,7 @@ export function useCardAsk(input: Readonly<{ on: boolean; offer: Readonly<{ way:
   }, [asks, name, code, need, isCarried]);
   if (!on || short <= 0n) return { state: "none" };
   if (carried) return { state: "ask", ask: carried.ask, quoted: carried.quoted };
-  const rule = askOfTheRule(offer, usdPerEur);
+  const rule = askOfTheRule(offer, usdPerEur, code);
   if (!asks) return rule;
   if (answer?.name !== name) return { state: "asking" };
   return askOfTheQuote(answer.said, rule);

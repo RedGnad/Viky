@@ -356,7 +356,6 @@ export const PAY = {
    * card service is opened in euros, so the euros are what the card is charged, and the figures above are their
    * conversion at the day's rate.
    */
-  cardCharged: (amount: string) => `Your card is charged ${amount}.`,
   cardStartsAt: (amount: string) => `Card payments start at ${amount}.`,
   makeTheGift: (amount: string) => `Make the gift ${amount}`,
   payFromAccount: (amount: string, recipient: string) => `Put ${amount} in ${their(recipient)} name`,

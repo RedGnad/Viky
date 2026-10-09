@@ -4,10 +4,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { askOfTheQuote, askOfTheRule, askToPay, usdcToAsk, type CardAskState } from "../src/card-ask";
+import { askOfTheQuote, askOfTheRule, askToPay, paidIn, usdcToAsk, type CardAskState } from "../src/card-ask";
 import { ASK_KEPT_MS, cardAskKept, keepCardAsk, QUOTE_WAIT_MS } from "../src/client/card-ask";
 import { eurosToBuyOn, wayInFor } from "../src/gift-amount";
-import { WAY_IN_GIFT_COIN, WAY_IN_USDC } from "../src/rails";
+import { rampnowPage, WAY_IN_GIFT_COIN, WAY_IN_USDC } from "../src/rails";
 import { PAY } from "../src/sentences";
 
 const RATE = 1.1186;
@@ -20,6 +20,41 @@ test("Rampnow's page is opened in dollars by the rule, and the quote is asked fo
   assert.equal(usdcToAsk(1n), 2n);
   assert.equal(usdcToAsk(0n), 0n);
   assert.equal(usdcToAsk(-5n), 0n);
+});
+
+test("a reader in euros never meets the dollar: with no key or no answer, the sheet and the address are today's (the founder, 9 Oct 2026)", () => {
+  // The order: Rampnow's quote in the reader's money; else, for a reader in euros, the euro by our rule, exactly as
+  // it was, the path real payments went through; else the dollar by our rule.
+  const eight = BigInt(Math.round(8 * RATE * 1_000_000));
+  const offer = wayInFor(eight, [WAY_IN_USDC], RATE, {}, "EUR");
+  assert.deepEqual([offer.euros, offer.atFloor], [9.12, false], "8 euros of gift: 9.12 by card, as since #97");
+  const rule = askOfTheRule(offer, RATE, "EUR");
+  assert.equal(rule.state, "ask");
+  if (rule.state !== "ask") return;
+  assert.deepEqual([rule.ask.currency, rule.ask.amount, Math.round(rule.ask.fee * 100) / 100, rule.quoted], ["EUR", 9.12, 1.04, false]);
+  // The address is the one opened today: the euro, 9.12, locked.
+  const ACCOUNT = "0x00000000000000000000000000000000000A11ce";
+  const today = `https://app.rampnow.io/order/quote?orderType=buy&srcChain=fiat&srcCurrency=EUR&srcAmount=9.12&paymentMode=card&dstCurrency=USDC&dstChain=monad&walletAddress=${ACCOUNT}&lockFields=srcAsset,srcAmount,dstAsset,paymentMode,walletAddress&prefill=true`;
+  assert.equal(rampnowPage({ account: ACCOUNT, ask: rule.ask }), today);
+  assert.equal(rampnowPage({ account: ACCOUNT, euros: 9.12 }), today);
+  // Whatever Rampnow says or does not say, short of a quote: the same.
+  for (const none of [{ state: "none", because: "off" }, { state: "none", because: "silent" }, { state: "none", because: "not-understood" }, "late"] as const) assert.deepEqual(askOfTheQuote(none, rule), rule, JSON.stringify(none));
+  // Its floor is the euro's, five euros, said exactly; and under it the gift proposed is the euro rule's.
+  assert.deepEqual(askOfTheRule(wayInFor(BigInt(Math.round(3 * RATE * 1_000_000)), [WAY_IN_USDC], RATE, {}, "EUR"), RATE, "EUR"), { state: "under", floor: { currency: "EUR", amount: 5 } });
+  assert.equal(paidIn(WAY_IN_USDC, "EUR"), "EUR");
+  assert.equal(eurosToBuyOn(eight, WAY_IN_USDC, RATE, "EUR"), 9.12, "and the wait asks the same");
+  // Every other reader is asked in dollars: one who counts in dollars, in pounds, in francs.
+  for (const other of ["USD", "GBP", "XOF"]) {
+    assert.equal(paidIn(WAY_IN_USDC, other), "USD", other);
+    const asked = askOfTheRule(wayInFor(eight, [WAY_IN_USDC], RATE, {}, other), RATE, other);
+    assert.deepEqual(asked.state === "ask" ? [asked.ask.currency, asked.ask.amount] : asked, ["USD", 10.21], other);
+  }
+  // A way opened in euros for everybody stays so, whatever the reader counts in.
+  assert.equal(paidIn(WAY_IN_GIFT_COIN, "USD"), "EUR");
+  // The screens pass the money they are read in to the rule.
+  assert.match(readFileSync("app/kit/offer/PaySheet.tsx", "utf8"), /const offer = wayInFor\(short, waysIn\(\), money\.rates\?\.usdPerEur, railIn, code\);/);
+  assert.match(readFileSync("src/client/card-ask.ts", "utf8"), /const rule = askOfTheRule\(offer, usdPerEur, code\);/);
+  assert.match(readFileSync("app/components/PayGift.tsx", "utf8"), /const ruleEuros = cardShort > 0n \? eurosToBuyOn\(cardShort, wayIn, money\.rates\?\.usdPerEur, askMoney\) : undefined;/);
 });
 
 test("by the rule: dollars to the cent, or the floor of six dollars when the gift is under it; nothing without a rate", () => {
@@ -79,7 +114,8 @@ test("the screens: the server says on the page whether quotes are asked, the quo
   assert.equal(QUOTE_WAIT_MS, 3_000);
   assert.equal(PAY.workingOutTotal, "Working out your total.");
   assert.ok(!("readingCardPrice" in PAY));
-  assert.equal(PAY.cardCharged("$11.35"), "Your card is charged $11.35.");
+  // What the card is charged is said by the button itself, so no line says it again (the founder, 9 Oct 2026).
+  assert.ok(!("cardCharged" in PAY));
   // Said by the server, from the one setting, on the page itself: no request is spent to learn it.
   assert.match(readFileSync("app/layout.tsx", "utf8"), /<body className="antialiased" data-card-quotes=\{rampnowQuotesOn\(\) \? "on" : undefined\}>/);
   const hook = readFileSync("src/client/card-ask.ts", "utf8");
@@ -94,8 +130,15 @@ test("the screens: the server says on the page whether quotes are asked, the quo
   assert.match(sheet, /<Button waiting=\{!ready \|\| !settled \|\| quoteAwaited \|\| status === "busy"\}/, "the button does not go while the price is asked");
   assert.match(sheet, /\{quoteAwaited \? <WaitLine>\{W\.workingOutTotal\}<\/WaitLine> : null\}/);
   assert.match(sheet, /\) : quoteAwaited \? \(\s+\/\/[^\n]+\n\s+\/\/[^\n]+\n\s+<div aria-hidden="true" data-pay-total-awaited="">/, "the total's place is kept, with nothing in it");
-  // A card charged in the sheet's own money is said exactly; in another, about, with what it is charged under the line.
+  // A card charged in the sheet's own money is said exactly; in another, the total is said about, the button says
+  // what the card is really charged, and the line under it adds up to that, in that money.
   assert.match(sheet, /const converted = sum !== undefined && sum\.charged\.currency !== code;/);
+  assert.match(sheet, /: sum \? W\.payByCard\(moneyIn\(sum\.charged\.amount, sum\.charged\.currency\)\) : W\.pay\}/);
+  assert.match(sheet, /const chargedSum = ask === undefined \|\| giftCharged === undefined \? undefined : ask\.currency === code \? sum : cardSum\(\{ code: ask\.currency, gift: giftCharged, charged: ask, fee: ask\.fee, rates: money\.rates \}\);/);
+  assert.doesNotMatch(sheet, /data-card-charged|cardCharged/);
+  // The floor is said in the sheet's own money, beside the gift the button proposes: about, when the card would be
+  // charged in another.
+  assert.match(sheet, /const floorSaid = !floor \? null : floor\.currency === code \|\| floorRate === undefined \? moneyIn\(floor\.amount, floor\.currency\) : `\$\{W\.about\} \$\{say\(toDecimals\(floor\.amount \* floorRate, code\)\)\}`;/);
   assert.match(sheet, /if \(!enough && asked\.state === "ask"\) keepCardAsk\(\{ ask: asked\.ask, quoted: asked\.quoted, forUnits: short\.toString\(\), code \}\);/);
   // The wait says and opens the same amount, and opens no page of Rampnow's while its price is asked.
   const wait = readFileSync("app/components/PayGift.tsx", "utf8");
