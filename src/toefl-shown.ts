@@ -26,11 +26,18 @@ export function toeflShownProviderId(): Hex {
 /** The subject the funder signs: the same for every gift on this condition, because the proof carries no name. */
 export const TOEFL_SHOWN_SUBJECT: Hex = keccak256(stringToHex("viky:subject:toefl-mybest-shown:v1"));
 
-/** The Reclaim provider, pinned by id, version and the hash of its one request. A new version is a new decision. */
+/**
+ * The Reclaim provider, pinned by id, version and the hash of its one request. A new version is a new decision.
+ *
+ * The hash is the one a proof of this version carries, as Reclaim's own library works it out from the published
+ * request (`hashRequestSpec`, read 9 Oct 2026). The configuration also publishes a `requestHash` field, 0x881b...ee21,
+ * which is not that hash: this pin held it from 22 Sep to 9 Oct 2026, and a real proof would have been refused as
+ * another request. test/reclaim-pins.test.ts works every pin out again.
+ */
 export const TOEFL_RECLAIM_PROVIDER = Object.freeze({
   id: "67ec1b13-b206-4fac-a78c-fbd5a2af55b3",
   version: "1.0.0",
-  requestHash: "0x881b7539dce87f232902946fa97c9410805b7587bb45d3f8fb5041193f3dee21",
+  requestHash: "0xd40b146a6c7210c1ee0213ad3e04c424bea780a4d8315d883595cfa1ce12fd3d",
   loginUrl: "https://v2.ereg.ets.org/ereg/public/jump?_p=TEL",
 });
 
