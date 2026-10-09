@@ -66,6 +66,14 @@ function figure(text: string): number {
   return text.trim().startsWith("−") ? -amount : amount;
 }
 
+/** The one line under the card's button, read back as figures: "€8.00 gift, €1.04 card fee, €0.08 stays yours." */
+async function theCardSum(page: Page): Promise<{ gift: number; part: boolean; fee: number; stays: number; text: string }> {
+  const text = (await sheet(page).locator("[data-card-sum]").innerText()).trim();
+  const read = text.match(/^€(\d+\.\d{2}) (gift|of the gift), (?:up to )?€(\d+\.\d{2}) card fee(?:, €(\d+\.\d{2}) stays yours)?\.$/);
+  expect(read, text).not.toBeNull();
+  return { gift: Number(read![1]), part: read![2] === "of the gift", fee: Number(read![3]), stays: Number(read![4] ?? 0), text };
+}
+
 async function shot(page: Page, name: string): Promise<void> {
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/${name}-390.png` });
 }
@@ -152,14 +160,18 @@ test.describe("the pay sheet of 3 Oct 2026", () => {
     const labels = await sheet(page).locator("[data-pay-lines] > div > span:first-child").allInnerTexts();
     expect(labels[0]).toBe("Boo's gift");
     expect(values[0]).toBe("€19.00");
-    expect(labels).toContain("Card fee");
-    expect(labels[labels.length - 1]).toBe("Viky takes");
+    // The gift, what the account puts in, and that Viky takes nothing: the fee and what stays are not lines any more.
+    expect(labels).toEqual(["Boo's gift", "From your Viky money", "Viky takes"]);
     const total = (await sheet(page).locator("[data-pay-total]").innerText()).trim();
     // One money format: every figure is written in euros, to the cent, and nothing is "about".
-    for (const value of [...values.slice(0, -1), total]) expect(value).toMatch(/^(− |up to )?€\d+\.\d{2}$/);
-    // The gift, less the account's part, plus the fee, plus what stays: the card's figure, to the cent.
-    const sum = values.slice(0, -1).reduce((running, value) => running + figure(value), 0);
-    expect(Math.round(sum * 100)).toBe(Math.round(figure(total) * 100));
+    for (const value of [...values.slice(0, -1), total]) expect(value).toMatch(/^(− )?€\d+\.\d{2}$/);
+    // One line under the button: the part of the gift the card pays, the fee, what stays. They add up to the card's
+    // figure, to the cent, and the part is the gift less what the account puts in.
+    const said = await theCardSum(page);
+    expect(said.part).toBe(true);
+    expect(Math.round((said.gift + said.fee + said.stays) * 100)).toBe(Math.round(figure(total) * 100));
+    const rest = values.slice(0, -1).reduce((running, value) => running + figure(value), 0);
+    expect(Math.round(said.gift * 100)).toBe(Math.round(rest * 100));
     await expect(sheet(page).getByRole("button", { name: `Pay ${total} by card` })).toBeVisible();
     // Signed in, the phone's own prompt says what the passkey does: no line about it, and no link warning here.
     await expect(sheet(page).getByText(/Your face or your fingerprint/)).toHaveCount(0);
@@ -389,7 +401,11 @@ test.describe("a judge's code on the pay sheet: visible, and small beside the ca
       // The card is still the sheet's one action, with its figure, its line and its total.
       const card = sheet(page).locator('[data-pays="card"]');
       await expect(card).toHaveText(/^Pay \$\d+\.\d{2} by card$/);
-      await expect(sheet(page).locator("[data-pay-total]")).toBeVisible();
+      // The sheet counts in dollars and the card is charged in euros: the total is said about, and the euros under
+      // the button, to the cent.
+      await expect(sheet(page).locator("[data-pay-total]")).toHaveText(/^about \$\d+\.\d{2}$/);
+      await expect(sheet(page).locator("[data-card-charged]")).toHaveText(/^Your card is charged €\d+\.\d{2}\.$/);
+      expect((await sheet(page).locator("[data-card-charged]").boundingBox())!.y).toBeGreaterThan((await card.boundingBox())!.y);
       await expect(sheet(page).getByText(/takes your card/)).toBeVisible();
       // First, and small: the code's field and its button stand above the card's button, and the button is the
       // smaller of the two, in height and in width.
@@ -505,4 +521,83 @@ test.describe("a judge's code on the pay sheet: visible, and small beside the ca
       await funder.context.close();
     }
   });
+});
+
+/**
+ * The third case, the card (the founder, 9 Oct 2026): asked to the cent where its service takes cents, said in one
+ * line under the button that adds up to what the button says, and not offered under the service's smallest payment.
+ *
+ * Which card service stands depends on the build's settings, so the figures are read off the screen and checked as a
+ * sum. A build with Rampnow's settings (VIKY_RAMPNOW_FRAME_BUILD=1) is also held to the founder's own example: a gift
+ * of 8 euros, its fee of 1.04, and a few cents that stay. The card's own figure moves by a cent with the day's rate,
+ * since the gift is kept in dollars to the cent: 9.12 on 9 Oct 2026.
+ */
+const RAMPNOW_BUILD = Boolean(process.env.VIKY_RAMPNOW_FRAME_BUILD);
+
+test.describe("the card on the pay sheet: one line that adds up, and no card under the floor (9 Oct 2026)", () => {
+  test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each case opens its own window");
+  test.setTimeout(150_000);
+
+  for (const size of SHOTS ? SIZES : SIZES.slice(0, 1)) {
+    test(`the card: one line under its button, which adds up to the cent to what the button says (${size.width})`, async ({ browser, baseURL }) => {
+      const funder = await toTheSheet(browser, baseURL, { ausd: 0n, signedIn: true, gifts: [], amount: RAMPNOW_BUILD ? "8" : "19", size });
+      const { page } = funder;
+      const button = sheet(page).locator('[data-pays="card"]');
+      await expect(button).toHaveText(/^Pay €\d+\.\d{2} by card$/);
+      const pays = figure((await button.innerText()).replace(/^Pay | by card$/g, ""));
+      const said = await theCardSum(page);
+      expect(said.part).toBe(false);
+      expect(Math.round((said.gift + said.fee + said.stays) * 100)).toBe(Math.round(pays * 100));
+      // The gift and what Viky takes above; no line for the fee, and none for what stays.
+      await expect(sheet(page).locator("[data-pay-lines] > div > span:first-child")).toHaveText(["Boo's gift", "Viky takes"]);
+      await expect(sheet(page).getByText("Change, kept in your account")).toHaveCount(0);
+      // Under the button, and above the line that says who takes the card.
+      const line = (await sheet(page).locator("[data-card-sum]").boundingBox())!;
+      expect(line.y).toBeGreaterThan((await button.boundingBox())!.y);
+      expect(line.y).toBeLessThan((await sheet(page).getByText(/takes your card/).boundingBox())!.y);
+      if (RAMPNOW_BUILD) {
+        // To the cent: what stays is the part in a hundred a rate needs, and no longer the rest of a whole euro.
+        expect([said.gift, said.fee]).toEqual([8, 1.04]);
+        expect(said.stays).toBeGreaterThan(0);
+        expect(said.stays).toBeLessThanOrEqual(0.1);
+      }
+      await shotAt(page, "C1-the-card-and-its-line");
+      await funder.context.close();
+    });
+
+    test(`under the card service's smallest payment: no card, the floor said, and one press makes the gift an amount a card can pay for (${size.width})`, async ({ browser, baseURL }) => {
+      const funder = await toTheSheet(browser, baseURL, { ausd: 0n, signedIn: true, gifts: [], amount: RAMPNOW_BUILD ? "3" : "2", size });
+      const { page } = funder;
+      await expect(sheet(page).locator("[data-card-floor]")).toHaveText(/^Card payments start at €\d+\.\d{2}\.$/);
+      const raise = sheet(page).locator('[data-pays="floor"]');
+      await expect(raise).toHaveText(/^Make the gift €\d+\.00$/);
+      await expect(sheet(page).locator('[data-pays="card"]')).toHaveCount(0);
+      await expect(sheet(page).locator("[data-card-sum]")).toHaveCount(0);
+      await expect(sheet(page).locator("[data-pay-total]")).toHaveCount(0);
+      await expect(sheet(page).getByText(/takes your card/)).toHaveCount(0);
+      if (RAMPNOW_BUILD) {
+        await expect(sheet(page).locator("[data-card-floor]")).toHaveText("Card payments start at €5.00.");
+        await expect(raise).toHaveText("Make the gift €4.00");
+      }
+      const proposed = (await raise.innerText()).replace("Make the gift ", "");
+      await shotAt(page, "C2-under-the-floor");
+
+      await raise.click();
+      // The gift is what the button said, on the sheet and on the card under it, and the card now pays for it.
+      await expect(sheet(page).locator("[data-pay-lines] > div > span:last-child").first()).toHaveText(proposed);
+      const button = sheet(page).locator('[data-pays="card"]');
+      await expect(button).toHaveText(/^Pay €\d+\.\d{2} by card$/);
+      await expect(sheet(page).locator("[data-card-floor]")).toHaveCount(0);
+      const said = await theCardSum(page);
+      expect(Math.round(said.gift * 100)).toBe(Math.round(figure(proposed) * 100));
+      expect(Math.round((said.gift + said.fee + said.stays) * 100)).toBe(Math.round(figure((await button.innerText()).replace(/^Pay | by card$/g, "")) * 100));
+      expect(Number(await card(page).getByLabel("how much").inputValue())).toBe(figure(proposed));
+      if (RAMPNOW_BUILD) {
+        expect([said.gift, said.fee]).toEqual([4, 1]);
+        expect(said.stays).toBeLessThanOrEqual(0.06);
+      }
+      await shotAt(page, "C3-the-gift-raised");
+      await funder.context.close();
+    });
+  }
 });

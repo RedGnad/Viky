@@ -1,15 +1,18 @@
 import { amountIn, currencyOf } from "./currencies";
+import { eurosNeededOn } from "./gift-amount";
+import type { WayIn } from "./rails";
 import type { Rates } from "./rates";
 
 /**
  * The pay sheet's figures (the founder's mockup pay-sheet-2026-10-03, validated 3 Oct 2026): one money, the one the
- * gift was typed in, and lines that add up to what the card pays, to the cent.
+ * gift was typed in, and figures that add up to what the card pays, to the cent.
  *
- * The card pays a whole number of euros: that is what the card service is asked for. The account covers the rest, so
- * its part is what is left once the card's figure and its fee are known: the gift, plus the fee, less the card. When
- * the card brings more than the gift and its fee, a service's floor or the margin a coin that moves needs, what is left
- * over stays in the account, on a line of its own. Either way the lines add up: the gift, less the account's part, plus
- * the fee, plus what stays, is the card's figure.
+ * The card pays what the card service is asked for: to the cent where its page takes cents, a whole number of euros
+ * otherwise. The account covers the rest, so its part is what is left once the card's figure and its fee are known:
+ * the gift, plus the fee, less the card. When the card brings more than the gift and its fee, the margin a rate needs
+ * or a whole euro, what is left over stays in the account. Either way the figures add up: the gift, less the account's
+ * part, plus the fee, plus what stays, is the card's figure. Since 9 Oct 2026 they are said in one line under the
+ * card's button: the part of the gift the card pays, its fee, and what stays.
  */
 
 /** How many of a currency one euro buys, by the day's rates; the euro itself and the two CFA francs are fixed. */
@@ -63,6 +66,29 @@ export function cardSum(input: Readonly<{ code: string; gift: number; cardEuros:
   const fee = toDecimals(input.feeEuros * rate, input.code);
   const rest = toDecimals(input.gift + fee - card, input.code);
   return { code: input.code, gift: input.gift, card, fee, cardEuros: input.cardEuros, fromAccount: rest > 0 ? rest : 0, stays: rest < 0 ? toDecimals(-rest, input.code) : 0 };
+}
+
+/**
+ * The smallest round gift a card can pay for (the founder, 9 Oct 2026). A gift that needs less of the card than the
+ * service's smallest payment used to be paid at that floor, the rest left in the account: five euros asked for a gift
+ * of three. The sheet now offers no card under the floor, and proposes this amount: the first round figure of the
+ * sheet's money, above the gift as it is, whose card payment reaches the floor. Round is the floor's own size in that
+ * money: a euro or a dollar where five euros are a handful, a thousand francs where they are three thousand.
+ *
+ * Nothing without the day's rates, and nothing when forty steps do not reach the floor, which no real fee allows.
+ */
+export function smallestGiftByCard(input: Readonly<{ way: WayIn; code: string; gift: number; heldUnits: bigint; rates: Rates | undefined }>): number | undefined {
+  const rate = perEuro(input.code, input.rates);
+  const usdPerEur = input.rates?.usdPerEur;
+  if (rate === undefined || !(usdPerEur && usdPerEur > 0)) return undefined;
+  const step = 10 ** Math.floor(Math.log10(Math.max(1, input.way.smallestEur * rate)));
+  for (let rung = Math.floor(input.gift / step) + 1, tried = 0; tried < 40; rung += 1, tried += 1) {
+    const gift = toDecimals(rung * step, input.code);
+    const units = BigInt(Math.round((gift / rate) * usdPerEur * 1_000_000));
+    const needed = units > input.heldUnits ? eurosNeededOn(units - input.heldUnits, input.way, usdPerEur) : 0;
+    if (needed !== undefined && needed >= input.way.smallestEur) return gift;
+  }
+  return undefined;
 }
 
 /** Dollars in the sheet's money at the day's rate, to its decimals: what the account holds, or a gift not typed in it. */
