@@ -39,7 +39,7 @@ contract VikyStravaRealProofHarness is VikyStravaReclaimVerifier {
 }
 
 /// @notice Feeds the real, live-captured Strava 6.0.0 two-claim proof set through the FINAL on-chain
-///         verifier grammar. The capture (session fa8968844e) already passes the production SDK barrier
+///         verifier grammar. The capture (session a8f5b7a8d2) already passes the production SDK barrier
 ///         verifyProof(6.0.0, allowedTags: [], teeAttestation) with isVerified and isTeeAttestationVerified
 ///         true. Passing this test proves the on-chain grammar accepts the same bytes, which is the
 ///         evidence required before LIVE_SCHEMA_CONFIRMED can be flipped.
