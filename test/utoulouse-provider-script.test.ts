@@ -9,11 +9,26 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const SCRIPT = readFileSync("docs/reclaim/utoulouse-enrolment.js", "utf8");
+// The same script without the character, for the day Reclaim's field refuses the length of the first.
+const WITHOUT_THE_CHARACTER = readFileSync("docs/reclaim/utoulouse-enrolment-no-character.js", "utf8");
 const NOTES = readFileSync("docs/reclaim/utoulouse-enrolment-provider.md", "utf8");
 
-test("the notes name the script by its hash, so the file pasted at Reclaim is the file kept here", () => {
-  const hash = createHash("sha256").update(SCRIPT, "utf8").digest("hex");
-  assert.ok(NOTES.includes(`sha256 \`${hash}\``), `the notes do not carry ${hash}`);
+test("the notes name each script by its hash, so the file pasted at Reclaim is a file kept here", () => {
+  for (const script of [SCRIPT, WITHOUT_THE_CHARACTER]) {
+    const hash = createHash("sha256").update(script, "utf8").digest("hex");
+    assert.ok(NOTES.includes(`sha256 \`${hash}\``), `the notes do not carry ${hash}`);
+  }
+});
+
+test("the script without the character is the same script but for the one line that holds the drawing", () => {
+  const lines = SCRIPT.split("\n"), others = WITHOUT_THE_CHARACTER.split("\n");
+  assert.equal(lines.length, others.length);
+  const differ = lines.flatMap((line, at) => (line === others[at] ? [] : [at]));
+  assert.equal(differ.length, 1);
+  assert.ok(lines[differ[0]!]!.startsWith('  var FIGURE = "<svg '));
+  assert.equal(others[differ[0]!], "  var FIGURE = null;");
+  // Both are plain ASCII: nothing a field or a paste can change on the way.
+  for (const script of [SCRIPT, WITHOUT_THE_CHARACTER]) assert.doesNotMatch(script, /[^\n -~]/);
 });
 
 test("a menu entry is looked for as Vaadin draws a button, and as a plain button too", () => {
@@ -44,8 +59,11 @@ test("every line of the session's log that told what happened is still written",
     "'pressed Inscriptions'",
     "'Inscriptions never pressable ('",
     "'press on Inscriptions threw'",
-    "'veil drawn (' + where + ')'",
-    "'veil taken off (' + why + ')'",
+    "'veil drawn (readyState=' + document.readyState + ')'",
+    "'character drawn'",
+    "'character not drawn: ' + ",
+    "'veil removed: ' + why",
+    "'veil failed: ' + reason",
   ]) {
     assert.ok(SCRIPT.includes(line), line);
   }
@@ -54,22 +72,41 @@ test("every line of the session's log that told what happened is still written",
   assert.doesNotMatch(SCRIPT, /log\([^)]*(innerText|textContent|labelOf|document\.title|location\.href)/);
 });
 
-test("a veil covers the page from the sign-in to the end, drawn with the page's own means, and the press is a plain click", () => {
+test("the veil is the mockup's, drawn with the page's own means on the page's root", () => {
   // The founder's rule (8 and 9 Oct 2026): a portal that stands still after the sign-in reads as broken in a second
-  // and a half, so nobody watches their own file move. The values are his.
-  const veil = SCRIPT.slice(SCRIPT.indexOf("function drawVeil(where) {"), SCRIPT.indexOf("function liftVeil(why) {"));
-  for (const said of ["position:fixed;inset:0;", "z-index:2147483647;", "background:#DDD6EB;", "color:#1E1633;", "font-family:-apple-system, Helvetica, sans-serif;", "font-size:20px;", "text-align:center;", "width:12px;height:12px;", "@keyframes viky-veil-turn"]) {
+  // and a half, so nobody watches their own file move. FIGURE and drawVeil are the mockup's own text.
+  const veil = SCRIPT.slice(SCRIPT.indexOf("  function drawVeil(host, position, figureSvg) {"), SCRIPT.indexOf("  let veilNow = null;"));
+  for (const said of ["s.zIndex = '2147483647'; s.background = '#DDD6EB'; s.color = '#1E1633';", "line.textContent = 'Reading your enrolment.';", "sub.textContent = 'Keep this page open.';", "line.textContent = 'That did not work.';", "sub.textContent = 'Go back to Viky and try again.';", "if (turning) turning.cancel();", "orbit.style.visibility = 'hidden';", "{ capture: true, passive: false }"]) {
     assert.ok(veil.includes(said), said);
   }
-  assert.ok(veil.includes("'Reading your enrolment.', 'Nothing to do.'"));
-  // On the root, so the file redrawing its body does not take it away; and nothing is fetched to draw it.
-  assert.ok(veil.includes("document.documentElement.appendChild(veil);"));
-  assert.doesNotMatch(veil, /url\(|@font-face|@import|<img|new Image|createElement\('(img|link|svg|canvas)'\)/);
-  // Drawn as soon as the page has a root, on the two hosts, and not on the ENT once the script has left it.
-  assert.ok(SCRIPT.includes("if (onTheFile || (onTheEnt && !state.applicationNavigationAttempted)) veilAtOnce('at the start');"));
-  assert.ok(SCRIPT.indexOf("veilAtOnce('at the start');") < SCRIPT.indexOf("await until(() => document.readyState !== 'loading', 15000, 100);"), "before the page is waited for");
-  // It comes off for a sign-in form, which needs the person, and when the script gives up: never on a press made.
-  assert.deepEqual([...SCRIPT.matchAll(/liftVeil\('([^']+)'\)/g)].map((found) => found[1]).sort(), ["gave up", "gave up", "gave up", "sign-in form on the ENT", "sign-in form on the file"]);
+  // No duration is said on it: none has been measured.
+  assert.deepEqual([...veil.matchAll(/textContent = '([^']+)'/g)].map((found) => found[1]).filter((said) => /\d|minute|second/.test(said!)), []);
+  // Fixed, on the root: the file redrawing its body does not take it away.
+  assert.ok(SCRIPT.includes("veilNow = drawVeil(document.documentElement, 'fixed', null);"));
+  // Nothing in it needs a stylesheet, a style attribute in markup, an image or a font: a page that allows none of
+  // them still shows all of it. The one thing set from text is the drawing, and it carries its colours as attributes.
+  assert.doesNotMatch(veil, /@font-face|@import|@keyframes|<img|<style|new Image|createElement\('(img|link|style|canvas)'\)|cssText|setAttribute\('style'/);
+  const figure = SCRIPT.split("\n").find((line) => line.startsWith("  var FIGURE = "))!;
+  assert.doesNotMatch(figure, /style=|<style|href|<image|<script|\son\w+=/);
+  assert.deepEqual([...new Set([...figure.matchAll(/url\(([^)]+)\)/g)].map((found) => found[1]))].sort(), ["#icon-body", "#icon-edge"]);
+  // The veil, the sentence and the dot first; the character after them, in a step of its own that says how it went.
+  const shown = SCRIPT.slice(SCRIPT.indexOf("  function showVeil() {"), SCRIPT.indexOf("  // The path gave up"));
+  assert.ok(shown.indexOf("veilNow = drawVeil(") < shown.indexOf("log('veil drawn (") && shown.indexOf("log('veil drawn (") < shown.indexOf("drawCharacter(veilNow.veil);"));
+  const character = SCRIPT.slice(SCRIPT.indexOf("  function drawCharacter(veil) {"), SCRIPT.indexOf("  function removeVeil(why) {"));
+  assert.match(character, /try \{[\s\S]+log\('character drawn'\);[\s\S]+\} catch \(e\) \{\s+log\('character not drawn: '/);
+});
+
+test("the veil is drawn as early as the page has a root, never over a sign-in form, and says when the path gave up", () => {
+  // On the two hosts, before the page is waited for; not on the ENT once the script has left it.
+  assert.ok(SCRIPT.includes("if (onTheFile || (onTheEnt && !state.applicationNavigationAttempted)) veilAtOnce();"));
+  assert.ok(SCRIPT.indexOf("veilAtOnce();") < SCRIPT.indexOf("await until(() => document.readyState !== 'loading', 15000, 100);"), "before the page is waited for");
+  // Never drawn over a sign-in form, and removed for one, whatever the veil says by then.
+  assert.ok(SCRIPT.includes("if (document.body && hasLoginNegativeSignal()) return;"));
+  assert.ok(SCRIPT.includes("if (veilNow && hasLoginNegativeSignal()) removeVeil('sign-in form');"));
+  assert.deepEqual([...new Set([...SCRIPT.matchAll(/removeVeil\('([^']+)'\)/g)].map((found) => found[1]))], ["sign-in form"]);
+  // It fails where the path gives up, and a minute after a press that the page outlived. Never on the press itself.
+  assert.deepEqual([...SCRIPT.matchAll(/failVeil\('([^']+)'\)/g)].map((found) => found[1]).sort(), ["Inscriptions never pressable", "file never ready", "no proof 60 s after the press", "press on Inscriptions threw"]);
+  assert.ok(SCRIPT.includes("setTimeout(() => failVeil('no proof 60 s after the press'), 60000);"));
   // The press is the entry's own click, which a veil over it does not stop.
   assert.ok(SCRIPT.includes("target.click();"));
   assert.doesNotMatch(SCRIPT, /MouseEvent|dispatchEvent/);
