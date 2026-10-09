@@ -34,7 +34,7 @@ test("Mercuryo keeps its own page: filling it in needs a partner widget id", () 
 });
 
 test("every screen that opens the partner opens the page this builds, and the judges page names the partner and the asset", () => {
-  assert.match(readFileSync("app/kit/offer/PaySheet.tsx", "utf8"), /window\.open\(wayInPage\(way, \{ account, euros \}\)/);
+  assert.match(readFileSync("app/kit/offer/PaySheet.tsx", "utf8"), /window\.open\(wayInPage\(way, \{ account, euros: offer\.euros, ask \}\)/);
   const wait = readFileSync("app/components/PayGift.tsx", "utf8");
   assert.doesNotMatch(wait, /wayIn\.page/);
   const judges = readFileSync("app/judges/page.tsx", "utf8");
@@ -54,7 +54,7 @@ test("without the key, the sheet says what to choose on the partner's page and w
 
 test("without the key, the pay press opens nothing: the waiting screen shows the code first, then opens the partner (D296)", () => {
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
-  assert.match(sheet, /if \(!enough && wayInFillsIn\(way\)\) \{\s*window\.open\(wayInPage\(way, \{ account, euros \}\), "_blank", "noopener,noreferrer"\);\s*router\.push\("\/fund\?step=paying&opened=1"\);\s*\} else router\.push\("\/fund\?step=paying"\);/);
+  assert.match(sheet, /if \(!enough && wayInFillsIn\(way\)\) \{\s*window\.open\(wayInPage\(way, \{ account, euros: offer\.euros, ask \}\), "_blank", "noopener,noreferrer"\);\s*router\.push\("\/fund\?step=paying&opened=1"\);\s*\} else router\.push\("\/fund\?step=paying"\);/);
   const wait = readFileSync("app/components/PayGift.tsx", "utf8");
   assert.match(wait, /partnerOpened \? W\.waiting\.openAgain\(wayIn\.name\) : W\.waiting\.openFirst\(wayIn\.name\)/);
   // On the waiting screen the code and its copy come before the button that opens the partner.
