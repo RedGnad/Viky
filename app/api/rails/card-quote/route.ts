@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { askedFromOurOwnPage } from "@/src/api-guard";
 import { NO_STORE } from "@/src/gift-api";
 import { cardQuoteAsk, quoteForUsdc } from "@/src/rampnow-quote";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
@@ -15,6 +16,8 @@ export const dynamic = "force-dynamic";
  * nothing of a person, and nothing else is sent to Rampnow. The key that asks is the server's, and stays there.
  */
 export async function GET(request: Request) {
+  // From our own pages only (the founder, 9 Oct 2026): each answer may ask Rampnow with our key.
+  if (!askedFromOurOwnPage(request)) return NextResponse.json({ error: "This is asked from Viky's own pages only." }, { status: 403, headers: NO_STORE });
   const rate = checkRateLimit("status", request);
   if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
   const need = cardQuoteAsk(new URL(request.url).searchParams);

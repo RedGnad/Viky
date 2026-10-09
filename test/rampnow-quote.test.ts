@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test, { beforeEach } from "node:test";
 import { GET } from "../app/api/rails/card-quote/route";
+import { askedFromOurOwnPage } from "../src/api-guard";
 import { cardQuoteAsk, forgetQuotes, MOST_READINGS, QUOTE_KEPT_MS, quoteForUsdc, rampnowKey, rampnowQuote, rampnowQuoteAddress, rampnowQuotesOn, readRampnowAnswer, type RampnowQuoteDeps } from "../src/rampnow-quote";
 
 const KEY = "pk_live_made_up_for_this_test";
@@ -141,15 +142,16 @@ test("a quote that is not understood whole is set aside: another kind of fee, an
   assert.deepEqual(await rampnowQuote({ currency: "USD", usdc: 10.1 }, { key: KEY, ask: async () => ({ code: 100008, message: "internal_err" }) }), { state: "none", because: "not-understood" });
 });
 
-test("a Rampnow that does not answer gives no quote, and is asked again at the next press; a quote is said again for a minute", async () => {
+test("a Rampnow that does not answer gives no quote, and is asked again at the next press; a quote is said again for twenty seconds", async () => {
   assert.deepEqual(await rampnowQuote({ currency: "USD", usdc: 10.1 }, { key: KEY, ask: async () => Promise.reject(new Error("late")) }), { state: "none", because: "silent" });
-  // Kept a minute for the same need, to the cent of USDC, so the screen that waits says what the sheet said.
+  // Kept twenty seconds for the same need, to the cent of USDC: the same need is not asked of Rampnow twice in a row.
+  assert.equal(QUOTE_KEPT_MS, 20_000);
   const service = rampnow();
   const first = await quoteForUsdc({ currency: "EUR", usdc: 10.1 }, service, 1_000);
   const readings = service.asked.length;
   assert.equal(first.state, "quoted");
   assert.deepEqual(await quoteForUsdc({ currency: "EUR", usdc: 10.1 }, service, 1_000 + QUOTE_KEPT_MS - 1), first);
-  assert.equal(service.asked.length, readings, "not asked again within the minute");
+  assert.equal(service.asked.length, readings, "not asked again within the twenty seconds");
   await quoteForUsdc({ currency: "EUR", usdc: 10.1 }, service, 1_000 + QUOTE_KEPT_MS);
   assert.ok(service.asked.length > readings, "asked again after it");
   await quoteForUsdc({ currency: "EUR", usdc: 10.11 }, service, 1_000);
@@ -170,11 +172,18 @@ test("the route reads a currency and an amount of USDC, and nothing of a person;
   const saved = process.env.RAMPNOW_API_KEY;
   delete process.env.RAMPNOW_API_KEY;
   try {
-    const off = await GET(new Request("https://viky.cash/api/rails/card-quote?currency=USD&units=10100000"));
+    const ours = { "sec-fetch-site": "same-origin", host: "viky.cash" };
+    const off = await GET(new Request("https://viky.cash/api/rails/card-quote?currency=USD&units=10100000", { headers: ours }));
     assert.equal(off.status, 200);
     assert.equal(off.headers.get("cache-control"), "no-store");
     assert.deepEqual(await off.json(), { state: "none", because: "off" });
-    assert.deepEqual(await (await GET(new Request("https://viky.cash/api/rails/card-quote?currency=USD"))).json(), { state: "none", because: "not-understood" });
+    assert.deepEqual(await (await GET(new Request("https://viky.cash/api/rails/card-quote?currency=USD", { headers: ours }))).json(), { state: "none", because: "not-understood" });
+    // From our own pages only: a request that does not say it comes from this site is refused before anything is asked.
+    for (const headers of [{}, { host: "viky.cash" }, { host: "viky.cash", "sec-fetch-site": "cross-site" }, { host: "viky.cash", "sec-fetch-site": "same-site" }, { host: "viky.cash", "sec-fetch-site": "none" }, { host: "viky.cash", "sec-fetch-site": "same-origin", origin: "https://elsewhere.example" }, { host: "viky.cash", referer: "https://elsewhere.example/page" }] as Record<string, string>[]) {
+      const refused = await GET(new Request("https://viky.cash/api/rails/card-quote?currency=USD&units=10100000", { headers }));
+      assert.equal(refused.status, 403, JSON.stringify(headers));
+      assert.deepEqual(await refused.json(), { error: "This is asked from Viky's own pages only." });
+    }
   } finally {
     if (saved !== undefined) process.env.RAMPNOW_API_KEY = saved;
   }
@@ -182,4 +191,21 @@ test("the route reads a currency and an amount of USDC, and nothing of a person;
   const route = readFileSync("app/api/rails/card-quote/route.ts", "utf8");
   assert.doesNotMatch(route, /readAccountAuthSession|headers\.get\("cookie"\)/);
   assert.match(route, /checkRateLimit\("status", request\)/);
+});
+
+test("our own page: a browser's own word for it, the page's address for an older browser, and never another site's", () => {
+  const asked = (headers: Record<string, string>) => askedFromOurOwnPage(new Request("https://viky.cash/api/rails/card-quote", { headers }));
+  assert.equal(asked({ host: "viky.cash", "sec-fetch-site": "same-origin" }), true);
+  // Behind the platform's proxy, the name the visitor asked for is the forwarded one.
+  assert.equal(asked({ host: "internal.example", "x-forwarded-host": "viky.cash", "sec-fetch-site": "same-origin", origin: "https://viky.cash" }), true);
+  // A browser that says nothing of the kind sends the page as referer of a request to its own site.
+  assert.equal(asked({ host: "viky.cash", referer: "https://viky.cash/" }), true);
+  assert.equal(asked({ host: "localhost:3000", referer: "http://localhost:3000/fund?step=paying" }), true);
+  for (const not of [{}, { host: "viky.cash" }, { "sec-fetch-site": "same-origin" }, { host: "viky.cash", "sec-fetch-site": "cross-site" }, { host: "viky.cash", "sec-fetch-site": "same-site" }, { host: "viky.cash", "sec-fetch-site": "none", referer: "https://viky.cash/" }, { host: "viky.cash", referer: "https://viky.cash.elsewhere.example/" }, { host: "viky.cash", referer: "not an address" }, { host: "viky.cash", "sec-fetch-site": "same-origin", origin: "null" }] as Record<string, string>[]) {
+    assert.equal(asked(not), false, JSON.stringify(not));
+  }
+  // The route asks it before its limit and before anything of Rampnow.
+  const route = readFileSync("app/api/rails/card-quote/route.ts", "utf8");
+  assert.ok(route.indexOf("if (!askedFromOurOwnPage(request))") < route.indexOf('checkRateLimit("status", request)'));
+  assert.ok(route.indexOf("if (!askedFromOurOwnPage(request))") < route.indexOf("quoteForUsdc("));
 });

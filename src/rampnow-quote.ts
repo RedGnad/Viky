@@ -207,8 +207,12 @@ export function cardQuoteAsk(params: URLSearchParams): Readonly<{ currency: stri
 export const READING_TIMEOUT_MS = 2_000;
 export const QUOTE_TIMEOUT_MS = 2_800;
 
-/** How long a quote is said again without asking: a minute, in which Rampnow's rate does not move a cent on a gift. */
-export const QUOTE_KEPT_MS = 60_000;
+/**
+ * How long a quote is said again without asking Rampnow (the founder, 9 Oct 2026: a few seconds, so the same need is
+ * not asked twice in a row): twenty seconds, in which its rate does not move a cent on a gift. The screens wait for
+ * the amount to stop changing before they ask at all (src/client/card-ask.ts).
+ */
+export const QUOTE_KEPT_MS = 20_000;
 
 const kept = new Map<string, Readonly<{ at: number; answer: Promise<CardQuoteAnswer> }>>();
 
@@ -220,7 +224,7 @@ async function askRampnow(address: string): Promise<unknown> {
 }
 
 /**
- * The quote the route answers with: asked once for the same need within a minute, and cut when Rampnow is slow, in
+ * The quote the route answers with: asked once for the same need within twenty seconds, and cut when Rampnow is slow, in
  * which case nothing is kept and the next press asks again. A need is its currency and its USDC to the cent.
  */
 export function quoteForUsdc(need: Readonly<{ currency: string; usdc: number }>, deps: RampnowQuoteDeps = { key: rampnowKey(), ask: askRampnow }, now: number = Date.now()): Promise<CardQuoteAnswer> {
