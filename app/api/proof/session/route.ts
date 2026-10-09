@@ -148,6 +148,10 @@ export async function POST(request: Request) {
     // address to go to it left them where they were, and a phone had by then let go of the page they came from. The
     // address is this request's own site and the gift's number, and carries nothing else.
     proofRequest.setRedirectUrl(`${accountAuthOriginFromRequest(request)}/g/${giftId}`);
+    // And when the session is abandoned, by inactivity or by an error (9 Oct 2026): the verification page goes to this
+    // address after a moment if the request carries one, and stays on its closing screen otherwise. The same page, the
+    // gift's, which then says the verification stopped.
+    proofRequest.setCancelRedirectUrl(`${accountAuthOriginFromRequest(request)}/g/${giftId}`);
 
     const sessionId = proofRequest.getStatusUrl().split("/").pop() || "";
     const requestUrl = await proofRequest.getRequestUrl(reclaimChannelLaunchOptions(channel));

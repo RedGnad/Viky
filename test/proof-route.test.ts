@@ -125,11 +125,42 @@ test("GET /session answers the session this account has open for the gift, and n
   }
 });
 
+test("a request given the two addresses carries both: where to go once the proof is made, and where to go when the session is abandoned", async () => {
+  // The library's own request, rebuilt from made-up values with nothing asked of the network: what the two calls of
+  // the route put in the request the verification page reads.
+  const { ReclaimProofRequest } = await import("@reclaimprotocol/js-sdk");
+  const network = globalThis.fetch;
+  let asked = 0;
+  globalThis.fetch = (() => {
+    asked += 1;
+    return Promise.reject(new Error("no network in this test"));
+  }) as typeof fetch;
+  try {
+    const request = await ReclaimProofRequest.fromJsonString(
+      JSON.stringify({ applicationId: `0x${"a1".repeat(20)}`, providerId: "made-up-provider", sessionId: "made-up-session", signature: `0x${"b2".repeat(65)}`, timestamp: "1791500000000", sdkVersion: "js-5.8.2" }),
+    );
+    const gift = "https://viky.cash/g/1000008";
+    request.setRedirectUrl(gift);
+    request.setCancelRedirectUrl(gift);
+    const carried = JSON.parse(request.toJsonString()) as { redirectUrl?: string; cancelRedirectUrl?: string };
+    assert.equal(carried.redirectUrl, gift);
+    assert.equal(carried.cancelRedirectUrl, gift);
+    assert.equal(asked, 0, "nothing was asked of Reclaim");
+  } finally {
+    globalThis.fetch = network;
+  }
+});
+
 test("the verification page is told where to bring the person back, and the row keeps its address", () => {
   // Reclaim's own redirect was empty (7 Oct 2026): the person stayed on its page with a proof made.
   const source = readFileSync("app/api/proof/session/route.ts", "utf8");
   assert.match(source, /proofRequest\.setRedirectUrl\(`\$\{accountAuthOriginFromRequest\(request\)\}\/g\/\$\{giftId\}`\)/, "this request's own site and the gift's number, nothing else");
   assert.ok(source.indexOf("setRedirectUrl(") < source.indexOf("getRequestUrl("), "set before the page's address is made, or the address does not carry it");
+  // A session abandoned, by inactivity or an error, left the person on Reclaim's closing screen (9 Oct 2026): the
+  // request carries the same address for that case, set before the page's address is made as well.
+  assert.match(source, /proofRequest\.setCancelRedirectUrl\(`\$\{accountAuthOriginFromRequest\(request\)\}\/g\/\$\{giftId\}`\);/, "the same address, the gift's page");
+  assert.ok(source.indexOf("setRedirectUrl(") < source.indexOf("setCancelRedirectUrl("));
+  assert.ok(source.indexOf("setCancelRedirectUrl(") < source.indexOf("getRequestUrl("));
   assert.match(source, /await saveProofSession\(\{[\s\S]*?requestUrl,\s*\}\)/);
   assert.match(source, /secondsLeft: PROOF_SESSION_TTL_SECONDS/);
 });
