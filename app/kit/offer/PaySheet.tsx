@@ -48,8 +48,8 @@ import { WaitLine } from "../Waiting";
  *
  * A judge's code (D297; the founder, 9 Oct 2026). The card stays the sheet's one action: a code is visible, and never
  * put forward in the card's place. When the link that brought the person carried a code, its field comes first, above
- * what the card is asked, open and filled in, with a small button; otherwise a small "Have a code?" stands under the
- * card's button and opens the field there. Using it makes the account of somebody who has none, and once the credit
+ * what the card is asked, open and filled in, with a small button; otherwise a small "Have a code?" stands right
+ * under the card's button, before the card service's own line, and opens the field there. Using it makes the account of somebody who has none, and once the credit
  * is in, the sheet's button pays with it, with no card, no fee and no smallest payment.
  *
  * One way in, chosen for the person (D239, the founder's decision of 25 Sep 2026): the first card service unless it
@@ -430,14 +430,15 @@ export function PaySheet({
                   </button>
                 </>
               ) : null}
-              {/* One line: who takes the card, its ID the first time, and its terms (the mockup of 3 Oct 2026). */}
-              {byCard ? <CardLine way={way} /> : null}
             </>
           )}
         </>
       )}
-      {/* When the link carried no code: a small "Have a code?" under the card's button, which opens its field there. */}
+      {/* When the link carried no code: a small "Have a code?" right under the card's button, before any word of the
+          card service (the founder, 9 Oct 2026: it stood under that paragraph, set back). It opens its field there. */}
       {codeFirst ? null : theCode("under")}
+      {/* One line: who takes the card, its ID the first time, and its terms (the mockup of 3 Oct 2026). */}
+      {byCard ? <CardLine way={way} /> : null}
       {/* What the press does where it makes something: an account, the first time. Signed in, the phone's own prompt
           says it, and the sheet says nothing more. */}
       {address || hasCredential ? null : <p className={HELP}>{madeHere ? (codeInReach ? W.passkeyMakesTheAccountEitherWay : W.passkeyMakesTheAccount) : ACCOUNT_DOOR.madeOnTheMainSite}</p>}

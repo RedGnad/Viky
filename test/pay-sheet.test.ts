@@ -163,11 +163,14 @@ test("a code is small beside the card, which stays the one action: first when th
   assert.match(sheet, /const codeInReach = !enough && \(pays === "card" \|\| codeStarted\) && \(codeFirst \? codeOffered !== false : codeOffered === true\);/);
   assert.match(sheet, /setCredits\(\{ open: answer\.open === true, credited: answer\.credited === true \}\);/);
   const body = sheet.slice(sheet.indexOf("<Sheet "), sheet.indexOf("</Sheet>"));
-  // First: after the gift's lines, above what the card is asked and its button. Otherwise: under the card's button
-  // and its line of terms. One or the other, and the card's button is drawn in both.
+  // First: after the gift's lines, above what the card is asked and its button. Otherwise: right under the card's
+  // button, before the card service's own line (the founder, 9 Oct 2026). One or the other, and the card's button is
+  // drawn in both.
   assert.ok(body.indexOf('{codeFirst ? theCode("first") : null}') > body.indexOf("data-pay-lines"));
   assert.ok(body.indexOf('{codeFirst ? theCode("first") : null}') < body.indexOf("data-pay-total"));
-  assert.ok(body.indexOf('{codeFirst ? null : theCode("under")}') > body.indexOf("<CardLine way={way} />"));
+  assert.ok(body.indexOf('{codeFirst ? null : theCode("under")}') > body.indexOf("data-pays="), "under the button");
+  assert.ok(body.indexOf('{codeFirst ? null : theCode("under")}') < body.indexOf("<CardLine way={way} />"), "and before the card service's line");
+  assert.ok(body.indexOf("<CardLine way={way} />") < body.indexOf("W.passkeyMakesTheAccountEitherWay"), "then the service's line, then the passkey's");
   assert.doesNotMatch(sheet, /onTheCode|codeWay|codeChosen/, "nothing stands in the card's place any more");
   // Small, in both places: the kit's small key, a field, and a small button. The sheet has one button in the sun.
   const code = readFileSync("app/kit/offer/JudgeCode.tsx", "utf8");

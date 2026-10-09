@@ -432,11 +432,12 @@ test.describe("a judge's code on the pay sheet: visible, and small beside the ca
       const { page } = funder;
       const card = sheet(page).locator('[data-pays="card"]');
       await expect(card).toHaveText(/^Pay €\d+\.\d{2} by card$/);
-      // The key is small, and under the card's button and its line.
+      // The key is small, right under the card's button and before any word of the card service.
       const key = sheet(page).locator("[data-have-a-code]");
       await expect(key).toHaveText("Have a code?");
       const terms = sheet(page).getByText(/takes your card/);
-      expect((await key.boundingBox())!.y).toBeGreaterThan((await terms.boundingBox())!.y);
+      expect((await key.boundingBox())!.y).toBeGreaterThan((await card.boundingBox())!.y);
+      expect((await key.boundingBox())!.y).toBeLessThan((await terms.boundingBox())!.y);
       expect((await key.boundingBox())!.height).toBeLessThan((await card.boundingBox())!.height);
       await shotAt(page, "C-the-key-under-the-card");
 
