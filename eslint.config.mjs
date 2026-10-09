@@ -8,4 +8,7 @@ export default defineConfig([
   // Playwright's own output and the review captures are pictures and traces, never source: an interrupted browser run
   // left minified trace resources in test-results/ and the lint read them as ours (20 Sep 2026).
   globalIgnores([".next/**", "out/**", "cache/**", "lib/**", "public/**", "next-env.d.ts", "test-results/**", "review-captures/**"]),
+  // The scripts pasted at Reclaim are kept byte for byte as they are pasted, a mockup's own function among them, and
+  // that function names an error it does not read.
+  { files: ["docs/reclaim/*.js"], rules: { "@typescript-eslint/no-unused-vars": "off" } },
 ]);
