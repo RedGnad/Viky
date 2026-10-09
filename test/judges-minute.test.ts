@@ -33,10 +33,10 @@ test("every section is a fold with an anchor, the contents list names each one o
   for (const anchor of read("app/judges/JudgesMinute.tsx").matchAll(/href="#([\w-]+)"/g)) assert.ok(ids.includes(anchor[1]), `#${anchor[1]}`);
   // The order of the list is the order of the page.
   const page = read("app/judges/page.tsx");
-  const order = ["how to try it", "<JudgesWhoUsed", 'title="Network"', "<JudgesVerify", "<JudgesConditions", "<JudgesReliability", "<JudgesContracts", "<JudgesEarlyGifts", "<JudgesIndex", "<JudgesAgora", "<JudgesMera", 'title="How money comes in"', 'title="How a day is read"', 'title="Risks and holes', "<MilestoneJudges", "<JudgesAccount"].map((mark) => page.indexOf(mark));
+  const order = ["how to try it", "<JudgesWhoUsed", 'title="Network"', "<JudgesVerify", "<JudgesConditions", "<JudgesReliability", "<JudgesContracts", "<JudgesEarlyGifts", "<JudgesIndex", "<JudgesAgora", "<JudgesMera", 'title="How money comes in"', 'title="How money goes out"', 'title="How a day is read"', 'title="Risks and holes', "<MilestoneJudges", "<JudgesAccount"].map((mark) => page.indexOf(mark));
   assert.ok(order.every((at) => at > 0), "every section is on the page");
   assert.deepEqual(order, [...order].sort((a, b) => a - b));
-  assert.deepEqual(JUDGES_CONTENTS.map((entry) => entry.id), ["try", "who", "network", "verify", "conditions", "reliability", "contracts", "first-gifts", "index", "agora", "mera", "money-in", "reading", "risks", "milestone", "account"]);
+  assert.deepEqual(JUDGES_CONTENTS.map((entry) => entry.id), ["try", "who", "network", "verify", "conditions", "reliability", "contracts", "first-gifts", "index", "agora", "mera", "money-in", "money-out", "reading", "risks", "milestone", "account"]);
 });
 
 test("every section of detail is folded: only the judge's own path and their own account open by themselves", () => {

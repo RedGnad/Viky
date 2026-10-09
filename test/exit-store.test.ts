@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test, { after, before, beforeEach } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import {
@@ -6,6 +7,7 @@ import {
   attachSignature,
   configureExitStore,
   conversionsSent,
+  exchangesSentInto,
   discardExit,
   ensureExitSchema,
   loadExit,
@@ -235,3 +237,25 @@ test("the judges page reads the conversions sent, USDC changed into what a gift 
   assert.equal(sent?.first?.minOut, 14_785_724n);
   assert.equal(sent?.first?.txHash, `0x${"88".repeat(32)}`);
 });
+
+test("the judges page reads the exchanges sent for a way out, by the coin handed back, and the first of them", async () => {
+  const USDC = "0x754704Bc059F8C67012fEd69BC8A327a5aafb603";
+  const MON = "0x0000000000000000000000000000000000000000";
+  assert.deepEqual(await exchangesSentInto(USDC), { count: 0, first: null });
+  // Prepared and signed is not sent.
+  const bank = terms({ amount: 10_000_000n, minOut: 9_995_586n });
+  await saveExit(bank);
+  await attachSignature(bank.id, `0x${"11".repeat(65)}`);
+  assert.deepEqual(await exchangesSentInto(USDC), { count: 0, first: null }, "signed is not sent");
+  await markExitSent(bank.id, `0x${"22".repeat(32)}`);
+  const sent = await exchangesSentInto(USDC.toLowerCase());
+  assert.equal(sent?.count, 1);
+  assert.deepEqual([sent?.first?.amount, sent?.first?.minOut, sent?.first?.txHash], [10_000_000n, 9_995_586n, `0x${"22".repeat(32)}`]);
+  // The card's coin has its own count: an exchange into USDC is not one of the card's.
+  assert.deepEqual(await exchangesSentInto(MON), { count: 0, first: null });
+  // What reads it leaves out an exchange that made the dollars of a mobile money payout: that way has its own line.
+  const store = readFileSync("src/exit-store.ts", "utf8");
+  assert.match(store, /SELECT exit_tx FROM viky_mobile_payouts/);
+  assert.match(store, /!mobile\.has\(String\(row\.tx_hash\)\.toLowerCase\(\)\)/);
+});
+
