@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 import { JUDGES_CONTENTS } from "../app/judges/JudgesContents";
+import { secondsToPay, TOULOUSE_PASSES } from "../src/judges-first-use";
 
 /**
  * The judges page for a judge in a hurry (the audit of 1 Oct 2026, D-11; the founder, 2 Oct 2026): a block that says
@@ -82,7 +83,24 @@ test("the minute says what Viky is, for whom, who used it, where it runs, why Mo
 
 test("the universities are lines a judge reads in a minute, and Rome's is written once its row holds the right hash (the UI pass of 8 Oct 2026)", () => {
   const minute = read("app/judges/JudgesMinute.tsx");
-  assert.ok(minute.includes('<span className="block">Toulouse: a real student showed their enrolment, and the gift paid.</span>'));
+  // The day's fact first (the founder, 9 Oct 2026), the first pass under it, each with the transaction that paid.
+  assert.match(minute, /Toulouse, \{TOULOUSE_PASSES\.onTheFixedRule\.day\}: a student showed their enrolment, and\{" "\}\s+<a className="underline" href=\{`https:\/\/monadvision\.com\/tx\/\$\{TOULOUSE_PASSES\.onTheFixedRule\.paidTx\}`\}>\s+the gift paid\s+<\/a>\{" "\}\s+\{secondsToPay\(TOULOUSE_PASSES\.onTheFixedRule\)\} seconds after the verification opened, with no review\./);
+  assert.match(minute, /Toulouse, \{TOULOUSE_PASSES\.first\.day\}, the first pass: a real student showed their enrolment, and\{" "\}/);
+  assert.ok(minute.indexOf('data-toulouse="on-the-fixed-rule"') < minute.indexOf('data-toulouse="first"'), "the first pass stays under it");
+  // Sixty seconds is worked out from the two moments, never typed: the verification opened, the block that paid.
+  assert.equal(TOULOUSE_PASSES.onTheFixedRule.day, "9 Oct 2026");
+  assert.equal(secondsToPay(TOULOUSE_PASSES.onTheFixedRule), 60);
+  assert.equal(TOULOUSE_PASSES.onTheFixedRule.opened.toISOString(), "2026-10-09T12:54:27.000Z");
+  assert.equal(TOULOUSE_PASSES.onTheFixedRule.paid.toISOString(), "2026-10-09T12:55:27.000Z");
+  assert.equal(TOULOUSE_PASSES.onTheFixedRule.paidTx, "0xd950295c4c3d51480496003fd6547b0fc6c3546ac0c5747d377e6259cd3277e2");
+  assert.equal(TOULOUSE_PASSES.first.paidTx, "0x9c5508e83b0dd20668bb6a8c683faa047820734d6938387f8b6f516c3467c4fd");
+  assert.doesNotMatch(minute, /60 seconds/, "the figure is the code's");
+  // The README says the same fact in the founder's sentence, with the same transaction, over the first pass.
+  const readme = read("README.md");
+  assert.match(readme, /\*\*Toulouse, 9 Oct 2026: a student showed their enrolment, and the gift paid 60 seconds after the verification\s+opened, with no review\.\*\*/);
+  assert.ok(readme.includes(`https://monadvision.com/tx/${TOULOUSE_PASSES.onTheFixedRule.paidTx}`));
+  assert.ok(readme.indexOf("Toulouse, 9 Oct 2026") < readme.indexOf("The first pass, two days before"), "and the first pass stays under it");
+  assert.match(readme, /Gift 1000008 on the second `MilestoneGift`, 5\.02 AUSD for staying enrolled/);
   assert.ok(minute.includes("more: each set up within two days of a first gift.</span>"));
   // Both cases (the founder, 9 Oct 2026): a rule set ahead pays the proof that fits it at once, and review is for the rest.
   assert.ok(minute.includes('<span className="block">A first proof that fits a rule set ahead for its university is paid at once.</span>'));
@@ -100,7 +118,7 @@ test("the universities are lines a judge reads in a minute, and Rome's is writte
   // 8 Oct 2026. Its name comes from the directory's entry, never typed into the page.
   assert.doesNotMatch(minute, /Rome/);
   assert.match(minute, /\{readyOnReclaim\.map\(\(name\) => \(\s+<span className="block" key=\{name\} data-ready-on-reclaim="">\s+\{name\}: ready today, on a check approved by Reclaim\.\s+<\/span>\s+\)\)\}/);
-  assert.ok(minute.indexOf("Toulouse: a real student showed their enrolment") < minute.indexOf("{readyOnReclaim.map("));
+  assert.ok(minute.indexOf('data-toulouse="first"') < minute.indexOf("{readyOnReclaim.map("));
   assert.ok(minute.indexOf("{readyOnReclaim.map(") < minute.indexOf("more: each set up within two days of a first gift."));
   assert.ok(page.includes("const readyOnReclaim = await readyOnReclaimsCheck(loadPortal);"));
   assert.ok(page.includes("readyOnReclaim={readyOnReclaim.map((one) => one.said)}"));
