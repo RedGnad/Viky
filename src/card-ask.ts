@@ -48,3 +48,60 @@ export function floorOf(way: WayIn, usdPerEur: number | undefined): CardAsked | 
   if (rate === undefined) return undefined;
   return paidIn(way) === "EUR" ? { currency: "EUR", amount: way.smallestEur } : { currency: "USD", amount: Math.ceil(way.smallestEur * rate - 1e-9) };
 }
+
+/**
+ * The USDC a quote is asked for: what the account is short of, and the one part in a hundred the rule allows for the
+ * change into what a gift holds (`DOLLAR_COIN_ALLOWANCE`). In the millionths an account counts in, rounded up.
+ */
+export function usdcToAsk(shortfallUnits: bigint): bigint {
+  return shortfallUnits <= 0n ? 0n : (shortfallUnits * 100n + 98n) / 99n;
+}
+
+/**
+ * What a screen knows of what the card is asked: still being asked of Rampnow; an amount, quoted by Rampnow in the
+ * money the screen is read in, or worked out by the rule in the way's own currency; under the service's smallest
+ * payment, with that floor; or nothing to say, when the rule needs a rate that was not read.
+ */
+export type CardAskState =
+  | Readonly<{ state: "asking" }>
+  | Readonly<{ state: "ask"; ask: CardAsk; quoted: boolean }>
+  | Readonly<{ state: "under"; floor: CardAsked }>
+  | Readonly<{ state: "none" }>;
+
+/** By the rule alone: the offer's euros said in the way's currency, or its floor when the gift is under it. */
+export function askOfTheRule(offer: Readonly<{ way: WayIn; euros: number | undefined; atFloor: boolean }>, usdPerEur: number | undefined): CardAskState {
+  if (offer.atFloor) {
+    const floor = floorOf(offer.way, usdPerEur);
+    return floor ? { state: "under", floor } : { state: "none" };
+  }
+  const ask = offer.euros ? askByRule(offer.way, offer.euros, usdPerEur) : undefined;
+  return ask ? { state: "ask", ask, quoted: false } : { state: "none" };
+}
+
+/** What Rampnow answered, as the route gives it (src/rampnow-quote.ts), or that it was not waited for any longer. */
+export type QuoteSaid =
+  | Readonly<{ state: "quoted"; quote: CardAsk & Readonly<{ arrives: number }> }>
+  | Readonly<{ state: "under"; currency: string; smallest: number }>
+  | Readonly<{ state: "none"; because?: string }>
+  | "late";
+
+/**
+ * From Rampnow's answer: its quote, in the currency it was asked in; its floor when the gift is under it; and the
+ * rule whenever it gives no quote, because no key is set, a card does not pay in that currency, or it did not answer.
+ */
+export function askOfTheQuote(said: QuoteSaid, rule: CardAskState): CardAskState {
+  if (said === "late" || said.state === "none") return rule;
+  if (said.state === "under") return { state: "under", floor: { currency: said.currency, amount: said.smallest } };
+  const { currency, amount, fee } = said.quote;
+  return { state: "ask", ask: { currency, amount, fee }, quoted: true };
+}
+
+/**
+ * What a screen that must be paid asks of the card, whatever the gift needs: under the service's smallest payment, the
+ * smallest payment itself, since what is over stays in the account (the screen that waits, where the gift is fixed).
+ */
+export function askToPay(state: CardAskState): CardAsked | undefined {
+  if (state.state === "ask") return { currency: state.ask.currency, amount: state.ask.amount };
+  if (state.state === "under") return state.floor;
+  return undefined;
+}

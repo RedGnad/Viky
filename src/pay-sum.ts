@@ -89,16 +89,19 @@ export function cardSum(input: Readonly<{ code: string; gift: number; charged: C
  *
  * Nothing without the day's rates, and nothing when forty steps do not reach the floor, which no real fee allows.
  */
-export function smallestGiftByCard(input: Readonly<{ way: WayIn; code: string; gift: number; heldUnits: bigint; rates: Rates | undefined }>): number | undefined {
+export function smallestGiftByCard(input: Readonly<{ way: WayIn; code: string; gift: number; heldUnits: bigint; rates: Rates | undefined; floor?: CardAsked }>): number | undefined {
   const rate = perEuro(input.code, input.rates);
   const usdPerEur = input.rates?.usdPerEur;
   if (rate === undefined || !(usdPerEur && usdPerEur > 0)) return undefined;
-  const step = 10 ** Math.floor(Math.log10(Math.max(1, smallestEurOn(input.way, usdPerEur) * rate)));
+  // The floor to reach, in euros: the way's own by the rule, or the one a quote gave, in the currency it gave it in.
+  const quoted = input.floor ? perEuro(input.floor.currency, input.rates) : undefined;
+  const floorEur = input.floor && quoted !== undefined ? input.floor.amount / quoted : smallestEurOn(input.way, usdPerEur);
+  const step = 10 ** Math.floor(Math.log10(Math.max(1, floorEur * rate)));
   for (let rung = Math.floor(input.gift / step) + 1, tried = 0; tried < 40; rung += 1, tried += 1) {
     const gift = toDecimals(rung * step, input.code);
     const units = BigInt(Math.round((gift / rate) * usdPerEur * 1_000_000));
     const needed = units > input.heldUnits ? eurosNeededOn(units - input.heldUnits, input.way, usdPerEur) : 0;
-    if (needed !== undefined && needed >= smallestEurOn(input.way, usdPerEur) - 1e-6) return gift;
+    if (needed !== undefined && needed >= floorEur - 1e-6) return gift;
   }
   return undefined;
 }

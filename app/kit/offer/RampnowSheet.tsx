@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { getJson } from "@/src/client/api";
 import { noteInRampnowJournal, noteRampnowMessage } from "@/src/client/rampnow-journal";
 import { FRAME_HEIGHT, frameHeightFor, LATE_WAY_OUT_AFTER_MS, orderUidOf, PAYMENT_POSSIBLE_AFTER_MS, RAMPNOW_FRAME_ALLOW, rampnowEventOf, rampnowFinishPage, rampnowSays } from "@/src/rampnow-frame";
-import { WAY_IN_USDC, rampnowPage } from "@/src/rails";
+import { WAY_IN_USDC, rampnowPage, type CardAsked } from "@/src/rails";
 import { PAY as W } from "@/src/sentences";
 import { BODY, HELP, SMALL_BUTTON } from "../../components/ui";
 import { Sheet } from "../Sheet";
@@ -43,7 +43,8 @@ const nothing = () => undefined;
 export function RampnowSheet({
   open,
   account,
-  euros,
+  ask,
+  asking = false,
   finish = null,
   known,
   started,
@@ -55,7 +56,10 @@ export function RampnowSheet({
 }: Readonly<{
   open: boolean;
   account: string | undefined;
-  euros?: number;
+  /** What the card is asked: how much, and in which currency (src/card-ask.ts). */
+  ask?: CardAsked;
+  /** That amount is still being asked of Rampnow: the frame waits for it rather than open on no amount. */
+  asking?: boolean;
   /** A payment already started, to finish: the order Rampnow named when it named one. No new payment is started. */
   finish?: Readonly<{ orderUid: string | null }> | null;
   /** Whether a payment is known, by a message of the frame, now or on an earlier visit. */
@@ -114,17 +118,18 @@ export function RampnowSheet({
 
   // The frame's address for a new payment, asked of the server, which puts in the session's own account and the public
   // key when it has one. A payment to finish needs none: its page is Rampnow's own.
+  const amountAsked = ask && ask.amount > 0 ? `?currency=${encodeURIComponent(ask.currency)}&amount=${encodeURIComponent(String(ask.amount))}` : "";
   useEffect(() => {
-    if (!open || !account || finishing) return;
+    if (!open || !account || finishing || asking) return;
     let live = true;
-    getJson<{ url: string }>(`/api/fund/rampnow-frame${euros && euros > 0 ? `?euros=${encodeURIComponent(String(euros))}` : ""}`).then(
+    getJson<{ url: string }>(`/api/fund/rampnow-frame${amountAsked}`).then(
       (answer) => live && setAddress(answer.url),
       () => live && setUnreachable(true),
     );
     return () => {
       live = false;
     };
-  }, [open, account, euros, finishing]);
+  }, [open, account, amountAsked, finishing, asking]);
 
   // Written down once per opening, with what it opens on and in which browser: the times of a real payment, and what
   // one browser does that another does not, are read from these lines. And once more if the page is left with it open.
@@ -248,7 +253,7 @@ export function RampnowSheet({
               <div className="flex flex-wrap items-center gap-[var(--space-sm)]" data-rampnow-beside="">
                 <p className={HELP}>{unreachable ? W.rampnow.notShowing : W.rampnow.cantSignIn}</p>
                 <a
-                  href={finishing ? rampnowFinishPage(orderUid) : rampnowPage({ account, euros })}
+                  href={finishing ? rampnowFinishPage(orderUid) : rampnowPage({ account, ask })}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={SMALL_BUTTON}

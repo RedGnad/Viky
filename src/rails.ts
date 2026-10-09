@@ -322,7 +322,9 @@ export const RAMPNOW_OPEN_IN: readonly string[] = [
 
 /**
  * Adding money by card through Rampnow's own public page (the founder, 1 Oct 2026), which arrives filled in and locked:
- * the amount, the euro, the card, USDC on Monad and the payer's own account (`wayInPage`). The person chooses nothing
+ * the amount and its currency, the card, USDC on Monad and the payer's own account (`wayInPage`). The currency is the
+ * one the person reads Viky in when Rampnow's own quote answers in it (src/rampnow-quote.ts), dollars otherwise
+ * (9 Oct 2026); it was the euro for everybody until then. The person chooses nothing
  * and pastes nothing. What arrives is USDC, another dollar coin, which the screen that waits changes into what a gift
  * holds, with nothing to confirm.
  *
@@ -353,6 +355,9 @@ export const WAY_IN_USDC: WayIn = {
   delivers: { coin: "USDC", network: "Monad" },
   smallestEur: 5,
   cents: true,
+  // Opened in dollars when its own quote does not say another currency (the founder, 9 Oct 2026): what a gift is
+  // counted in, so nothing is changed twice. Its fee and its floor are its own, in euros, said in dollars at the rate.
+  paidIn: "USD",
   fee: { percent: 7, upTo: false, plus: 0.4, minimum: 1, currency: "EUR" },
   conditions: ["The first time: your details, a code by text, and your ID.", "A card in your name."],
   // Two readings. Its documentation, "Onramp Flow" (docs.rampnow.io, read 5 Oct 2026): the person enters an e-mail and
