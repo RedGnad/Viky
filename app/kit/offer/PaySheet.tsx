@@ -395,7 +395,7 @@ export function PaySheet({
   // card's figure in that money is the euros at the day's rate, not what the bank will take: it is said "about", and
   // the euros the card is charged are said under the button, to the cent (the audit of 9 Oct 2026, F19).
   const converted = code !== "EUR";
-  const total = enough ? { label: W.rows.fromAccount, amount: giftRead } : sum ? { label: W.youPay, amount: converted ? `${W.about} ${say(sum.card)}` : say(sum.card) } : undefined;
+  const total = enough ? { label: W.rows.fromAccount, amount: giftRead, about: false } : sum ? { label: W.youPay, amount: say(sum.card), about: converted } : undefined;
 
   return (
     <Sheet open={open} title={W.title(recipient)} onClose={close} tall>
@@ -435,6 +435,8 @@ export function PaySheet({
         <div>
           <p className={CARD_LABEL}>{total.label}</p>
           <p className={`${CARD_AMOUNT} whitespace-nowrap tabular-nums`} data-pay-total="">
+            {/* "about", in the size of a sentence: it qualifies the figure and is not one. */}
+            {total.about ? <span className={`${BODY} font-normal`}>{W.about} </span> : null}
             {total.amount}
           </p>
         </div>

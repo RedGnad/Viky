@@ -269,7 +269,9 @@ test("where the sheet is not in euros, the total is said about, and the euros th
   assert.equal(PAY.cardCharged("€34.00"), "Your card is charged €34.00.");
   assert.equal(PAY.about, "about");
   assert.match(sheet, /const converted = code !== "EUR";/);
-  assert.match(sheet, /sum \? \{ label: W\.youPay, amount: converted \? `\$\{W\.about\} \$\{say\(sum\.card\)\}` : say\(sum\.card\) \}/);
+  assert.match(sheet, /sum \? \{ label: W\.youPay, amount: say\(sum\.card\), about: converted \}/);
+  // "about" stands before the figure in the size of a sentence, never in the figure's own.
+  assert.match(sheet, /\{total\.about \? <span className=\{`\$\{BODY\} font-normal`\}>\{W\.about\} <\/span> : null\}\s+\{total\.amount\}/);
   assert.match(sheet, /\{sum && converted \? \(\s+<p className=\{HELP\} data-card-charged="">\s+\{W\.cardCharged\(moneyIn\(sum\.cardEuros, "EUR"\)\)\}/);
   const body = sheet.slice(sheet.indexOf("<Sheet "), sheet.indexOf("</Sheet>"));
   // Under the button and the line that adds up, and before the code's key and the card service's own line.
