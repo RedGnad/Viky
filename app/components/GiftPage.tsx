@@ -44,7 +44,7 @@ import { MOTION } from "@/src/design-tokens";
 import { SHOWN_MARK, withoutShownMark } from "@/src/shown-return";
 import type { AnyGiftStatus } from "@/src/gift-status";
 import type { MilestoneStatus } from "@/src/milestone-view";
-import { contractDayInWords, contractRangeInWords, dateInWords, dayInWords, hourInWords, momentInWords, nextPassMs } from "@/src/moments";
+import { contractDayInWords, contractRangeInWords, dateInWords, dayInWords, hourInWords, momentInWords, nextPassMs, onALaterDay } from "@/src/moments";
 import { COUNTING_PASS_UTC, settlingTimeInWords } from "@/src/pass-schedule";
 import { reserveOf } from "@/src/reserves";
 import { ACCOUNT_DOOR, CONSENT as C, GIFT_LIVE as L, GIFT_PAGE as W, LIMIT, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M, SHOW_PROOF, WAITS } from "@/src/sentences";
@@ -509,7 +509,8 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
     takeableFromHome: earned > 0n,
     proof: proofStands,
     // The day the university's page is read by at the latest: two days after the gift was made, in the reader's clock.
-    builtByInWords: dayInWords((status.createdAtChain + 2 * 86_400) * 1000, zone),
+    // Once that day has passed, no day is said: the sentence stays and the day goes (the founder, 10 Oct 2026).
+    builtByInWords: nowMs !== 0 && onALaterDay(nowMs, (status.createdAtChain + 2 * 86_400) * 1000, zone) ? null : dayInWords((status.createdAtChain + 2 * 86_400) * 1000, zone),
     lateUntilInWords: lateUntilMs === null ? null : dateInWords(lateUntilMs, zone),
     // Ended by the person it is for: the day in this reader's clock, and the two amounts the ending moved.
     ended: status.ended ? { onInWords: dateInWords(status.ended.atMs, zone), keptDisplay: status.ended.keptDisplay, givenBackDisplay: status.ended.givenBackDisplay } : null,

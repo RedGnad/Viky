@@ -1300,6 +1300,9 @@ export const GIFT_LIVE = {
      */
     buildingYours: (from: string) => `Your university is being set up. You can show your page here from ${from} at the latest.`,
     buildingTheirs: (from: string) => `Their university is being set up. They can show their page from ${from} at the latest.`,
+    /** Once the day named has passed and the page is still not read: the sentence stays and the day goes (the founder, 10 Oct 2026). */
+    buildingLateYours: "Your university is being set up. The money waits in your name.",
+    buildingLateTheirs: "Their university is being set up.",
     /**
      * Past the last day. True of the contract: what a source dates itself (a certificate granted, a test taken, a race
      * run) may be proved for fourteen days more if its date is in time, and then the gift goes back. The state is the

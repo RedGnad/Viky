@@ -95,6 +95,12 @@ test.describe("a gift had or not, as its two people read it", () => {
       await expect(page.getByText(/within two days/)).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Show it", exact: true })).toHaveCount(0);
       await shot(page, size.name, "3d-yours-being-built");
+      // Past the day named (this gift was made five days ago): the sentence stays and the day goes.
+      state = { review: { status: "building" } };
+      await page.goto(`/g/${GIFT}`);
+      await expect(page.getByText("Your university is being set up. The money waits in your name.", { exact: true })).toBeVisible();
+      await expect(page.getByText(/at the latest/)).toHaveCount(0);
+      await shot(page, size.name, "3d2-yours-being-built-past-the-day");
 
       // The last day has passed. An enrolment is dated the day it is shown, so nothing shown now can pay: no gesture
       // is offered, and the page says when it goes back.
@@ -153,6 +159,11 @@ test.describe("a gift had or not, as its two people read it", () => {
       await page.goto(`/g/${GIFT}`);
       await expect(page.getByText(/^Their university is being set up\. They can show their page from \d{1,2} [A-Z][a-z]{2} at the latest\.$/)).toBeVisible();
       await shot(page, size.name, "3g2-theirs-being-built");
+      state = { review: { status: "building" } };
+      await page.goto(`/g/${GIFT}`);
+      await expect(page.getByText("Their university is being set up.", { exact: true })).toBeVisible();
+      await expect(page.getByText(/at the latest/)).toHaveCount(0);
+      await shot(page, size.name, "3g3-theirs-being-built-past-the-day");
 
       state = { review: { status: "pending" } };
       await page.goto(`/g/${GIFT}`);

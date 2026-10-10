@@ -10,6 +10,7 @@ import { CONDITIONS } from "../src/conditions";
 import { liveOf, type LiveInput } from "../src/gift-live";
 import { askedInWords, certificateById } from "../src/milestone-conditions";
 import { marathonTargetUnderHours } from "../src/marathon";
+import { onALaterDay } from "../src/moments";
 import { GIFT_CARD, GIFT_PAGE, MILESTONE_PAGE, SHOW_PROOF } from "../src/sentences";
 
 test("what it asks is said in the register's words, from the contract's own target", () => {
@@ -102,6 +103,11 @@ test("the title says where the proof stands, to each of the two people", () => {
   // Said by what the person will be able to do and when (the founder, 10 Oct 2026).
   assert.equal(title({ proof: "building", builtByInWords: "12 Oct" }), "Your university is being set up. You can show your page here from 12 Oct at the latest.");
   assert.equal(title({ proof: "building", builtByInWords: "12 Oct", voice: "funder" }), "Their university is being set up. They can show their page from 12 Oct at the latest.");
+  // Once the day named has passed, the sentence stays and the day goes.
+  assert.equal(title({ proof: "building", builtByInWords: null }), "Your university is being set up. The money waits in your name.");
+  assert.equal(title({ proof: "building", builtByInWords: null, voice: "funder" }), "Their university is being set up.");
+  assert.deepEqual([onALaterDay(Date.UTC(2026, 9, 13, 0, 5), Date.UTC(2026, 9, 12, 15), "UTC"), onALaterDay(Date.UTC(2026, 9, 12, 23, 55), Date.UTC(2026, 9, 12, 15), "UTC"), onALaterDay(Date.UTC(2026, 9, 12, 23, 55), Date.UTC(2026, 9, 12, 15), "Asia/Tokyo")], [true, false, false]);
+  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /builtByInWords: nowMs !== 0 && onALaterDay\(nowMs, \(status\.createdAtChain \+ 2 \* 86_400\) \* 1000, zone\) \? null : dayInWords\(\(status\.createdAtChain \+ 2 \* 86_400\) \* 1000, zone\),/);
   // The card says it once: the block under it draws nothing while the university is being set up.
   assert.match(readFileSync("app/kit/ShowProof.tsx", "utf8"), /if \(review === "building" && state\.at !== "held"\) return null;/);
   assert.equal("building" in SHOW_PROOF, false);

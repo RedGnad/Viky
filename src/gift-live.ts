@@ -44,7 +44,10 @@ export type LiveInput = Readonly<{
    * so what was had in time can still be proved, and "ended" where the showing itself is what is dated.
    */
   proof?: "pending" | "refused" | "building" | "late" | "ended" | "unread" | null;
-  /** The day the university's page is read by at the latest, in words: the gift's making plus two days, in the reader's clock. */
+  /**
+   * The day the university's page is read by at the latest, in words: the gift's making plus two days, in the reader's
+   * clock. Nothing once that day has passed: the sentence then says no day.
+   */
   builtByInWords?: string | null;
   /** The last day of the late window, in the reader's clock: fourteen days after the gift's last day. */
   lateUntilInWords?: string | null;
@@ -160,8 +163,10 @@ function proofHeadline(proof: NonNullable<LiveInput["proof"]>, voice: Voice, rec
     case "refused":
       return L.awaitingProof.refused;
     case "building":
-      // Said by what the person will be able to do and when (10 Oct 2026); the page always knows the day.
-      return yours ? L.awaitingProof.buildingYours(builtBy ?? "") : L.awaitingProof.buildingTheirs(builtBy ?? "");
+      // Said by what the person will be able to do and when; once the day named has passed, the sentence stays and
+      // the day goes (the founder, 10 Oct 2026).
+      if (!builtBy) return yours ? L.awaitingProof.buildingLateYours : L.awaitingProof.buildingLateTheirs;
+      return yours ? L.awaitingProof.buildingYours(builtBy) : L.awaitingProof.buildingTheirs(builtBy);
     case "late":
       return L.awaitingProof.late;
     case "ended":

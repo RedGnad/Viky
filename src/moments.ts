@@ -89,15 +89,21 @@ export function isZone(value: unknown): value is string {
  * Every screen the server draws passes the zone, so the server and the browser say the same day. Nothing else does,
  * and for them this is what it always was.
  */
-/** The same day without its year, for a day close enough that the year is noise: "12 Oct" (the founder, 10 Oct 2026). */
-export function dayInWords(atMs: number, zone?: string): string {
-  return dateInWords(atMs, zone).replace(/ \d{4}$/, "");
-}
-
 export function dateInWords(atMs: number, zone?: string): string {
   const at = new Date(atMs);
   if (!zone) return `${at.getDate()} ${MONTHS[at.getMonth()]} ${at.getFullYear()}`;
   const parts = new Intl.DateTimeFormat("en-GB", { timeZone: zone, day: "numeric", month: "numeric", year: "numeric" }).formatToParts(at);
   const partOf = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
   return `${Number(partOf("day"))} ${MONTHS[Number(partOf("month")) - 1]} ${partOf("year")}`;
+}
+
+/** The same day without its year, for a day close enough that the year is noise: "12 Oct" (the founder, 10 Oct 2026). */
+export function dayInWords(atMs: number, zone?: string): string {
+  return dateInWords(atMs, zone).replace(/ \d{4}$/, "");
+}
+
+/** Whether a moment falls on a later calendar day than another, on the same clock as `dateInWords`: the day named has passed. */
+export function onALaterDay(atMs: number, thanMs: number, zone?: string): boolean {
+  const day = (ms: number) => new Intl.DateTimeFormat("en-CA", { ...(zone ? { timeZone: zone } : {}), year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
+  return day(atMs) > day(thanMs);
 }
