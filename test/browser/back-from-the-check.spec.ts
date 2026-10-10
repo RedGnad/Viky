@@ -36,11 +36,33 @@ const card = (page: Page) => page.locator("section.gift-card-placed");
 const state = (page: Page) => card(page).locator(".gift-state");
 const waitLine = (page: Page) => card(page).locator("[data-waiting]");
 const moment = (page: Page) => page.locator("dialog.reached-moment");
-/** Where the amount is laid out on the card, which no swell changes. An expression: a function sent to the page loses its name on the way. */
-const amountTop = (page: Page) => page.evaluate(`document.querySelector('section.gift-card-placed [data-turns="amount"]').offsetTop`) as Promise<number>;
+/**
+ * How far under its card's top edge the amount stands, by the two boxes themselves, read once nothing moves the amount
+ * (its swell changes its box for a moment). An expression: a function sent to the page loses its name on the way.
+ */
+const AMOUNT = `document.querySelector('section.gift-card-placed [data-turns="amount"]')`;
+const amountTop = async (page: Page) => {
+  await expect.poll(() => page.evaluate(`${AMOUNT}.getAnimations().length`), { timeout: 30_000 }).toBe(0);
+  return page.evaluate(`Math.round((${AMOUNT}.getBoundingClientRect().top - document.querySelector('section.gift-card-placed').getBoundingClientRect().top) * 100) / 100`) as Promise<number>;
+};
 const cardHeight = (page: Page) => page.evaluate(`document.querySelector('section.gift-card-placed').offsetHeight`) as Promise<number>;
-/** Where the card itself stands on the page: what stands above it must not push it either. */
-const cardTop = (page: Page) => page.evaluate(`Math.round(document.querySelector('section.gift-card-placed').getBoundingClientRect().top + window.scrollY)`) as Promise<number>;
+/**
+ * Where the card itself stands on the page, read once it stands still (a page that has just arrived is still rising):
+ * what stands above it must not push it either.
+ */
+const CARD_TOP = `Math.round((document.querySelector('section.gift-card-placed').getBoundingClientRect().top + window.scrollY) * 100) / 100`;
+const cardTop = async (page: Page) => {
+  let last = Number.NaN;
+  await expect
+    .poll(async () => {
+      const now = (await page.evaluate(CARD_TOP)) as number;
+      const still = now === last;
+      last = now;
+      return still;
+    }, { intervals: [250], timeout: 30_000 })
+    .toBe(true);
+  return last;
+};
 
 /** The animations that time the landing, and the confetti of the moment: the two clocks a frame is held on. */
 const LANDING = "document.documentElement.getAnimations()";
@@ -48,7 +70,7 @@ const RAIN = "[...document.querySelectorAll('.confetti-piece')].flatMap((piece) 
 /** Holds every animation where it is once `clock` has run `ms` of its own time, and says what time that was. */
 const holdAt = (page: Page, clock: string, ms: number) =>
   page.evaluate(
-    `new Promise((done) => { const tick = () => { const running = ${clock}; const at = running.length ? Math.max(...running.map((one) => Number(one.currentTime ?? 0))) : -1; if (at >= ${ms}) { document.getAnimations().forEach((one) => one.pause()); done(at); } else requestAnimationFrame(tick); }; tick(); })`,
+    `new Promise((done, refuse) => { const asked = performance.now(); let seen = false; const tick = () => { const running = ${clock}; const at = running.length ? Math.max(...running.map((one) => Number(one.currentTime ?? 0))) : -1; if (running.length) seen = true; if (at >= ${ms}) { document.getAnimations().forEach((one) => one.pause()); done(at); } else if (!running.length && (seen || performance.now() - asked > 5000)) refuse(new Error("the clock this frame is held on is not running: asked for ${ms} ms of it")); else requestAnimationFrame(tick); }; tick(); })`,
   ) as Promise<number>;
 const letGo = (page: Page) => page.evaluate(`document.getAnimations().forEach((one) => { if (one.playState === "paused") one.play(); })`);
 
@@ -146,17 +168,22 @@ test.describe("back from the verification, on the gift's page", () => {
       await expect(card(page).locator(".gift-next")).toHaveText(/^Reached on \d{1,2} [A-Z][a-z]{2} \d{4}\.$/);
       await expect(waitLine(page)).toHaveCount(0);
       await expect(card(page).locator(".gift-meta").first()).toHaveText("Yours");
-      expect(await amountTop(page), "the amount is where it was: nothing pushed it").toBe(top);
-      expect(await cardHeight(page), "and the card is as tall as it was").toBe(height);
-      expect(await cardTop(page), "and stands where it stood").toBe(stands);
-      // The circle alone is drawn now, the triangle it carried out of sight.
-      expect(await page.evaluate(`getComputedStyle(document.querySelector('.had-or-not [data-part="body"]')).opacity`)).toBe("1");
+      // No character appears at the head of the page as the card's own lands: the head stays as it was.
+      expect(await page.evaluate(`document.querySelectorAll("main [data-reacts]").length`)).toBe(0);
       if (SHOTS) {
+        // Taken while the landing's own clock still runs: the measures below wait for stillness, and it would have run out.
         await holdAt(page, LANDING, 800);
         expect(await page.evaluate(`getComputedStyle(document.querySelector('.had-or-not [data-part="was"]')).opacity`)).toBe("0");
         await shot(page, size.name, "5-landed");
         await letGo(page);
       }
+      // Read once nothing moves, by the boxes themselves; the moment may have opened over the page by then, which
+      // changes nothing of where the card and its amount stand under it.
+      expect(await amountTop(page), "the amount is where it was: nothing pushed it").toBe(top);
+      expect(await cardHeight(page), "and the card is as tall as it was").toBe(height);
+      expect(await cardTop(page), "and stands where it stood").toBe(stands);
+      // The circle alone is drawn now, the triangle it carried out of sight.
+      expect(await page.evaluate(`getComputedStyle(document.querySelector('.had-or-not [data-part="body"]')).opacity`)).toBe("1");
 
       // The moment, after the landing, unchanged: the confetti, and the amount that turns "yours".
       await expect(moment(page)).toBeVisible({ timeout: 30_000 });

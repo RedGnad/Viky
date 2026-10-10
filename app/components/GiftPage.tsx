@@ -189,7 +189,7 @@ export function GiftPage({
 const hadAndReached = (status: GiftStatus | MilestoneStatus | null) => Boolean(status && status.kind === "milestone" && status.shape === "certificate" && status.reached);
 
 /** What the page does with a reach it sees happen: whether it is under way, the step of the landing, and the moment held back. */
-type Reach = Readonly<{ reaching: boolean; step: 0 | 1 | 2; momentHeld: boolean }>;
+type Reach = Readonly<{ reaching: boolean; step: 0 | 1 | 2; momentHeld: boolean; /** This page saw the gift reached, and played its landing. */ sawTheReach: boolean }>;
 
 /**
  * A gift had or not that is reached while its page stands (the founder's mockup of 10 Oct 2026). The page read the
@@ -238,7 +238,7 @@ function useReachOnItsPage(status: GiftStatus | MilestoneStatus | null): Reach &
     ];
     return () => cues.forEach((cue) => cue.cancel());
   }, [reachedHere]);
-  return { said, reaching, step, momentHeld: reachedHere !== null && !momentFree };
+  return { said, reaching, step, momentHeld: reachedHere !== null && !momentFree, sawTheReach: reachedHere !== null };
 }
 
 const onHashChange = (changed: () => void) => {
@@ -980,7 +980,11 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, reach }: Readon
                 <Figure id="made" arms="wave" mouth="soft" halftone />
               </span>
             </Success>
-          ) : moment === "counting" || moment === "climbing" || moment === "awaitingProof" ? null : (
+          ) : moment === "counting" || moment === "climbing" || moment === "awaitingProof" || reach.sawTheReach ? null : (
+            // Nor on a page that saw its gift reached (measured 10 Oct 2026): a gift reached draws the head character
+            // and one awaiting its proof draws none, so it appeared from nothing above the card, in a row of its own,
+            // at the very instant the card's character landed, and the card moved under it. The head of this page
+            // stays as it was; a page opened on a gift already reached has it from its first image, as before.
             // The opening, made on this page: the gift's own character answers it, once. The days do not move.
             <Reacts gesture={openings}>
               <HeadCharacter />

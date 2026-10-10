@@ -153,6 +153,9 @@ test("as it lands the words change where they stand, the amount swells once, and
   // Out on Material's short2, in on short4, the swell of the moment made smaller, the moment 700 ms after the landing.
   assert.deepEqual(MOTION.landing, { wordsOutMs: 100, wordsInMs: 200, swell: 1.08, momentAfterMs: 700 });
   assert.match(motion, /fill: "forwards" \}\) : line\.animate\(\[\{ opacity: 0 \}, \{ opacity: 1 \}\], \{ duration: wordsInMs, easing: EASING\.standard \}\)/);
+  // The head of a page that saw the reach stays as it was: no character appears above the card as its own lands.
+  assert.match(page, /moment === "counting" \|\| moment === "climbing" \|\| moment === "awaitingProof" \|\| reach\.sawTheReach \? null : \(/);
+  assert.match(page, /sawTheReach: reachedHere !== null \};/);
   // The moment itself is unchanged: it is only held until the page lets it.
   const moment = readFileSync("app/kit/ReachedMoment.tsx", "utf8");
   assert.match(moment, /<ReachedMoments gifts=\{owed && !held \? \[gift\] : \[\]\} here \/>/);
