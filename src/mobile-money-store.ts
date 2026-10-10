@@ -227,6 +227,23 @@ export async function notePayoutState(reference: string, state: Readonly<{ statu
   return rows.length === 1;
 }
 
+/** A payout whose dollars were sent to Switch and that has not arrived: what the morning's email says of it. */
+export type UnfinishedPayout = Readonly<{ reference: string; status: string; country: string; network: string; units: bigint; depositSentAt: Date }>;
+
+/**
+ * The payouts whose deposit left more than an hour before `now` and that Switch has not said arrived (the final
+ * audit of 9 Oct 2026): followed until then by the person's own screen and by Switch's message alone, so one that
+ * failed, or that stayed where it was, was known to nobody here.
+ */
+export async function payoutsNotFinished(now: Date = new Date()): Promise<readonly UnfinishedPayout[]> {
+  const before = new Date(now.getTime() - 3_600_000).toISOString();
+  const rows = await ledger`
+    SELECT reference, status, country, network, units, deposit_sent_at FROM viky_mobile_payouts
+     WHERE deposit_sent_at IS NOT NULL AND deposit_sent_at < ${before} AND status <> 'COMPLETED'
+     ORDER BY deposit_sent_at ASC LIMIT 50`;
+  return rows.map((row) => ({ reference: String(row.reference), status: String(row.status), country: String(row.country), network: String(row.network), units: BigInt(String(row.units)), depositSentAt: new Date(String(row.deposit_sent_at)) }));
+}
+
 export type ArrivedPayout = Readonly<{ at: Date; localAmount: number; localCurrency: string; units: bigint; country: string; network: string; depositTx: string | null; exitTx: string }>;
 
 /**

@@ -574,6 +574,25 @@ export async function followUnsettledOrders(deps: PhoneDeps = livePhoneDeps()): 
   return lines;
 }
 
+/**
+ * The orders the morning's pass leaves for somebody, as one email, or nothing (the final audit of 9 Oct 2026): an
+ * order whose money came in and that waits for an operator, one that could not be followed, one whose money is still
+ * to be sent back. Each was a line of the scheduled task's answer, which nobody reads, while the person read "On its
+ * way" and then nothing.
+ */
+export function ordersToTell(lines: readonly FollowLine[]): Readonly<{ subject: string; text: string }> | null {
+  const waiting = lines.filter((line) => line.state.includes("for an operator") || line.state.startsWith("not followed") || line.state === "refund_pending");
+  if (waiting.length === 0) return null;
+  return {
+    subject: `${waiting.length} phone or gift card ${waiting.length === 1 ? "order waits" : "orders wait"} for somebody`,
+    text: [
+      "The settling pass followed the orders whose money came in and has not ended, and left:",
+      ...waiting.map((line) => `- order ${line.orderId}: ${line.state}`),
+      "The person reads \"On its way\" meanwhile. An order \"for an operator\" is paid by nobody until its invoice is read by hand; one \"refund_pending\" still owes its money back.",
+    ].join("\n"),
+  };
+}
+
 const TRANSFER_ABI = [
   {
     type: "function",
