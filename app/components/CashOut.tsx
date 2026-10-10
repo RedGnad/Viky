@@ -296,6 +296,11 @@ export function CashOut() {
    * this is for has no use for dollars here. They are still said where an amount is typed and confirmed in them.
    */
   const heldLed = (): LedAmount => money.led(dollarsHeld);
+  /**
+   * An amount of the account's money as the screens that spend it say it (the founder, 10 Oct 2026): in the one
+   * currency the person reads in, the one Me speaks, and in dollars only where no rate makes another currency true.
+   */
+  const sayHeld = (units: bigint): string => money.figure(units).text;
   const readyOf = (way: WayOut): Ready | undefined => (holdings ? readyFor(way, coinOf(way), held(coinOf(way))) : undefined);
   /**
    * What the first screen says is ready for a service (the founder, 3 and 4 Oct 2026): only the money of a withdrawal
@@ -905,7 +910,7 @@ export function CashOut() {
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
         {moneyCard}
-        <GiftCardOut country={countryNow} rates={money.rates} countryName={countryNow ? (countryInWords(countryNow) ?? countryNow.toUpperCase()) : null} ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
+        <GiftCardOut country={countryNow} rates={money.rates} say={sayHeld} countryName={countryNow ? (countryInWords(countryNow) ?? countryNow.toUpperCase()) : null} ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
       </div>
     );
   }
@@ -915,7 +920,7 @@ export function CashOut() {
       <div className="flex flex-col gap-[var(--space-xl)]">
         {heading}
         {moneyCard}
-        <MobileMoneyOut offer={mobileOffered} payable={mobilePayable} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
+        <MobileMoneyOut offer={mobileOffered} payable={mobilePayable} held={ausd} say={sayHeld} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
       </div>
     );
   }
@@ -925,7 +930,7 @@ export function CashOut() {
       <div className="flex flex-col gap-[var(--space-xl)]">
         {heading}
         {moneyCard}
-        <PhoneTopUp rates={money.rates} ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
+        <PhoneTopUp rates={money.rates} say={sayHeld} ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
       </div>
     );
   }

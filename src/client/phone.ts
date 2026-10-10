@@ -21,6 +21,8 @@ export type PhoneStatus = Readonly<{
   orderId: string;
   state: "on_its_way" | "delivered" | "refunded" | "refund_pending";
   amount: string;
+  /** The same amount in the dollar's own units, which a screen says in the currency its reader reads in. */
+  units?: string;
   operatorName: string;
   kind?: "phone" | "gift_card";
   /** A delivered gift card's code, sent to its owner alone (D271). */

@@ -1,41 +1,43 @@
 "use client";
 import { useEffect, useState } from "react";
-import { surelyOutOfReach } from "@/src/out-of-reach";
 import type { Rates } from "@/src/rates";
 import type { Hex, LocalAccount } from "viem";
 import { ApiError } from "@/src/client/api";
 import { lastNumber, rememberNumber } from "@/src/client/account-country";
 import { findPhoneOperators, followPhone, payPhone, phoneKindOf, pricePhone, type PhoneKind, type PhoneOperator, type PhonePrice, type PhoneStatus } from "@/src/client/phone";
-import { AUSD } from "@/src/coins";
-import { amountByItsLetters, figureIn, lettersOf } from "@/src/currencies";
-import { twoDecimalsDown } from "@/src/exit-steps";
+import { faceValue, namedInPlural } from "@/src/currencies";
 import { PHONE_OUT as W } from "@/src/sentences";
-import { BODY, CARD, CARD_AMOUNT, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
+import { BODY, CARD, CARD_LABEL, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
 import { Said } from "../kit/Said";
 import { WAITS } from "@/src/sentences";
 import { Button } from "../kit/Button";
+import { SpendChoice } from "../kit/SpendChoice";
 
 /**
  * Your phone, the third way out (D238), in three screens at most: where (the number and its phone company), how much
- * (in the phone's own currency, with the dollars it takes and what stays), done. The person's money moves once, on
- * "Top it up", after Bitrefill has priced the top-up; every refusal is the server's own sentence, under what caused it.
+ * (the top-up at its face value in the phone's own currency, what it takes and what stays in the currency the person
+ * reads in), done. The person's money moves once, on "Top it up", after Bitrefill has priced the top-up; every refusal
+ * is the server's own sentence, under what caused it. The amount, its price and the one button are the spending
+ * screens' own (app/kit/SpendChoice.tsx, 10 Oct 2026).
  */
 
 type Screen = "where" | "howMuch" | "done";
 
-function dollars(units: bigint): string {
-  return `$${twoDecimalsDown(units, AUSD.decimals)}`;
-}
-
-/** A bound of an amount, as a figure alone, its currency being named once after the two: a franc figure with its thousands a space apart. */
-function bound(amount: number, currency: string): string {
-  return lettersOf(currency) === currency ? new Intl.NumberFormat("en-US").format(amount) : figureIn(amount, currency);
-}
-
-/** An amount Bitrefill names in its own currency, by that currency's letters: "20 EUR", and "5 000 FCFA" for francs. */
-function local(amount: string, currency: string): string {
+/** A face value Bitrefill names, in the phone's own currency: "€10", "5 000 FCFA"; as it came when it is no number. */
+function face(amount: string, currency: string): string {
   const figure = Number(amount);
-  return Number.isFinite(figure) ? amountByItsLetters(figure, currency) : `${amount} ${lettersOf(currency)}`;
+  return Number.isFinite(figure) ? faceValue(figure, currency) : `${amount} ${currency}`;
+}
+
+/**
+ * The number as the card names whose phone it is: its start and its last two figures, the middle left out. It is the
+ * person's own number on their own screen; left whole it is also what a glance over a shoulder takes.
+ */
+export function numberInShort(phone: string): string {
+  const figures = phone.replace(/[^\d+]/g, "");
+  if (figures.length < 9) return figures;
+  const middle = figures.length - 6;
+  return `${figures.slice(0, 4)} ${Array.from({ length: Math.ceil(middle / 2) }, () => "••").join(" ")} ${figures.slice(-2)}`;
 }
 
 function randomNonce(): Hex {
@@ -44,7 +46,7 @@ function randomNonce(): Hex {
   return `0x${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}` as Hex;
 }
 
-export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; ensureSigner: () => Promise<LocalAccount>; onSessionClosed: () => void; onChanged: () => Promise<unknown>; onBack: () => void }>) {
+export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; say: (units: bigint) => string; ensureSigner: () => Promise<LocalAccount>; onSessionClosed: () => void; onChanged: () => Promise<unknown>; onBack: () => void }>) {
   const [screen, setScreen] = useState<Screen>("where");
   // The number is only ever the top-up's destination (D274): the last one topped up on this device fills the field,
   // and it decides nothing else, not the country and not the ways out.
@@ -53,21 +55,21 @@ export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; ensure
   // Credit or data (the founder, 26 Sep 2026): the same order, the same treasury, the same ceilings, another product.
   const [kind, setKind] = useState<PhoneKind>("credit");
   const [operator, setOperator] = useState<PhoneOperator | null>(null);
-  const [packageId, setPackageId] = useState<string | null>(null);
-  const [amount, setAmount] = useState("");
-  const [price, setPrice] = useState<PhonePrice | null>(null);
+  /** What was bought, as the last screen says it once the choice has left this one. */
+  const [bought, setBought] = useState<Readonly<{ face: string; operator: string }> | null>(null);
   const [status, setStatus] = useState<PhoneStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
-  const refusal = (error: unknown): boolean => {
+  /** The sentence for a refusal, or nothing when it closed the session and the screen is leaving. */
+  const refused = (error: unknown): string | null => {
     if (error instanceof ApiError && error.code === "SIGN_IN_REQUIRED") {
       props.onSessionClosed();
-      return true;
+      return null;
     }
-    setProblem(error instanceof ApiError ? error.message : W.failed);
-    return false;
+    return error instanceof ApiError ? error.message : W.failed;
   };
+  const refusal = (error: unknown) => setProblem(refused(error));
 
   // A top-up on its way is asked again every few seconds for a minute, then left to the person's "Check again".
   const onItsWay = status?.state === "on_its_way" || status?.state === "refund_pending";
@@ -106,36 +108,13 @@ export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; ensure
 
   const choose = (chosen: PhoneOperator) => {
     setOperator(chosen);
-    setPackageId(null);
-    setAmount("");
-    setPrice(null);
     setProblem(null);
     setScreen("howMuch");
   };
 
   const ofKind = (operators ?? []).filter((one) => phoneKindOf(one) === kind);
-  const typed = Number(amount.replace(/[\s,]/g, ""));
-  const range = operator?.range ?? null;
-  const typedFits = range !== null && Number.isFinite(typed) && typed >= range.min && typed <= range.max;
-  const typedFar = typedFits && operator !== null && surelyOutOfReach(typed, operator.currency, props.ausd, props.rates);
-  const chosenPackage = operator?.packages.find((one) => one.id === packageId) ?? null;
-
-  const askPrice = async () => {
-    if (!operator) return;
-    setBusy(true);
-    setProblem(null);
-    setPrice(null);
-    try {
-      setPrice(await pricePhone({ phone, operatorId: operator.id, ...(chosenPackage ? { packageId: chosenPackage.id } : { value: typed }) }));
-    } catch (error) {
-      refusal(error);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const topUp = async () => {
-    if (!price) return;
+  /** The person's one signature and the payment: it returns once the screen has moved on, and throws a refusal. */
+  const topUp = async (price: PhonePrice) => {
     let account: LocalAccount;
     try {
       account = await props.ensureSigner();
@@ -143,18 +122,12 @@ export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; ensure
       props.onSessionClosed();
       return;
     }
-    setBusy(true);
-    setProblem(null);
-    try {
-      setStatus(await payPhone({ account, price, nonce: randomNonce() }));
-      rememberNumber(phone);
-      setScreen("done");
-      await props.onChanged();
-    } catch (error) {
-      refusal(error);
-    } finally {
-      setBusy(false);
-    }
+    const next = await payPhone({ account, price, nonce: randomNonce() });
+    setBought({ face: face(price.localAmount, price.localCurrency), operator: price.operatorName });
+    setStatus(next);
+    rememberNumber(phone);
+    setScreen("done");
+    await props.onChanged();
   };
 
   const alert = problem ? (
@@ -163,15 +136,18 @@ export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; ensure
     </p>
   ) : null;
 
-  if (screen === "done" && status && price) {
+  if (screen === "done" && status && bought) {
     const title = status.state === "delivered" ? W.doneTitle : status.state === "on_its_way" ? W.onItsWayTitle : W.refundedTitle;
+    // What the order took, in the currency the person reads in; in dollars, as the server says it, where it gave no figure.
+    const took = status.units ? props.say(BigInt(status.units)) : status.amount;
     return (
       <section className={CARD}>
         <h2 className={TITLE}>{title}</h2>
-        {status.state === "delivered" ? <p className={BODY}>{W.delivered(local(price.localAmount, price.localCurrency), price.operatorName)}</p> : null}
+        {status.state === "delivered" ? <p className={BODY}>{W.delivered(bought.face, bought.operator)}</p> : null}
         {status.state === "on_its_way" ? <Said text={W.onItsWay} /> : null}
-        {status.state === "refunded" ? <p className={BODY}>{W.refunded(status.amount)}</p> : null}
-        {status.state === "refund_pending" ? <p className={BODY}>{W.refundPending(status.amount)}</p> : null}
+        {status.state === "refunded" ? <p className={BODY}>{W.refunded(took)}</p> : null}
+        {status.state === "refund_pending" ? <p className={BODY}>{W.refundPending(took)}</p> : null}
+        {alert}
         <div className="flex flex-wrap gap-[var(--tap-gap)]">
           {onItsWay ? (
             <button type="button" onClick={() => void followPhone(status.orderId).then(setStatus, (error) => refusal(error))} className={SMALL_BUTTON}>
@@ -189,54 +165,29 @@ export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; ensure
   if (screen === "howMuch" && operator) {
     return (
       <section className={CARD}>
-        <h2 className={TITLE}>{W.howMuchTitle}</h2>
-        {operator.packages.length > 0 ? (
-          <div className="flex flex-col gap-[var(--tap-gap)]">
-            {operator.packages.map((one) => {
-              // Its face value alone is more than they hold: shown, never hidden, and said why it cannot be chosen.
-              const far = surelyOutOfReach(Number(one.value), operator.currency, props.ausd, props.rates);
-              return (
-                <button key={one.id} type="button" aria-pressed={one.id === packageId} onClick={() => { setPackageId(one.id); setAmount(""); setPrice(null); setProblem(null); }} disabled={busy || far} className={one.id === packageId ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
-                  {local(one.value, operator.currency)}
-                  {far ? <span className="block text-[length:var(--type-help)]">{W.outOfReach}</span> : null}
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
-        {range ? (
-          <label className="flex flex-col gap-[var(--space-xs)]">
-            <span className={BODY}>{W.howMuch(lettersOf(operator.currency))}</span>
-            <input value={amount} onChange={(event) => { setAmount(event.target.value); setPackageId(null); setPrice(null); setProblem(null); }} inputMode="numeric" className={FIELD} disabled={busy} />
-            <span className={HELP}>{W.range(bound(range.min, operator.currency), bound(range.max, operator.currency), lettersOf(operator.currency))}</span>
-            {typedFar ? <span className={HELP}>{W.outOfReach}</span> : null}
-          </label>
-        ) : null}
-        {price ? (
-          <div>
-            {/* A sentence, so it is said in the help voice and not in small capitals (the founder's rule 5 of 1 Oct 2026). */}
-            <p className={HELP}>{W.priced(local(price.localAmount, price.localCurrency), price.operatorName)}</p>
-            <p className={CARD_AMOUNT}>{dollars(price.ausdUnits)}</p>
-            <p className={HELP}>{W.costs(dollars(price.ausdUnits), dollars(props.ausd > price.ausdUnits ? props.ausd - price.ausdUnits : 0n), price.feeUnits > 0n ? dollars(price.feeUnits) : undefined)}</p>
-          </div>
-        ) : null}
-        {alert}
-        <div className="flex flex-wrap gap-[var(--tap-gap)]">
-          {price ? (
-            <Button doing={busy ? W.confirming : null} onPress={() => void topUp()}>
-              {W.confirm}
-            </Button>
-          ) : (
-            <>
-              <Button doing={busy ? W.pricing : null} step={WAITS.price("Bitrefill")} waiting={!chosenPackage && (!typedFits || typedFar)} onPress={() => void askPrice()}>
-                {W.getPrice}
-              </Button>
-            </>
+        <h2 className={TITLE}>{W.cardTitle}</h2>
+        <p className={CARD_LABEL}>{W.forWhom(numberInShort(phone), operator.name)}</p>
+        <SpendChoice
+          key={operator.id}
+          packages={operator.packages}
+          range={operator.range}
+          currency={operator.currency}
+          held={props.ausd}
+          rates={props.rates}
+          say={props.say}
+          numeric
+          ask={(chosen) => pricePhone({ phone, operatorId: operator.id, ...chosen })}
+          total={(price, stays, fees) => W.total(face(price.localAmount, price.localCurrency), W.kindsInASentence[kind], price.operatorName, stays, fees)}
+          pay={topUp}
+          refused={refused}
+          words={{ another: W.another, howMuch: W.howMuch(namedInPlural(operator.currency)), range: W.range, outOfReach: W.outOfReach, asking: W.pricing, askingStep: WAITS.price("Bitrefill"), confirm: W.confirm, confirming: W.confirming }}
+        >
+          {(paying) => (
+            <button type="button" onClick={() => { setScreen("where"); setProblem(null); }} disabled={paying} className={SMALL_BUTTON}>
+              {W.back}
+            </button>
           )}
-          <button type="button" onClick={() => { setScreen("where"); setProblem(null); setPrice(null); }} disabled={busy} className={SMALL_BUTTON}>
-            {W.back}
-          </button>
-        </div>
+        </SpendChoice>
       </section>
     );
   }

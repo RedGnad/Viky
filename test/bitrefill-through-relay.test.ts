@@ -106,7 +106,8 @@ test("the price is the invoice plus Relay's fee, said as a fee, and needs no flo
   const row = await store.loadPhoneOrder(priced.orderId);
   assert.equal(row?.bridgeTo, DEPOSIT);
   assert.equal(row?.usdcUnits, 1_000_000n);
-  assert.equal(PHONE_OUT.costs("$1.03", "$98.97", "$0.03"), "It takes $1.03, including $0.03 in fees, and $98.97 stays with you.");
+  // The fee is said once, in the sentence under the total, in the currency the person reads in (10 Oct 2026).
+  assert.equal(PHONE_OUT.total("€1", PHONE_OUT.kindsInASentence.credit, "Orange", "€98.97", "€0.03"), "€1 of credit on the phone, through Orange, and €0.03 of fees. €98.97 stays with you.");
 });
 
 test("paid: the person's AUSD reaches the treasury, which passes exactly it to Relay under the order's nonce, and nothing is paid from Base", async () => {

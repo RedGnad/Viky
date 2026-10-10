@@ -32,7 +32,9 @@ test("a press says under each field what it is missing, in the sentences the rou
   assert.equal(MOBILE_OUT.amountUnder("5 872 F"), "At least 5 872 F at a time.");
   assert.equal(MOBILE_OUT.amountOver("8 806 F"), "At most 8 806 F at a time.");
   // The button is pressable while nothing is under way, and a press with a field missing asks nothing of the passkey.
-  assert.match(form, /<Button doing=\{busy \? doing : null\} onPress=\{\(\) => void send\(\)\}>/);
+  // What did not happen is said under the button, as on the two other screens that spend the balance (10 Oct 2026).
+  assert.match(form, /<Button doing=\{busy \? doing : null\} failed=\{problem\} failedId="mobile-refused" onPress=\{\(\) => void send\(\)\}>/);
+  assert.doesNotMatch(form, /role="alert"/);
   assert.doesNotMatch(form, /disabled=\{!ready\}/);
   assert.match(form, /setPressed\(true\);\n\s*if \(!network \|\| !numberFits \|\| !holderFits \|\| \(!changed && \(!within \|\| local === null\)\)\) return;/);
   // A press with no price yet, or after one that failed, asks for the price and goes on (the founder, 5 Oct 2026):
@@ -96,8 +98,10 @@ test("the way out is said in the person's words: no exchange, no network, no Swi
   assert.equal(momentOf("2026-10-03T10:15:00.000Z", "Africa/Nairobi"), "3 Oct, 13:15");
   assert.equal(momentOf("2026-10-03T23:40:00.000Z", "Africa/Douala"), "4 Oct, 00:40");
   assert.equal(momentOf("2026-10-03T10:15:00.000Z", "Nowhere/At-all"), "3 Oct, 10:15");
-  assert.equal(MOBILE_OUT.fromBalance("$14.94", momentOf("2026-10-03T10:15:00.000Z", "Africa/Dakar")), "$14.94 from your balance, at the rate of 3 Oct, 10:15.");
-  assert.match(form, /W\.fromBalance\(dollarsOf\(price\.dollars\), momentOf\(price\.at, zone\)\)/);
+  // What leaves the balance and what stays, both in the currency the person reads in (10 Oct 2026).
+  assert.equal(MOBILE_OUT.fromBalance("€13.80", momentOf("2026-10-03T10:15:00.000Z", "Africa/Dakar"), "€1.22"), "€13.80 from your balance, at the rate of 3 Oct, 10:15. €1.22 stays with you.");
+  assert.match(form, /W\.fromBalance\(props\.say\(price\.dollars\), momentOf\(price\.at, zone\), props\.say\(props\.held > price\.dollars \? props\.held - price\.dollars : 0n\)\)/);
+  assert.doesNotMatch(form, /dollarsOf|twoDecimalsDown/);
   assert.match(form, /const zone = useReaderZone\(\);/);
   // The changing step's own silence is said in the way out's words, never in the exchange's.
   assert.match(readFileSync("src/client/mobile-money.ts", "utf8"), /error\.code === "QUOTE_UNAVAILABLE"\) return new ApiError\(\{ status: error\.status, code: error\.code, message: MOBILE_REFUSALS\.notNow \}\);/);

@@ -138,6 +138,30 @@ export function lettersOf(code: string): string {
 }
 
 /**
+ * A face value, as a gift card or a top-up names it (the founder, 10 Oct 2026): its currency's own sign, and no
+ * decimals where the value has none. "€10", "$7.50", "5 000 FCFA". An amount of money that leaves an account keeps
+ * its decimals (`amountIn`): this is the number printed on the thing bought.
+ */
+export function faceValue(amount: number, code: string): string {
+  const { decimals, after } = currencyOf(code);
+  const figure = amount.toLocaleString(LOCALE, { minimumFractionDigits: Number.isInteger(amount) ? 0 : decimals, maximumFractionDigits: decimals });
+  return written(after ? figure.replace(/,/g, NO_BREAK) : figure, code);
+}
+
+/** A currency as an amount is asked in it, several of it: "euros", "US dollars", "CFA francs". */
+export function namedInPlural(code: string): string {
+  const ours = WRITTEN_AFTER[code];
+  if (ours) return `${ours.name}s`;
+  try {
+    const named = new Intl.NumberFormat(LOCALE, { style: "currency", currency: code, currencyDisplay: "name" }).formatToParts(2).find((part) => part.type === "currency")?.value;
+    if (named) return named;
+  } catch {
+    // A runtime without the currency's name says its code, which is still true.
+  }
+  return code;
+}
+
+/**
  * An amount a payout service names in its own currency, as a line of a screen says it: "20 EUR" by its code, grouped
  * in English, and a franc amount as francs are written, "5 000 FCFA".
  */
