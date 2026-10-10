@@ -166,16 +166,16 @@ test("how money leaves is the register's six ways, and the word check is said in
 
 test("the two sentences that stood as notes are written, dated, and the studies are said in one sentence", () => {
   const people = section("What we know about the two people");
-  assert.ok(people.includes("By 10 Oct 2026, four people outside the team had used Viky: two funded a gift, three opened one, and one who earned a gift used that money to offer one in turn."));
+  assert.ok(people.includes("By 10 Oct 2026, five people outside the team had used Viky: two funded a gift, four opened one, and one who earned a gift used that money to offer one in turn."));
   assert.doesNotMatch(README, /\[N\] people outside the team/);
   // The studies are said as what they are for, in one sentence, with nothing after it (the founder, 10 Oct 2026).
   assert.ok(people.includes("These studies are why the design is what it is. **What using it with people showed us.**"));
   assert.doesNotMatch(README, /These studies have their limits|not proof that Viky works/);
   const path = section("Path forward: how the next hundred find Viky");
-  assert.ok(path.includes("The student channel is open. On 7 Oct 2026 a student in Toulouse showed his enrolment from his university's own portal and the gift paid. On 9 Oct 2026 a second gift paid 60 seconds after the verification opened, with nobody reviewing it."));
+  assert.ok(path.includes("The student channel is open. On 7 Oct 2026 a student in Toulouse showed his enrolment from his university's own portal and the gift paid. On 9 Oct 2026 a second gift paid 20 seconds after he signed in to that portal, with nobody reviewing it."));
   assert.doesNotMatch(README, /The student channel opens once/);
   // Both passes are the ones "What has run with real money" gives the transactions of.
   const ran = section("What has run with real money");
-  assert.match(ran, /Toulouse, 9 Oct 2026: a student showed their enrolment, and the gift paid 60 seconds after the verification opened, with no review\./);
+  assert.match(ran, /Toulouse, 9 Oct 2026: a student showed their enrolment, and the gift paid 20 seconds after they signed in to their university's portal, with no review\./);
   assert.match(ran, /7 Oct, 12:15: opened by the student/);
 });

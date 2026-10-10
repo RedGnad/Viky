@@ -95,8 +95,8 @@ money tied to effort, and on being watched, points the same way. Each line is wh
 
 These studies are why the design is what it is.
 
-**What using it with people showed us.** By 10 Oct 2026, four people outside the team had used Viky: two funded a
-gift, three opened one, and one who earned a gift used that money to offer one in turn. The judges page counts who
+**What using it with people showed us.** By 10 Oct 2026, five people outside the team had used Viky: two funded a
+gift, four opened one, and one who earned a gift used that money to offer one in turn. The judges page counts who
 funded a gift and who opened one, by account, from the index. Four things changed because of what happened:
 
 - A link opened inside Instagram could not create an account. The page now has a button that opens it in the phone's
@@ -172,10 +172,11 @@ index, and the testers' figures come with the submission.
   6. 03:44: the 0.187 AUSD it earned withdrawn ([`0xf2d4…cf10`](https://monadvision.com/tx/0xf2d4cdb9393dc0e4507a6f282991edccdf93ecd60e18323cd33e1e5f8b59cf10)). The contract holds nothing of it.
 - **A card payment converted.** 3 Oct 2026: the USDC a card service delivered to the funder's own account, changed
   into 7.914524 AUSD on one signature ([`0x533e…1616`](https://monadvision.com/tx/0x533ec0746493e0670029b917887b8e15376380a4a9c7bb82706b2de910ed1616)).
-- **Toulouse, 9 Oct 2026: a student showed their enrolment, and the gift paid 60 seconds after the verification
-  opened, with no review.** Gift 1000008 on the second `MilestoneGift`, 5.02 AUSD for staying enrolled, made out to
-  the same account as the gift below. The verification opened at 12:54:27 UTC, on the rule fixed ahead of the pass,
-  and the gift paid in the block of 12:55:27
+- **Toulouse, 9 Oct 2026: a student showed their enrolment, and the gift paid 20 seconds after they signed in to
+  their university's portal, with no review.**
+  Gift 1000008 on the second `MilestoneGift`, 5.02 AUSD for staying enrolled, made out to the same account as the
+  gift below. The verification opened at 12:54:27 UTC, on the rule fixed ahead of the pass, the portal's sign-in form
+  was gone from the page at 12:55:09, and the gift paid in the block of 12:55:27
   ([`0xd950…77e2`](https://monadvision.com/tx/0xd950295c4c3d51480496003fd6547b0fc6c3546ac0c5747d377e6259cd3277e2)).
   Nobody read the proof first: it fitted the rule, so it was paid at once.
 - **The first pass, two days before: a gift between two people who are not the author, paid on a proof from a
@@ -219,7 +220,7 @@ Beeminder, with two communities it did not own ([its blog](https://blog.beeminde
 | Communities that already keep commitments | Language learners first: Duolingo reports 58.7 million daily users ([Q2 2026 shareholder letter](https://www.sec.gov/Archives/edgar/data/1562088/000162828026053299/q2fy26duolingo6-30x26share.htm)). | A member who tells one real gift, with its page. No advertising. | Ten funders. The least certain of the three. |
 
 The student channel is open. On 7 Oct 2026 a student in Toulouse showed his enrolment from his university's own
-portal and the gift paid. On 9 Oct 2026 a second gift paid 60 seconds after the verification opened, with nobody
+portal and the gift paid. On 9 Oct 2026 a second gift paid 20 seconds after he signed in to that portal, with nobody
 reviewing it.
 
 **What would stop this plan, and how we would know.** Funders who do not finish without help: the journey is redone

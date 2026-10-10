@@ -4,11 +4,15 @@ import type { IndexedGift } from "./envio-index";
 /**
  * Whose accounts made and opened the gifts the judges page counts (the founder, 1 and 2 Oct 2026).
  *
- * The five accounts below are the founder's own test accounts, named by him on 1 Oct 2026. They are public on the
+ * The four accounts below are the founder's own test accounts, named by him on 1 Oct 2026. They are public on the
  * chain like every account, and they are listed here so that the page can say which gifts are his own tries: a count
  * of gifts that did not tell them apart would read as people using Viky when it was one person testing it. Any
  * account that is not in this list, nor an operator account of this deployment, is somebody else's, and nothing more
  * is said of whose.
+ *
+ * A fifth stood in the list until 10 Oct 2026: the account that opened gift 1 and did its lesson on 12 Sep 2026. It
+ * is an outside person's, the first who tried Viky, on a friend's phone (the founder, that day), and the page had
+ * counted that person as him.
  *
  * A gift paid by an account the judge code credited is counted apart (the final audit of 9 Oct 2026): its money is
  * the treasury's, and it is a try of the path the judges page gives. Counted with the rest, every judge who followed
@@ -18,19 +22,21 @@ import type { IndexedGift } from "./envio-index";
 export const FOUNDER_TEST_ACCOUNTS: readonly string[] = [
   "0xb12e0c72209bd4becfdafa96a8f3e7ebc93b8376",
   "0x350af869aba6ff26ab33517ecd3e38acaf107761",
-  "0x91c964e745ffd6265c75df33ca9137d81c3c454d",
   "0x881350ea7a98f607f42dc4c2e2edde70f8724c3d",
   "0x57193d615c1f11c5afaf8166fab8fe93dcb61697",
 ];
 
-/** The founder's accounts as one set of lower-case addresses: the five above and this deployment's operator accounts. */
+/**
+ * The founder's accounts as one set of lower-case addresses: the ones above and this deployment's operator accounts.
+ * An account the deployment still names as an operator's is counted as his, whatever the list above says.
+ */
 export function founderAccounts(operators: Iterable<string> = []): ReadonlySet<string> {
   const all = new Set(FOUNDER_TEST_ACCOUNTS.map((account) => account.toLowerCase()));
   for (const account of operators) if (isAddress(account)) all.add(account.toLowerCase());
   return all;
 }
 
-/** The length of the list in a word, as the page says it: "the five listed". A figure past the words. */
+/** The length of the list in a word, as the page says it: "the four listed". A figure past the words. */
 const IN_WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"] as const;
 export function countOfFounderAccounts(): string {
   return IN_WORDS[FOUNDER_TEST_ACCOUNTS.length] ?? String(FOUNDER_TEST_ACCOUNTS.length);

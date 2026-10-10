@@ -173,7 +173,7 @@ test("what has run with real money is only what has a transaction, each with its
   // came before the money, and with what its proof read and no more (7 Oct 2026).
   assert.match(ran, /\*\*The first pass, two days before: a gift between two people who are not the author, paid on a proof from a\s+university's portal\.\*\*/);
   // Over it, the day's fact (the founder, 9 Oct 2026): the same account, on the rule fixed ahead, paid with no review.
-  assert.match(ran, /\*\*Toulouse, 9 Oct 2026: a student showed their enrolment, and the gift paid 60 seconds after the verification\s+opened, with no review\.\*\*/);
+  assert.match(ran, /\*\*Toulouse, 9 Oct 2026: a student showed their enrolment, and the gift paid 20 seconds after they signed in to\s+their university's portal, with no review\.\*\*/);
   assert.ok(links.includes("0xd950295c4c3d51480496003fd6547b0fc6c3546ac0c5747d377e6259cd3277e2"));
   assert.ok(ran.indexOf("Toulouse, 9 Oct 2026") < ran.indexOf("The first pass, two days before"));
   assert.match(ran, /created and funded by a third party, in a student's name/);
