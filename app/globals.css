@@ -2107,6 +2107,12 @@ dialog.reached-moment::backdrop {
   }
 }
 
+/* The app's icon under the landing's card waits out of sight until its card enters the screen, when a script put it
+   there before the first image (app/kit/LandingStory.tsx): a page whose script never runs shows it as it is. */
+.face-icon[data-arrives] {
+  opacity: 0;
+}
+
 /* The fold's own mark, which turns when it opens. */
 .gift-chevron {
   color: var(--on-surface-faint);
@@ -2320,16 +2326,11 @@ html[data-intro] .launch-intro.launch-intro-leaving {
   transform: rotate(var(--poster-turn, 0deg));
 }
 /*
- * The app's icon drawn on the landing (app/kit/Figure.tsx, FaceIcon): one image by day and by night, as an icon on a
- * home screen is (the founder, 9 Oct 2026). The five colours are the day's own, said again here because a variable set
- * for the night cannot be read as it was by day; test/landing-story.test.ts refuses one that has left the day's.
+ * The app's icon drawn on the landing (app/kit/Figure.tsx, FaceIcon). It wears the night as every drawing of the page
+ * does (the founder, 10 Oct 2026): it said the day's five colours again from 9 Oct, one image whatever the hour, and
+ * stood out of the page after dark. Its shadow alone is its own.
  */
 .face-icon {
-  --character-hero-from: #FF7F8E;
-  --character-hero-to: #B79BFF;
-  --character-halftone: #835EFF;
-  --character-gloss: rgba(255, 255, 255, 0.45);
-  --character-face: #1E1633;
   filter: drop-shadow(0 6px 14px rgba(30, 22, 51, 0.22));
 }
 .poster-character svg {

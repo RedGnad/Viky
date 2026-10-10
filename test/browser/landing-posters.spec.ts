@@ -126,15 +126,18 @@ test.describe("the posters under the landing's card", () => {
     // No shape carries a shade under its face, here or in the file the named ones are read from.
     await expect(story.locator('[data-part="shade"]')).toHaveCount(0);
     expect(await page.evaluate(`fetch(document.querySelector("[data-landing-story] [data-ch] use").getAttribute("href")).then((file) => file.text()).then((file) => [(file.match(/<symbol /g) || []).length, /shade/.test(file)])`)).toEqual([32, false]);
-    // On the phone's card the app's icon stands where a figure waved: a square, 110 wide, rounded, in the day's colours
-    // whatever the hour.
+    // On the phone's card the app's icon stands where a figure waved: a square, 110 wide, rounded, in the page's colours
+    // for the hour, as every drawing of the page is (the founder, 10 Oct 2026; it kept the day's after dark until then).
     const icon = page.locator('[data-landing-story] svg[data-character="icon"]');
     await expect(icon).toHaveCount(1);
     expect(await icon.evaluate((drawn) => { const box = drawn.getBoundingClientRect(); return [Math.round(box.width), Math.round(box.height)]; })).toEqual([110, 110]);
     const colours = `(() => { const style = getComputedStyle(document.querySelector('[data-landing-story] svg[data-character="icon"]')); return ["--character-hero-from", "--character-hero-to", "--character-halftone", "--character-face"].map((name) => style.getPropertyValue(name).trim().toUpperCase()); })()`;
     expect(await page.evaluate(colours)).toEqual(["#FF7F8E", "#B79BFF", "#835EFF", "#1E1633"]);
     await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "dark" });
-    expect(await page.evaluate(colours), "the same image after dark").toEqual(["#FF7F8E", "#B79BFF", "#835EFF", "#1E1633"]);
+    const afterDark = (await page.evaluate(colours)) as string[];
+    const pageAfterDark = (await page.evaluate(`["--character-hero-from", "--character-hero-to", "--character-halftone", "--character-face"].map((name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim().toUpperCase())`)) as string[];
+    expect(afterDark, "after dark it wears the night, the page's own").toEqual(pageAfterDark);
+    expect(afterDark, "which is not the day's").not.toEqual(["#FF7F8E", "#B79BFF", "#835EFF", "#1E1633"]);
     await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "light" });
     // The one in the last title wears Me's sunglasses.
     await expect(story.locator('[data-band="key"] [data-ch] [data-prop="shades"]')).toHaveCount(1);

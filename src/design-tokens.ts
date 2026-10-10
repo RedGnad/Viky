@@ -577,6 +577,42 @@ export const MOTION = {
     giveUpMs: 5000,
   },
   /**
+   * The one who reads its book reads it (the founder's mockup of 10 Oct 2026; every figure is his). It plays by
+   * itself while the drawing is on the screen, and reads the book as it is drawn: the three lines of the left page,
+   * then the two of the right. Lengths are the drawing's own units, on the group that holds the two eyes: where a
+   * line starts and ends on each page, how far down the first line is and how much further each next one. The eyes go
+   * down to the book, along a line, back to the start of the next, across to the other page, then up to the reader of
+   * the page, and stay there. The third line of the left page is shorter, as its stroke is: the eyes go `reach` of the
+   * way in `time` of a line's time. The mouth follows the eyes by `mouth` of their way. The line being read darkens
+   * along its length as the eyes pass; the five go back to their grey in the last `fadeMs` of the time the eyes are up.
+   */
+  reading: {
+    left: [-3.6, -0.6],
+    right: [0.6, 3.6],
+    down: 1.5,
+    perLine: 0.45,
+    mouth: 0.35,
+    downMs: 260,
+    lineMs: 880,
+    backMs: 150,
+    pageMs: 200,
+    upMs: 320,
+    heldMs: 1700,
+    fadeMs: 300,
+    shortLine: { reach: 0.82, time: 0.86 },
+    lineEasing: "cubic-bezier(0.3, 0, 0.7, 1)",
+    mark: { opacity: 0.78, width: 0.8 },
+  },
+  /**
+   * The app's icon on the landing, arriving once as its card enters the screen (the founder's mockup of 10 Oct 2026;
+   * the figures are his). It lands as an icon is placed on a home screen: its size on the expressive fast spring,
+   * its opacity without overshoot. Its face settles a moment after its body, the eyes and the mouth coming up from
+   * `faceDrop` of the drawing's units lower. It blinks once, then glances at its button, wherever the button stands:
+   * `glance.by` units towards it, there by `thereAt` of the glance's time, held until `backFrom`, then back. After
+   * `restMs` it blinks now and then with every drawing in view.
+   */
+  icon: { fromScale: 0.82, spring: SPRING.expressiveFastSpatial, fadeMs: 120, faceAfterMs: 90, faceDrop: 1.2, blinkAtMs: 480, glanceAtMs: 760, glance: { by: 1.1, durationMs: 1000, thereAt: 0.22, backFrom: 0.74 }, restMs: 1800, inView: 0.6 },
+  /**
    * A pointer over a button lifts it; over a character, its face turns towards the pointer. Material's short4.
    * A screen with no pointer has no hover: an expression plays once when something is chosen, and `heldMs` is how
    * long it stays before it comes back, so the whole round trip is 700 ms, Material's extra-long1.

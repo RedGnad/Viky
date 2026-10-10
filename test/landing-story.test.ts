@@ -65,7 +65,8 @@ test("the landing lays five posters under its column, then the phone, then the w
   // The days' own character, with no floor under it; the one that rolls is written into the page, since a part of it turns.
   assert.match(story, /<Character state=\{state\} standing=\{false\} drawn=\{act === "roll" \? "inline" : "referenced"\} className="block h-full w-full" \/>/);
   // What is checked holds the hero with its book (the founder, 9 Oct 2026): the figure of the family that learns, whole,
-  // the chooser's own, taller than a shape in its title. It lands in its word like the others and has no act.
+  // the chooser's own, taller than a shape in its title. It lands in its word like the others and has no act of the
+  // scroll: it reads its book by itself (the founder, 10 Oct 2026; test/landing-blink-and-icon.test.ts).
   assert.match(story, /<Figure id="story-book" halftone \{\.\.\.FAMILY_FIGURES\.learn\} \/>/);
   assert.deepEqual(FAMILY_FIGURES.learn, { arms: "read", props: ["book"], mouth: "soft", gaze: { x: 0, y: 0.7 } });
   assert.match(story, /<span data-ch=\{act === "back" \? "back" : "lands"\} \{\.\.\.\(act \? \{ "data-act": act \} : \{\}\)\}/, "no act, no act named");
@@ -290,16 +291,13 @@ test("the phone's card shows the app's icon, made of the figure's own pieces, on
   onBody.forEach((size, index) => {
     for (const [x, y] of size.at.filter(([dx]) => dx >= 12 && dx <= 52)) assert.ok(onIcon[index].at.some(([dx, dy]) => dx === x && dy === y), `size ${index}: (${x}, ${y})`);
   });
-  // One image whatever the hour: the five colours it is drawn in are the day's own, said again on the icon.
-  const day = css.slice(css.indexOf(":root {"), css.indexOf("\n}", css.indexOf(":root {")));
+  // It wears the night as every drawing of the page does (the founder, 10 Oct 2026): it said the day's five colours
+  // again from 9 Oct, and stood out of the page after dark. Its rule says no colour now, only its own shadow.
   const rule = css.slice(css.indexOf(".face-icon {"), css.indexOf("}", css.indexOf(".face-icon {")));
-  for (const name of ["--character-hero-from", "--character-hero-to", "--character-halftone", "--character-gloss", "--character-face"]) {
-    const said = new RegExp(`${name}: ([^;]+);`);
-    assert.ok(said.exec(rule)?.[1], name);
-    assert.equal(said.exec(rule)?.[1], said.exec(day)?.[1], `${name} is the day's`);
-  }
-  for (const name of [...icon.matchAll(/var\((--[a-z0-9-]+)\)/g)].map((match) => match[1])) assert.ok(rule.includes(`${name}:`), `${name} is said on the icon`);
-  assert.equal(css.match(/\.face-icon \{/g)?.length, 1, "said once, for day and night alike");
+  assert.doesNotMatch(rule, /--character-/, "no colour of the drawing is fixed on the icon");
+  assert.match(rule, /filter: drop-shadow\(0 6px 14px rgba\(30, 22, 51, 0\.22\)\);/);
+  for (const name of [...icon.matchAll(/var\((--[a-z0-9-]+)\)/g)].map((match) => match[1])) assert.ok(css.includes(`${name}:`), `${name} is one of the page's own, set for the day and for the night`);
+  assert.equal(css.match(/\.face-icon \{/g)?.length, 1, "one rule for the icon");
 });
 
 test("no shape carries a shade under its face any more", () => {
