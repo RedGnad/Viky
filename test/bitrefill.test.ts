@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { bitrefillAuthorization, bitrefillConfigured, BitrefillError, createInvoice, e164Of, operatorsFor, outcomeOf, readInvoice, usdcUnits } from "../src/bitrefill";
+import { bitrefillAuthorization, bitrefillConfigured, BitrefillError, createInvoice, e164Of, operatorsFor, outcomeOf, readInvoice, usdcUnits, invoiceStatus } from "../src/bitrefill";
 
 /** Bitrefill's answers below follow its documented shapes (docs.bitrefill.com, read 25 Sep 2026); no key was used. */
 const env = { BITREFILL_API_KEY: "k" } as unknown as NodeJS.ProcessEnv;
@@ -87,4 +87,45 @@ test("a USDC price in six-decimal units, rounded up so Viky never underpays", ()
   assert.equal(usdcUnits("3.8123451"), 3_812_346n);
   assert.equal(usdcUnits("10"), 10_000_000n);
   assert.throws(() => usdcUnits("1e-7"), refused("BAD_ANSWER"));
+});
+
+test("an invoice's state is read where the API puts it, and nothing is ever unpaid on a word nobody has read (10 Oct 2026)", async () => {
+  // The reference's own shape of a new invoice. The first real order was read back like this four seconds after it
+  // was priced, and refused five times as a price that had run out: `unpaid` was looked for one level too high.
+  const fresh = { data: { id: "c2b27180-610e-4132-af77-ad42fc0ac444", status: "not_delivered", payment: { method: "usdc_base", address: "0x2222222222222222222222222222222222222222", price: 11.2, currency: "USDC", status: "unpaid" }, orders: [{ id: "615b35e2f616a8092ee45aff", status: "created" }] } };
+  const said: string[] = [];
+  const log = console.log;
+  console.log = (line: unknown) => void said.push(String(line));
+  try {
+    const read = await readInvoice(fresh.data.id, answering(200, fresh));
+    assert.equal(read.status, "unpaid");
+    assert.equal(outcomeOf(read), "waiting");
+    // Read again in the same state, the journal says nothing more; in another state, one more line.
+    await readInvoice(fresh.data.id, answering(200, fresh));
+    const paid = { data: { ...fresh.data, payment: { ...fresh.data.payment, status: "paid" }, orders: [{ id: "615b35e2f616a8092ee45aff", status: "delivered" }] } };
+    assert.equal(outcomeOf(await readInvoice(fresh.data.id, answering(200, paid))), "delivered");
+  } finally {
+    console.log = log;
+  }
+  // The journal carries the two words as they came and the one they were read as: what was missing on 10 Oct.
+  const lines = said.map((line) => JSON.parse(line) as Record<string, unknown>).filter((line) => "bitrefillInvoiceRead" in line);
+  assert.deepEqual(lines.map((line) => [line.invoice, line.payment, line.orders, line.readAs]), [["not_delivered", "unpaid", ["created"], "unpaid"], ["not_delivered", "paid", ["delivered"], "complete"]]);
+
+  // "Core concepts"' own shape, one word on the invoice, reads as it always did.
+  for (const word of ["unpaid", "payment_detected", "payment_confirmed", "pending", "complete", "blocked", "denied", "payment_error"]) assert.equal(invoiceStatus({ status: word, paymentStatus: "", orders: [] }), word);
+  // Under `not_delivered` the payment's word is the state; a payment word that is none of the eight means the money
+  // is in, and the orders say the rest.
+  assert.equal(invoiceStatus({ status: "not_delivered", paymentStatus: "payment_confirmed", orders: [{ status: "processing" }] }), "payment_confirmed");
+  assert.equal(invoiceStatus({ status: "not_delivered", paymentStatus: "paid", orders: [{ status: "processing" }] }), "pending");
+  assert.equal(invoiceStatus({ status: "not_delivered", paymentStatus: "paid", orders: [{ status: "delivered" }] }), "complete");
+  assert.equal(invoiceStatus({ status: "", paymentStatus: "unpaid", orders: [] }), "unpaid");
+  // A final word at the invoice's own level wins over whatever the payment says.
+  assert.equal(invoiceStatus({ status: "denied", paymentStatus: "unpaid", orders: [] }), "denied");
+  assert.equal(invoiceStatus({ status: "payment_error", paymentStatus: "paid", orders: [{ status: "created" }] }), "payment_error");
+  // A word nobody has read moves nothing: it is never taken for unpaid, whatever the payment says, and is complete
+  // only when every order is delivered.
+  assert.equal(invoiceStatus({ status: "expired", paymentStatus: "unpaid", orders: [{ status: "created" }] }), "expired");
+  assert.equal(invoiceStatus({ status: "not_delivered", paymentStatus: "", orders: [] }), "not_delivered");
+  assert.equal(invoiceStatus({ status: "all_delivered", paymentStatus: "paid", orders: [{ status: "delivered" }] }), "complete");
+  assert.equal(invoiceStatus({ status: "partially_delivered", paymentStatus: "paid", orders: [{ status: "delivered" }, { status: "processing" }] }), "partially_delivered");
 });

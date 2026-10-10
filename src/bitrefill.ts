@@ -12,7 +12,9 @@
  *   address to pay on Base; Bitrefill does not take Monad, so the treasury pays it on Base. `refund_address` is where a
  *   failed delivery's money comes back.
  * - `GET /invoices/<id>`: `unpaid`, `payment_detected`, `payment_confirmed`, `pending`, `complete`, `blocked`, `denied`,
- *   `payment_error`; a phone top-up's order is `delivered` or `failed`, and carries no code.
+ *   `payment_error`; a phone top-up's order is `delivered` or `failed`, and carries no code. That is "Core concepts".
+ *   The endpoint's own reference, read 10 Oct 2026, puts `unpaid` in `payment.status` and `not_delivered` in the
+ *   invoice's `status`, and production answered that way the same day: see `invoiceStatus`.
  * - Limits of a basic account (terms §8): five phone items a day, 200 USD a refill, 500 USD a day, 2,000 USD a month.
  *   The pilot runs on one account, so they are the whole service's (the founder, 25 Sep 2026).
  */
@@ -177,13 +179,58 @@ function priceInUsdc(price: unknown, currency: unknown): string {
   return `${units / 1_000_000n}.${(units % 1_000_000n).toString().padStart(6, "0")}`;
 }
 
-function invoiceOf(raw: Record<string, unknown>): BitrefillInvoice {
+/** The eight words Bitrefill's "Core concepts" gives an invoice: the ones the rest of Viky is written in. */
+const INVOICE_WORDS = ["unpaid", "payment_detected", "payment_confirmed", "pending", "complete", "blocked", "denied", "payment_error"];
+
+/**
+ * An invoice's state in those eight words, from what the API really answers (10 Oct 2026).
+ *
+ * "Core concepts" gives the invoice one word, `unpaid` on a new one. The reference of `GET /invoices/<id>` shows two:
+ * the invoice's own `status` says where the delivery stands (`not_delivered` on a new invoice) and `payment.status`
+ * where the money stands (`unpaid`). Production went against "Core concepts": the first real order, on 10 Oct 2026,
+ * was read back four seconds after it was priced, was not `unpaid` at the invoice's own level, and was refused as a
+ * price that had run out, five times, with nothing moved. Which word it carried is not known: the answer was not
+ * kept. So what is read here is said in the journal at each reading (`readInvoice`), the two words as they came.
+ *
+ * The rule errs on the side of moving nothing. One of the eight words at the invoice's own level is taken as it is.
+ * Under `not_delivered`, or no word at all, the payment's word is the state. Any other word of the invoice is one
+ * Viky does not know: it is `complete` when every order is delivered, and otherwise left as it came, which is never
+ * `unpaid`, so nothing is ever paid on a word nobody has read.
+ */
+export function invoiceStatus(read: Readonly<{ status: string; paymentStatus: string; orders: ReadonlyArray<Readonly<{ status: string }>> }>): string {
+  const { status, paymentStatus, orders } = read;
+  if (INVOICE_WORDS.includes(status)) return status;
+  const allDelivered = orders.length > 0 && orders.every((order) => order.status === "delivered");
+  if (status === "not_delivered" || status === "") {
+    if (INVOICE_WORDS.includes(paymentStatus)) return paymentStatus;
+    // A payment word that is none of the eight ("paid", say): the money is in, and the orders say the rest.
+    if (paymentStatus !== "") return allDelivered ? "complete" : "pending";
+    return status;
+  }
+  return allDelivered ? "complete" : status;
+}
+
+/** What each reading of an invoice has already said in the journal, so a wait of a minute says each state once. */
+const saidOfAnInvoice = new Set<string>();
+
+function invoiceOf(raw: Record<string, unknown>, journal = false): BitrefillInvoice {
   const payment = (raw.payment ?? {}) as Record<string, unknown>;
   if (typeof raw.id !== "string" || typeof payment.address !== "string" || payment.price === undefined) throw new BitrefillError("BAD_ANSWER", "Bitrefill answered an invoice without a price or an address");
   const orders = Array.isArray(raw.orders) ? raw.orders.map((o) => ({ id: String((o as Record<string, unknown>).id), status: String((o as Record<string, unknown>).status) })) : [];
+  const answered = { status: String(raw.status ?? ""), paymentStatus: String(payment.status ?? "") };
+  const status = invoiceStatus({ ...answered, orders });
+  if (journal) {
+    // The words as Bitrefill answered them, beside the one Viky took them for: no personal data, once per state.
+    const said = { bitrefillInvoiceRead: raw.id, invoice: answered.status, payment: answered.paymentStatus, orders: orders.map((order) => order.status), readAs: status };
+    const once = JSON.stringify(said);
+    if (!saidOfAnInvoice.has(once)) {
+      saidOfAnInvoice.add(once);
+      console.log(JSON.stringify({ at: new Date().toISOString(), ...said }));
+    }
+  }
   return {
     id: raw.id,
-    status: String(raw.status ?? ""),
+    status,
     payment: { method: String(payment.method ?? ""), address: payment.address, price: priceInUsdc(payment.price, payment.currency), currency: String(payment.currency ?? "") },
     orders,
   };
@@ -221,7 +268,7 @@ export async function createInvoice(
 
 export async function readInvoice(id: string, deps: Deps = liveDeps()): Promise<BitrefillInvoice> {
   if (!/^[A-Za-z0-9_-]{6,80}$/.test(id)) throw new BitrefillError("BAD_ANSWER", "That is not an invoice id");
-  return invoiceOf(await call<Record<string, unknown>>(`/invoices/${id}`, { method: "GET" }, deps));
+  return invoiceOf(await call<Record<string, unknown>>(`/invoices/${id}`, { method: "GET" }, deps), true);
 }
 
 /** An invoice's state, in the three things the rest of Viky asks: still going, delivered, or over without delivery. */
