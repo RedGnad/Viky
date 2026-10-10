@@ -57,7 +57,9 @@ test("the price is no press any more, and no sentence says dollars of its own", 
     assert.doesNotMatch(screen, /twoDecimalsDown|function dollars|dollarsOf|`\$\$\{/, name);
     assert.match(screen, /say: \(units: bigint\) => string/, name);
   }
-  assert.match(out, /const sayHeld = \(units: bigint\): string => money\.figure\(units\)\.text;/);
+  // Said by the balance's own figure, so what stays is what the balance reads after: a dollar is cut to the cent.
+  assert.match(out, /const heldLed = \(\): LedAmount => money\.led\(dollarsHeld\);/);
+  assert.match(out, /const sayHeld = \(units: bigint\): string => money\.led\(units\)\.lead;/);
   assert.match(out, /<GiftCardOut country=\{countryNow\} rates=\{money\.rates\} say=\{sayHeld\} /);
   assert.match(out, /<PhoneTopUp rates=\{money\.rates\} say=\{sayHeld\} /);
   assert.match(out, /<MobileMoneyOut offer=\{mobileOffered\} payable=\{mobilePayable\} held=\{ausd\} say=\{sayHeld\} /);

@@ -299,8 +299,10 @@ export function CashOut() {
   /**
    * An amount of the account's money as the screens that spend it say it (the founder, 10 Oct 2026): in the one
    * currency the person reads in, the one Me speaks, and in dollars only where no rate makes another currency true.
+   * It is the balance's own figure (`heldLed`), so what "stays with you" is what the balance reads once it is paid:
+   * the dollar cut to the cent, never rounded up, and another currency to its nearest.
    */
-  const sayHeld = (units: bigint): string => money.figure(units).text;
+  const sayHeld = (units: bigint): string => money.led(units).lead;
   const readyOf = (way: WayOut): Ready | undefined => (holdings ? readyFor(way, coinOf(way), held(coinOf(way))) : undefined);
   /**
    * What the first screen says is ready for a service (the founder, 3 and 4 Oct 2026): only the money of a withdrawal

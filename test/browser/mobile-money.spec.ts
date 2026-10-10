@@ -52,6 +52,8 @@ type World = {
   startsRefused?: number;
   /** The payout the way out finds again when it is opened. */
   latest?: Record<string, unknown> | null;
+  /** The day's rates name the franc, so the account reads in it; without it the franc has no rate and the dollar is read. */
+  readsInFrancs?: boolean;
 };
 
 type Asked = { started: () => unknown; starts: () => number; sent: () => unknown; priced: () => unknown; changes: () => number; refusedForMore: () => number; seen: () => string[]; holdings: { ausd: bigint; usdc: bigint; mon: bigint } };
@@ -70,7 +72,9 @@ async function inSenegal(device: Profile, world: World = {}): Promise<Asked> {
   const holdings = { ausd: world.held ?? 15_000_000n, usdc: 0n, mon: 0n };
   await answerTheChain(context, holdings);
   await page.route("**/api/gifts/earned", (route) => route.fulfill(json({ gifts: [] })));
-  await page.route("**/api/rates", (route) => route.fulfill(json({ rates: { ...RATES, readAtMs: Date.now() }, currencies: ["USD", "EUR", "XOF"] })));
+  // The franc at its fixed rate to the euro, where the account is to read in it.
+  const eurPer = world.readsInFrancs ? { ...RATES.eurPer, XOF: 655.957 } : RATES.eurPer;
+  await page.route("**/api/rates", (route) => route.fulfill(json({ rates: { ...RATES, eurPer, readAtMs: Date.now() }, currencies: ["USD", "EUR", "XOF"] })));
   await page.route("**/api/account/preferences", (route) => route.fulfill(json({ country: "sn", displayCurrency: "XOF" })));
   await page.route("**/api/rails/where**", (route) =>
     route.fulfill(json({ country: "sn", ask: false, fromConnection: "sn", fromDevice: "sn", waysOut: { Ramp: "does-not", Mercuryo: "does-not" }, waysIn: {}, card: { offered: false, country: "sn" }, out: { bank: null, cardSmallest: null } })),
@@ -208,7 +212,8 @@ test.describe("your mobile money", () => {
       // the hour of the person's own clock (13:15 in Nairobi for 10:15 UTC).
       await expect(page.getByText("about 8 802 FCFA", { exact: true })).toBeVisible();
       expect(asked.priced()).toEqual({ country: "SN", local: 8802 });
-      await expect(page.getByText("$14.96 from your balance, at the rate of 3 Oct, 13:15.", { exact: true })).toBeVisible();
+      // What leaves the balance and what stays, said as the balance above says its money (10 Oct 2026).
+      await expect(page.getByText("$14.96 from your balance, at the rate of 3 Oct, 13:15. $0.03 stays with you.", { exact: true })).toBeVisible();
       expect(asked.refusedForMore(), "the exchange was never asked for more than the account holds").toBe(0);
       const send = page.getByRole("button", { name: "Send to my Orange" });
       await expect(send).toBeEnabled();
@@ -234,6 +239,25 @@ test.describe("your mobile money", () => {
       // Its end was shown on a screen somebody is looking at: the server is told, once.
       await expect.poll(() => asked.seen()).toEqual([REFERENCE]);
       await shot(page, size.name, "4-arrived");
+      await device.context.close();
+    });
+
+    test(`somebody who reads in francs: what leaves the balance and what stays are said in francs, with no dollar on the screen (${size.name})`, async ({ browser, baseURL }) => {
+      // The founder, 10 Oct 2026: one currency on the screens that spend the balance, the one the person reads in.
+      const device = await profile(browser, baseURL, size.viewport, { timezoneId: "Africa/Dakar" });
+      const { page } = device;
+      await inSenegal(device, { readsInFrancs: true });
+      await page.clock.install();
+      await page.goto("/cash-out");
+      await openTheCard(page);
+      await page.clock.fastForward(1_000);
+      // The francs that arrive, at Switch's quote, and under them the balance's own francs, at the day's rate.
+      await expect(page.getByText("about 8 802 FCFA", { exact: true })).toBeVisible();
+      // 8 747 francs of a balance of 8 766, and 18 that stay: each figure carries spaces that do not break.
+      await expect(page.locator("[data-mobile-figure] p").nth(1)).toHaveText(/^8\s747\sFCFA from your balance, at the rate of 3 Oct, 10:15\.\s18\sFCFA stays with you\.$/);
+      expect(await page.locator("main").innerText(), "no dollar beside the francs").not.toMatch(/\$\s?\d/);
+      await page.getByRole("button", { name: "Send to my Orange" }).scrollIntoViewIfNeeded();
+      await shot(page, size.name, "13-read-in-francs");
       await device.context.close();
     });
 
