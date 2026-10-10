@@ -52,6 +52,31 @@ export function monadTransport(rpcUrl = monadRpcUrl()): Transport {
   return fallback([http(rpcUrl), http(PUBLIC_RPC_URL)]);
 }
 
+/** A provider this code can name from an endpoint's host. Alchemy serves Monad at `monad-mainnet.g.alchemy.com`. */
+export type RpcProvider = "Alchemy";
+
+/**
+ * Who runs an endpoint, by name and never by address: the endpoint carries a key, the name of who runs it does not.
+ * Known by the host alone. Any other host has no name here, and nothing is said of it.
+ */
+export function rpcProviderOf(rpcUrl: string): RpcProvider | null {
+  try {
+    const host = new URL(rpcUrl).hostname.toLowerCase();
+    return host === "alchemy.com" || host.endsWith(".alchemy.com") ? "Alchemy" : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Who this deployment asks first, for a browser's reads and for the server's, each by its provider's name. Read on the
+ * server, where both settings are known: whoever prints the answer never holds either endpoint.
+ */
+export function providersAskedFirst(): Readonly<{ browser: RpcProvider | null; server: RpcProvider | null }> {
+  const browser = process.env.NEXT_PUBLIC_MONAD_RPC_URL?.trim() || PUBLIC_RPC_URL;
+  return { browser: rpcProviderOf(browser), server: rpcProviderOf(process.env.MONAD_RPC_URL?.trim() || browser) };
+}
+
 /** Whether an endpoint is a node on this machine: a rehearsal's fork of the network, never the network itself. */
 export function isLocalRpc(rpcUrl: string): boolean {
   return /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?(\/|$)/.test(rpcUrl);

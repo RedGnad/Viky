@@ -4,7 +4,7 @@ import { giftEscrowAbi } from "./gift-escrow-abi";
 import { giftEscrowV2Abi } from "./gift-escrow-v2-abi";
 import { milestoneGiftAbi } from "./milestone-gift-abi";
 import { milestoneGiftV2Abi } from "./milestone-gift-v2-abi";
-import { monadTransport, PUBLIC_RPC_URL } from "./monad/chain";
+import { monadTransport, providersAskedFirst, PUBLIC_RPC_URL } from "./monad/chain";
 import { giftEscrowV3Abi } from "./gift-escrow-v3-abi";
 import { consentAnchorAddress, giftEscrowV2Address, giftEscrowV3Address, milestoneGiftV2Address } from "./v2";
 
@@ -165,4 +165,17 @@ export async function contractFacts(): Promise<ContractFacts[]> {
     { what: "readings", getter: "proofPaused" },
   ]));
   return Promise.all(jobs);
+}
+
+/**
+ * Who answers the app's reads of Monad first, said under Network (the founder, 10 Oct 2026): by the provider's name,
+ * from this deployment's own settings, and never by the endpoint, which carries a key. Nothing is said where the first
+ * endpoint is the public one, or one this code has no name for: the sentence is read, never written.
+ */
+export function providerWords(asked: ReturnType<typeof providersAskedFirst> = providersAskedFirst()): string | null {
+  const then = "Monad RPC first, with the public endpoint above behind it.";
+  if (asked.browser && asked.browser === asked.server) return `The app's own reads of Monad go through ${asked.browser}'s ${then}`;
+  if (asked.browser) return `The reads a browser makes of Monad go through ${asked.browser}'s ${then}`;
+  if (asked.server) return `The server's reads of Monad go through ${asked.server}'s ${then}`;
+  return null;
 }
