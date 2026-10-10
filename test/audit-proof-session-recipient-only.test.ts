@@ -9,7 +9,7 @@ const route = readFileSync(new URL("../app/api/proof/session/route.ts", import.m
 
 test("the route loads the gift and refuses anybody but its recipient, before anything is asked of Reclaim", () => {
   const loaded = route.indexOf("const gift = await loadGift(giftId);");
-  const refused = route.indexOf('if (gift.recipient?.toLowerCase() !== account.toLowerCase()) throw new Error("This gift is not yours to prove");');
+  const refused = route.indexOf('if (gift.recipient?.toLowerCase() !== account.toLowerCase()) throw new SessionRefusal("This gift is not yours to prove");');
   const reclaim = route.indexOf("const appId = process.env.RECLAIM_APP_ID");
   assert.ok(loaded > 0 && refused > loaded, "the gift is read, then its recipient compared");
   assert.ok(reclaim > refused, "before the Reclaim application is used");

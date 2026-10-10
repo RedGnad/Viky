@@ -1927,6 +1927,17 @@ export const SHOW_PROOF = {
     over: "That verification is over. Show it again.",
     cancelled: "Stopped before the proof came back. Nothing was changed.",
     unavailable: "The proof could not be checked right now. Try again in a moment.",
+    /**
+     * The refusals whose own text says what happened inside (the audit of 8 Oct 2026: a person read "The proof failed
+     * SDK or TEE verification"). Their code stays theirs, the logs keep their text, and the person reads one of these
+     * (src/shown-refusals.ts). True of the verification: a proof refused there is recorded nowhere.
+     */
+    notAccepted: "That proof could not be accepted, so nothing was counted. Show it again.",
+    alreadyCounted: "That proof was already counted.",
+    /** The proof is for another subject than the one the funder signed: the contract's own refusal. */
+    otherSubject: "That proof is not for what this gift names. Nothing was counted.",
+    /** The session could not be opened at all, for a reason that is not the person's: nothing was asked of them yet. */
+    notOpened: "The verification could not be opened right now. Try again in a moment.",
   },
 } as const;
 
