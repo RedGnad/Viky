@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "@/src/client/api";
 import { faceValue } from "@/src/currencies";
+import { overFaceAsShown, type SpendMoney } from "@/src/display-currency";
 import { surelyOutOfReach } from "@/src/out-of-reach";
 import type { Rates } from "@/src/rates";
 import { BODY, CARD_AMOUNT, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../components/ui";
@@ -17,15 +18,17 @@ import { StepInProgress, WaitLine } from "./Waiting";
  * - The price is never a step. It is asked the moment the choice is whole, a button pressed or the typing over, and
  *   shown in place: the total that leaves the account, and one sentence that says what it buys, its fees, and what
  *   stays. There was a press of its own for it, "See the price", and the amount was asked twice.
- * - One currency for the account's money, the one the person reads in (`say`). The thing bought keeps its face value
- *   in its own currency, which is what is printed on it.
+ * - One currency for the account's money, the one the person reads in (`money`). The thing bought keeps its face
+ *   value in its own currency, which is what is printed on it.
+ * - The figures add up as they are shown. What stays is the balance as shown less the total as shown; and where the
+ *   face value is in the currency the total is shown in, the fees are what the total is over it.
  * - One button, and it carries the outcome: its words, then what it is doing, and what did not happen under it. The
  *   first tester pressed it five times: the refusal stood in a quiet line above it, and nothing else had changed.
  *
  * A price that has run out is asked again at once, the choice being still made, and the refusal stays said under the
  * button until the next press.
  */
-export type SpendPrice = Readonly<{ ausdUnits: bigint; feeUnits: bigint }>;
+export type SpendPrice = Readonly<{ ausdUnits: bigint; feeUnits: bigint; localAmount: string; localCurrency: string }>;
 export type SpendChosen = Readonly<{ packageId: string } | { value: number }>;
 
 /** How long after the last key a typed amount is taken as said. */
@@ -37,7 +40,7 @@ export function SpendChoice<P extends SpendPrice>({
   currency,
   held,
   rates,
-  say,
+  money,
   ask,
   total,
   pay,
@@ -53,8 +56,8 @@ export function SpendChoice<P extends SpendPrice>({
   /** What the account holds, to say which amounts are more than that. */
   held: bigint;
   rates?: Rates;
-  /** An amount of the account's money, in the currency the person reads in. */
-  say: (units: bigint) => string;
+  /** The account's money as the balance says it: an amount, and what stays of the balance once it leaves. */
+  money: SpendMoney;
   /** Asks the price of what was chosen. Nothing moves. */
   ask: (chosen: SpendChosen) => Promise<P>;
   /** The sentence under the total: what it buys, its fees when it has any, and what stays. */
@@ -141,6 +144,17 @@ export function SpendChoice<P extends SpendPrice>({
     }
   };
 
+  /**
+   * The fees the sentence names. Where the thing's face value is in the currency the total is shown in, they are
+   * what the total is over it, so the figures add up as they are shown: the fee the price names is the transfer's
+   * alone, and the rate the thing was changed at is the rest. Elsewhere no sum crosses, and that fee is said.
+   */
+  const feesOf = (priced: P): string | undefined => {
+    const over = overFaceAsShown(money.shown(priced.ausdUnits), Number(priced.localAmount), priced.localCurrency);
+    if (over !== undefined) return over ?? undefined;
+    return priced.feeUnits > 0n ? money.say(priced.feeUnits) : undefined;
+  };
+
   const busy = paying;
   return (
     <>
@@ -213,8 +227,8 @@ export function SpendChoice<P extends SpendPrice>({
       ) : null}
       {price && !asking ? (
         <div data-spend-total="" className="flex flex-col gap-[var(--space-xs)] border-t border-[var(--divider)] pt-[var(--space-md)]">
-          <p className={CARD_AMOUNT}>{say(price.ausdUnits)}</p>
-          <p className={HELP}>{total(price, say(held > price.ausdUnits ? held - price.ausdUnits : 0n), price.feeUnits > 0n ? say(price.feeUnits) : undefined)}</p>
+          <p className={CARD_AMOUNT}>{money.say(price.ausdUnits)}</p>
+          <p className={HELP}>{total(price, money.stays(price.ausdUnits), feesOf(price))}</p>
         </div>
       ) : null}
       <div className="flex flex-col gap-[var(--space-sm)]">

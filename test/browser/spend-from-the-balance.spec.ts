@@ -24,8 +24,13 @@ const SHOTS = process.env.VIKY_SPEND_CAPTURES;
 const shot = (page: Page, size: string, name: string) => capture(SHOTS, page, size, name);
 
 const RATES = { date: "2026-10-09", usdPerEur: 1.1355, eurPerUsd: 1 / 1.1355, xofPerUsd: 655.957 / 1.1355, eurPer: { USD: 1.1355, EUR: 1 }, readAtMs: Date.now() };
-/** What a thing bought takes from the account, in the dollar's units: its face value at the day's rate, and a fee. */
-const taken = (euros: number) => ({ ausdUnits: String(Math.round((euros * 1.1355 + 0.352) * 1_000_000)), feeUnits: "352000" });
+/**
+ * What a thing bought takes from the account, in the dollar's units, as the first real order was priced (10 Oct 2026:
+ * a 10 EUR card for 12.05 dollars, 0.35 of them the transfer's fee). Bitrefill changes the face value at its own rate,
+ * 1.17 here, which is not the day's published one the account reads in: the fee the price names is not all that the
+ * thing costs over its face value.
+ */
+const taken = (euros: number) => ({ ausdUnits: String(Math.round((euros * 1.17 + 0.352) * 1_000_000)), feeUnits: "352000" });
 const main = (page: Page) => page.locator("main");
 
 type Asked = { price: Array<Record<string, unknown>>; pay: number };
@@ -71,7 +76,7 @@ async function person(device: Profile, asked: Asked, pays: Array<"lapsed" | "del
     if (outcome === "lapsed") return route.fulfill(json({ code: "PRICE_EXPIRED", error: "That price has run out. Start again: nothing was taken." }, 409));
     holds.ausd -= BigInt(taken(10).ausdUnits);
     kept = [{ orderId: "ph_test_000002", name: "Amazon.fr", localAmount: "10", localCurrency: "EUR", amount: "$11.70", at: new Date().toISOString(), code: { code: "AQ7K-M2XP-9TLD", link: "https://www.amazon.fr/gc/redeem", expires: "10 Oct 2036" } }];
-    return route.fulfill(json({ orderId: "ph_test_000002", state: "delivered", amount: "$11.70", units: taken(10).ausdUnits, operatorName: "Amazon.fr", kind: "gift_card", code: { code: "AQ7K-M2XP-9TLD", link: "https://www.amazon.fr/gc/redeem", expires: "10 Oct 2036" } }));
+    return route.fulfill(json({ orderId: "ph_test_000002", state: "delivered", amount: "$12.05", units: taken(10).ausdUnits, operatorName: "Amazon.fr", kind: "gift_card", code: { code: "AQ7K-M2XP-9TLD", link: "https://www.amazon.fr/gc/redeem", expires: "10 Oct 2036" } }));
   });
   await makeAnAccount(device);
 }
@@ -115,9 +120,11 @@ test.describe("spending from the balance", () => {
       const total = page.locator("[data-spend-total]");
       await expect(total).toBeVisible();
       expect(asked.price).toEqual([{ productId: "amazon_fr-france", packageId: "amazon-10" }]);
-      // The total in euros, and one sentence: the card at its face value, the fees once, what stays.
-      await expect(total.locator("p").nth(0)).toHaveText(/^€\d+\.\d\d$/);
-      await expect(total.locator("p").nth(1)).toHaveText(/^A €10 Amazon\.fr card and €0\.\d\d of fees\. €\d+\.\d\d stays with you\.$/);
+      // The total in euros, and one sentence whose figures add up as they are shown: the card at its face value and
+      // what the total is over it make the total, and what stays is the €15.29 above less that total.
+      await expect(main(page)).toContainText("€15.29");
+      await expect(total.locator("p").nth(0)).toHaveText("€10.61");
+      await expect(total.locator("p").nth(1)).toHaveText("A €10 Amazon.fr card and €0.61 of fees. €4.68 stays with you.");
       await expect(buy).toBeEnabled();
       await noDollars(page, "the price");
       await shot(page, size.name, "3-the-total-in-place");
@@ -149,8 +156,9 @@ test.describe("spending from the balance", () => {
       await expect(main(page)).toContainText("AQ7K-M2XP-9TLD");
       await expect(main(page)).toContainText('It stays in "Your gift cards" below.');
       expect(asked.pay).toBe(2);
-      // What the sentence under the total promised is what the balance now says: the same figure, read again.
-      await expect(main(page)).toContainText("€4.98");
+      // The balance is read again once it is paid, and says what is left to the cent it rounds to: €4.67, where the
+      // sentence before the payment, made on the two figures as they were shown, said €4.68.
+      await expect(main(page)).toContainText("€4.67");
       await expect(main(page)).not.toContainText("€15.29");
       await noDollars(page, "the code");
       await shot(page, size.name, "6-the-code-in-its-place");
@@ -179,7 +187,7 @@ test.describe("spending from the balance", () => {
     // Nothing is asked while the amount is being typed; one asking once it is over.
     await field.pressSequentially("12", { delay: 120 });
     expect(asked.price.length).toBe(1);
-    await expect(page.locator("[data-spend-total] p").nth(1)).toHaveText(/^A €12 Amazon\.fr card and €0\.\d\d of fees\. €\d+\.\d\d stays with you\.$/);
+    await expect(page.locator("[data-spend-total] p").nth(1)).toHaveText("A €12 Amazon.fr card and €0.67 of fees. €2.62 stays with you.");
     expect(asked.price[1]).toEqual({ productId: "amazon_fr-france", value: 12 });
     expect(asked.price.length).toBe(2);
     await shot(page, "390", "7-another-amount");
@@ -198,7 +206,7 @@ test.describe("spending from the balance", () => {
     // Another card is another choice from nothing: no price left from the one before.
     await expect(page.locator("[data-spend-total]")).toHaveCount(0);
     await page.getByRole("textbox").fill("8");
-    await expect(page.locator("[data-spend-total] p").nth(1)).toHaveText(/^An €8 Nike France card and €0\.\d\d of fees\. €\d+\.\d\d stays with you\.$/);
+    await expect(page.locator("[data-spend-total] p").nth(1)).toHaveText("An €8 Nike France card and €0.55 of fees. €6.74 stays with you.");
     await shot(page, "390", "8-a-card-with-no-fixed-amount");
     await device.context.close();
   });
@@ -226,7 +234,7 @@ test.describe("spending from the balance", () => {
     await expect(page.locator("[data-spend-amounts] button")).toHaveText(["€5", "€10", "€20More than you have"]);
     await expect(page.getByRole("button", { name: "See the price" })).toHaveCount(0);
     await page.locator("[data-spend-amounts] button").nth(1).click();
-    await expect(page.locator("[data-spend-total] p").nth(1)).toHaveText(/^€10 of credit on the phone, through Orange, and €0\.\d\d of fees\. €\d+\.\d\d stays with you\.$/);
+    await expect(page.locator("[data-spend-total] p").nth(1)).toHaveText("€10 of credit on the phone, through Orange, and €0.61 of fees. €4.68 stays with you.");
     await expect(page.locator("[data-spend-pay]")).toHaveText("Top it up");
     await noDollars(page, "the phone");
     await shot(page, "390", "9-the-phone-top-up");

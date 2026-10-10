@@ -14,7 +14,7 @@ import { totalEarned, type EarnedInGift } from "@/src/earned-shape";
 import { readCoinBalance, sendMon, sendWithExplicitGas } from "@/src/client/onchain";
 import { isVikyContract } from "@/src/viky-contracts";
 import { AUSD, coinAt, COINS, isNative, MON, USDC, type Coin } from "@/src/coins";
-import { rateDateInWords, spokenAmount, whenInWords, type LedAmount } from "@/src/display-currency";
+import { rateDateInWords, spendMoney, spokenAmount, whenInWords, type LedAmount } from "@/src/display-currency";
 import { exitAmount, type ExitAmount } from "@/src/exit-amount";
 import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, heldForWithdrawal, netOfEverything, readyFor, smallestOnTheCard, toTheCent, twoDecimalsDown, type Ready } from "@/src/exit-steps";
 import { chainCoinToChange, USDC_ARRIVAL_FLOOR } from "@/src/funding-step";
@@ -297,12 +297,12 @@ export function CashOut() {
    */
   const heldLed = (): LedAmount => money.led(dollarsHeld);
   /**
-   * An amount of the account's money as the screens that spend it say it (the founder, 10 Oct 2026): in the one
-   * currency the person reads in, the one Me speaks, and in dollars only where no rate makes another currency true.
-   * It is the balance's own figure (`heldLed`), so what "stays with you" is what the balance reads once it is paid:
-   * the dollar cut to the cent, never rounded up, and another currency to its nearest.
+   * How the screens that spend the balance say the account's money (the founder, 10 Oct 2026): in the one currency
+   * the person reads in, the one Me speaks, and in dollars only where no rate makes another currency true. An amount
+   * is said as the balance above says its own (`heldLed`), and what "stays with you" is that balance as shown less
+   * the amount as shown, so the figures of the screen add up as they are read.
    */
-  const sayHeld = (units: bigint): string => money.led(units).lead;
+  const spending = spendMoney(dollarsHeld, money.currency, money.rates);
   const readyOf = (way: WayOut): Ready | undefined => (holdings ? readyFor(way, coinOf(way), held(coinOf(way))) : undefined);
   /**
    * What the first screen says is ready for a service (the founder, 3 and 4 Oct 2026): only the money of a withdrawal
@@ -912,7 +912,7 @@ export function CashOut() {
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
         {moneyCard}
-        <GiftCardOut country={countryNow} rates={money.rates} say={sayHeld} countryName={countryNow ? (countryInWords(countryNow) ?? countryNow.toUpperCase()) : null} ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
+        <GiftCardOut country={countryNow} rates={money.rates} money={spending} countryName={countryNow ? (countryInWords(countryNow) ?? countryNow.toUpperCase()) : null} ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
       </div>
     );
   }
@@ -922,7 +922,7 @@ export function CashOut() {
       <div className="flex flex-col gap-[var(--space-xl)]">
         {heading}
         {moneyCard}
-        <MobileMoneyOut offer={mobileOffered} payable={mobilePayable} held={ausd} say={sayHeld} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
+        <MobileMoneyOut offer={mobileOffered} payable={mobilePayable} money={spending} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
       </div>
     );
   }
@@ -932,7 +932,7 @@ export function CashOut() {
       <div className="flex flex-col gap-[var(--space-xl)]">
         {heading}
         {moneyCard}
-        <PhoneTopUp rates={money.rates} say={sayHeld} ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
+        <PhoneTopUp rates={money.rates} money={spending} ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
       </div>
     );
   }

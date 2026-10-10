@@ -2390,10 +2390,13 @@ export const MOBILE_OUT = {
   underMinimum: (least: string, have: string) => `Mobile money pays from ${least} at a time here, and you have ${have}.`,
   about: (figure: string) => `about ${figure}`,
   /**
-   * What leaves the balance for it, second (the founder, 3 Oct 2026), and when it was priced; then what stays (the
-   * spending screens' rule, 10 Oct 2026). Both in the currency the person reads in.
+   * Under the figure that arrives, for somebody who reads in another currency than the payout's: what leaves the
+   * balance for it, then what stays, both in the currency they read in (the spending screens' rule, 10 Oct 2026).
+   * The hour of the rate stood here since 3 Oct 2026; the founder took it off the same 10 Oct.
    */
-  fromBalance: (amount: string, when: string, stays: string) => `${amount} from your balance, at the rate of ${when}. ${stays} stays with you.`,
+  fromBalance: (amount: string, stays: string) => `${amount} from your balance. ${stays} stays with you.`,
+  /** Read in the payout's own currency, the figure that arrives is the one amount the screen says: what stays follows it, alone. */
+  staysWithYou: (stays: string) => `${stays} stays with you.`,
   /**
    * In place of the amount when dollars were already changed and have not been sent on, as after a payout cut before
    * they left (the founder, 5 Oct 2026): the card sends those, and says that it changes nothing more. It does not say

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { Rates } from "@/src/rates";
+import type { SpendMoney } from "@/src/display-currency";
 import type { Hex, LocalAccount } from "viem";
 import { ApiError } from "@/src/client/api";
 import { giftCardCodes, listGiftCards, priceGiftCard, type GiftCardCode, type GiftCardKept, type GiftCardListed } from "@/src/client/giftcards";
@@ -54,7 +55,7 @@ export function GiftCardCodeLines({ code }: Readonly<{ code: GiftCardCode }>) {
   );
 }
 
-export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | null; countryName: string | null; ausd: bigint; say: (units: bigint) => string; ensureSigner: () => Promise<LocalAccount>; onSessionClosed: () => void; onChanged: () => Promise<unknown>; onBack: () => void }>) {
+export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | null; countryName: string | null; ausd: bigint; money: SpendMoney; ensureSigner: () => Promise<LocalAccount>; onSessionClosed: () => void; onChanged: () => Promise<unknown>; onBack: () => void }>) {
   const [cards, setCards] = useState<readonly GiftCardListed[] | null | "unreadable">(null);
   const [sheetOpen, setSheetOpen] = useState(true);
   const [card, setCard] = useState<GiftCardListed | null>(null);
@@ -150,7 +151,7 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
   if (status) {
     const title = status.state === "delivered" ? W.doneTitle : status.state === "on_its_way" ? W.onItsWayTitle : W.refundedTitle;
     // What the order took, in the currency the person reads in; in dollars, as the server says it, where it gave no figure.
-    const took = status.units ? props.say(BigInt(status.units)) : status.amount;
+    const took = status.units ? props.money.say(BigInt(status.units)) : status.amount;
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
         <section className={CARD}>
@@ -211,7 +212,7 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
             currency={card.currency}
             held={props.ausd}
             rates={props.rates}
-            say={props.say}
+            money={props.money}
             ask={(chosen) => priceGiftCard({ productId: card.id, ...chosen })}
             total={(price, stays, fees) => W.total(face(price.localAmount, price.localCurrency), card.name, stays, fees)}
             pay={(price) => buy(card, price)}

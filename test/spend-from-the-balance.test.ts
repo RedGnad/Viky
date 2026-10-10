@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { faceValue, namedInPlural } from "../src/currencies";
+import { amountAsShown, leftAsShown, overFaceAsShown, spendMoney } from "../src/display-currency";
 import { articleFor, GIFT_CARD_OUT, MOBILE_OUT, PHONE_OUT } from "../src/sentences";
 
 /**
@@ -33,7 +34,8 @@ test("the fees are said once, in the sentence under the total, with what stays",
   assert.equal(GIFT_CARD_OUT.card("€10", "Amazon.fr"), "A €10 Amazon.fr card");
   assert.equal(PHONE_OUT.total("€10", PHONE_OUT.kindsInASentence.credit, "Orange", "€4.74", "€0.28"), "€10 of credit on the phone, through Orange, and €0.28 of fees. €4.74 stays with you.");
   assert.equal(PHONE_OUT.total("5 000 FCFA", PHONE_OUT.kindsInASentence.data, "Orange", "€4.74"), "5 000 FCFA of mobile data on the phone, through Orange. €4.74 stays with you.");
-  assert.equal(MOBILE_OUT.fromBalance("€13.80", "3 Oct, 10:15", "€1.22"), "€13.80 from your balance, at the rate of 3 Oct, 10:15. €1.22 stays with you.");
+  assert.equal(MOBILE_OUT.fromBalance("€13.80", "€1.22"), "€13.80 from your balance. €1.22 stays with you.");
+  assert.equal(MOBILE_OUT.staysWithYou("19 FCFA"), "19 FCFA stays with you.");
   // The amount asked, and its bounds, in the thing's own currency by its name and its sign.
   assert.equal(GIFT_CARD_OUT.howMuch("euros"), "How much, in euros");
   assert.equal(GIFT_CARD_OUT.range("€5", "€500"), "Between €5 and €500.");
@@ -55,17 +57,46 @@ test("the price is no press any more, and no sentence says dollars of its own", 
   // of them writes a dollar sign itself.
   for (const [name, screen] of [["the gift card", card], ["the phone", phone], ["mobile money", mobile]] as const) {
     assert.doesNotMatch(screen, /twoDecimalsDown|function dollars|dollarsOf|`\$\$\{/, name);
-    assert.match(screen, /say: \(units: bigint\) => string/, name);
+    assert.match(screen, /money: SpendMoney;/, name);
   }
-  // Said by the balance's own figure, so what stays is what the balance reads after: a dollar is cut to the cent.
+  // Said from the balance the card above shows: an amount as that balance says its own, and what stays worked out
+  // on the two figures as they are shown.
   assert.match(out, /const heldLed = \(\): LedAmount => money\.led\(dollarsHeld\);/);
-  assert.match(out, /const sayHeld = \(units: bigint\): string => money\.led\(units\)\.lead;/);
-  assert.match(out, /<GiftCardOut country=\{countryNow\} rates=\{money\.rates\} say=\{sayHeld\} /);
-  assert.match(out, /<PhoneTopUp rates=\{money\.rates\} say=\{sayHeld\} /);
-  assert.match(out, /<MobileMoneyOut offer=\{mobileOffered\} payable=\{mobilePayable\} held=\{ausd\} say=\{sayHeld\} /);
+  assert.match(out, /const spending = spendMoney\(dollarsHeld, money\.currency, money\.rates\);/);
+  assert.match(out, /<GiftCardOut country=\{countryNow\} rates=\{money\.rates\} money=\{spending\} /);
+  assert.match(out, /<PhoneTopUp rates=\{money\.rates\} money=\{spending\} /);
+  assert.match(out, /<MobileMoneyOut offer=\{mobileOffered\} payable=\{mobilePayable\} money=\{spending\} /);
   // An amount that came back is said the same way: the order tells its units, and the screen says them.
   assert.match(read("src/phone-order.ts"), /amount: dollars\(order\.ausdUnits\), units: order\.ausdUnits\.toString\(\),/);
-  for (const screen of [card, phone]) assert.match(screen, /const took = status\.units \? props\.say\(BigInt\(status\.units\)\) : status\.amount;/);
+  for (const screen of [card, phone]) assert.match(screen, /const took = status\.units \? props\.money\.say\(BigInt\(status\.units\)\) : status\.amount;/);
+});
+
+test("the figures of a screen add up as they are shown: what stays is the balance shown less the amount shown", () => {
+  const rates = { date: "2026-10-09", usdPerEur: 1.1355, eurPerUsd: 1 / 1.1355, xofPerUsd: 655.957 / 1.1355, eurPer: { USD: 1.1355, EUR: 1, XOF: 655.957 }, readAtMs: 0 };
+  // Read in dollars, each figure is cut to the cent. $14.968406 leaves $15.00: the two cut figures used to read
+  // $14.96 and $0.03, a cent under the balance beside them (the founder, 10 Oct 2026).
+  const dollars = spendMoney(15_000_000n, "USD", rates);
+  assert.deepEqual([dollars.say(15_000_000n), dollars.say(14_968_406n), dollars.stays(14_968_406n)], ["$15.00", "$14.96", "$0.04"]);
+  assert.deepEqual(dollars.shown(14_968_406n), { text: "$14.96", pieces: 1496, code: "USD" });
+  // With no rate the franc is not read: the dollar is, and it says so by its code.
+  assert.equal(spendMoney(15_000_000n, "XOF", undefined).shown(1n).code, "USD");
+  // Read in euros: 17.36 dollars are €15.29, a card that takes 12.052 of them is €10.61, and €4.68 stays.
+  const euros = spendMoney(17_360_000n, "EUR", rates);
+  assert.deepEqual([euros.say(17_360_000n), euros.say(12_052_000n), euros.stays(12_052_000n)], ["€15.29", "€10.61", "€4.68"]);
+  assert.deepEqual(euros.shown(12_052_000n), { text: "€10.61", pieces: 1061, code: "EUR" });
+  // Read in francs, which have no smaller piece: 8 665 less 8 647.
+  const francs = spendMoney(15_000_000n, "XOF", rates);
+  assert.deepEqual([francs.shown(15_000_000n).pieces, francs.shown(14_968_406n).pieces, francs.stays(14_968_406n).replace(/\s/g, " ")], [8665, 8647, "18 FCFA"]);
+  // Never under nothing.
+  assert.equal(dollars.stays(20_000_000n), "$0.00");
+  assert.equal(leftAsShown(amountAsShown(1_000_000n, "EUR", rates), amountAsShown(2_000_000n, "EUR", rates)), "€0.00");
+  // The fees a sentence names beside a face value in the currency the total is shown in: what the total is over it.
+  // The price's own fee is the transfer's alone (0.352 dollars, €0.31): the rate the card was changed at is the rest.
+  assert.equal(overFaceAsShown(euros.shown(12_052_000n), 10, "EUR"), "€0.61");
+  assert.equal(overFaceAsShown(euros.shown(11_300_000n), 10, "EUR"), null, "nothing is over: no fee is said");
+  assert.equal(overFaceAsShown(euros.shown(12_052_000n), 10, "USD"), undefined, "another currency: no sum crosses");
+  assert.equal(overFaceAsShown(dollars.shown(10_352_000n), 10, "USD"), "$0.35");
+  assert.match(kit, /const over = overFaceAsShown\(money\.shown\(priced\.ausdUnits\), Number\(priced\.localAmount\), priced\.localCurrency\);\n\s+if \(over !== undefined\) return over \?\? undefined;\n\s+return priced\.feeUnits > 0n \? money\.say\(priced\.feeUnits\) : undefined;/);
 });
 
 test("the gift card and the phone are built on the one piece that keeps the rule", () => {
@@ -85,8 +116,8 @@ test("the gift card and the phone are built on the one piece that keeps the rule
   // An answer to a choice since changed is dropped.
   assert.match(kit, /if \(turn\.current === mine\) setPrice\(answered\);/);
   // One currency: the total and what stays through `say`, the face values in the thing's own.
-  assert.match(kit, /<p className=\{CARD_AMOUNT\}>\{say\(price\.ausdUnits\)\}<\/p>/);
-  assert.match(kit, /total\(price, say\(held > price\.ausdUnits \? held - price\.ausdUnits : 0n\), price\.feeUnits > 0n \? say\(price\.feeUnits\) : undefined\)/);
+  assert.match(kit, /<p className=\{CARD_AMOUNT\}>\{money\.say\(price\.ausdUnits\)\}<\/p>/);
+  assert.match(kit, /total\(price, money\.stays\(price\.ausdUnits\), feesOf\(price\)\)/);
   assert.match(kit, /\{faceValue\(Number\(one\.value\), currency\)\}/);
   // One button, and what did not happen under it. A price that ran out is asked again at once, the refusal kept.
   assert.match(kit, /<Button doing=\{paying \? words\.confirming : null\} waiting=\{!price \|\| asking\} failed=\{failed\} failedId="spend-refused"/);
