@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import type { IndexedGift } from "../src/envio-index";
-import { between, FOUNDER_TEST_ACCOUNTS, founderAccounts, shortOf, usageOf } from "../src/pilot-accounts";
+import { creditedAccountsOf } from "../src/judge-credit";
+import { between, countOfFounderAccounts, FOUNDER_TEST_ACCOUNTS, founderAccounts, shortOf, usageOf } from "../src/pilot-accounts";
 
 /**
  * "Who has used Viky" on the judges page (the audit of 1 Oct 2026, D-08; the founder, 2 Oct 2026): the count is made
@@ -74,7 +75,8 @@ test("the count: gifts, who funded and who opened them, what was earned and what
   assert.deepEqual(usage.funders, { all: 3, founders: 2 });
   assert.deepEqual(usage.recipients, { all: 3, founders: 1 });
   // The gift nobody opened is counted apart: it was one of the founder's own tries, by its funder alone.
-  assert.deepEqual(usage.between, { "two others": 1, "founder to another": 1, "another to founder": 0, "the founder's own try": 1, "not opened yet": 1 });
+  assert.deepEqual(usage.between, { "paid from a judge credit": 0, "two others": 1, "founder to another": 1, "another to founder": 0, "the founder's own try": 1, "not opened yet": 1 });
+  assert.equal(usage.fromJudgeCredit, 0);
   assert.equal(usage.onSecondVersion, 1);
   assert.equal(usage.onThirdVersion, 0);
   // A gift on the third daily contract is counted there, and with neither the first version's nor the second's (the
@@ -85,4 +87,68 @@ test("the count: gifts, who funded and who opened them, what was earned and what
   assert.match(who, /usage\.onThirdVersion > 0 \? `\$\{count\(usage\.onThirdVersion, "is", "are"\)\} on the third daily contract` : null,/);
   // Nothing indexed is nothing counted, not an error.
   assert.equal(usageOf([], founderAccounts()).gifts, 0);
+});
+
+test("a gift paid by an account the judge code credited is counted apart, and its accounts with it (the final audit of 9 Oct 2026)", () => {
+  // The one credit given so far paid a rehearsal: a new account funded a gift the founder's account opened. Counted
+  // with the rest, the page read it as "from somebody else to the founder", and its funder as an outside person; and
+  // every judge who follows the page's own path adds two accounts and a gift "between two people".
+  const JUDGE = "0x87383d8d34a15cc7039caf312943f265c31416fe";
+  const JUDGE_SECOND = "0x00000000000000000000000000000000000000c3";
+  const credited = creditedAccountsOf([
+    { account: JUDGE.toUpperCase().replace("0X", "0x"), state: "sent" },
+    { account: "0x00000000000000000000000000000000000000c4", state: "reserved" },
+  ]);
+  assert.deepEqual([...credited], [JUDGE], "the credits that were sent, in lower case, and no other line of the journal");
+  const founders = founderAccounts();
+  // First, whoever opened it and whether anybody did.
+  assert.equal(between({ funder: JUDGE, recipient: FOUNDER }, founders, credited), "paid from a judge credit");
+  assert.equal(between({ funder: JUDGE, recipient: JUDGE_SECOND }, founders, credited), "paid from a judge credit");
+  assert.equal(between({ funder: JUDGE, recipient: null }, founders, credited), "paid from a judge credit");
+  // What a credited account opened, somebody else paid for: it stays what it was.
+  assert.equal(between({ funder: ANNA, recipient: JUDGE }, founders, credited), "two others");
+  // With nobody credited nothing changes.
+  assert.equal(between({ funder: JUDGE, recipient: FOUNDER }, founders), "another to founder");
+
+  const gifts = [
+    gift({ giftId: "1", kind: "daily", funder: FOUNDER, recipient: FOUNDER_TWO, fundedAmount: 20_000_000n }),
+    gift({ giftId: "1000005", funder: ANNA, recipient: BEN, fundedAmount: 5_000_000n }),
+    gift({ giftId: "1000009", funder: JUDGE, recipient: FOUNDER, fundedAmount: 3_000_000n }),
+    gift({ giftId: "1000010", funder: JUDGE, recipient: JUDGE_SECOND, fundedAmount: 3_000_000n }),
+  ];
+  const before = usageOf(gifts, founders);
+  assert.deepEqual([before.funders, before.recipients], [{ all: 3, founders: 1 }, { all: 4, founders: 2 }], "counted with the rest, a judge is two outside people");
+  const usage = usageOf(gifts, founders, credited);
+  // Every gift and all the money are still said; the accounts are those of the gifts no credit paid for.
+  assert.equal(usage.gifts, 4);
+  assert.equal(usage.funded, 31_000_000n);
+  assert.equal(usage.fromJudgeCredit, 2);
+  assert.deepEqual(usage.funders, { all: 2, founders: 1 });
+  assert.deepEqual(usage.recipients, { all: 2, founders: 1 });
+  assert.deepEqual(usage.between, { "paid from a judge credit": 2, "two others": 1, "founder to another": 0, "another to founder": 0, "the founder's own try": 1, "not opened yet": 0 });
+  assert.equal(Object.values(usage.between).reduce((sum, one) => sum + one, 0), usage.gifts, "each gift in exactly one class");
+});
+
+test("the judges page reads the journal of credits once, shows no count when it cannot, and prints the list's length", () => {
+  const page = readFileSync("app/judges/page.tsx", "utf8");
+  assert.equal(page.match(/creditedByTheJudgeCode\(\)/g)?.length, 1, "read once, for the two blocks");
+  assert.match(page, /const credited = judgeCredit \? await creditedByTheJudgeCode\(\)\.catch\(\(\) => null\) : new Set<string>\(\);/);
+  assert.match(readFileSync("src/judge-credit.ts", "utf8"), /return creditedAccountsOf\(await loadJudgeCredits\(\)\);/);
+  assert.match(page, /<JudgesWhoUsed index=\{index\} credited=\{credited\} \/>/);
+  const who = readFileSync("app/judges/JudgesWhoUsed.tsx", "utf8");
+  // No journal, no count: who was credited is not known, and a judge's try would be read as somebody's use.
+  assert.match(who, /if \(!credited\) \{[\s\S]*?data-who-used="credits-unread"[\s\S]*?So no count is shown here rather than one that would take a judge&apos;s try\s+for somebody&apos;s use\./);
+  assert.match(who, /Paid from a judge credit: \{usage\.between\["paid from a judge credit"\]\}\./);
+  assert.match(who, /credited\.has\(one\) \? "credited by the judge code" : "not the founder's"/);
+  const minute = readFileSync("app/judges/JudgesMinute.tsx", "utf8");
+  assert.match(minute, /\{usage\.fromJudgeCredit === 1 \? "was" : "were"\} paid from a judge credit and\{" "\}\s+\{usage\.fromJudgeCredit === 1 \? "is" : "are"\} counted apart\. \{others === 1 \? "The other was" : `The \$\{others\} others were`\} funded by/);
+  assert.match(minute, /"The journal of judge credits could not be read just now, so no count is given here: "/);
+  // Each count carries its own share that is not the founder's, in the founder's words of 10 Oct 2026.
+  const said = minute.replace(/\s+/g, " ");
+  assert.ok(said.includes(`{count(usage.funders.all, "account", "accounts")}, {usage.funders.all - usage.funders.founders} of them not the founder&apos;s, and opened by {usage.recipients.all}, {usage.recipients.all - usage.recipients.founders} of them not his. {formatAusd(usage.earned)} earned, {formatAusd(usage.sentBack)} gone back. Counted from the index as this page is served:`));
+  assert.doesNotMatch(said, /of which/);
+  // "the five listed" is the list's own length, never a word typed beside it.
+  assert.equal(countOfFounderAccounts(), "five");
+  assert.match(who, /they are the\{" "\}\s+\{countOfFounderAccounts\(\)\} listed in <code>src\/pilot-accounts\.ts<\/code>/);
+  assert.doesNotMatch(who, /they are the five/);
 });

@@ -110,7 +110,7 @@ test("the judges page shows the index beside the chain, and says so when it cann
   assert.match(block, /client\.getBlockNumber\(\)/, "the index's block is set beside the chain's head");
   assert.match(block, /https:\/\/monadvision\.com\/tx\/\$\{gift\.createdInTransaction\}/);
   assert.match(page, /<JudgesIndex index=\{index\} \/>/);
-  assert.match(page, /<JudgesWhoUsed index=\{index\} \/>/);
+  assert.match(page, /<JudgesWhoUsed index=\{index\} credited=\{credited\} \/>/);
   // The index is read by the judges page and by nothing else: its blocks, and the counting of who used Viky.
   const users = execFileSync("grep", ["-rl", "envio-index", "app", "src"], { encoding: "utf8" }).trim().split("\n").sort();
   assert.deepEqual(users, ["app/judges/JudgesIndex.tsx", "app/judges/JudgesMera.tsx", "app/judges/JudgesMinute.tsx", "app/judges/JudgesWhoUsed.tsx", "app/judges/page.tsx", "src/pilot-accounts.ts"]);

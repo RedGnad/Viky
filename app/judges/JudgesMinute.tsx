@@ -38,18 +38,22 @@ function Address({ address }: Readonly<{ address: string }>) {
  */
 export function JudgesMinute({
   index,
+  credited,
   contracts,
   moreUniversities,
   readyOnReclaim,
 }: Readonly<{
   index: IndexRead | null;
+  /** The accounts the judge code credited, or nothing when its journal could not be read: no count is then given. */
+  credited: ReadonlySet<string> | null;
   contracts: Readonly<{ daily: string | null; milestone: string | null; anchor: string | null; version: 1 | 2 | 3 }>;
   /** How many universities are listed beyond the ones a student can show from today, or nothing when not counted. */
   moreUniversities: number | null;
   /** The universities ready on a check approved by Reclaim, each by the name the directory's entry gives its line. */
   readyOnReclaim: readonly string[];
 }>) {
-  const usage = index ? usageOf(index.gifts, founderAccounts(operatorAccounts())) : null;
+  const usage = index && credited ? usageOf(index.gifts, founderAccounts(operatorAccounts()), credited) : null;
+  const others = usage ? usage.gifts - usage.fromJudgeCredit : 0;
   return (
     <section className="space-y-[var(--space-sm)]" id="minute">
       <h2 className={TITLE}>In one minute</h2>
@@ -70,12 +74,24 @@ export function JudgesMinute({
         <dd className={HELP} data-minute="use">
           {usage ? (
             <>
-              {count(usage.gifts, "gift", "gifts")} made, {formatAusd(usage.funded)} put into them: funded by{" "}
-              {count(usage.funders.all, "account", "accounts")} and opened by {usage.recipients.all}, of which{" "}
-              {usage.funders.all - usage.funders.founders} and {usage.recipients.all - usage.recipients.founders} are not the
-              founder&apos;s own test accounts. {formatAusd(usage.earned)} earned, {formatAusd(usage.sentBack)} gone back. Counted
-              from the index as this page is served:{" "}
+              {count(usage.gifts, "gift", "gifts")} made, {formatAusd(usage.funded)} put into them
+              {/* A gift paid from a judge credit is a try of this page's own path: said, and counted apart. */}
+              {usage.fromJudgeCredit > 0 ? (
+                <span data-minute="judge-credit">
+                  . {usage.fromJudgeCredit} {usage.fromJudgeCredit === 1 ? "was" : "were"} paid from a judge credit and{" "}
+                  {usage.fromJudgeCredit === 1 ? "is" : "are"} counted apart. {others === 1 ? "The other was" : `The ${others} others were`} funded by{" "}
+                </span>
+              ) : (
+                ": funded by "
+              )}
+              {/* Each count with its own share that is not the founder's (the founder's words, 10 Oct 2026). */}
+              {count(usage.funders.all, "account", "accounts")}, {usage.funders.all - usage.funders.founders} of them not the
+              founder&apos;s, and opened by {usage.recipients.all}, {usage.recipients.all - usage.recipients.founders} of them not
+              his. {formatAusd(usage.earned)} earned, {formatAusd(usage.sentBack)} gone back. Counted from the index as this page
+              is served:{" "}
             </>
+          ) : index ? (
+            "The journal of judge credits could not be read just now, so no count is given here: "
           ) : (
             "The index of the contracts' events could not be read just now, so no count is given here: "
           )}

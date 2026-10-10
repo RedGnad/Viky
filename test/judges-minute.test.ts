@@ -70,7 +70,7 @@ test("the minute says what Viky is, for whom, who used it, where it runs, why Mo
   assert.ok(readme.includes("the person who pays for somebody else's effort from a distance and cannot check it themselves"));
   assert.ok(minute.includes("The person who pays for somebody else&apos;s effort from a distance and cannot check it themselves"));
   // The figures of use are counted, the same count as the section's; the figures of Monad are the measured ones.
-  assert.ok(minute.includes("const usage = index ? usageOf(index.gifts, founderAccounts(operatorAccounts())) : null;"));
+  assert.ok(minute.includes("const usage = index && credited ? usageOf(index.gifts, founderAccounts(operatorAccounts()), credited) : null;"));
   assert.ok(minute.includes("{monWords(creditedDayMon())}") && minute.includes("{BLOCK_TIME.seconds} s") && minute.includes("{FINALITY_GAP.fewestBlocks} or {FINALITY_GAP.mostBlocks} blocks"));
   assert.doesNotMatch(minute, /\$\d|\d MON|\d+ gifts/, "no figure is typed into the block");
   // The three addresses are the page's own settings, and the command is one anybody can run with no key.

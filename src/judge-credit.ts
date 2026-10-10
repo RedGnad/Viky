@@ -154,6 +154,19 @@ export async function loadJudgeCredits(): Promise<readonly JudgeCreditRow[]> {
   }));
 }
 
+/**
+ * The accounts the judge code credited, in lower case, from the journal's lines: the ones whose credit was sent. The
+ * judges page reads it once to count apart the gifts such an account paid for (src/pilot-accounts.ts).
+ */
+export function creditedAccountsOf(rows: readonly Pick<JudgeCreditRow, "account" | "state">[]): ReadonlySet<string> {
+  return new Set(rows.filter((row) => row.state === "sent").map((row) => row.account.toLowerCase()));
+}
+
+/** The same, read from the journal: one reading, for the page that counts who used Viky. */
+export async function creditedByTheJudgeCode(): Promise<ReadonlySet<string>> {
+  return creditedAccountsOf(await loadJudgeCredits());
+}
+
 /** Whether this account received its judge credit: a "sent" line in the journal (D295). */
 export async function isJudgeCredited(account: string): Promise<boolean> {
   await ensureJudgeCreditSchema();
