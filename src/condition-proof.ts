@@ -34,7 +34,20 @@ export type ConditionProof = Readonly<{
   whoActed: string;
   /** Question 4: what the source does about cheating, and what it publishes that we can read. */
   sourcePolicing: string;
+  /** What the gift waits for, where the thing to show comes at a set time: said on the judges page, under the name. */
+  waits?: string;
 }>;
+
+/**
+ * A year's results, for the two conditions read on a university's results page (the founder, 10 Oct 2026). True of
+ * the code and of the operator's rule together. A page of another year than the provider's row names pays nothing
+ * (`wrongTerm`, src/university-shown.ts), and a results page is never pinned without its year (`resultsYearProblem`).
+ * The rule: a results provider is pinned on the academic year under way and on no other (docs/VERIFICATION.md). Until
+ * a university's results of the year are out its provider carries no pin, so every proof of it is held and read by
+ * hand, and a page of an earlier year is refused there. The gift itself names no year yet: it is the row, and the
+ * hand that reads, that keep an earlier year out.
+ */
+export const RESULTS_WAIT_FOR_THE_YEAR = "A year's results are published at its end: a gift made during the year waits for them, and a page of an earlier year does not count.";
 
 export const CONDITION_PROOFS: readonly ConditionProof[] = [
   {
@@ -158,6 +171,7 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
   {
     conditionId: "university-year-passed-shown",
     supervised: false,
+    waits: RESULTS_WAIT_FOR_THE_YEAR,
     inShort: "Shown from their own student portal, the results page that says passed. Proves the account, not who sat the exams.",
     data: "The results page of the person's own student portal, shown by them: they sign in there, in a verification tab, and what the page carried is proved by an attestor in a TEE where the university's provider is a classic one, or by the signature of Viky's pinned witness on the provider's own domain where it is an AI provider, with no enclave: the one field that says passed, matched against the results provider's pattern, and the year's field where the page dates itself, so a page of another year pays nothing. Viky keeps that it said passed and the day, and nothing else; no grade is read and the password never reaches Viky. A university without a results provider yet takes the gift, and the provider is built within two days; the first proof under a rule Reclaim's agent wrote is read by the operator before anything pays, and where the operator fixed the rule ahead, from a version Reclaim publishes, the first proof that fits it is paid at once and one that does not is held.",
     account: "The funder chooses the university from the list, and it is hashed into the terms they sign under this condition's own name; a page shown from another university, or a proof of enrolment on the same one, pays nothing. Who holds the portal's account is not proved: a shared student account is a shared student account.",
@@ -167,6 +181,7 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
   {
     conditionId: "university-grade-shown",
     supervised: false,
+    waits: RESULTS_WAIT_FOR_THE_YEAR,
     inShort: "The grade on their results page, on the university's scale, shown by them. Proves the account, not who sat the exams.",
     data: "The results page of the person's own student portal, shown by them: they sign in there, in a verification tab, and what the page carried is proved by an attestor in a TEE where the university's provider is a classic one, or by the signature of Viky's pinned witness on the provider's own domain where it is an AI provider, with no enclave: the one field that holds the grade, read on the scale the results provider declares (out of 20, a GPA out of 4, or out of N in a step; a scale of letters is declared and refused when the gift is made), and the year's field where the page dates itself, so a page of another year pays nothing. Viky keeps the grade in hundredths and the day, and nothing else; the password never reaches Viky. On a university whose results page is not read yet, the funder chooses the scale (out of 20, 4 or 100, or letters, ranked in one order), and the first proof the operator reviews pins the university's own: a gift made on another scale is refused, and nothing is paid.",
     account: "The funder chooses the university from the list and sets the grade on its own scale; the university is hashed into the terms they sign under this condition's own name, so a page shown from another university pays nothing, and the contract compares the grade shown with the target in the same hundredths. Who holds the portal's account is not proved: a shared student account is a shared student account.",
