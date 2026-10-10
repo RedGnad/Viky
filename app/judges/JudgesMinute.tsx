@@ -3,7 +3,7 @@ import type { IndexRead } from "@/src/envio-index";
 import { formatAusd } from "@/src/gift-reader";
 import { BLOCK_TIME, creditedDayMon, dollarsOf, FINALITY_GAP, monWords, RELAYER_FEES } from "@/src/measured";
 import { PUBLIC_RPC_URL } from "@/src/monad/chain";
-import { secondsToPay, TOULOUSE_PASSES } from "@/src/judges-first-use";
+import { TOULOUSE_PASSES } from "@/src/judges-first-use";
 import { founderAccounts, usageOf } from "@/src/pilot-accounts";
 import { countInWords } from "@/src/university-choice";
 import { CopyLine } from "../kit/CopyLine";
@@ -110,7 +110,7 @@ export function JudgesMinute({
             <a className="underline" href={`https://monadvision.com/tx/${TOULOUSE_PASSES.onTheFixedRule.paidTx}`}>
               the gift paid
             </a>{" "}
-            {secondsToPay(TOULOUSE_PASSES.onTheFixedRule)} seconds after the verification opened, with no review.
+            {TOULOUSE_PASSES.onTheFixedRule.secondsFromSignIn} seconds after they signed in to their university&apos;s portal, with no review.
           </span>
           <span className="block" data-toulouse="first">
             Toulouse, {TOULOUSE_PASSES.first.day}, the first pass: a real student showed their enrolment, and{" "}

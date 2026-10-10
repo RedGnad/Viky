@@ -61,7 +61,14 @@ export type FollowedExchange = typeof FIRST_BANK_PAYOUT;
  * account. The first proof was the first from that university: it was held, and paid once the operator had read what
  * it read. The second ran on the rule fixed ahead of it: the verification opened at Reclaim at 12:54:27 UTC, its
  * proof was relayed in the block of 12:55:27, and no review holds a line for the gift (Viky's own rows, read the
- * same day). How long it took is worked out here from those two moments, and never typed.
+ * same day).
+ *
+ * How long it took is counted from the student's sign-in to their portal (the founder, 10 Oct 2026): from the
+ * verification opening it was sixty seconds, most of them the student typing. Two things say when they signed in.
+ * The session's public log at Reclaim has the portal's sign-in form gone from the page at 12:55:09 (its event
+ * LOGIN_INDICATORS_NOT_FOUND), read by the founder. And the founder measured twenty seconds on his recording of the
+ * pass, from the press that sent the sign-in to the payment. The measure is the figure said; the log's moment bounds
+ * it, since the form is gone only after the sign-in is sent. Neither was read again by whoever wrote this.
  */
 export const TOULOUSE_PASSES = {
   first: { day: "7 Oct 2026", giftId: "1000006", paidTx: "0x9c5508e83b0dd20668bb6a8c683faa047820734d6938387f8b6f516c3467c4fd" },
@@ -69,15 +76,17 @@ export const TOULOUSE_PASSES = {
     day: "9 Oct 2026",
     giftId: "1000008",
     opened: new Date("2026-10-09T12:54:27Z"),
+    signInFormGone: new Date("2026-10-09T12:55:09Z"),
     paid: new Date("2026-10-09T12:55:27Z"),
+    secondsFromSignIn: 20,
     block: 111_901_591,
     paidTx: "0xd950295c4c3d51480496003fd6547b0fc6c3546ac0c5747d377e6259cd3277e2",
   },
 } as const;
 
-/** The seconds between a verification opening and the block that paid its gift. */
-export function secondsToPay(pass: Readonly<{ opened: Date; paid: Date }>): number {
-  return Math.round((pass.paid.getTime() - pass.opened.getTime()) / 1_000);
+/** The whole seconds between two moments of a pass. */
+export function secondsBetween(from: Date, to: Date): number {
+  return Math.round((to.getTime() - from.getTime()) / 1_000);
 }
 
 /**
