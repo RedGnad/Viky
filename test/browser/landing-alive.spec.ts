@@ -13,8 +13,8 @@ import { profile, shot as capture, sizesFor } from "./gift-kit";
  * the screen does not. And its eyes go along the lines of its book as the page is scrolled. With less motion asked
  * for, the icon is simply there and nothing reads.
  *
- * Every animation the icon's page starts is slowed, so each instant of the mockup can be held and looked at; a held
- * frame is every animation paused at its own time.
+ * Every animation the icon's page starts is slowed, so the test has the time to look, and each instant of the mockup is
+ * set: every animation of the arrival paused and put at that time, as the mockup takes its own stills.
  *
  * VIKY_LANDING_ALIVE_CAPTURES=<folder> also photographs those instants at 390 by 844 and at 1440 by 900, and measures
  * what the arrival costs a processor slowed four times, at a phone's size and density, into a file beside them.
@@ -29,17 +29,31 @@ const STORY = "[data-landing-story]";
 const ICON = `document.querySelector('${STORY} svg[data-character="icon"]')`;
 const READER = `document.querySelector('${STORY} [data-blinks]')`;
 const HERO_LIDS = `[...document.querySelectorAll('.hero-stage [data-part="lid"]')]`;
-/** Every animation of the icon, the ones inside it too: they are all started in one go, so their times are one clock. */
-const ICON_CLOCK = `${ICON}.getAnimations({ subtree: true })`;
-/** Holds every animation where it is once `clock` has run `ms` of its own time; refuses a clock that is not running. */
-const holdAt = (page: Page, clock: string, ms: number) =>
-  page.evaluate(
-    `new Promise((done, refuse) => { const asked = performance.now(); let seen = false; const tick = () => { const running = ${clock}; const at = running.length ? Math.max(...running.map((one) => Number(one.currentTime ?? 0))) : -1; if (running.length) seen = true; if (at >= ${ms}) { document.getAnimations().forEach((one) => one.pause()); done(at); } else if (!running.length && (seen || performance.now() - asked > 5000)) refuse(new Error("the clock this frame is held on is not running: asked for ${ms} ms of it")); else requestAnimationFrame(tick); }; tick(); })`,
-  ) as Promise<number>;
+/**
+ * Puts the icon's arrival at one instant, as the founder's mockup takes its stills: every animation of the icon, the
+ * ones inside it too, paused and set to that time. They are started together and each counts its own wait, so one
+ * time is one image of the arrival, whatever the browser's own pace. Says how many animations it set.
+ *
+ * The animations are taken in hand the first time and kept: one that has run to its end is no longer among those the
+ * browser lists for the drawing, and a still asked for after it would silently set nothing of it.
+ */
+const setIconAt = (page: Page, ms: number) =>
+  page.evaluate(`(() => { window.__iconArrival = window.__iconArrival || ${ICON}.getAnimations({ subtree: true }); window.__iconArrival.forEach((one) => { one.pause(); one.currentTime = ${ms}; }); return window.__iconArrival.length; })()`) as Promise<number>;
+/** Lets the arrival go on from the instant it was put at. */
+const letTheIconGo = (page: Page) => page.evaluate(`(window.__iconArrival || []).forEach((one) => one.play())`);
+/** How tall a lid of the icon is drawn, of what it is when open, with the arrival put at an instant. */
+const lidAt = async (page: Page, ms: number) => {
+  await setIconAt(page, ms);
+  return figuresOf((await page.evaluate(`getComputedStyle(${ICON}.querySelector('[data-part="lid"]')).transform`)) as string)[3];
+};
+/** Lets every animation that was paused go on from where it is. */
 const letGo = (page: Page) => page.evaluate(`document.getAnimations().forEach((one) => { if (one.playState === "paused") one.play(); })`);
 /** Where a part of a drawing has been moved to, in the drawing's own units, however it was moved. */
 const MOVED = (part: string) =>
   `(() => { const one = ${part}; const said = one.getAttribute("transform") || ""; const matrix = /matrix\\(([^)]+)\\)/.exec(said); if (matrix) { const n = matrix[1].split(/[ ,]+/).map(Number); return { x: n[4], y: n[5] }; } const moved = /translate\\(([^)]+)\\)/.exec(said); if (moved) { const n = moved[1].split(/[ ,]+/).map(Number); return { x: n[0] || 0, y: n[1] || 0 }; } const style = getComputedStyle(one).transform; if (!style || style === "none") return { x: 0, y: 0 }; const m = new DOMMatrix(style); return { x: m.e, y: m.f }; })()`;
+
+/** The six figures of a transform as the browser says it ("matrix(a, b, c, d, e, f)"), or those of no transform. */
+const figuresOf = (said: string) => (said.startsWith("matrix(") ? said.slice(7, -1).split(",").map(Number) : [1, 0, 0, 1, 0, 0]);
 
 async function landing(page: Page): Promise<void> {
   await page.goto("/", { waitUntil: "load" });
@@ -66,22 +80,31 @@ test.describe("the landing's drawings, outside the posters' own movement", () =>
       await page.evaluate(`${ICON}.scrollIntoView({ block: "center", behavior: "instant" })`);
       await expect(icon).not.toHaveAttribute("data-arrives", /.*/);
       // It lands: smaller than it is, on its way in.
-      await holdAt(page, ICON_CLOCK, 40);
-      expect(new DOMMatrix((await page.evaluate(`getComputedStyle(${ICON}).transform`)) as string).a).toBeLessThan(1);
+      // Its size, its opacity, its eyes, its mouth and its two lids at least: all of the arrival is in hand from here.
+      expect(await setIconAt(page, 40), "the arrival is under way").toBeGreaterThanOrEqual(6);
+      expect(figuresOf((await page.evaluate(`getComputedStyle(${ICON}).transform`)) as string)[0], "its width, of what it will be").toBeLessThan(1);
       await shot(page, size.name, "icon-1-it-lands");
-      await letGo(page);
-      // It blinks, once: the lids are closing or closed half way through.
-      await holdAt(page, ICON_CLOCK, 555);
-      expect(new DOMMatrix((await page.evaluate(`getComputedStyle(${ICON}.querySelector('[data-part="lid"]')).transform`)) as string).d).toBeLessThan(0.5);
+      await letTheIconGo(page);
+      // It blinks, once, 480 ms in, for 150 ms: open before, open after, and closed in between. Where it is most
+      // closed is measured, not supposed, and the picture is taken there.
+      expect(await lidAt(page, 470), "open before its blink").toBeCloseTo(1, 2);
+      let closed = { at: 480, tall: 1 };
+      for (let at = 480; at <= 630; at += 5) {
+        const tall = await lidAt(page, at);
+        if (tall < closed.tall) closed = { at, tall };
+      }
+      expect(closed.tall, `a lid's height at its lowest, ${closed.at} ms in`).toBeLessThan(0.2);
+      expect(await lidAt(page, 629), "open again as its blink ends").toBeGreaterThan(0.9);
+      await setIconAt(page, closed.at);
       expect(await page.evaluate(`getComputedStyle(${ICON}).opacity`)).toBe("1");
       await shot(page, size.name, "icon-2-it-blinks");
-      await letGo(page);
+      await letTheIconGo(page);
       // It glances at its button, wherever the button stands: below it on a phone, beside it on a computer.
       const towards = (await page.evaluate(
         `(() => { const icon = ${ICON}; const button = icon.parentElement.querySelector("button, a"); if (!button) return null; const a = icon.getBoundingClientRect(); const b = button.getBoundingClientRect(); return { dx: b.left + b.width / 2 - (a.left + a.width / 2), dy: b.top + b.height / 2 - (a.top + a.height / 2) }; })()`,
       )) as { dx: number; dy: number } | null;
       if (towards) {
-        await holdAt(page, ICON_CLOCK, 1_160);
+        await setIconAt(page, 1_160);
         const eyes = (await page.evaluate(MOVED(`${ICON}.querySelector('[data-part="gaze"]')`))) as { x: number; y: number };
         expect(Math.hypot(eyes.x, eyes.y)).toBeCloseTo(1.1, 1);
         expect(eyes.x * towards.dx + eyes.y * towards.dy, "towards the button").toBeGreaterThan(0);
@@ -89,7 +112,7 @@ test.describe("the landing's drawings, outside the posters' own movement", () =>
         if (size.name === "390") expect(Math.abs(eyes.y)).toBeGreaterThan(Math.abs(eyes.x));
         else expect(Math.abs(eyes.x)).toBeGreaterThan(Math.abs(eyes.y));
         await shot(page, size.name, "icon-3-it-glances-at-its-button");
-        await letGo(page);
+        await letTheIconGo(page);
       }
       // At rest: whole, where it is, with nothing left on it but a lid now and then.
       await expect.poll(() => page.evaluate(`${ICON}.getAnimations().length`), { timeout: 30_000 }).toBe(0);
@@ -113,9 +136,9 @@ test.describe("the landing's drawings, outside the posters' own movement", () =>
       await landing(page);
       await page.evaluate(`${READER}.scrollIntoView({ block: "center", behavior: "instant" })`);
       expect((await page.evaluate(`${READER}.querySelectorAll('[data-part="lid"]').length`)) as number).toBe(2);
-      // Within the longest gap between two blinks, and a little: it blinks. Held with its lids half way.
+      // Within the longest gap between two blinks, and a little: it blinks. Held where its lids are closed.
       const blink = (await page.evaluate(
-        `new Promise((done) => { const from = performance.now(); const tick = () => { const moving = [...${READER}.querySelectorAll('[data-part="lid"]')].flatMap((lid) => lid.getAnimations()); if (moving.length) { const others = ${HERO_LIDS}.flatMap((lid) => lid.getAnimations()).length; const hero = document.querySelector(".hero-stage"); const heroSeen = hero ? hero.getBoundingClientRect().bottom > 0 : false; moving.forEach((one) => { one.pause(); one.currentTime = 75; }); done({ after: performance.now() - from, hero: others, heroSeen }); } else if (performance.now() - from > 12000) done(null); else requestAnimationFrame(tick); }; tick(); })`,
+        `new Promise((done) => { const from = performance.now(); const tick = () => { const moving = [...${READER}.querySelectorAll('[data-part="lid"]')].flatMap((lid) => lid.getAnimations()); if (moving.length) { const others = ${HERO_LIDS}.flatMap((lid) => lid.getAnimations()).length; const hero = document.querySelector(".hero-stage"); const heroSeen = hero ? hero.getBoundingClientRect().bottom > 0 : false; moving.forEach((one) => { one.pause(); one.currentTime = 30; }); done({ after: performance.now() - from, hero: others, heroSeen }); } else if (performance.now() - from > 12000) done(null); else requestAnimationFrame(tick); }; tick(); })`,
       )) as { after: number; hero: number; heroSeen: boolean } | null;
       expect(blink, "it blinked within twelve seconds").not.toBeNull();
       // The drawings in view blink together, and one that is off the screen does not blink at all.
