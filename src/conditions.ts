@@ -1155,7 +1155,8 @@ export const MARATHON_FINISH_LINE: Condition = {
   // Open since goal 30 was signed and the reading service ran the Breizh Chrono source (D273, D275).
   live: true,
   state: "open",
-  source: "Breizh Chrono",
+  // Not one company's name (the final audit of 9 Oct 2026): the line reads three, and the race chosen decides which.
+  source: "the race's timing company",
   family: "move",
   // The line covers three distances (the founder, 4 Oct 2026): its name says a race, and its list says which.
   name: "Finish a race",
@@ -1166,7 +1167,7 @@ export const MARATHON_FINISH_LINE: Condition = {
   reading: "breizh-chrono-runner",
   words: {
     earnedDay: "When they finish, all of this becomes theirs",
-    connect: "Opened. Enter your bib number before the race starts; after the finish, Viky reads your line on Breizh Chrono.",
+    connect: "Opened. Enter your bib number before the race starts; after the finish, Viky reads your line from the race's timing company.",
     doIt: "Enter your bib number here before the start, then run. After the finish, Viky reads your line on the timing company's results page.",
     eachDay: "the day the result is read",
     preview: "Finish your race: the gift is yours when the results page says you did.",

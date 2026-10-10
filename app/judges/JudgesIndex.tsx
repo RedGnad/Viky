@@ -113,7 +113,7 @@ export async function JudgesIndex({ index }: Readonly<{ index: IndexRead | null 
         <dd className={HELP}>
           {index.gifts.map((gift) => (
             <span key={`${gift.contract}-${gift.giftId}`} className="block">
-              Gift {gift.giftId}, {gift.kind}, {formatAusd(gift.amount)}, {gift.status}, {dayOf(gift.createdAt)}:{" "}
+              Gift {gift.giftId}, {gift.kind}, {formatAusd(gift.amount)}, {gift.status}, made {dayOf(gift.createdAt)}:{" "}
               <a className="underline" href={`https://monadvision.com/tx/${gift.createdInTransaction}`}>
                 {short(gift.createdInTransaction)}
               </a>

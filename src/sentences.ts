@@ -376,7 +376,7 @@ export const PAY = {
    * The card stays the sheet's one action (the founder, 9 Oct 2026: a code is visible, never put forward in the
    * card's place). When the link that brought the person carried a code, its field comes first, above what the card is
    * asked, open and filled in, under the question as its name and with a small button; otherwise the question is a
-   * small key under the card's button, which opens the field where it stands.
+   * small key right above the card's button, which opens the field where it stands.
    */
   code: {
     have: "Have a code?",
