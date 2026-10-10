@@ -166,7 +166,7 @@ test("how money leaves is the register's six ways, and the word check is said in
 
 test("the two sentences that stood as notes are written, dated, and the studies are said in one sentence", () => {
   const people = section("What we know about the two people");
-  assert.ok(people.includes("By 10 Oct 2026, five people outside the team had used Viky: two funded a gift, four opened one, and one who earned a gift used that money to offer one in turn."));
+  assert.ok(people.includes("By 10 Oct 2026, four people outside the team had used Viky: two funded a gift, three opened one, and one who earned a gift used that money to offer one in turn."));
   assert.doesNotMatch(README, /\[N\] people outside the team/);
   // The studies are said as what they are for, in one sentence, with nothing after it (the founder, 10 Oct 2026).
   assert.ok(people.includes("These studies are why the design is what it is. **What using it with people showed us.**"));
