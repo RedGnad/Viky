@@ -29,6 +29,11 @@ import { sendPinnedRuleAlert, sendReviewAlert } from "@/src/provider-alert";
 import { shownConditionById } from "@/src/shown-conditions";
 import { verifyShownSession } from "@/src/shown-verification";
 import { tellReached } from "@/src/morning-send-live";
+import { milestoneErrorResponse } from "@/src/milestone-api";
+import { FinalityTimeout } from "@/src/monad/chain";
+import { RequestError } from "@/src/request-error";
+import { SHOW_PROOF } from "@/src/sentences";
+import { refusalForThePerson, saidInOurWords } from "@/src/shown-refusals";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -188,9 +193,23 @@ export async function POST(request: Request) {
     // A figure out of all proportion with the gift's target: nothing was signed, and the operator was told.
     if (error instanceof ReadingOutOfProportion) return NextResponse.json({ error: error.message, code: error.code }, { status: 409, headers: { "Cache-Control": "no-store" } });
     if (error instanceof VerificationError) {
-      // The reason is the product here: every refusal is typed and demonstrable.
-      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status, headers: { "Cache-Control": "no-store" } });
+      // The reason is the product here: every refusal is typed and demonstrable. Its code is the refusal's own; its
+      // sentence is the refusal's too when it was written for the person, and ours when it speaks of the inside
+      // (src/shown-refusals.ts), in which case the logs keep what it said.
+      if (saidInOurWords(error.code)) console.warn(JSON.stringify({ proofRefused: error.code, said: error.message.slice(0, 300) }));
+      return NextResponse.json({ error: refusalForThePerson(error.code, error.message), code: error.code }, { status: error.status, headers: { "Cache-Control": "no-store" } });
     }
-    return NextResponse.json({ error: error instanceof Error ? error.message : "The proof was rejected", code: "REJECTED" }, { status: 400, headers: { "Cache-Control": "no-store" } });
+    // The proof is for another subject than the gift's: the milestone table's sentence names a chess account.
+    if (error instanceof RelayerError && error.code === "REVERTED" && error.contractError === "IdentityMismatch") {
+      return NextResponse.json({ error: SHOW_PROOF.refusals.otherSubject, code: "OTHER_SUBJECT", contractError: error.contractError }, { status: 409, headers: { "Cache-Control": "no-store" } });
+    }
+    // The relay's own answers, as every other route says them: a contract's refusal by its name, the relayer not
+    // ready, and a send that left and is not known to be final yet, which must not be started again.
+    if (error instanceof RelayerError || error instanceof FinalityTimeout) return milestoneErrorResponse(error);
+    // A body this route refused is said as written. Anything else is a library's or the network's text: for our
+    // logs, never for the person (the audit of 8 Oct 2026).
+    if (error instanceof RequestError) return NextResponse.json({ error: error.message, code: error.code }, { status: error.status, headers: { "Cache-Control": "no-store" } });
+    console.error("proof not verified:", error);
+    return NextResponse.json({ error: SHOW_PROOF.refusals.unavailable, code: "REJECTED" }, { status: 400, headers: { "Cache-Control": "no-store" } });
   }
 }

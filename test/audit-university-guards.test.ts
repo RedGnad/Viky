@@ -31,10 +31,10 @@ test("the session's condition is read off the gift's record, never taken from th
 
   const route = readFileSync("app/api/proof/session/route.ts", "utf8");
   assert.doesNotMatch(route, /body\.conditionId/, "what the browser names is not read at all");
-  assert.match(route, /const entry = shownConditionOfGift\(gift, record\);\n\s*if \(!entry\) throw new Error\("Unknown condition"\);/);
+  assert.match(route, /const entry = shownConditionOfGift\(gift, record\);\n\s*if \(!entry\) throw new SessionRefusal\("Unknown condition"\);/);
   // Read before the Reclaim application is used, and before the month's count is asked.
   assert.ok(route.indexOf("const entry = shownConditionOfGift(gift, record);") < route.indexOf("const appId = process.env.RECLAIM_APP_ID"));
   assert.ok(route.indexOf("const entry = shownConditionOfGift(gift, record);") < route.indexOf("await ReclaimProofRequest.init("));
   // What the request itself gets wrong is still refused before any lookup.
-  assert.ok(route.indexOf('throw new Error("A check-in needs a valid day");') < route.indexOf("const gift = await loadGift(giftId);"));
+  assert.ok(route.indexOf('throw new SessionRefusal("A check-in needs a valid day");') < route.indexOf("const gift = await loadGift(giftId);"));
 });
