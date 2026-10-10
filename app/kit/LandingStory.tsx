@@ -1,15 +1,17 @@
 "use client";
 import Link from "next/link";
-import { Fragment, useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
-import { MOTION } from "@/src/design-tokens";
+import { Fragment, useEffect, useLayoutEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
+import { EASING, MOTION } from "@/src/design-tokens";
+import { springEasing } from "@/src/motion";
 import { inRows, readByName } from "@/src/landing-read";
 import { MOVES, POSTERS_READY, POSTERS_STILL } from "@/src/moves";
 import { CATALOGUE, HOME, LANDING_STORY as W, ME } from "@/src/sentences";
 import { BODY, CARD, HELP, HERO, PRIMARY_BUTTON, SAY } from "../components/ui";
+import { blinkOnce, blinksNowAndThen, noteBlink } from "./blink-clock";
 import { Character, type CharacterState } from "./Character";
 import { ConditionIcon } from "./ConditionIcon";
 import { FAMILY_FIGURES } from "./FamilyArt";
-import { FaceIcon, Figure, Scene } from "./Figure";
+import { BOOK_LINES, FaceIcon, Figure, READ_INK, Scene } from "./Figure";
 import { Install, isStandalone } from "./Install";
 import { MarkNotice } from "./MarkNotice";
 import { reduced } from "./Motion";
@@ -43,8 +45,9 @@ const TURN = "--poster-turn";
 /**
  * The character each poster holds, and its act (the founder, 9 Oct 2026, on a mockup). Three are days: the one earned,
  * the one missed, which comes back, and today, which hops at the yes. What is checked holds the hero reading its book,
- * the figure of the family that learns, which lands in its word like the others and has no act. The fifth is the one
- * who wears sunglasses on Me.
+ * the figure of the family that learns, which lands in its word like the others and has no act of the scroll: it
+ * reads its book by itself while it is on the screen, and blinks now and then as the hero does (the founder, 10 Oct
+ * 2026; `useLandingAlive`). The fifth is the one who wears sunglasses on Me.
  */
 const HELD: Readonly<Record<Key, Readonly<{ state: CharacterState | "book" | "shades"; act?: Act }>>> = {
   theirs: { state: "earned", act: "roll" },
@@ -118,10 +121,18 @@ function Poster({ title, after, character, firstUnderTheCard = false }: Readonly
  * figure, and the one with the book is the chooser's, whole. The day that rolls is written into the page, since a
  * part of it turns and a named drawing's parts cannot be reached (D206).
  */
+/** A drawing of the landing that blinks now and then, by the one rule (app/kit/blink-clock.ts). */
+const BLINKS = "data-blinks";
+/** The drawing that reads its book (`reads`, below). */
+const READS = "data-reads";
+/** The app's icon, and what it wears while it waits under the screen for its card to enter (app/globals.css). */
+const ICON = 'svg[data-character="icon"]';
+const ARRIVES = "data-arrives";
+
 function Held({ poster }: Readonly<{ poster: Key }>) {
   const { state, act } = HELD[poster];
   return (
-    <span data-ch={act === "back" ? "back" : "lands"} {...(act ? { "data-act": act } : {})} aria-hidden className={`poster-character${BOX[state] ?? ""}`}>
+    <span data-ch={act === "back" ? "back" : "lands"} {...(act ? { "data-act": act } : {})} {...(state === "book" ? { [BLINKS]: "", [READS]: "" } : {})} aria-hidden className={`poster-character${BOX[state] ?? ""}`}>
       {state === "shades" ? (
         <Figure id="story-key" limbs={false} eyes="shades" mouth="grin" halftone />
       ) : state === "book" ? (
@@ -288,10 +299,213 @@ function usePosters(root: { readonly current: HTMLElement | null }): void {
   }, [root]);
 }
 
+/**
+ * The icon lands (the founder's mockup of 10 Oct 2026; `MOTION.icon`): its size on the spring and its opacity without
+ * overshoot, the eyes and the mouth a moment after the body, one blink, then a glance at its button, wherever the
+ * button stands, below it on a phone and beside it on a computer. Everything is started at once, each part held at
+ * its first image until its own moment, so nothing here waits on a clock.
+ */
+function iconArrives(icon: SVGSVGElement): Animation[] {
+  const I = MOTION.icon;
+  const pop = springEasing(I.spring);
+  // Where its button is, measured before anything moves.
+  const button = icon.parentElement?.querySelector("button, a");
+  const from = icon.getBoundingClientRect();
+  const to = button?.getBoundingClientRect();
+  const running: Animation[] = [
+    icon.animate([{ transform: `scale(${I.fromScale})` }, { transform: "scale(1)" }], { duration: pop.durationMs, easing: pop.easing, fill: "backwards" }),
+    icon.animate([{ opacity: 0 }, { opacity: 1 }], { duration: I.fadeMs, easing: EASING.standard, fill: "backwards" }),
+  ];
+  // The face has weight: the eyes and the mouth, never the group that holds them, which carries the face's own size.
+  for (const name of ["eyes", "mouth"]) {
+    const part = icon.querySelector(`[data-part="${name}"]`);
+    if (part) running.push(part.animate([{ transform: `translateY(${I.faceDrop}px)` }, { transform: "translateY(0px)" }], { duration: pop.durationMs, delay: I.faceAfterMs, easing: pop.easing, fill: "backwards" }));
+  }
+  // One blink, the hero's, and none by the common rule sooner than its shortest gap after it.
+  noteBlink(performance.now() + I.blinkAtMs);
+  blinkOnce(icon, I.blinkAtMs);
+  const eyes = icon.querySelector('[data-part="gaze"]');
+  if (to && eyes) {
+    const dx = to.left + to.width / 2 - (from.left + from.width / 2);
+    const dy = to.top + to.height / 2 - (from.top + from.height / 2);
+    const far = Math.hypot(dx, dy) || 1;
+    const there = `translate(${Math.round((dx / far) * I.glance.by * 100) / 100}px, ${Math.round((dy / far) * I.glance.by * 100) / 100}px)`;
+    running.push(
+      eyes.animate(
+        [
+          { transform: "translate(0px, 0px)", easing: EASING.emphasizedDecelerate },
+          { transform: there, offset: I.glance.thereAt },
+          { transform: there, offset: I.glance.backFrom, easing: EASING.standard },
+          { transform: "translate(0px, 0px)" },
+        ],
+        { duration: I.glance.durationMs, delay: I.glanceAtMs },
+      ),
+    );
+  }
+  return running;
+}
+
+const SVG = "http://www.w3.org/2000/svg";
+const twoPlaces = (value: number) => Math.round(value * 100) / 100;
+
+/**
+ * The one who reads its book reads it (the founder's mockup of 10 Oct 2026; `MOTION.reading`). Its eyes go down to
+ * the book, along each of the three lines of the left page, across to the right page and along its two, then up to
+ * whoever reads the landing, and stay there before they start again. The mouth follows a little. Each line of the
+ * book is drawn a second time over itself, dark, and shown along its length as the eyes pass over it; the five go
+ * back to their grey just before the eyes go down again.
+ *
+ * One turn of it is written whole, as the keyframes of a few animations that repeat, each line darkening at the very
+ * moments the eyes are on it: nothing here waits on a clock, and nothing can fall out of step. It plays only while
+ * the drawing is on the screen and the tab in front, as the blink does.
+ */
+function reads(held: Element): () => void {
+  const drawn = held.querySelector("svg");
+  const eyes = drawn?.querySelector('[data-part="gaze"]');
+  const mouth = drawn?.querySelector('[data-part="mouth"]');
+  const book = drawn?.querySelector('[data-prop="book"]');
+  if (!eyes || !book) return () => {};
+  const R = MOTION.reading;
+  // One turn: where the eyes go, in how long, on which curve, and which line they are on meanwhile.
+  const steps: Array<Readonly<{ ms: number; to: readonly [number, number]; easing: string; line?: number }>> = [];
+  let page: "left" | "right" | null = null;
+  let row = 0;
+  BOOK_LINES.forEach((line, index) => {
+    const [start, end] = R[line.page];
+    if (line.page !== page) row = 0;
+    const down = R.down + row * R.perLine;
+    steps.push({ ms: page === null ? R.downMs : line.page === page ? R.backMs : R.pageMs, to: [start, down], easing: page === null ? EASING.emphasizedDecelerate : EASING.standard });
+    steps.push({ ms: line.short ? R.lineMs * R.shortLine.time : R.lineMs, to: [line.short ? start + (end - start) * R.shortLine.reach : end, down], easing: R.lineEasing, line: index });
+    page = line.page;
+    row += 1;
+  });
+  steps.push({ ms: R.upMs, to: [0, 0], easing: EASING.emphasizedDecelerate }, { ms: R.heldMs, to: [0, 0], easing: "linear" });
+  const turnMs = steps.reduce((sum, step) => sum + step.ms, 0);
+  const at = (x: number, y: number) => `translate(${twoPlaces(x)}px, ${twoPlaces(y)}px)`;
+  const looking: Keyframe[] = [];
+  const following: Keyframe[] = [];
+  const read: Array<Readonly<{ from: number; to: number }>> = [];
+  let time = 0;
+  let where: readonly [number, number] = [0, 0];
+  for (const step of steps) {
+    looking.push({ offset: time / turnMs, transform: at(where[0], where[1]), easing: step.easing });
+    following.push({ offset: time / turnMs, transform: at(where[0] * R.mouth, where[1] * R.mouth), easing: step.easing });
+    if (step.line !== undefined) read[step.line] = { from: time / turnMs, to: (time + step.ms) / turnMs };
+    time += step.ms;
+    where = step.to;
+  }
+  looking.push({ offset: 1, transform: at(0, 0) });
+  following.push({ offset: 1, transform: at(0, 0) });
+  const turning = { duration: turnMs, iterations: Number.POSITIVE_INFINITY };
+
+  // The turn exists only in front of somebody. Off the screen there is nothing of it on the page, no dark line and no
+  // animation: a page that waits for every movement to end must find none here. It starts again from the eyes going
+  // down when the drawing comes back, and is held where it is while the tab is behind another.
+  let marks: SVGPathElement[] = [];
+  let running: Animation[] = [];
+  const begin = () => {
+    if (running.length > 0) return;
+    marks = BOOK_LINES.map((line) => {
+      const mark = document.createElementNS(SVG, "path");
+      mark.setAttribute("d", line.d);
+      mark.setAttribute("pathLength", "1");
+      mark.setAttribute("data-part", "read");
+      Object.assign(mark.style, { fill: "none", stroke: READ_INK, strokeOpacity: String(R.mark.opacity), strokeWidth: String(R.mark.width), strokeLinecap: "round", strokeDasharray: "1 2", strokeDashoffset: "1" });
+      book.appendChild(mark);
+      return mark;
+    });
+    running = [
+      eyes.animate(looking, turning),
+      ...(mouth ? [mouth.animate(following, turning)] : []),
+      ...marks.map((mark, index) =>
+        mark.animate(
+          [
+            { offset: 0, strokeDashoffset: 1, opacity: 1 },
+            { offset: read[index].from, strokeDashoffset: 1, opacity: 1, easing: R.lineEasing },
+            { offset: read[index].to, strokeDashoffset: 0, opacity: 1 },
+            { offset: (turnMs - R.fadeMs) / turnMs, strokeDashoffset: 0, opacity: 1, easing: "ease-out" },
+            { offset: 1, strokeDashoffset: 0, opacity: 0 },
+          ],
+          turning,
+        ),
+      ),
+    ];
+  };
+  const end = () => {
+    running.forEach((one) => one.cancel());
+    running = [];
+    marks.forEach((mark) => mark.remove());
+    marks = [];
+  };
+  let seen = false;
+  const follow = () => {
+    if (!seen) return end();
+    begin();
+    running.forEach((one) => (document.hidden ? one.pause() : one.play()));
+  };
+  const watch = new IntersectionObserver((entries) => {
+    seen = entries[entries.length - 1].isIntersecting;
+    follow();
+  });
+  watch.observe(held);
+  document.addEventListener("visibilitychange", follow);
+  return () => {
+    watch.disconnect();
+    document.removeEventListener("visibilitychange", follow);
+    end();
+  };
+}
+
+/**
+ * What lives on the landing outside the scroll (the founder, 10 Oct 2026). The one who reads its book reads it, and
+ * blinks now and then, by the one rule every drawing blinks by. And the app's icon arrives once, when its card enters the screen,
+ * tied to no position of the scroll: under the screen when the page is drawn, it waits there at its starting state
+ * (the rule of 23 Sep 2026: the first image is the starting state), lands as it comes in, and blinks now and then
+ * afterwards. In view when the page is drawn, or under reduced motion, it is simply there.
+ */
+function useLandingAlive(root: { readonly current: HTMLElement | null }): void {
+  // Before the browser paints, so the icon is never seen whole and then gone.
+  useLayoutEffect(() => {
+    const icon = root.current?.querySelector<SVGSVGElement>(ICON);
+    if (!icon || reduced() || icon.getBoundingClientRect().top < window.innerHeight) return;
+    icon.setAttribute(ARRIVES, "");
+    return () => icon.removeAttribute(ARRIVES);
+  }, [root]);
+  useEffect(() => {
+    const story = root.current;
+    if (!story || reduced()) return;
+    const stops = [...story.querySelectorAll(`[${BLINKS}]`)].map((drawing) => blinksNowAndThen(drawing));
+    for (const drawing of story.querySelectorAll(`[${READS}]`)) stops.push(reads(drawing));
+    const icon = story.querySelector<SVGSVGElement>(ICON);
+    let running: Animation[] = [];
+    let watch: IntersectionObserver | undefined;
+    if (icon && !icon.hasAttribute(ARRIVES)) stops.push(blinksNowAndThen(icon));
+    else if (icon) {
+      watch = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          watch?.disconnect();
+          running = iconArrives(icon);
+          icon.removeAttribute(ARRIVES);
+          stops.push(blinksNowAndThen(icon, MOTION.icon.restMs));
+        },
+        { threshold: MOTION.icon.inView },
+      );
+      watch.observe(icon);
+    }
+    return () => {
+      watch?.disconnect();
+      running.forEach((animation) => animation.cancel());
+      stops.forEach((stop) => stop());
+    };
+  }, [root]);
+}
+
 export function LandingStory() {
   const standalone = useSyncExternalStore(never, isStandalone, serverFalse);
   const story = useRef<HTMLElement>(null);
   usePosters(story);
+  useLandingAlive(story);
   return (
     <section ref={story} data-landing-story="" aria-label={W.region} className="w-full">
       {W.blocks.map((block, index) => (

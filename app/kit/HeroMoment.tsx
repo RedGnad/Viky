@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { EASING, MOTION } from "@/src/design-tokens";
 import { heroCookieText } from "@/src/hero-cookie";
 import { springEasing } from "@/src/motion";
-import { msSinceBlink, noteBlink } from "./blink-clock";
+import { blinksNowAndThen } from "./blink-clock";
 import { Figure } from "./Figure";
 import { Expression, reduced } from "./Motion";
 
@@ -142,26 +142,13 @@ export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
   useEffect(() => {
     const stage = root.current;
     if (!stage || reduced()) return;
-    const { blink, tuck } = MOTION;
+    const { tuck } = MOTION;
     const readyAt = performance.now() + (played ? 0 : heroTimeline().done);
-    const lids = [...stage.querySelectorAll<SVGElement>('[data-part="lid"]')];
     const arms = [...stage.querySelectorAll<SVGElement>('[data-part="arm"]')].map((limb, index) => ({ limb, spread: outward(index, MOTION.hero.spread.armsDeg) }));
     const legs = [...stage.querySelectorAll<SVGElement>('[data-part="leg"]')].map((limb, index) => ({ limb, spread: outward(index, MOTION.hero.spread.legsDeg) }));
     const limbs = [...arms, ...legs];
-    let seen = true;
-    let blinkTimer: number | undefined;
-    const nextBlink = () => {
-      blinkTimer = window.setTimeout(() => {
-        // Not so soon after another blink, the one as the light changes included (D309).
-        if (seen && !document.hidden && msSinceBlink() >= blink.fromMs) {
-          noteBlink();
-          const closed = `scaleY(${blink.closedTo})`;
-          lids.forEach((lid) => lid.animate([{ transform: "scaleY(1)" }, { transform: closed, offset: 0.5 }, { transform: "scaleY(1)" }], { duration: blink.durationMs, easing: blink.easing }));
-        }
-        nextBlink();
-      }, blink.fromMs + Math.random() * (blink.toMs - blink.fromMs));
-    };
-    blinkTimer = window.setTimeout(nextBlink, Math.max(0, readyAt - performance.now()));
+    // The blink now and then is every drawing's, from one clock (app/kit/blink-clock.ts): from the moment it stands.
+    const stopBlinking = blinksNowAndThen(stage, Math.max(0, readyAt - performance.now()));
     let tucked = false;
     let folding: Animation[] = [];
     const follow = () => {
@@ -180,15 +167,10 @@ export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
     };
     const settled = window.setTimeout(follow, Math.max(0, readyAt - performance.now()));
     window.addEventListener("scroll", follow, { passive: true });
-    const observer = new IntersectionObserver((entries) => {
-      seen = entries[entries.length - 1].isIntersecting;
-    });
-    observer.observe(stage);
     return () => {
-      window.clearTimeout(blinkTimer);
+      stopBlinking();
       window.clearTimeout(settled);
       window.removeEventListener("scroll", follow);
-      observer.disconnect();
       folding.forEach((animation) => animation.cancel());
     };
   }, [played]);
