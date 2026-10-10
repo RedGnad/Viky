@@ -28,12 +28,32 @@ type Busy = "loading" | "connecting" | "starting" | "erasing" | null;
 
 const CARD = "flex flex-col gap-[var(--space-md)]";
 
-export function ConnectTheAccount({ giftId, conditionId, yours, onChanged }: Readonly<{ giftId: string; conditionId: string; yours: boolean; onChanged: () => Promise<void> | void }>) {
+export function ConnectTheAccount({
+  giftId,
+  conditionId,
+  yours,
+  dayOneIsTheStart = false,
+  onConnection,
+  onChanged,
+}: Readonly<{
+  giftId: string;
+  conditionId: string;
+  yours: boolean;
+  /** The gift's first day is the day counting starts, and not the day after (`firstDayIsTheStart`, src/v2.ts). */
+  dayOneIsTheStart?: boolean;
+  /** Told whether the source is connected, as soon as it is known: the card's own title then says so. */
+  onConnection?: (connected: boolean) => void;
+  onChanged: () => Promise<void> | void;
+}>) {
   const condition = conditionById(conditionId);
   const link = condition?.link;
   const source = link?.kind === "connect" ? condition?.source.toLowerCase() : null;
   const { ensureSigner } = useAccount();
-  const [status, setStatus] = useState<Status | null>(null);
+  // On the way back from the source's own page the address says it is connected: drawn so at once, and the server's
+  // answer then says what is.
+  const [status, setStatus] = useState<Status | null>(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("connect") === "done" ? { connected: true, since: null, bound: false, configured: true } : null,
+  );
   const [busy, setBusy] = useState<Busy>("loading");
   // The source sends the person back with `?connect=done`, or a reason: read once, when the screen is first drawn,
   // and said as that reason (src/connect-return.ts).
@@ -41,10 +61,8 @@ export function ConnectTheAccount({ giftId, conditionId, yours, onChanged }: Rea
     if (typeof window === "undefined") return null;
     return connectReturnInWords(new URLSearchParams(window.location.search).get("connect"), condition?.source ?? "");
   });
-  const [said, setSaid] = useState<string | null>(() => {
-    if (typeof window === "undefined" || link?.kind !== "connect") return null;
-    return new URLSearchParams(window.location.search).get("connect") === "done" ? link.consent.connected : null;
-  });
+  /** What a gesture on this screen came to, said in place of what the connection says of itself. */
+  const [said, setSaid] = useState<string | null>(null);
 
   // The connection's state, read from the server when the screen is drawn and after each gesture: a promise's
   // answers, never a state set in the effect itself.
@@ -67,6 +85,11 @@ export function ConnectTheAccount({ giftId, conditionId, yours, onChanged }: Rea
     };
   }, [giftId, source, asked]);
   const load = useCallback(async () => setAsked((count) => count + 1), []);
+  // The card's title follows the connection: told when the server's answer changes it, never set from here.
+  const connected = status?.connected;
+  useEffect(() => {
+    if (connected !== undefined) onConnection?.(connected);
+  }, [connected, onConnection]);
 
   if (!yours || !link || link.kind !== "connect" || !source) return null;
   const words = link.consent;
@@ -122,10 +145,13 @@ export function ConnectTheAccount({ giftId, conditionId, yours, onChanged }: Rea
   const working = busy !== null;
   return (
     <div className={CARD}>
-      <p className="font-medium">{words.title}</p>
+      {/* Connected, the card's own title says so (app/components/GiftPage.tsx): this block's title asked to connect. */}
+      {status?.connected ? null : <p className="font-medium">{words.title}</p>}
       {status?.connected ? (
         <>
-          <p className={BODY}>{said ?? words.connected}</p>
+          <p className={BODY} data-connected-says="">
+            {said ?? (dayOneIsTheStart ? words.connectedDayOne : words.connected)}
+          </p>
           {!status.bound ? (
             <>
               <Button doing={busy === "starting" ? W.reading : null} step={WAITS.connecting(condition?.source ?? "")} waiting={working && busy !== "starting"} onPress={() => void start()}>

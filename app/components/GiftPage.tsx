@@ -5,7 +5,7 @@ import { useMinute } from "../kit/clock";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { openWithTheLinkSecret, type StartStep } from "@/src/client/v2";
 import { openingSecretOf } from "@/src/v2-protocol";
-import { opensByItsLink, paysTheSameDay } from "@/src/v2";
+import { firstDayIsTheStart, opensByItsLink, paysTheSameDay } from "@/src/v2";
 import { useMoneySession } from "@/src/account/money-session";
 import { isAccountError } from "@/src/account/errors";
 import { useDoor } from "@/src/account/door";
@@ -284,6 +284,8 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
   const [answer, setAnswer] = useState<{ at: Where; text: string; failed: boolean } | null>(null);
   /** A signed-out reader of an opened gift asked to sign in: the quiet line opens the door, it is not the moment's action. */
   const [signingIn, setSigningIn] = useState(false);
+  /** A connected source, connected and not started yet: its own block says so once it has asked (app/kit/ConnectTheAccount.tsx). */
+  const [sourceConnected, setSourceConnected] = useState(false);
   /** "Open my gift" pressed with nobody signed in: the account comes first, then the gift is opened, on that one press. */
   const [comingIn, setComingIn] = useState(false);
   // Whether an account was signed in on this page before it went: then the session closed while they were here,
@@ -486,6 +488,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
     openBy,
     linkHere,
     connectBy,
+    sourceConnected,
     endedOnInWords: milestone?.reachedAtMs ? dateInWords(milestone.reachedAtMs, zone) : daily && daily.finished && daily.endDay > 0 ? contractDayInWords(daily.endDay) : null,
     deadlineInWords: milestone?.deadlineMs ? dateInWords(milestone.deadlineMs, zone) : null,
     nextReadingInWords: moment === "counting" || moment === "climbing" ? nextReading : null,
@@ -787,7 +790,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
         );
       case "connect":
         // A condition of the third nature is connected, not named (D189): the source's own page, one gesture.
-        if (condition?.link.kind === "connect") return <ConnectTheAccount giftId={giftId} conditionId={condition.id} yours={mine} onChanged={reloadAll} />;
+        if (condition?.link.kind === "connect") return <ConnectTheAccount giftId={giftId} conditionId={condition.id} yours={mine} dayOneIsTheStart={firstDayIsTheStart(status.version)} onConnection={setSourceConnected} onChanged={reloadAll} />;
         return connectWords ? (
           <ConnectTheSource
             words={connectWords}
