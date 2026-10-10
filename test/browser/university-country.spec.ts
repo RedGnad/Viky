@@ -6,6 +6,10 @@ import { expect, test, type Page } from "@playwright/test";
  * the student's; a country as a chip in its own sheet; one field that searches the whole list. The defect the country
  * sheet pins: choosing a country closed both sheets, because React carries a nested dialog's close up to its parent's
  * handler. The list is answered here, so the screen is measured and not the table.
+ *
+ * One list since 10 Oct 2026 (the founder's mockup): the field says how many it searches, a university whose students
+ * show their page today comes first with a mark on its line, the two days are said under the university chosen, and a
+ * search that found nothing, alone, leads to the page a university is asked from.
  */
 const sheet = (page: Page) => page.locator("dialog.sheet[open]");
 
@@ -15,8 +19,11 @@ const SENEGAL = [
   { pair: "ugb-sn", title: "Université Gaston Berger", issuer: "Senegal", country: "SN", ready: [], scale: null },
 ];
 const LAGOS = { pair: "unilag-ng", title: "University of Lagos", issuer: "Nigeria", country: "NG", ready: [], scale: null };
-/** The second group, whatever number its heading counts. */
-const MORE = /added on request within two days$/;
+/** The one list, by the name it is read aloud by, and its lines as they read: the name, the country, the mark if any. */
+const list = (page: Page) => sheet(page).getByRole("group", { name: "Universities" });
+const lines = (page: Page) => list(page).locator("label");
+/** The search field, whatever number it says it searches. */
+const SEARCH = /^Search (\d[\d,]* )?universit(y|ies)$/;
 
 async function answerTheList(page: Page, list: readonly object[] = [...SENEGAL, LAGOS]) {
   await page.route(/\/api\/portals\?all=1$/, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ results: list }) }));
@@ -38,7 +45,7 @@ async function openAtUniversity(page: Page) {
   await line.click();
 }
 
-test("the list opens on every country with no step before it, and one field searches the whole list", async ({ page }) => {
+test("one list opens on every country, the field says how many it searches, and the ready come first with their mark", async ({ page }) => {
   await answerTheList(page);
   await openAtUniversity(page);
   await expect(sheet(page).getByRole("heading", { name: "Which university" })).toBeVisible();
@@ -46,49 +53,50 @@ test("the list opens on every country with no step before it, and one field sear
   await expect(modes.getByRole("radio", { name: "Enrolled" })).toBeChecked();
   // Every country, and every line says its own.
   await expect(sheet(page).getByRole("button", { name: /All countries/ })).toBeVisible();
-  const tested = sheet(page).getByRole("group", { name: "Ready today" });
-  const all = sheet(page).getByRole("group", { name: MORE });
-  await expect(tested.getByText("Université Cheikh Anta Diop")).toBeVisible();
-  await expect(tested.getByText("Senegal", { exact: true })).toBeVisible();
-  await expect(all.getByText("Université Gaston Berger")).toBeVisible();
-  await expect(all.getByText("University of Lagos")).toBeVisible();
-  await expect(all.getByText("Nigeria", { exact: true })).toBeVisible();
-  // The heading counts the others and says how fast one is added: the line that said it under the heading is gone.
-  await expect(all.locator("legend")).toHaveText("2 more, added on request within two days");
-  await expect(sheet(page).getByText("Set up on the first gift, within two days.")).toHaveCount(0);
-  await expect(all.getByText("Université Cheikh Anta Diop")).toHaveCount(0);
-  // The search runs on both groups, over every country.
-  const search = sheet(page).getByLabel("Search universities");
+  // The count is in the field, and nothing counts or sorts the universities into ready and waiting.
+  await expect(sheet(page).getByLabel("Search 3 universities")).toBeVisible();
+  await expect(sheet(page).getByText(/added on request|more,|Yours isn't here|Add your university|Ask for it/)).toHaveCount(0);
+  // One list: the one whose students show their page today first, with its mark, then the others by name, with none.
+  await expect(lines(page)).toHaveText(["Université Cheikh Anta DiopSenegalReady today", "Université Gaston BergerSenegal", "University of LagosNigeria"]);
+  await expect(list(page).locator("legend")).toHaveClass(/sr-only/);
+  // The mark stands at the end of its line, beside the name and not under it.
+  const name = (await lines(page).first().getByText("Université Cheikh Anta Diop").boundingBox())!;
+  const mark = (await lines(page).first().getByText("Ready today").boundingBox())!;
+  expect(mark.x, "the mark is to the right of the name").toBeGreaterThanOrEqual(name.x + name.width - 1);
+  // The search runs on the whole list, over every country.
+  const search = sheet(page).getByLabel(SEARCH);
   await search.fill("cheikh");
-  await expect(sheet(page).getByText("Université Gaston Berger")).toHaveCount(0);
-  await expect(tested.getByText("Université Cheikh Anta Diop")).toBeVisible();
-  await expect(all).toHaveCount(0);
+  await expect(lines(page)).toHaveText(["Université Cheikh Anta DiopSenegalReady today"]);
   await search.fill("lagos");
-  await expect(all.getByText("University of Lagos")).toBeVisible();
-  await expect(tested).toHaveCount(0);
-  // Nothing ready among what is shown: the heading counts, and is "more" than nothing.
-  await expect(all.locator("legend")).toHaveText("1 university, added on request within two days");
+  await expect(lines(page)).toHaveText(["University of LagosNigeria"]);
+  // A search that finds nothing says so, and there alone leads to the page a university is asked from.
   await search.fill("sorbonne");
   await expect(sheet(page).getByText("No university by that name in the list yet.")).toBeVisible();
+  await expect(sheet(page).getByRole("link", { name: "Ask for it" })).toHaveAttribute("href", "/add-your-university");
+  await expect(list(page)).toHaveCount(0);
   await search.fill("lagos");
-  // Choosing folds the list into the one chosen, and Change opens it again, on every country still.
-  await all.getByText("University of Lagos").click();
+  await expect(sheet(page).getByRole("link", { name: "Ask for it" })).toHaveCount(0);
+  // Choosing folds the list into the one chosen, with the one line that says the two days, and Change opens it again.
+  await list(page).getByText("University of Lagos").click();
   const chosen = sheet(page).locator("[data-university-chosen]");
   await expect(chosen.getByText("University of Lagos")).toBeVisible();
   await expect(chosen.getByText("Nigeria")).toBeVisible();
-  await expect(sheet(page).getByLabel("Search universities")).toHaveCount(0);
+  await expect(chosen.locator("[data-university-when]")).toHaveText("Its page is set up within two days of your gift. The money waits in their name meanwhile.");
+  await expect(sheet(page).getByLabel(SEARCH)).toHaveCount(0);
   // What they will show changes, and the university stays.
   await modes.getByText("The year passed", { exact: true }).click();
   await expect(modes.getByRole("radio", { name: "The year passed" })).toBeChecked();
   await expect(chosen.getByText("University of Lagos")).toBeVisible();
   await chosen.getByRole("button", { name: /Change/ }).click();
   await expect(sheet(page).getByRole("button", { name: /All countries/ })).toBeVisible();
-  // Ready today is said of what the gift asks: for a year passed, the university read for enrolment is with the others.
-  await expect(tested).toHaveCount(0);
-  await expect(all.locator("legend")).toHaveText("3 universities, added on request within two days");
-  await expect(all.getByText("Université Cheikh Anta Diop")).toBeVisible();
+  // Ready today is said of what the gift asks: for a year passed, the university read for enrolment carries no mark,
+  // and stands where its own name puts it.
+  await expect(lines(page)).toHaveText(["Université Cheikh Anta DiopSenegal", "Université Gaston BergerSenegal", "University of LagosNigeria"]);
   await modes.getByText("Enrolled", { exact: true }).click();
-  await expect(tested.getByText("Université Cheikh Anta Diop")).toBeVisible();
+  await expect(lines(page).first()).toHaveText("Université Cheikh Anta DiopSenegalReady today");
+  // And once chosen, one whose students show their page today says that, and nothing of two days.
+  await list(page).getByText("Université Cheikh Anta Diop").click();
+  await expect(chosen.locator("[data-university-when]")).toHaveText("Its students show their page today.");
 });
 
 test("a country chosen in the chip's sheet narrows the list, closes that sheet only, and every country comes back first", async ({ page }) => {
@@ -101,8 +109,10 @@ test("a country chosen in the chip's sheet narrows the list, closes that sheet o
   await sheet(page).last().getByText("Nigeria", { exact: true }).click();
   await expect(sheet(page)).toHaveCount(1);
   await expect(sheet(page).getByRole("button", { name: /In Nigeria/ })).toBeVisible();
-  const all = sheet(page).getByRole("group", { name: MORE });
+  const all = list(page);
   await expect(all.getByText("University of Lagos")).toBeVisible();
+  // The field counts what it searches now: the country's own.
+  await expect(sheet(page).getByLabel("Search 1 university")).toBeVisible();
   await expect(sheet(page).getByText("Université Gaston Berger")).toHaveCount(0);
   await expect(all.getByText("Nigeria", { exact: true })).toHaveCount(0, { timeout: 1000 });
   await sheet(page).getByRole("button", { name: /In Nigeria/ }).click();
@@ -113,7 +123,7 @@ test("a country chosen in the chip's sheet narrows the list, closes that sheet o
 test("every university is listed, drawn a hundred at a time as the end comes near, and searched whole at once", async ({ page }) => {
   await answerTheList(page, Array.from({ length: 250 }, (_, index) => ({ ...SENEGAL[1], pair: `u${index}-sn`, title: `Université ${String(index).padStart(3, "0")}` })));
   await openAtUniversity(page);
-  const rows = sheet(page).getByRole("group", { name: MORE }).getByRole("radio");
+  const rows = list(page).getByRole("radio");
   await expect(rows).toHaveCount(100);
   for (let turn = 0; turn < 6 && (await rows.count()) < 250; turn += 1) {
     await sheet(page).locator(".sheet-body").first().evaluate((body) => body.scrollTo({ top: body.scrollHeight }));
@@ -121,7 +131,7 @@ test("every university is listed, drawn a hundred at a time as the end comes nea
   }
   await expect(rows).toHaveCount(250);
   await sheet(page).locator(".sheet-body").first().evaluate((body) => body.scrollTo({ top: 0 }));
-  await sheet(page).getByLabel("Search universities").fill("240");
+  await sheet(page).getByLabel("Search 250 universities").fill("240");
   await expect(rows).toHaveCount(1);
   await expect(sheet(page).getByText("Université 240")).toBeVisible();
 });
@@ -131,8 +141,8 @@ test("pressing the search field moves nothing under the pointer, so no universit
   // stood on was chosen on release, in Safari, the first one of the country every time.
   await answerTheList(page, Array.from({ length: 30 }, (_, index) => ({ ...SENEGAL[1], pair: `u${index}-sn`, title: `Université ${index}` })));
   await openAtUniversity(page);
-  await sheet(page).getByRole("group", { name: MORE }).waitFor();
-  const field = sheet(page).getByLabel("Search universities");
+  await list(page).waitFor();
+  const field = sheet(page).getByLabel("Search 30 universities");
   await field.evaluate((element) => element.scrollIntoView({ block: "center" }));
   const box = (await field.boundingBox())!;
   const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];

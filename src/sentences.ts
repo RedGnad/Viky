@@ -1795,9 +1795,14 @@ export const CONDITION_NATURE = { read: "READ FOR YOU", shown: "SHOWN BY THEM", 
  */
 
 /**
- * "Which university?" asked as a list (D247), and as the founder set it on 26 Sep 2026 (D264): the names alone, grouped
- * by country, no sentence about checking in the chooser, and under the list one invitation to the page where a student
- * adds their own. How a university is checked is said on the gift's page, folded, where the proof is shown.
+ * "Which university?" asked as a list (D247), and as the founder set it on 26 Sep 2026 (D264): the names alone, and no
+ * sentence about checking in the chooser. How a university is checked is said on the gift's page, folded, where the
+ * proof is shown.
+ *
+ * One list since 10 Oct 2026 (the founder's mockup): every university in it can be chosen and paid for now, so nothing
+ * sorts them into ready and not ready. Two groups did, "Ready today" over one university and "11,021 more, added on
+ * request within two days" over the rest, with "Add your university" at the foot: a payer read one university that
+ * works, a waiting list, and a button that suggests doing it oneself.
  */
 /**
  * The scale a grade is typed on (the founder, 28 Sep 2026): the university's own once its first results page has been
@@ -1815,8 +1820,13 @@ export const GRADE_SCALE = {
 } as const;
 
 export const UNIVERSITY_CHOICE = {
-  /** The one field (the founder, 29 Sep 2026): the whole list is searched, every country at once. */
-  search: "Search universities",
+  /**
+   * The one field (the founder, 29 Sep 2026): the whole list is searched, every country at once. It says how many
+   * universities it searches once the list is read, which is where the count stands since 10 Oct 2026.
+   */
+  search: (count?: string) => (count ? `Search ${count} ${count === "1" ? "university" : "universities"}` : "Search universities"),
+  /** What the list is called when read aloud: the sheet's own title asks the question, so it is not drawn twice. */
+  list: "Universities",
   /** The chip that narrows the list to one country: what it is called when read aloud, and its sheet's title. */
   country: "Which country",
   /** What the chip says: every country, the default (the founder, 30 Sep 2026), or the one chosen. */
@@ -1827,19 +1837,21 @@ export const UNIVERSITY_CHOICE = {
   unreadable: "The list could not be read right now. Close this and try again in a moment.",
   nothing: "No university by that name in the list yet.",
   /**
-   * The two groups of the list (the UI pass of 8 Oct 2026): where a student can show today, then every other, whose
-   * heading says how many they are and how fast one is added. The line that said it under the heading is gone: the
-   * heading says it, and the gift's page says it again when it matters. `count` is src/university-choice.ts's.
+   * The mark on the line of a university whose students can show their page today, for what the gift asks. Such a
+   * university comes first in the list; the others carry nothing, no "on request" and no "more".
    */
   ready: "Ready today",
-  more: (count: string) => `${count} more, added on request within two days`,
-  /** The same heading where no university of the list shown is ready: there is nothing to be "more" than. */
-  moreAlone: (count: string) => `${count} ${count === "1" ? "university" : "universities"}, added on request within two days`,
   /** Beside the university chosen, which folds the list away so what comes after it is in reach. */
   change: "Change",
-  /** The one line under the list: a question, and the link that answers it. */
-  notListed: "Yours isn't here?",
-  addYours: "Add your university",
+  /**
+   * Under the university chosen, in one line about that university: the only place the two days are said to a payer.
+   * True of the code: a gift on a university Viky does not read yet is made and paid like any other, the contract
+   * holds the money in the recipient's name, and its provider is built within two days of that first gift.
+   */
+  setUpInTwoDays: "Its page is set up within two days of your gift. The money waits in their name meanwhile.",
+  showToday: "Its students show their page today.",
+  /** Under a search that found nothing, and nowhere else: the way to the page where a university is asked for. */
+  askForIt: "Ask for it",
 } as const;
 
 export const SHOW_PROOF = {

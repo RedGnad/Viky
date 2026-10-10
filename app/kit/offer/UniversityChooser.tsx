@@ -5,7 +5,7 @@ import { listAllUniversities } from "@/src/client/certificate-gift";
 import type { GiftDraft } from "@/src/gift-draft";
 import { countryInWords } from "@/src/rail-country";
 import { UNIVERSITY_CHOICE as W } from "@/src/sentences";
-import { countInWords, indexUniversities, senseOfCondition, shownUniversities, type IndexedUniversity, type ListedUniversity } from "@/src/university-choice";
+import { indexUniversities, readyFor, searchedCount, senseOfCondition, shownUniversities, type IndexedUniversity, type ListedUniversity } from "@/src/university-choice";
 import { CHOICE, HELP, META, SMALL_BUTTON } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
 import { CountryPicker } from "../CountryPicker";
@@ -46,6 +46,10 @@ function readWorld(): Promise<readonly IndexedUniversity[]> {
 /** How many lines are drawn at first, and added each time the end of the list comes near. */
 const PAGE = 100;
 
+/** The mark of a university whose students can show their page today, at the end of its own line (the founder's mockup of 10 Oct 2026). */
+const READY_MARK =
+  "rounded-full border-[length:var(--control-border-width)] border-[var(--control-border)] bg-[var(--accent)] px-[var(--space-sm)] py-[2px] text-[length:var(--type-help)] leading-[var(--type-help-leading)] font-bold tracking-[var(--tracking-label)] whitespace-nowrap text-[var(--on-accent)]";
+
 /**
  * "Which university?" (D247, D313, and the founder, 29 and 30 Sep 2026: "au lieu d'avoir tout de proposé et de pouvoir
  * filtrer si besoin"). It opens on every country: the person paying is often not in the student's country, a parent in
@@ -53,13 +57,16 @@ const PAGE = 100;
  * chip in the app's button style narrows it to one country. Every line says its country until one is chosen. While the
  * list is read, empty lines hold its place and nothing is written.
  *
- * Two groups (the UI pass of 8 Oct 2026): the universities a student can show from today, for what this gift asks, and
- * every other, under how many they are and how fast one is added.
+ * One list (the founder's mockup of 10 Oct 2026): every university in it can be chosen and paid for now. The field
+ * says how many it searches. A university whose students can show their page today, for what this gift asks, comes
+ * first and carries a mark on its line; the others carry nothing. Two groups stood here since 8 Oct, the second under
+ * "more, added on request within two days", which a payer read as one university that works and a waiting list.
  *
  * All of it is listed: the lines are drawn a hundred at a time as the end comes near, so eleven thousand of them do not
  * weigh on a phone, and nothing is held back. Once a university is chosen the list folds into it, with a way to change
- * it, so what comes after (a grade) is in reach. Under the list one invitation to add a university (D264): a university
- * is chosen whether or not Viky reads its portal yet, and its provider is built within two days.
+ * it, so what comes after (a grade) is in reach; and under its name one line says when its students can show their
+ * page, today or within two days of the gift, the only place the two days are said to a payer. A search that finds
+ * nothing, and it alone, leads to the page where a university is asked for (D264): it stood at the foot of every list.
  */
 export function UniversityChooser({
   open,
@@ -78,8 +85,10 @@ export function UniversityChooser({
   const [drawn, setDrawn] = useState<Readonly<{ key: string; count: number }>>({ key: "", count: PAGE });
   const top = useRef<HTMLDivElement>(null);
 
+  // Read when the sheet opens, and for a university already chosen: the line under its name is said from the list.
+  const hasChosen = Boolean(draft.course && draft.courseTitle);
   useEffect(() => {
-    if (!open || index !== null) return;
+    if ((!open && !hasChosen) || index !== null) return;
     let live = true;
     readWorld().then(
       (read) => {
@@ -94,7 +103,7 @@ export function UniversityChooser({
     return () => {
       live = false;
     };
-  }, [open, index]);
+  }, [open, hasChosen, index]);
 
   // What is typed narrows the list a moment later than the field shows it, so typing never waits on eleven thousand lines.
   const typed = useDeferredValue(words.trim());
@@ -102,6 +111,9 @@ export function UniversityChooser({
   // Ready is said of what this gift asks for: enrolment, or a page of results.
   const sense = senseOfCondition(draft.conditionId);
   const shown = useMemo(() => (Array.isArray(index) ? shownUniversities(index, typed, country, sense) : null), [index, typed, country, sense]);
+  // One list: the ready first, then every other, each by its own name.
+  const listed = useMemo(() => (shown ? [...shown.ready, ...shown.others] : []), [shown]);
+  const searched = useMemo(() => (Array.isArray(index) ? searchedCount(index, country) : null), [index, country]);
   const listKey = `${country ?? ""}|${typed}`;
   const count = drawn.key === listKey ? drawn.count : PAGE;
 
@@ -116,18 +128,28 @@ export function UniversityChooser({
     // The name, then its country under it, from the sentence the terms carry ("Name, Country"), split at its last comma.
     const cut = chosenTitle.lastIndexOf(", ");
     const [name, where] = cut > 0 ? [chosenTitle.slice(0, cut), chosenTitle.slice(cut + 2)] : [chosenTitle, ""];
+    // Whether its students can show their page today, for what this gift asks: said from the list once it is read,
+    // and nothing before, since either line would be a guess.
+    const one = Array.isArray(index) ? index.find((entry) => entry.one.pair === draft.course)?.one : undefined;
     return (
       <div
         data-university-chosen=""
-        className="flex items-center justify-between gap-[var(--space-md)] rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--control-border)] bg-[var(--chosen)] p-[var(--space-md)]"
+        className="flex flex-col gap-[var(--space-sm)] rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--control-border)] bg-[var(--chosen)] p-[var(--space-md)]"
       >
-        <span className="flex min-w-0 flex-col">
-          <span className={`${CHOICE} break-words`}>{name}</span>
-          {where ? <span className={META}>{where}</span> : null}
-        </span>
-        <button type="button" className={`${SMALL_BUTTON} shrink-0`} aria-label={`${W.change}: ${name}`} onClick={() => setChanging(true)}>
-          {W.change}
-        </button>
+        <div className="flex items-center justify-between gap-[var(--space-md)]">
+          <span className="flex min-w-0 flex-col">
+            <span className={`${CHOICE} break-words`}>{name}</span>
+            {where ? <span className={META}>{where}</span> : null}
+          </span>
+          <button type="button" className={`${SMALL_BUTTON} shrink-0`} aria-label={`${W.change}: ${name}`} onClick={() => setChanging(true)}>
+            {W.change}
+          </button>
+        </div>
+        {one ? (
+          <p className={HELP} data-university-when="">
+            {readyFor(one, sense) ? W.showToday : W.setUpInTwoDays}
+          </p>
+        ) : null}
       </div>
     );
   }
@@ -138,13 +160,19 @@ export function UniversityChooser({
     if (one) choose(one);
   };
   // Every line says its country while several countries are shown, since a name alone no longer tells them apart.
-  const line = (one: ListedUniversity) => ({ value: one.pair, label: one.title, tag: country ? undefined : <span className={META}>{countryInWords(one.country) ?? one.issuer}</span> });
+  // And the mark of one whose students can show their page today, which is what set a group of its own apart before.
+  const line = (one: ListedUniversity) => ({
+    value: one.pair,
+    label: one.title,
+    tag: country ? undefined : <span className={META}>{countryInWords(one.country) ?? one.issuer}</span>,
+    mark: readyFor(one, sense) ? <span className={READY_MARK}>{W.ready}</span> : undefined,
+  });
 
   return (
     <div ref={top} className="flex scroll-mt-[var(--space-md)] flex-col gap-[var(--space-sm)]">
       <Field
         id="university-search"
-        label={W.search}
+        label={W.search(searched === null ? undefined : searched.toLocaleString("en-US"))}
         value={words}
         onChange={(next) => {
           // The first letter brings the field to the top of the sheet, so what it finds is under it and not under the
@@ -177,29 +205,21 @@ export function UniversityChooser({
         <p className={HELP}>{W.unreadable}</p>
       ) : (
         <>
-          {shown.ready.length > 0 ? <ChoiceList name="university" legend={W.ready} shape="lines" value={value} onChange={pick(shown.ready)} options={shown.ready.map(line)} /> : null}
-          {shown.others.length > 0 ? (
-            <ChoiceList
-              name="university"
-              legend={(shown.ready.length > 0 ? W.more : W.moreAlone)(countInWords(shown.others.length))}
-              shape="lines"
-              value={value}
-              onChange={pick(shown.others)}
-              options={shown.others.slice(0, count).map(line)}
-            />
+          {listed.length > 0 ? <ChoiceList name="university" legend={W.list} legendHidden shape="lines" value={value} onChange={pick(listed)} options={listed.slice(0, count).map(line)} /> : null}
+          {listed.length > count ? <MoreWhenNear onNear={() => setDrawn({ key: listKey, count: count + PAGE })} /> : null}
+          {/* A search that found nothing, and it alone, leads to the page where a university is asked for (D264): its
+              first lines say to offer the gift anyway. Nothing about how a university is checked, which the gift's
+              page says where the proof is shown. */}
+          {listed.length === 0 ? (
+            <>
+              <p className={HELP}>{W.nothing}</p>
+              <Link href="/add-your-university" className={`${SMALL_BUTTON} self-start no-underline`}>
+                {W.askForIt}
+              </Link>
+            </>
           ) : null}
-          {shown.others.length > count ? <MoreWhenNear onNear={() => setDrawn({ key: listKey, count: count + PAGE })} /> : null}
-          {shown.ready.length + shown.others.length === 0 ? <p className={HELP}>{W.nothing}</p> : null}
         </>
       )}
-      {/* One line under the list (D264): an invitation, and nothing about how a university is checked, which the gift's
-          page says where the proof is shown. */}
-      <div className="flex items-center justify-between gap-[var(--space-md)]">
-        <p className={HELP}>{W.notListed}</p>
-        <Link href="/add-your-university" className={`${SMALL_BUTTON} no-underline`}>
-          {W.addYours}
-        </Link>
-      </div>
     </div>
   );
 }

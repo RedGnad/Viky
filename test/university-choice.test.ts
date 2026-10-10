@@ -7,7 +7,7 @@ import { GET as searchGet } from "../app/api/portals/search/route";
 import { configurePortalStore, ensurePortalSchema, FOLD_FROM, FOLD_TO, foldForSearch, savePortalRows } from "../src/portal-store";
 import type { SqlExecutor } from "../src/proof-session-store";
 import { ADD_UNIVERSITY, SHOW_PROOF, UNIVERSITY_CHOICE } from "../src/sentences";
-import { countInWords, indexUniversities, inGroups, matching, senseOfCondition, shownUniversities, sortName, type ListedUniversity } from "../src/university-choice";
+import { countInWords, indexUniversities, inGroups, matching, readyFor, searchedCount, senseOfCondition, shownUniversities, sortName, type ListedUniversity } from "../src/university-choice";
 import { DIRECTORY_PORTALS } from "../src/directory-portals";
 import { readyByTheDirectory, readyOnReclaimsCheck, readySenses } from "../src/university-ready";
 
@@ -93,23 +93,51 @@ test("a university whose check is Reclaim's own, approved, is ready once its row
   assert.deepEqual(await readyOnReclaimsCheck(async () => Promise.reject(new Error("the database did not answer"))), []);
 });
 
-test("the second group's heading counts what it holds, by the thousand once there are thousands", () => {
-  assert.equal(countInWords(11_412), "11,000");
-  assert.equal(countInWords(11_000), "11,000");
-  assert.equal(countInWords(999), "999");
-  assert.equal(countInWords(312), "312");
-  assert.equal(countInWords(1), "1");
-  assert.equal(UNIVERSITY_CHOICE.more(countInWords(11_412)), "11,000 more, added on request within two days");
-  assert.equal(UNIVERSITY_CHOICE.moreAlone(countInWords(312)), "312 universities, added on request within two days");
-  assert.equal(UNIVERSITY_CHOICE.moreAlone(countInWords(1)), "1 university, added on request within two days");
-  // At 390 the heading of eleven thousand takes two lines: cut evenly, never one word alone on the second.
-  assert.match(readFileSync("app/kit/ChoiceList.tsx", "utf8"), /lines \? `\$\{CARD_LABEL\} mb-\[var\(--space-sm\)\] \[text-wrap:balance\]`/);
+test("one list: the field says how many it searches, the ready come first with a mark on their line, and nothing counts 'more'", () => {
+  // The founder's mockup of 10 Oct 2026. Two groups stood here since 8 Oct, "Ready today" over one university and
+  // "11,021 more, added on request within two days" over the rest, with "Add your university" at the foot: a payer
+  // read one university that works, a waiting list, and a button that suggests doing it oneself.
+  assert.equal(UNIVERSITY_CHOICE.search("11,022"), "Search 11,022 universities");
+  assert.equal(UNIVERSITY_CHOICE.search("1"), "Search 1 university");
+  assert.equal(UNIVERSITY_CHOICE.search(), "Search universities", "while the list is read, no count is said");
+  const ready = { ...one("uadb-sn", "Université Alioune Diop de Bambey", "Senegal", "SN"), ready: ["enrolment"] as const };
+  const index = indexUniversities([...LIST, ready, one("unilag-ng", "University of Lagos", "Nigeria", "NG")]);
+  // The count is of what the field searches: every university, or the chosen country's.
+  assert.deepEqual([searchedCount(index, null), searchedCount(index, "SN"), searchedCount(index, "NG"), searchedCount(index, "FR")], [5, 4, 1, 0]);
+  // Ready is said of one university, for what the gift asks.
+  assert.deepEqual([readyFor(ready, "enrolment"), readyFor(ready, "results"), readyFor(LIST[0], "enrolment")], [true, false, false]);
   const chooser = readFileSync("app/kit/offer/UniversityChooser.tsx", "utf8");
-  assert.match(chooser, /legend=\{\(shown\.ready\.length > 0 \? W\.more : W\.moreAlone\)\(countInWords\(shown\.others\.length\)\)\}/);
-  // The line that said it under the heading is gone: the heading says it.
-  assert.doesNotMatch(chooser, /note=\{/);
+  assert.match(chooser, /label=\{W\.search\(searched === null \? undefined : searched\.toLocaleString\("en-US"\)\)\}/);
+  // One list, the ready first, then every other, each by its own name; the sheet's title asks the question.
+  assert.match(chooser, /const listed = useMemo\(\(\) => \(shown \? \[\.\.\.shown\.ready, \.\.\.shown\.others\] : \[\]\), \[shown\]\);/);
+  assert.match(chooser, /<ChoiceList name="university" legend=\{W\.list\} legendHidden shape="lines" value=\{value\} onChange=\{pick\(listed\)\} options=\{listed\.slice\(0, count\)\.map\(line\)\} \/>/);
+  assert.equal(chooser.split("<ChoiceList").length, 2, "one list, not two groups");
+  // The mark on the line of a ready one, and nothing on the others: no "on request", no "more".
+  assert.match(chooser, /mark: readyFor\(one, sense\) \? <span className=\{READY_MARK\}>\{W\.ready\}<\/span> : undefined,/);
+  assert.doesNotMatch(chooser, /W\.more|moreAlone|countInWords|note=\{/);
+  const words = Object.values(UNIVERSITY_CHOICE).map((said) => (typeof said === "function" ? (said as (count?: string) => string)("3") : said));
+  assert.doesNotMatch(JSON.stringify(words), /on request|more|Yours isn't|Add your/i);
+  // The mark stands at the end of its line, and the words of that line wrap in the room that is left.
+  const lines = readFileSync("app/kit/ChoiceList.tsx", "utf8");
+  assert.match(lines, /<span className=\{option\.mark \? "flex min-w-0 flex-1 flex-col" : "flex flex-col"\}>/, "a line without a mark is drawn as it was");
+  assert.match(lines, /\{option\.mark \? <span className="shrink-0 self-center">\{option\.mark\}<\/span> : null\}/);
+  // The judges page still counts by the thousand, which is what that count is for.
+  assert.deepEqual([countInWords(11_412), countInWords(999), countInWords(1)], ["11,000", "999", "1"]);
 });
 
+test("the two days are said once, to a payer, under the university chosen", () => {
+  assert.equal(UNIVERSITY_CHOICE.setUpInTwoDays, "Its page is set up within two days of your gift. The money waits in their name meanwhile.");
+  assert.equal(UNIVERSITY_CHOICE.showToday, "Its students show their page today.");
+  const chooser = readFileSync("app/kit/offer/UniversityChooser.tsx", "utf8");
+  // Said from the list, by what the gift asks, and not at all while the list is unread: either line would be a guess.
+  assert.match(chooser, /const one = Array\.isArray\(index\) \? index\.find\(\(entry\) => entry\.one\.pair === draft\.course\)\?\.one : undefined;/);
+  assert.match(chooser, /\{one \? \(\n\s+<p className=\{HELP\} data-university-when="">\n\s+\{readyFor\(one, sense\) \? W\.showToday : W\.setUpInTwoDays\}\n\s+<\/p>\n\s+\) : null\}/);
+  // So the list is read for a university already chosen, the sheet open or not.
+  assert.match(chooser, /if \(\(!open && !hasChosen\) \|\| index !== null\) return;/);
+  // Nowhere else in the chooser: not over a group, not under the list.
+  assert.equal(chooser.split("W.setUpInTwoDays").length, 2);
+  assert.doesNotMatch(JSON.stringify(Object.entries(UNIVERSITY_CHOICE).filter(([key]) => key !== "setUpInTwoDays").map(([, said]) => (typeof said === "function" ? (said as (count?: string) => string)("3") : said))), /two days/);
+});
 test("the search within a country: every word, without case or accents, by name, and all of them when nothing is typed", () => {
   assert.deepEqual(matching(LIST, "").map((u) => u.pair), ["bem-sn", "ucad-sn", "ugb-sn"]);
   assert.deepEqual(matching(LIST, "universite cheikh").map((u) => u.pair), ["ucad-sn"]);
@@ -146,7 +174,7 @@ test("the list route gives the countries with their counts, then one country's u
   }
 });
 
-test("the chooser lists names alone, says nothing about checking, and invites the student's own university (D264)", () => {
+test("the chooser lists names alone, says nothing about checking, and a search that found nothing leads to the page a university is asked from (D264)", () => {
   const chooser = readFileSync("app/kit/offer/UniversityChooser.tsx", "utf8");
   const sheet = readFileSync("app/kit/offer/WillSheet.tsx", "utf8");
   const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
@@ -156,15 +184,16 @@ test("the chooser lists names alone, says nothing about checking, and invites th
   assert.doesNotMatch(chooser, /W\.reading\}<\/p>|Reading the/, "no sentence while the list is read: empty lines hold its place");
   // Nothing about checking in the chooser: that is said folded on the gift's page, where the proof is shown.
   assert.doesNotMatch(chooser, /<details|<summary|navigator\.share|clipboard/);
-  assert.deepEqual(Object.keys(UNIVERSITY_CHOICE).sort(), ["addYours", "change", "country", "everywhere", "inCountry", "more", "moreAlone", "notListed", "nothing", "reading", "ready", "search", "unreadable"]);
-  // The two groups' words, as the founder validated them on the mockup of 8 Oct 2026, and nothing on each line.
+  assert.deepEqual(Object.keys(UNIVERSITY_CHOICE).sort(), ["askForIt", "change", "country", "everywhere", "inCountry", "list", "nothing", "reading", "ready", "search", "setUpInTwoDays", "showToday", "unreadable"]);
+  // The mark's words, as the founder drew them on the mockup of 10 Oct 2026.
   assert.equal(UNIVERSITY_CHOICE.ready, "Ready today");
-  assert.equal(UNIVERSITY_CHOICE.more("11,000"), "11,000 more, added on request within two days");
-  assert.doesNotMatch(JSON.stringify([...Object.values(UNIVERSITY_CHOICE).filter((v) => typeof v === "string"), UNIVERSITY_CHOICE.more("1"), UNIVERSITY_CHOICE.moreAlone("1")]), /unverified|password|proof|checked|connected|tested/i);
-  // One line under the list: the question and the link to the page a student adds theirs from.
-  assert.equal(`${UNIVERSITY_CHOICE.notListed} ${UNIVERSITY_CHOICE.addYours}`, "Yours isn't here? Add your university");
-  // The question, and beside it a small button to the page a student adds theirs from: never a link in the text.
-  assert.match(chooser, /<p className=\{HELP\}>\{W\.notListed\}<\/p>\n\s*<Link href="\/add-your-university" className=\{`\$\{SMALL_BUTTON\} no-underline`\}>/);
+  assert.doesNotMatch(JSON.stringify([...Object.values(UNIVERSITY_CHOICE).filter((v) => typeof v === "string"), UNIVERSITY_CHOICE.search("1")]), /unverified|password|proof|checked|connected|tested/i);
+  // Under a search that found nothing, and nowhere else (the founder, 10 Oct 2026): the sentence that says so, and
+  // a small button to the page a university is asked from. It stood at the foot of every list as "Yours isn't here?
+  // Add your university", which a payer read as theirs to do.
+  assert.equal(`${UNIVERSITY_CHOICE.nothing} ${UNIVERSITY_CHOICE.askForIt}`, "No university by that name in the list yet. Ask for it");
+  assert.match(chooser, /\{listed\.length === 0 \? \(\n\s+<>\n\s+<p className=\{HELP\}>\{W\.nothing\}<\/p>\n\s+<Link href="\/add-your-university" className=\{`\$\{SMALL_BUTTON\} self-start no-underline`\}>\n\s+\{W\.askForIt\}/);
+  assert.equal(chooser.split("/add-your-university").length, 2, "one way to that page, under an empty search");
   assert.ok(existsSync("app/add-your-university/page.tsx"), "the page the link opens");
   // The page opens on three lines for somebody who is paying (the founder's words, 9 Oct 2026): it opened on a
   // student's procedure, which a payer read as theirs to do. The procedure is under a fold named by whom it is for.
@@ -197,8 +226,8 @@ test("the list shows every university, drawn a hundred at a time as its end come
   // near rather than at once, and nothing stops the next hundred.
   const chooser = readFileSync("app/kit/offer/UniversityChooser.tsx", "utf8");
   assert.match(chooser, /const PAGE = 100;/);
-  assert.match(chooser, /options=\{shown\.others\.slice\(0, count\)\.map\(line\)\}/);
-  assert.match(chooser, /\{shown\.others\.length > count \? <MoreWhenNear onNear=\{\(\) => setDrawn\(\{ key: listKey, count: count \+ PAGE \}\)\} \/> : null\}/);
+  assert.match(chooser, /options=\{listed\.slice\(0, count\)\.map\(line\)\}/);
+  assert.match(chooser, /\{listed\.length > count \? <MoreWhenNear onNear=\{\(\) => setDrawn\(\{ key: listKey, count: count \+ PAGE \}\)\} \/> : null\}/);
   assert.doesNotMatch(chooser, /slice\(0, \d+\)/);
   assert.equal(UNIVERSITY_CHOICE.inCountry("France"), "In France");
   assert.equal(UNIVERSITY_CHOICE.everywhere, "All countries");
