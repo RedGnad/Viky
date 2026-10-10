@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { MOTION } from "@/src/design-tokens";
 import { nextGoal } from "@/src/landing-goals";
 import { HOME } from "@/src/sentences";
@@ -20,8 +21,22 @@ import { reduced } from "./Motion";
  *
  * The one movement on a clock outside the working ring, asked for by the founder over D225's still names; it stops
  * whenever nobody can see it.
+ *
+ * The change is made in one place (10 Oct 2026, after the founder found the phrase gone on viky.cash, "Their gift can
+ * wait for" with nothing after it, and it stayed gone). The phrase that leaves is held unseen until the next one is
+ * drawn; the next one used to be drawn by React at its own time and brought in by a second effect that followed the
+ * text, so if that effect did not come, nothing ever brought the phrase back. Now, as the exit ends, the next phrase
+ * is written and its entrance started in the same gesture. What caused it that day was not found: a probe of several
+ * hundred manipulations did not make it happen again. So whatever becomes of an exit is answered too. An exit that is
+ * cancelled goes on to the next wait. An effect that was cleaned up does nothing more, where an exit it had started
+ * used to set a timer nobody could clear, a second loop beside the new one. And a net: a little after every exit, and
+ * at every moment the loop looks at itself, a phrase that nothing is moving and that cannot be seen is shown.
  */
 const REMEMBERED = 8;
+/** Under this opacity a phrase is not seen. */
+const UNSEEN = 0.05;
+/** How long after an exit should have ended the net looks at what became of it. */
+const NET_AFTER_MS = 400;
 
 export function GoalsGoingBy({ first, kinds }: Readonly<{ first: string; kinds: readonly (readonly string[])[] }>) {
   const root = useRef<HTMLDivElement>(null);
@@ -33,23 +48,69 @@ export function GoalsGoingBy({ first, kinds }: Readonly<{ first: string; kinds: 
   useEffect(() => {
     const element = root.current;
     if (!element || all.length < 2 || reduced()) return;
+    const { holdMs, outMs, outEasing, inMs, inEasing, rise } = MOTION.rotate;
+    /** False once this effect is cleaned up: nothing it started does anything after that. */
+    let alive = true;
     let seen = false;
     let timer: number | undefined;
-    const next = () => {
-      timer = undefined;
-      if (!seen || document.hidden) return;
-      const { outMs, outEasing, rise } = MOTION.rotate;
-      const leaving = said.current?.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: `translateY(-${rise})` }], { duration: outMs, easing: outEasing, fill: "forwards" });
-      if (!leaving) return;
-      leaving.onfinish = () => {
-        const drawn = nextGoal(kinds, recent.current);
-        recent.current = [...recent.current, drawn].slice(-REMEMBERED);
-        setNow(drawn);
-        schedule();
-      };
+    let net: number | undefined;
+    /** The exit under way, until what became of it is known. */
+    let leaving: Animation | undefined;
+
+    /** The net: a phrase that nothing is moving and that cannot be seen is shown, as it stands. */
+    const mend = () => {
+      const phrase = said.current;
+      if (!phrase) return;
+      const drawn = phrase.getAnimations();
+      if (drawn.some((one) => one.playState === "running") || Number(getComputedStyle(phrase).opacity) >= UNSEEN) return;
+      leaving = undefined;
+      drawn.forEach((one) => one.cancel());
     };
     const schedule = () => {
-      if (timer === undefined && seen && !document.hidden) timer = window.setTimeout(next, MOTION.rotate.holdMs);
+      if (!alive) return;
+      mend();
+      if (timer === undefined && leaving === undefined && seen && !document.hidden) timer = window.setTimeout(next, holdMs);
+    };
+    /** The change, in one place: the next phrase is written and its entrance started, in the gesture that ends the exit. */
+    const change = () => {
+      const phrase = said.current;
+      if (!phrase) return;
+      const drawn = nextGoal(kinds, recent.current);
+      recent.current = [...recent.current, drawn].slice(-REMEMBERED);
+      // Written at once, and not at React's next convenience: the entrance below starts on the new words.
+      flushSync(() => setNow(drawn));
+      phrase.getAnimations().forEach((one) => one.cancel());
+      phrase.animate([{ opacity: 0, transform: `translateY(${rise})` }, { opacity: 1, transform: "none" }], { duration: inMs, easing: inEasing });
+    };
+    const next = () => {
+      timer = undefined;
+      if (!alive || !seen || document.hidden) return;
+      const phrase = said.current;
+      if (!phrase) return;
+      const exit = phrase.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: `translateY(-${rise})` }], { duration: outMs, easing: outEasing, fill: "forwards" });
+      leaving = exit;
+      exit.finished.then(
+        () => {
+          if (!alive || leaving !== exit) return;
+          leaving = undefined;
+          try {
+            change();
+          } finally {
+            schedule();
+          }
+        },
+        // Cancelled: the phrase is as it was, and the loop goes on to its next wait.
+        () => {
+          if (!alive || leaving !== exit) return;
+          leaving = undefined;
+          schedule();
+        },
+      );
+      window.clearTimeout(net);
+      net = window.setTimeout(() => {
+        net = undefined;
+        schedule();
+      }, outMs + NET_AFTER_MS);
     };
     const observer = new IntersectionObserver((entries) => {
       seen = entries[entries.length - 1].isIntersecting;
@@ -59,23 +120,15 @@ export function GoalsGoingBy({ first, kinds }: Readonly<{ first: string; kinds: 
     const onVisibility = () => schedule();
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
+      alive = false;
       observer.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
-      if (timer !== undefined) window.clearTimeout(timer);
+      window.clearTimeout(timer);
+      window.clearTimeout(net);
+      // An exit under way is taken back: the phrase stands as it was, and nothing of this effect follows it.
+      leaving?.cancel();
     };
   }, [kinds, all.length]);
-
-  // Each new phrase rises into place from where the last one left, once it is drawn.
-  const firstImage = useRef(true);
-  useEffect(() => {
-    if (firstImage.current) {
-      firstImage.current = false;
-      return;
-    }
-    const { inMs, inEasing, rise } = MOTION.rotate;
-    said.current?.getAnimations().forEach((animation) => animation.cancel());
-    said.current?.animate([{ opacity: 0, transform: `translateY(${rise})` }, { opacity: 1, transform: "none" }], { duration: inMs, easing: inEasing });
-  }, [now]);
 
   if (!first) return null;
   return (
