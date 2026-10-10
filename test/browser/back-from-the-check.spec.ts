@@ -120,13 +120,17 @@ test.describe("back from the verification, on the gift's page", () => {
       await expect(waitLine(page)).toHaveText("Keep this page open.");
       await expect(moment(page)).toHaveCount(0);
       if (SHOTS) {
-        // It gathers, then it is at the top, half the triangle and half the circle.
+        // It gathers, then it is at the top, where the triangle is going and the circle is coming: both partly there.
+        // (The fade runs on the standard curve, which is most of the way through by its middle.)
         await holdAt(page, LANDING, 100);
         await shot(page, size.name, "2-it-gathers");
         await letGo(page);
         await holdAt(page, LANDING, 250);
-        expect(Number(await page.evaluate(`getComputedStyle(document.querySelector('.had-or-not [data-part="was"]')).opacity`))).toBeGreaterThan(0.2);
-        expect(Number(await page.evaluate(`getComputedStyle(document.querySelector('.had-or-not [data-part="body"]')).opacity`))).toBeGreaterThan(0.2);
+        for (const part of ["was", "body"]) {
+          const opacity = Number(await page.evaluate(`getComputedStyle(document.querySelector('.had-or-not [data-part="${part}"]')).opacity`));
+          expect(opacity, part).toBeGreaterThan(0);
+          expect(opacity, part).toBeLessThan(1);
+        }
         await shot(page, size.name, "3-at-the-top-it-becomes-the-circle");
         await letGo(page);
         // It lands, and the words that stood are going out where they stand.
