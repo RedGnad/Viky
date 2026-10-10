@@ -4,21 +4,22 @@ import { join } from "node:path";
 import { profile, shot as capture, sizesFor } from "./gift-kit";
 
 /**
- * The one who reads its book on the landing, and the app's icon after dark (the founder, 10 Oct 2026, on an animated
- * mockup and its board of six images).
+ * The one who reads its book on the landing, and the app's icon after dark (the founder, 10 Oct 2026).
  *
- * The reader reads by itself while it is on the screen: its eyes go down to the book, along the three lines of the
- * left page, the third shorter, across to the right page and along its two, then up to whoever reads the landing. The
- * mouth follows a third of the way. Each line of the book darkens along its length as the eyes pass over it, and the
- * five are back to their grey before the eyes go down again. It blinks now and then with the drawings in view. Off the
- * screen nothing of the turn is left on the page; with less motion asked for, nothing reads and no line is drawn over.
+ * The reader reads by itself while it is on the screen, calmly (his word on the page itself, after a first turn that
+ * read the left page then the right, fast and wide, and darkened each line; then on a mockup of three amplitudes, of
+ * which this is the second): its eyes go down to the book, drift along three lines, each a little lower, with a short
+ * glide back between two, then go up to whoever reads the landing and stay there. The mouth follows three tenths of
+ * the way. The book is not touched: nothing is drawn over its lines. It blinks
+ * now and then with the drawings in view. Off the screen no animation of the turn is left on the page; with less
+ * motion asked for, nothing reads.
  *
- * The turn is put at its instants as the mockup takes its stills: every animation of it paused and set to one time.
+ * The turn is put at its instants as a still is taken: its two animations paused and set to one time.
  *
  * And after dark the icon is drawn in the page's own colours for the hour, as the reader is.
  *
- * VIKY_LANDING_ALIVE_CAPTURES=<folder> also photographs the six images of the board, the reader alone at three times
- * the density, and the icon after dark, at 390 by 844 and at 1440 by 900.
+ * VIKY_LANDING_ALIVE_CAPTURES=<folder> also photographs four instants of the turn, the reader alone at three times the
+ * density, and the icon after dark, at 390 by 844 and at 1440 by 900.
  */
 const SHOTS = process.env.VIKY_LANDING_ALIVE_CAPTURES;
 const SIZES = sizesFor(SHOTS);
@@ -30,17 +31,16 @@ const READER = `document.querySelector('${STORY} [data-reads]')`;
 const HERO_LIDS = `[...document.querySelectorAll('.hero-stage [data-part="lid"]')]`;
 /** The animations of the reader's turn: the ones that repeat, which a blink's do not. */
 const TURN = `${READER}.getAnimations({ subtree: true }).filter((one) => one.effect.getComputedTiming().iterations === Infinity)`;
-/** Whether the turn is running: the eyes, the mouth and the five lines, every one of them. */
-const READING_RUNS = `(() => { const turn = ${TURN}; return turn.length === 7 && turn.every((one) => one.playState === "running"); })()`;
-/** Puts the turn at one instant: every animation of it, kept in hand once taken, paused and set there. */
+/** Whether the turn is running: the eyes and the mouth, and nothing else. */
+const READING_RUNS = `(() => { const turn = ${TURN}; return turn.length === 2 && turn.every((one) => one.playState === "running"); })()`;
+/** Puts the turn at one instant: its animations, kept in hand once taken, paused and set there. */
 const setReadingAt = (page: Page, ms: number) => page.evaluate(`(window.__turn = window.__turn || ${TURN}).forEach((one) => { one.pause(); one.currentTime = ${ms}; })`);
 /** Where a part of the drawing has been moved to, in the drawing's own units. */
 const MOVED = (part: string) => `(() => { const style = getComputedStyle(${READER}.querySelector('[data-part="${part}"]')).transform; if (!style || style === "none") return { x: 0, y: 0 }; const m = new DOMMatrix(style); return { x: m.e, y: m.f }; })()`;
-/** For each line of the book, how much of it is still to darken (1: all of it, 0: none), and how much it shows. */
-const LINES = `[...${READER}.querySelectorAll('[data-part="read"]')].map((mark) => ({ left: Math.round(parseFloat(getComputedStyle(mark).strokeDashoffset) * 100) / 100, shown: Number(getComputedStyle(mark).opacity) }))`;
+/** The book as it is drawn: how many strokes it is made of, and how many were added to be drawn over its lines. */
+const BOOK = `(() => { const book = ${READER}.querySelector('[data-prop="book"]'); return { strokes: book.querySelectorAll("path").length, drawnOver: book.querySelectorAll('[data-part="read"]').length }; })()`;
 
 type Where = Readonly<{ x: number; y: number }>;
-type Line = Readonly<{ left: number; shown: number }>;
 
 async function landing(page: Page): Promise<void> {
   await page.goto("/", { waitUntil: "load" });
@@ -48,7 +48,7 @@ async function landing(page: Page): Promise<void> {
   await expect(page.locator(STORY)).toHaveAttribute("data-posters", "playing", { timeout: 15_000 });
 }
 
-/** The reader alone, as the board shows it: its own box, at the density the page was opened at. */
+/** The reader alone: its own box, at the density the page was opened at. */
 async function closeUp(page: Page, size: string, name: string): Promise<void> {
   if (!SHOTS) return;
   mkdirSync(SHOTS, { recursive: true });
@@ -59,18 +59,21 @@ test.describe("the one who reads its book, and the icon after dark", () => {
   test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each test opens its own windows");
 
   for (const size of SIZES) {
-    test(`it reads by itself, line by line, each line darkening as its eyes pass, then it looks up (${size.name})`, async ({ browser, baseURL }) => {
+    test(`it reads by itself, calmly: the eyes go down, drift along three lines and come up, and the book is not touched (${size.name})`, async ({ browser, baseURL }) => {
       test.setTimeout(120_000);
       const device = await profile(browser, baseURL, size.viewport, { passkey: false });
-      // The board's close-ups are enlarged three times: the page is opened at three times the density when they are taken.
+      // The close-ups are enlarged three times: the page is opened at three times the density when they are taken.
       const context = SHOTS ? await browser.newContext({ baseURL: device.baseURL, viewport: size.viewport, deviceScaleFactor: 3, serviceWorkers: "block" }) : device.context;
       if (SHOTS) await device.context.close();
       const page = SHOTS ? await context.newPage() : device.page;
       await landing(page);
+      // The book before anything reads it: the strokes it is drawn with.
+      const drawn = (await page.evaluate(BOOK)) as { strokes: number; drawnOver: number };
+      expect(drawn).toEqual({ strokes: 7, drawnOver: 0 });
       await page.evaluate(`${READER}.scrollIntoView({ block: "center", behavior: "instant" })`);
-      // In front of somebody: the turn is running, and the book's five lines are drawn over, to be darkened.
+      // In front of somebody: the turn is running, the eyes and the mouth and nothing else, and the book is as it was.
       await expect.poll(() => page.evaluate(READING_RUNS)).toBe(true);
-      expect(await page.evaluate(`${READER}.querySelectorAll('[data-prop="book"] [data-part="read"]').length`)).toBe(5);
+      expect(await page.evaluate(BOOK)).toEqual(drawn);
 
       // Within the longest gap between two blinks, and a little: it blinks, with the drawings in view and no other.
       const blink = (await page.evaluate(
@@ -81,51 +84,58 @@ test.describe("the one who reads its book, and the icon after dark", () => {
 
       const at = async (ms: number) => {
         await setReadingAt(page, ms);
-        return { eyes: (await page.evaluate(MOVED("gaze"))) as Where, mouth: (await page.evaluate(MOVED("mouth"))) as Where, lines: (await page.evaluate(LINES)) as Line[] };
+        return { eyes: (await page.evaluate(MOVED("gaze"))) as Where, mouth: (await page.evaluate(MOVED("mouth"))) as Where };
       };
       const near = (got: number, wanted: number, what: string) => expect(Math.abs(got - wanted), `${what}: ${got} for ${wanted}`).toBeLessThanOrEqual(0.03);
-      // The ends of each stretch, to the hundredth: down to the book, the left page and its short third line, across,
-      // the right page, and up. The mouth is a third of the eyes' way, wherever they are.
-      const ends: ReadonlyArray<readonly [number, number, number]> = [[260, -3.6, 1.5], [1_140, -0.6, 1.5], [1_290, -3.6, 1.95], [2_170, -0.6, 1.95], [2_320, -3.6, 2.4], [3_076.8, -1.14, 2.4], [3_276.8, 0.6, 1.5], [4_156.8, 3.6, 1.5], [4_306.8, 0.6, 1.95], [5_186.8, 3.6, 1.95], [5_506.8, 0, 0]];
+      // The ends of each stretch, to the hundredth: down to the first line, along it, a glide back and a little lower,
+      // twice more, then up. The mouth is three tenths of the eyes' way, wherever they are.
+      const lines: ReadonlyArray<readonly [number, number]> = [[600, 2_500], [2_820, 4_720], [5_040, 6_940]];
+      const ends: ReadonlyArray<readonly [number, number, number]> = [[600, -1.8, 1.25], [2_500, 1.8, 1.25], [2_820, -1.8, 1.55], [4_720, 1.8, 1.55], [5_040, -1.8, 1.85], [6_940, 1.8, 1.85], [7_640, 0, 0], [9_500, 0, 0]];
       for (const [ms, x, y] of ends) {
         const { eyes, mouth } = await at(ms);
         near(eyes.x, x, `eyes across at ${ms} ms`);
         near(eyes.y, y, `eyes down at ${ms} ms`);
-        near(mouth.x, x * 0.35, `mouth across at ${ms} ms`);
-        near(mouth.y, y * 0.35, `mouth down at ${ms} ms`);
+        near(mouth.x, x * 0.3, `mouth across at ${ms} ms`);
+        near(mouth.y, y * 0.3, `mouth down at ${ms} ms`);
       }
-      // The six images of the board. A line being read is partly dark; those before it wholly; those after it not at all.
-      const board: ReadonlyArray<readonly [string, number, number]> = [["1-left-page-line-1", 700, 0], ["2-left-page-line-2", 1_730, 1], ["3-left-page-line-3", 2_700, 2], ["4-right-page-line-1", 3_716, 3], ["5-right-page-line-2", 4_746, 4]];
-      for (const [name, ms, reading] of board) {
-        const { lines } = await at(ms);
-        lines.forEach((line, index) => {
-          if (index < reading) expect(line.left, `${name}: line ${index + 1} is read`).toBe(0);
-          else if (index > reading) expect(line.left, `${name}: line ${index + 1} is not read yet`).toBe(1);
-          else {
-            expect(line.left, `${name}: its own line is being read`).toBeGreaterThan(0);
-            expect(line.left).toBeLessThan(1);
-          }
-          expect(line.shown).toBe(1);
-        });
+      // Measured over the whole turn, a tenth of a second at a time. The eyes never go further than 1.8 units to
+      // either side nor lower than the last line (the first turn went 3.6 units to a side). And while they read a
+      // line they are calm: never more than 0.35 units in a tenth of a second, where the first turn crossed a page at
+      // more than that. The way back is another matter, and is meant to be short.
+      let before: Where | null = null;
+      let fastestOnALine = 0;
+      let widest = 0;
+      let lowest = 0;
+      for (let ms = 0; ms <= 10_240; ms += 100) {
+        const { eyes } = await at(ms);
+        widest = Math.max(widest, Math.abs(eyes.x));
+        lowest = Math.max(lowest, eyes.y);
+        const reading = lines.some(([from, to]) => ms - 100 >= from && ms <= to);
+        if (before && reading) fastestOnALine = Math.max(fastestOnALine, Math.hypot(eyes.x - before.x, eyes.y - before.y));
+        before = eyes;
+      }
+      expect(widest, "no further than 1.8 units to either side").toBeLessThanOrEqual(1.83);
+      expect(widest, "and as far as that, so that the eyes are seen").toBeGreaterThanOrEqual(1.77);
+      expect(lowest, "no lower than the last line").toBeLessThanOrEqual(1.88);
+      expect(fastestOnALine, `the most the eyes travel along a line in a tenth of a second: ${fastestOnALine.toFixed(2)}`).toBeLessThanOrEqual(0.35);
+      // The way back: from the end of a line to the start of the next in 320 ms, and most of the way in its first half.
+      const midBack = (await at(2_660)).eyes;
+      expect(midBack.x, `half way through the way back the eyes are most of the way there: ${midBack.x}`).toBeLessThan(-0.9);
+      // The book is still as it was drawn, wherever the turn is.
+      expect(await page.evaluate(BOOK)).toEqual(drawn);
+      // Four instants of it, for whoever judges on the image.
+      for (const [name, ms] of [["1-down-on-the-first-line", 600], ["2-along-the-second-line", 3_770], ["3-the-end-of-the-third-line", 6_940], ["4-it-looks-up-at-you", 9_000]] as const) {
+        await at(ms);
         await closeUp(page, size.name, `reader-${name}`);
       }
-      // It looks up at you: the eyes back where they rest, the five lines dark.
-      const up = await at(5_700);
-      near(up.eyes.x, 0, "eyes up");
-      near(up.eyes.y, 0, "eyes up");
-      expect(up.lines.map((line) => line.left)).toEqual([0, 0, 0, 0, 0]);
-      expect(Math.min(...up.lines.map((line) => line.shown))).toBe(1);
-      await closeUp(page, size.name, "reader-6-it-looks-up-at-you");
       await shot(page, size.name, "reader-in-its-page");
-      // And before the eyes go down again, the five are back to their grey.
-      expect(Math.max(...(await at(7_200)).lines.map((line) => line.shown))).toBeLessThan(0.1);
 
-      // Only in front of somebody: off the screen nothing of the turn is left on the page, no animation and no dark
-      // line, so a page that waits for every movement to end finds none; it starts again once the drawing is back.
+      // Only in front of somebody: off the screen no animation of the turn is left on the page, so a page that waits
+      // for every movement to end finds none; it starts again once the drawing is back.
       await page.evaluate(`(window.__turn || []).forEach((one) => one.play())`);
       await expect.poll(() => page.evaluate(READING_RUNS)).toBe(true);
       await page.evaluate(`window.scrollTo({ top: 0, behavior: "instant" })`);
-      await expect.poll(() => page.evaluate(`${TURN}.length + ${READER}.querySelectorAll('[data-part="read"]').length`)).toBe(0);
+      await expect.poll(() => page.evaluate(`${TURN}.length`)).toBe(0);
       await page.evaluate(`${READER}.scrollIntoView({ block: "center", behavior: "instant" })`);
       await expect.poll(() => page.evaluate(READING_RUNS)).toBe(true);
       await context.close();
@@ -150,7 +160,7 @@ test.describe("the one who reads its book, and the icon after dark", () => {
     });
   }
 
-  test("with less motion asked for, nothing reads and no line of the book is drawn over", async ({ browser, baseURL }) => {
+  test("with less motion asked for, nothing reads and the book is as it is drawn", async ({ browser, baseURL }) => {
     const device = await profile(browser, baseURL, { width: 390, height: 844 }, { passkey: false });
     const { page } = device;
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -158,7 +168,7 @@ test.describe("the one who reads its book, and the icon after dark", () => {
     await page.evaluate(`${READER}.scrollIntoView({ block: "center", behavior: "instant" })`);
     await page.waitForTimeout(600);
     expect(await page.evaluate(`${READER}.getAnimations({ subtree: true }).length`)).toBe(0);
-    expect(await page.evaluate(`${READER}.querySelectorAll('[data-part="read"]').length`)).toBe(0);
+    expect(await page.evaluate(BOOK)).toEqual({ strokes: 7, drawnOver: 0 });
     expect(await page.evaluate(MOVED("gaze"))).toEqual({ x: 0, y: 0 });
     await device.context.close();
   });
