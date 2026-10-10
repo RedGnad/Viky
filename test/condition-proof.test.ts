@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { CONDITION_PROOFS, conditionsWithProof, proofOfCondition } from "../src/condition-proof";
+import { CONDITION_PROOFS, conditionsWithProof, proofOfCondition, RESULTS_WAIT_FOR_THE_YEAR } from "../src/condition-proof";
 import { CONDITIONS, liveConditions } from "../src/conditions";
+import { resultsYearProblem } from "../src/university-shown";
 
 /**
  * What each condition proves is part of the register, not a page's decoration: a condition offered to a funder without
@@ -58,4 +59,23 @@ test("no answer claims more than the code does, and supervision is claimed only 
     CONDITION_PROOFS.filter((proof) => proof.supervised).map((proof) => proof.conditionId),
     ["duolingo-english-test", "wca-time"],
   );
+});
+
+test("the two conditions read on a results page say what they wait for, and no other condition does (the founder, 10 Oct 2026)", () => {
+  const sentence = "A year's results are published at its end: a gift made during the year waits for them, and a page of an earlier year does not count.";
+  assert.equal(RESULTS_WAIT_FOR_THE_YEAR, sentence);
+  const waiting = CONDITION_PROOFS.filter((entry) => entry.waits !== undefined).map((entry) => entry.conditionId).sort();
+  assert.deepEqual(waiting, ["university-grade-shown", "university-year-passed-shown"]);
+  for (const id of waiting) assert.equal(proofOfCondition(id)?.waits, sentence);
+  // The judges page prints it under the condition's name, and writes no such sentence itself.
+  const page = readFileSync("app/judges/JudgesConditions.tsx", "utf8");
+  assert.match(page, /\{proof\.waits \? \(\s*<p className=\{HELP\} data-condition-waits="">\s*\{proof\.waits\}/);
+  assert.doesNotMatch(page, /published at its end/);
+  // What makes it true. A page of another year than the provider's row names pays nothing, and a results page is
+  // never pinned without its year. The operator's rule, written where the review is described, keeps a pin on the
+  // year under way: until that year's results are out there is no pin, and every proof is held and read by hand.
+  assert.match(readFileSync("src/university-shown.ts", "utf8"), /function wrongTerm\(results: ResultsExtract, fields: Readonly<Record<string, string>>\): ResultsVerdict \| undefined \{\n  if \(!results\.year\) return undefined;/);
+  assert.notEqual(resultsYearProblem(undefined, false), null);
+  assert.equal(resultsYearProblem("^2026/2027$", false), null);
+  assert.match(readFileSync("docs/VERIFICATION.md", "utf8"), /A results page is pinned\s+on the academic year under way and on no other/);
 });
