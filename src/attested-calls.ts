@@ -412,7 +412,15 @@ const proofs = (count: number) => `${count} ${count === 1 ? "proof" : "proofs"}`
  * What the operator reads each morning of the judging: what the day before spent, by gift and by reason, what is left
  * of each reserve, and the day they start again. `use` is the cycle's count at the moment the summary is made.
  */
-export function morningSummary(dayStartMs: number, spent: DaySpent, use: CycleUse): Alert {
+export type WaitingProvider = Readonly<{ university: string; sense: string; giftId: string | null; since: Date }>;
+
+/** A request's age in whole days, as the summary says it. */
+function askedAgo(since: Date, nowMs: number): string {
+  const days = Math.floor(Math.max(0, nowMs - since.getTime()) / 86_400_000);
+  return days === 0 ? "asked today" : `asked ${days} ${days === 1 ? "day" : "days"} ago`;
+}
+
+export function morningSummary(dayStartMs: number, spent: DaySpent, use: CycleUse, waiting: readonly WaitingProvider[] = [], nowMs: number = Date.now()): Alert {
   const day = utcDayInWords(new Date(dayStartMs).toISOString());
   const proved = spent.reduce((sum, line) => sum + line.proved, 0);
   const failed = spent.reduce((sum, line) => sum + line.failed, 0);
@@ -427,6 +435,11 @@ export function morningSummary(dayStartMs: number, spent: DaySpent, use: CycleUs
       `Readings left: ${left} of ${use.fetches.allowed} (${use.fetches.proved} gave a proof this cycle, of ${use.fetches.started} started).`,
       `Proofs of people left: ${leftOf(use.verifications.shown, use.verifications.allowed)} of ${use.verifications.allowed} (${use.verifications.shown} came back this cycle).`,
       `Both reserves start again on ${utcDayInWords(use.until)} (UTC).`,
+      // A university somebody paid a gift on and whose provider is not built: one line each, with how long it has waited
+      // (the final audit of 9 Oct 2026). The request was one email the day it was made, and nothing after.
+      ...(waiting.length > 0
+        ? ["", `Waiting for a provider to be built (${waiting.length}):`, ...waiting.map((one) => `- ${one.university}, ${one.sense}: ${askedAgo(one.since, nowMs)}${one.giftId ? `, gift ${one.giftId}` : ""}`)]
+        : []),
     ].join("\n"),
   };
 }
@@ -435,19 +448,33 @@ export type MorningSummaryDeps = Readonly<{
   claim: (name: string, everySeconds: number, nowMs: number) => Promise<boolean>;
   spent: (dayStartMs: number) => Promise<DaySpent>;
   use: (nowMs: number) => Promise<CycleUse>;
+  /** The universities whose provider is asked for and not built. A list that cannot be read says nothing, and the summary still leaves. */
+  waiting?: () => Promise<readonly WaitingProvider[]>;
 }>;
+
+/** Read from the portals' store, loaded when asked: that store reads this journal. */
+async function providersWaited(): Promise<readonly WaitingProvider[]> {
+  const { openRequests, loadPortal } = await import("./portal-store");
+  const waiting: WaitingProvider[] = [];
+  for (const request of await openRequests()) {
+    const portal = await loadPortal(request.portalId).catch(() => null);
+    waiting.push({ university: portal?.university ?? request.portalId, sense: request.sense, giftId: request.firstGiftId, since: request.createdAt });
+  }
+  return waiting;
+}
 
 /**
  * The summary of the day before, when it is due: a morning of the judging, from six o'clock UTC, once. Asked by the
  * call that already arrives every five minutes (app/api/cron/milestones), so it leaves within minutes of six.
  */
-export async function morningSummaryDue(nowMs: number = Date.now(), deps: MorningSummaryDeps = { claim: claimPass, spent: spentOn, use: cycleUse }): Promise<Alert | null> {
+export async function morningSummaryDue(nowMs: number = Date.now(), deps: MorningSummaryDeps = { claim: claimPass, spent: spentOn, use: cycleUse, waiting: providersWaited }): Promise<Alert | null> {
   const now = new Date(nowMs);
   if (!inJudging(nowMs) || now.getUTCHours() < MORNING_SUMMARY_HOUR_UTC) return null;
   const today = Math.floor(nowMs / 86_400_000);
   if (!(await deps.claim(`reclaim-summary:${today}`, 2 * 86_400, nowMs))) return null;
   const yesterday = (today - 1) * 86_400_000;
-  return morningSummary(yesterday, await deps.spent(yesterday), await deps.use(nowMs));
+  const waiting = deps.waiting ? await deps.waiting().catch(() => []) : [];
+  return morningSummary(yesterday, await deps.spent(yesterday), await deps.use(nowMs), waiting, nowMs);
 }
 
 export type AttestedCall = Readonly<{
