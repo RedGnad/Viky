@@ -240,7 +240,7 @@ test("a session open when the page is read on the server is checking from the fi
   // Brought back by the verification page, the person never sees the button to start over while the browser asks.
   const page = readFileSync("app/g/[id]/page.tsx", "utf8");
   assert.match(page, /return account \? await loadOpenShownSession\(id, account\) : null;/, "by the signed-in account and the gift, on the server");
-  assert.match(page, /<GiftPage giftId=\{id\} linkKey=\{linkKey\} initialStatus=\{initialStatus\} openProof=\{openProof\} \/>/);
+  assert.match(page, /<GiftPage giftId=\{id\} linkKey=\{linkKey\} initialStatus=\{initialStatus\} openProof=\{openProof\} cameBackShown=\{cameBackShown\(shown\)\} \/>/);
   assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /openAtLoad=\{openProof\} onChecking=\{setProofSilent\} onShown=\{reloadAll\}/);
   const source = readFileSync("app/kit/ShowProof.tsx", "utf8");
   assert.match(source, /useState<State>\(\(\) => \(checkingAtLoad\(\{ yours, review, openAtLoad \}\) \? \{ at: "checking" \} : \{ at: "asking" \}\)\);/);
@@ -277,7 +277,7 @@ test("while the verification page is open, Viky says to stay on it, and it is th
   assert.equal(SHOW_PROOF.waiting, "Sign in there and stay on that page. It brings you back here.");
   assert.doesNotMatch(SHOW_PROOF.waiting, /Come back|Waiting for the proof/);
   // It is true of the session Viky opens: Reclaim's page is told where to send the person once the proof is made.
-  assert.match(readFileSync("app/api/proof/session/route.ts", "utf8"), /proofRequest\.setRedirectUrl\(`\$\{accountAuthOriginFromRequest\(request\)\}\/g\/\$\{giftId\}`\);/);
+  assert.match(readFileSync("app/api/proof/session/route.ts", "utf8"), /proofRequest\.setRedirectUrl\(`\$\{accountAuthOriginFromRequest\(request\)\}\/g\/\$\{giftId\}\?shown=1`\);/);
   assert.match(readFileSync("app/kit/ShowProof.tsx", "utf8"), /\{W\.waiting\}/);
 });
 

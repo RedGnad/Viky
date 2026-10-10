@@ -1,4 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { TERMS, daily, serve } from "./gift-fixtures";
 import { DAY, agreement, gift, json, makeAnAccount, neverAskedToBeTold, now, profile, shot as capture, sizesFor } from "./gift-kit";
 
@@ -12,6 +14,12 @@ import { DAY, agreement, gift, json, makeAnAccount, neverAskedToBeTold, now, pro
  * its character jumps and is the circle when it comes down; the words change where they stand as it lands, and nothing
  * on the card moves; the moment opens after. And the general rule: a day counted on the open page makes the same jump
  * from the triangle it was, and under reduced motion the final state is simply there.
+ *
+ * And the founder's three corrections of the same day. The jump's height gives way to the room above the character:
+ * at its top it stays under the line over it. "Shown." is said only to a person the verification page brought back
+ * with a proof made, by a mark in the address that the page reads once and takes out of the bar; a page loaded again
+ * on a session still open says "Checking for your proof". And under the card nothing changes until the moment covers
+ * the page.
  *
  * What is real: the product's page against the server under test, a real account, every press. What is stood in for:
  * the gift, the session routes and the verdict, as in ./shown-proof-reload.spec.ts. What this does not show: the very
@@ -64,6 +72,19 @@ const cardTop = async (page: Page) => {
   return last;
 };
 
+/** The line over the character on the card, and the character's own moving part. */
+const ABOVE = `document.querySelector('section.gift-card-placed .gift-shape').previousElementSibling`;
+const FIGURE = `document.querySelector('.had-or-not [data-part="figure"]')`;
+/**
+ * The jump as the page plays it, in pixels: how far it rises, how much taller it is drawn at its top, the room between
+ * the character at rest and the line over it, and what the jump's own rise would have been.
+ */
+const RISE = `(() => { const figure = ${FIGURE}; const svg = figure.closest("svg"); const scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width; const box = figure.getBBox(); const frames = figure.getAnimations().flatMap((one) => one.effect.getKeyframes()); const units = Math.max(...frames.map((frame) => { const found = /translateY\\(-([\\d.]+)px\\)/.exec(String(frame.transform)); return found ? Number(found[1]) : 0; })); const stretch = Math.max(...frames.map((frame) => { const found = /scale\\([\\d.]+, ([\\d.]+)\\)/.exec(String(frame.transform)); return found ? Number(found[1]) : 1; })); const restTop = svg.getBoundingClientRect().top + (box.y - svg.viewBox.baseVal.y) * scale; const round = (value) => Math.round(value * 100) / 100; return { risePx: round(units * scale), stretchPx: round((stretch - 1) * box.height * scale), roomPx: round(restTop - ${ABOVE}.getBoundingClientRect().bottom), ownPx: round(0.38 * box.height * scale), heightPx: round(box.height * scale) }; })()`;
+/** How far under the line over it the circle's top stands, at the stretch of the jump's highest image. */
+const CIRCLE_TOP_UNDER_THE_LINE = `(() => { const circle = document.querySelector('.had-or-not [data-part="body"] circle'); const svg = circle.closest("svg"); const scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width; const box = circle.getBoundingClientRect(); return (box.top + box.bottom) / 2 - circle.r.baseVal.value * scale * 1.08 - ${ABOVE}.getBoundingClientRect().bottom; })()`;
+const seeItAgain = (page: Page) => page.locator("button", { hasText: "See it again" });
+const youDecide = (page: Page) => page.locator('[data-decide="messages"]');
+
 /** The animations that time the landing, and the confetti of the moment: the two clocks a frame is held on. */
 const LANDING = "document.documentElement.getAnimations()";
 const RAIN = "[...document.querySelectorAll('.confetti-piece')].flatMap((piece) => piece.getAnimations())";
@@ -115,10 +136,13 @@ test.describe("back from the verification, on the gift's page", () => {
       const check = await backFromTheCheck(page);
       await makeAnAccount(device);
       await page.addInitScript(SLOWED);
-      await page.goto(`/g/${GIFT}`);
+      // The address the verification page brings the person back to once a proof is made (src/shown-return.ts).
+      await page.goto(`/g/${GIFT}?shown=1`);
 
       // Back, with the session open: the card says where the proof stands, with the wheel, and no block under it.
       await expect(state(page)).toHaveText("Shown. Viky is checking it.");
+      // The mark is read once: it is out of the address bar, so a page loaded again does not say it a second time.
+      await expect.poll(() => new URL(page.url()).search).toBe("");
       await expect(waitLine(page)).toHaveText("Keep this page open.");
       await expect(waitLine(page).locator(".working-ring")).toBeVisible();
       await expect.poll(check.looks).toBe(1);
@@ -141,6 +165,16 @@ test.describe("back from the verification, on the gift's page", () => {
       await expect(state(page)).toHaveText("Shown. Viky is checking it.");
       await expect(waitLine(page)).toHaveText("Keep this page open.");
       await expect(moment(page)).toHaveCount(0);
+      // The jump's height gives way to the room above the character: at its top, drawn taller as it is there, it stays
+      // under the line that says what the gift is for. It still jumps, and never higher than the jump's own rise.
+      const rise = (await page.evaluate(RISE)) as { risePx: number; stretchPx: number; roomPx: number; ownPx: number; heightPx: number };
+      expect(rise.risePx).toBeGreaterThan(4);
+      expect(rise.risePx + rise.stretchPx, "its top travels no further than the room above it").toBeLessThanOrEqual(rise.roomPx + 0.5);
+      expect(rise.risePx).toBeLessThanOrEqual(rise.ownPx + 0.5);
+      if (SHOTS) {
+        mkdirSync(SHOTS, { recursive: true });
+        writeFileSync(join(SHOTS, `the-jump-measured-${size.name}.json`), `${JSON.stringify(rise, null, 2)}\n`);
+      }
       if (SHOTS) {
         // It gathers, then it is at the top, where the triangle is going and the circle is coming: both partly there.
         // (The fade runs on the standard curve, which is most of the way through by its middle.)
@@ -153,6 +187,10 @@ test.describe("back from the verification, on the gift's page", () => {
           expect(opacity, part).toBeGreaterThan(0);
           expect(opacity, part).toBeLessThan(1);
         }
+        // At the top of its jump the circle is under the line over it: it passes over no line. Read from the circle's
+        // own middle and its radius, drawn taller as it is there: the box the browser gives a turning drawing is the
+        // turned rectangle around it, wider and taller than what is seen.
+        expect((await page.evaluate(CIRCLE_TOP_UNDER_THE_LINE)) as number).toBeGreaterThanOrEqual(-0.5);
         await shot(page, size.name, "3-at-the-top-it-becomes-the-circle");
         await letGo(page);
         // It lands, and the words that stood are going out where they stand.
@@ -170,6 +208,9 @@ test.describe("back from the verification, on the gift's page", () => {
       await expect(card(page).locator(".gift-meta").first()).toHaveText("Yours");
       // No character appears at the head of the page as the card's own lands: the head stays as it was.
       expect(await page.evaluate(`document.querySelectorAll("main [data-reacts]").length`)).toBe(0);
+      // Under the card nothing has changed yet: the controls of the person it is for are there, "See it again" is not.
+      await expect(youDecide(page)).toHaveCount(1);
+      await expect(seeItAgain(page)).toHaveCount(0);
       if (SHOTS) {
         // Taken while the landing's own clock still runs: the measures below wait for stillness, and it would have run out.
         await holdAt(page, LANDING, 800);
@@ -188,11 +229,51 @@ test.describe("back from the verification, on the gift's page", () => {
       // The moment, after the landing, unchanged: the confetti, and the amount that turns "yours".
       await expect(moment(page)).toBeVisible({ timeout: 30_000 });
       await expect(moment(page).getByRole("heading", { name: "You did it." })).toBeVisible();
+      // Once the moment is fully there over the page, the page under it is the reached gift's, changed unseen.
+      await expect(seeItAgain(page)).toHaveCount(1, { timeout: 30_000 });
+      await expect(youDecide(page)).toHaveCount(0);
       if (SHOTS) {
         await holdAt(page, RAIN, 1_220);
         await shot(page, size.name, "6-the-moment");
         await letGo(page);
       }
+      // The moment closed, the page is the one a later visit would draw.
+      await moment(page).getByRole("button", { name: "See the gift" }).click();
+      await expect(moment(page)).toHaveCount(0);
+      await expect(seeItAgain(page)).toBeVisible();
+      await expect(state(page)).toHaveText("It is yours.");
+      await shot(page, size.name, "7-after-the-moment");
+      await device.context.close();
+    });
+  }
+
+  for (const size of SIZES) {
+    test(`a page loaded again on a session still open says what it is doing, and never "Shown." (${size.name})`, async ({ browser, baseURL }) => {
+      test.setTimeout(120_000);
+      const device = await profile(browser, baseURL, size.viewport);
+      const { page } = device;
+      await neverAskedToBeTold(device.context);
+      const check = await backFromTheCheck(page);
+      await makeAnAccount(device);
+      await page.addInitScript(SLOWED);
+      // No mark: nothing says a proof was made. The session is open, so the page asks what became of it.
+      await page.goto(`/g/${GIFT}`);
+      await expect(state(page)).toHaveText("Checking for your proof");
+      await expect(waitLine(page)).toHaveText("Keep this page open.");
+      await expect.poll(check.looks).toBe(1);
+      await expect(page.getByText(/Shown\./)).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /^Show it$/ })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: /^Sign in to/ })).toHaveCount(0);
+      await expect(card(page).locator(".gift-action")).toBeHidden();
+      const top = await amountTop(page);
+      await shot(page, size.name, "1b-loaded-again-checking");
+      // A proof was there all the same: paid, the character jumps and the card says it, where the words stood.
+      await check.pay();
+      await expect(card(page).locator('.had-or-not[data-change="earned"]')).toBeVisible();
+      await expect(state(page)).toHaveText("It is yours.");
+      await expect(page.getByText(/Shown\./)).toHaveCount(0);
+      expect(await amountTop(page), "nothing pushed the amount").toBe(top);
+      await expect(moment(page)).toBeVisible({ timeout: 30_000 });
       await device.context.close();
     });
   }
@@ -205,7 +286,7 @@ test.describe("back from the verification, on the gift's page", () => {
     const check = await backFromTheCheck(page);
     await makeAnAccount(device);
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.goto(`/g/${GIFT}`);
+    await page.goto(`/g/${GIFT}?shown=1`);
     await expect(state(page)).toHaveText("Shown. Viky is checking it.");
     await expect(waitLine(page)).toHaveText("Keep this page open.");
     await expect.poll(check.looks).toBe(1);

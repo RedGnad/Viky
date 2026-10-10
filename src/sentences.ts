@@ -1870,6 +1870,12 @@ export const SHOW_PROOF = {
    * once the proof is made (`setRedirectUrl`, app/api/proof/session/route.ts): both screens now say the same thing.
    */
   waiting: "Sign in there and stay on that page. It brings you back here.",
+  /**
+   * The card's own headline while the page asks what became of a verification it cannot say was finished: a page
+   * loaded again, or brought back to the front, on a session still open (the founder, 10 Oct 2026). It stood in small
+   * under the block until then. "Shown." is said only to a person the verification page brought back with a proof made.
+   */
+  checking: "Checking for your proof",
   stopWaiting: "Stop waiting",
   /**
    * Under the target (D185): said with the number, to the person who showed it and to nobody else, since the number

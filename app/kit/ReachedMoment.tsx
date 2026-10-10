@@ -87,7 +87,7 @@ export function useLoaded(): boolean {
  * The moments this screen owes, played one after another once the page has loaded. Each is written as seen on the
  * account the moment it is shown, so a reload, another tab or another device does not play it again.
  */
-export function ReachedMoments({ gifts, here }: Readonly<{ gifts: readonly ReachedGift[]; here?: OnItsPage }>) {
+export function ReachedMoments({ gifts, here, onOpened }: Readonly<{ gifts: readonly ReachedGift[]; here?: OnItsPage; /** Told each time a moment is fully there over the screen. */ onOpened?: () => void }>) {
   const loaded = useLoaded();
   // Held once owed: the list read again after the first is written seen no longer carries it, and a moment playing
   // must not be taken off the screen by its own write.
@@ -100,7 +100,7 @@ export function ReachedMoments({ gifts, here }: Readonly<{ gifts: readonly Reach
     if (now) void markReachedSeen(now.giftId).catch(() => undefined);
   }, [now]);
   if (!now) return null;
-  return <ReachedMoment key={now.giftId} gift={now} here={here} onClose={() => setDone((was) => [...was, now.giftId])} />;
+  return <ReachedMoment key={now.giftId} gift={now} here={here} onOpened={onOpened} onClose={() => setDone((was) => [...was, now.giftId])} />;
 }
 
 /**
@@ -116,28 +116,40 @@ export type OnItsPage = boolean;
  * link), and "See it again", which replays it whenever asked and writes nothing.
  *
  * `held` is a gift reached while this page stood (the founder, 10 Oct 2026): its character lands first and the card
- * says it, and the moment opens once the page lets it, unchanged.
+ * says it, and the moment opens once the page lets it, unchanged. Under the card the page is still as it was until the
+ * moment covers it: `quiet` keeps "See it again" undrawn until then, and `onSettled` tells the page, once, that the
+ * moment is fully there over it, or that none is owed to this account, so that nothing is waited for.
  */
-export function ReachedOnItsPage({ gift, held = false }: Readonly<{ gift: ReachedGift; held?: boolean }>) {
+export function ReachedOnItsPage({ gift, held = false, quiet = false, onSettled }: Readonly<{ gift: ReachedGift; held?: boolean; quiet?: boolean; onSettled?: () => void }>) {
   const [owed, setOwed] = useState(false);
   const [again, setAgain] = useState(false);
+  const settled = useRef(onSettled);
+  useEffect(() => {
+    settled.current = onSettled;
+  });
   useEffect(() => {
     let live = true;
     loadReachedSeen(gift.giftId)
       .then((answer) => {
-        if (live && !answer.seen) setOwed(true);
+        if (!live) return;
+        if (!answer.seen) setOwed(true);
+        else settled.current?.();
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (live) settled.current?.();
+      });
     return () => {
       live = false;
     };
   }, [gift.giftId]);
   return (
     <>
-      <ReachedMoments gifts={owed && !held ? [gift] : []} here />
-      <button type="button" onClick={() => setAgain(true)} className={`${SMALL_BUTTON} self-start`}>
-        {W.seeItAgain}
-      </button>
+      <ReachedMoments gifts={owed && !held ? [gift] : []} here onOpened={() => settled.current?.()} />
+      {quiet ? null : (
+        <button type="button" onClick={() => setAgain(true)} className={`${SMALL_BUTTON} self-start`}>
+          {W.seeItAgain}
+        </button>
+      )}
       {again ? <ReachedMoment gift={gift} here onClose={() => setAgain(false)} /> : null}
     </>
   );
@@ -178,7 +190,7 @@ function rain(layer: HTMLElement): Animation[] {
   return animations;
 }
 
-export function ReachedMoment({ gift, here, onClose }: Readonly<{ gift: ReachedGift; /** Set when the moment plays over the gift's own page. */ here?: OnItsPage; onClose: () => void }>) {
+export function ReachedMoment({ gift, here, onOpened, onClose }: Readonly<{ gift: ReachedGift; /** Set when the moment plays over the gift's own page. */ here?: OnItsPage; /** Told once the moment is fully there: what is under it can change unseen. */ onOpened?: () => void; onClose: () => void }>) {
   const { address } = useAccount();
   const money = useDisplayCurrency(address);
   const zone = useReaderZone();
@@ -189,6 +201,10 @@ export function ReachedMoment({ gift, here, onClose }: Readonly<{ gift: ReachedG
   // Still, under reduced motion, the amount is already theirs; moving, it turns at `becomesAfterMs`. This screen is
   // only drawn in the browser, after the page has loaded or on a press, so the question can be asked as it is made.
   const [still] = useState(reduced);
+  const opened = useRef(onOpened);
+  useEffect(() => {
+    opened.current = onOpened;
+  });
   const [turned, setTurned] = useState(false);
   const became = still || turned;
   const recipient = gift.role === "recipient";
@@ -210,6 +226,8 @@ export function ReachedMoment({ gift, here, onClose }: Readonly<{ gift: ReachedG
     const { inMs, becomesAfterMs } = MOTION.moment;
     const spring = springEasing(SPRING.expressiveFastSpatial);
     const animations: Animation[] = [element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: inMs, easing: "ease-out" })];
+    // Fully there once it has risen in: until then the page shows through it.
+    animations[0].finished.then(() => opened.current?.()).catch(() => undefined);
     // The amount turns: it swells once on the expressive spring as its word changes from "in your name" to "yours".
     const turn = amount.current?.animate([{ transform: "scale(1)" }, { transform: "scale(1.12)" }, { transform: "scale(1)" }], {
       duration: spring.durationMs * 1.5,

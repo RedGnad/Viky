@@ -62,6 +62,62 @@ export function useReducedMotion(): boolean {
 
 const part = (root: Element, name: string) => root.querySelector<SVGElement>(`[data-part="${name}"]`);
 
+/** A box lifted out of the page's flow stands above nothing. */
+const OUT_OF_FLOW = new Set(["absolute", "fixed"]);
+
+/**
+ * The free room above a character, in pixels: up to the nearest box that stands above it on the page, or to the inner
+ * edge of a box that would cut off what leaves it (a row of days scrolls sideways, and a scroller cuts upwards too).
+ * Looked for outwards from the drawing: what stands beside it is not above it. Nothing above it is no limit.
+ */
+function roomAbove(figure: Element): number {
+  const top = figure.getBoundingClientRect().top;
+  for (let at: Element | null = figure.closest("svg") ?? figure; at && at !== document.body; at = at.parentElement) {
+    for (let before = at.previousElementSibling; before; before = before.previousElementSibling) {
+      const box = before.getBoundingClientRect();
+      if ((box.width === 0 && box.height === 0) || box.bottom > top || OUT_OF_FLOW.has(getComputedStyle(before).position)) continue;
+      return top - box.bottom;
+    }
+    const around = at.parentElement;
+    if (around && getComputedStyle(around).overflowY !== "visible") return Math.max(0, top - (around.getBoundingClientRect().top + around.clientTop));
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+/** How much taller the jump draws a character at its top than at rest: the stretch of its highest image. */
+const APEX_STRETCH = 1.08;
+
+/**
+ * How high a jump rises, as a share of the character's own height: the smaller of the jump's own rise and the free
+ * room above the character (the founder, 10 Oct 2026). One jump in the product, its curve, its durations, its squash
+ * and its turn the same everywhere; only its height gives way, so a character passes over no line and leaves no box
+ * that would cut it. The room is what its top may travel: at the top of the jump the character is also drawn taller,
+ * from the floor it left, so that stretch is taken off the room before the rise is.
+ */
+function riseWithin(figure: Element, riseBy: number): number {
+  const height = figure.getBoundingClientRect().height;
+  if (!(height > 0)) return riseBy;
+  return Math.max(0, Math.round(Math.min(riseBy, roomAbove(figure) / height - (APEX_STRETCH - 1)) * 1000) / 1000);
+}
+
+/**
+ * The rise as the jump's highest image writes it: a length of the drawing's own, taken from the character's height at
+ * rest. It was a share of the moving part's box, and that box is not still: a day that carries the triangle it was
+ * turns it in the air, the box grows with the turn, and the share grew with it (measured 10 Oct 2026: the lone
+ * character rose a quarter higher than the jump says, into the line over it). A drawing that cannot be measured keeps
+ * the share.
+ */
+function riseOf(figure: Element, riseBy: number): string {
+  const share = riseWithin(figure, riseBy);
+  try {
+    const height = (figure as SVGGraphicsElement).getBBox().height;
+    if (height > 0) return `${Math.round(share * height * 1000) / 1000}px`;
+  } catch {
+    // Not drawn, so not measured.
+  }
+  return `${share * 100}%`;
+}
+
 /**
  * A day earned: it gathers, jumps once, lands with a squash that springs back, and its face opens on the landing.
  *
@@ -85,12 +141,13 @@ function playEarned(root: Element, delay: number, how: boolean | "becomes" = fal
   const jumpMs = gatherMs + riseMs + fallMs;
   const land = springEasing(landing);
   const total = jumpMs + land.durationMs;
+  const rise = riseOf(figure, riseBy);
   const animations = [
     figure.animate(
       [
         { offset: 0, transform: "translateY(0) scale(1, 1)", easing: EASING.standardAccelerate },
         { offset: gatherMs / total, transform: "translateY(0) scale(1.1, 0.88)", easing: EASING.emphasizedDecelerate },
-        { offset: (gatherMs + riseMs) / total, transform: `translateY(-${riseBy * 100}%) scale(0.94, 1.08)`, easing: EASING.emphasizedAccelerate },
+        { offset: (gatherMs + riseMs) / total, transform: `translateY(-${rise}) scale(0.94, ${APEX_STRETCH})`, easing: EASING.emphasizedAccelerate },
         { offset: jumpMs / total, transform: "translateY(0) scale(1.12, 0.86)", easing: land.easing },
         { offset: 1, transform: "translateY(0) scale(1, 1)" },
       ],

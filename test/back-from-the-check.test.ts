@@ -7,6 +7,7 @@ import { Character } from "../app/kit/Character";
 import { MOTION } from "../src/design-tokens";
 import { liveOf, type LiveInput } from "../src/gift-live";
 import { GIFT_LIVE, SHOW_PROOF } from "../src/sentences";
+import { cameBackShown, SHOWN_MARK, shownReturnPath, withoutShownMark } from "../src/shown-return";
 
 /**
  * Back from the verification, on a gift's page (the founder, 10 Oct 2026, on what he saw on 9 Oct and on an animated
@@ -49,18 +50,18 @@ test("while their own proof is asked about, the card says so itself and the bloc
   assert.equal(checking.headline, "Shown. Viky is checking it.");
   assert.equal(checking.next, null);
   assert.equal(checking.figure?.label, liveOf(WAITING).figure?.label, "the money and its label stand as they stood");
-  assert.match(page, /const said = liveOf\(checkingTheirOwn \? \{ \.\.\.liveInput, proof: "pending" \} : liveInput\);/);
+  assert.match(page, /const shownAndChecked = checkingTheirOwn && cameBackShown;\n\s+const said = liveOf\(shownAndChecked \? \{ \.\.\.liveInput, proof: "pending" \} : liveInput\);/, "said only to a person brought back with a proof made");
   // What the funder would read is not changed by it: their own page has no session to ask about.
   assert.match(page, /const theirs = liveOf\(\{ \.\.\.liveInput, voice: "funder" \}\);/);
   // The wait is the card's own line, the wheel and one sentence, where the next moment is said.
   assert.equal(GIFT_LIVE.awaitingProof.keepOpen, "Keep this page open.");
-  assert.match(page, /waiting=\{checkingTheirOwn \? L\.awaitingProof\.keepOpen : dayReading\.phase === "certifying" \? WAITS\.counting\(source\) : null\}/);
+  assert.match(page, /waiting=\{checkingTheirOwn && !landed \? L\.awaitingProof\.keepOpen : dayReading\.phase === "certifying" \? WAITS\.counting\(source\) : null\}/);
   // The same words the verification page shows while it reads: the two screens say one thing.
   assert.match(readFileSync("docs/reclaim/utoulouse-enrolment-provider.md", "utf8") + readFileSync("test/utoulouse-provider-script.test.ts", "utf8"), /Keep this page open\./);
   // The block is silent while the server is asked and once the proof has paid, and its two small lines are gone.
   assert.match(block, /if \(saidByTheCard\(state\)\) return null;/);
   assert.doesNotMatch(block, /W\.checking|W\.shown\(/);
-  assert.ok(!("checking" in SHOW_PROOF) && !("shown" in SHOW_PROOF), "nothing draws those two sentences any more");
+  assert.ok(!("shown" in SHOW_PROOF), "nothing draws that sentence any more");
   // And an action that draws nothing takes no room on the card.
   assert.match(css, /\.gift-action:empty \{\n\s*display: none;\n\}/);
 });
@@ -134,11 +135,12 @@ test("a day earned on the page that drew it as a triangle makes the same jump (C
 
 test("as it lands the words change where they stand, the amount swells once, and the moment opens after", () => {
   // The card is drawn from the gift as it was until the character has landed and the old words are out.
-  assert.match(page, /const reaching = !still && Boolean\(status && said && status !== said && status\.giftId === said\.giftId && hadAndReached\(status\) && !hadAndReached\(said\)\);/);
+  assert.match(page, /const reaching = !still && !released && Boolean\(status && said && status !== said && status\.giftId === said\.giftId && hadAndReached\(status\) && !hadAndReached\(said\)\);/);
   assert.match(page, /if \(status !== said && !reaching\) setSaid\(status\);/, "anything else read of the gift is said at once");
-  assert.match(page, /after\(EARNED_AIRBORNE_MS, \(\) => setStep\(1\)\),/);
-  assert.match(page, /after\(EARNED_AIRBORNE_MS \+ wordsOutMs, \(\) => \{\n\s+setSaid\(read\.current\);\n\s+setStep\(2\);\n\s+\}\),/);
-  assert.match(page, /after\(EARNED_AIRBORNE_MS \+ momentAfterMs, \(\) => setMomentFree\(true\)\),/);
+  assert.match(page, /const cues = \[after\(EARNED_AIRBORNE_MS, \(\) => setStep\(1\)\), after\(EARNED_AIRBORNE_MS \+ wordsOutMs, \(\) => setStep\(2\)\), after\(EARNED_AIRBORNE_MS \+ momentAfterMs, \(\) => setMomentFree\(true\)\)\];/);
+  // Once landed the card alone says the gift as it is, by the rules every card is said by.
+  assert.match(page, /const landed = reaching && step === 2 && status\?\.kind === "milestone" \? status : null;/);
+  assert.match(page, /const live = landed\s+\? liveOf\(\{ \.\.\.liveInput, moment: readAs\(giftOfMilestone\(landed\), voice\)\.moment, /);
   // Timed by animations that move nothing, on the clock the jump runs on.
   assert.match(page, /const cue = document\.documentElement\.animate\(\[\], \{ duration: ms \}\);/);
   assert.doesNotMatch(page + motion, /setTimeout|setInterval/, "never a clock");
@@ -155,10 +157,69 @@ test("as it lands the words change where they stand, the amount swells once, and
   assert.match(motion, /fill: "forwards" \}\) : line\.animate\(\[\{ opacity: 0 \}, \{ opacity: 1 \}\], \{ duration: wordsInMs, easing: EASING\.standard \}\)/);
   // The head of a page that saw the reach stays as it was: no character appears above the card as its own lands.
   assert.match(page, /moment === "counting" \|\| moment === "climbing" \|\| moment === "awaitingProof" \|\| reach\.sawTheReach \? null : \(/);
-  assert.match(page, /sawTheReach: reachedHere !== null \};/);
+  assert.match(page, /sawTheReach: reachedHere !== null, release \};/);
   // The moment itself is unchanged: it is only held until the page lets it.
   const moment = readFileSync("app/kit/ReachedMoment.tsx", "utf8");
-  assert.match(moment, /<ReachedMoments gifts=\{owed && !held \? \[gift\] : \[\]\} here \/>/);
-  assert.match(page, /held=\{reach\.momentHeld\} \/>/);
+  assert.match(moment, /<ReachedMoments gifts=\{owed && !held \? \[gift\] : \[\]\} here onOpened=\{\(\) => settled\.current\?\.\(\)\} \/>/);
+  assert.match(page, /held=\{reach\.momentHeld\} quiet=\{landed !== null\} onSettled=\{reach\.release\} \/>/);
   assert.deepEqual(MOTION.moment, { inMs: 450, becomesAfterMs: 900, pieces: 64, fallMs: 2200, spreadMs: 1100 });
+});
+
+test("\"Shown.\" is never said of what may not have been: the address after a proof carries a mark, read once", () => {
+  // The verification page goes to one address after a proof and to another after a verification abandoned (the
+  // installed SDK's own words: "after successful proof generation", "after an error which aborts the verification").
+  const route = readFileSync("app/api/proof/session/route.ts", "utf8");
+  assert.match(route, /proofRequest\.setRedirectUrl\(`\$\{accountAuthOriginFromRequest\(request\)\}\/g\/\$\{giftId\}\?shown=1`\);/, "with a proof made: the mark");
+  assert.match(route, /proofRequest\.setCancelRedirectUrl\(`\$\{accountAuthOriginFromRequest\(request\)\}\/g\/\$\{giftId\}`\);/, "abandoned: none");
+  assert.equal(shownReturnPath("1000008"), "/g/1000008?" + SHOWN_MARK + "=1", "the route writes out what the page reads");
+  // Read with the page, on the server, and kept for as long as the page stands.
+  const served = readFileSync("app/g/[id]/page.tsx", "utf8");
+  assert.match(served, /const \{ t, shown \} = await props\.searchParams;/);
+  assert.match(served, /cameBackShown=\{cameBackShown\(shown\)\}/);
+  assert.equal(cameBackShown("1"), true);
+  for (const other of [undefined, "", "0", "true", ["1", "1"]]) assert.equal(cameBackShown(other), false);
+  assert.match(page, /const \[shown\] = useState\(cameBackShown\);/);
+  // Taken out of the address bar, so a page loaded again does not say it a second time; the rest of the address stays.
+  assert.match(page, /if \(new URL\(window\.location\.href\)\.searchParams\.has\(SHOWN_MARK\)\) window\.history\.replaceState\(null, "", withoutShownMark\(window\.location\.href\)\);/);
+  assert.equal(withoutShownMark("https://viky.cash/g/1000008?shown=1"), "/g/1000008");
+  assert.equal(withoutShownMark("https://viky.cash/g/1000008?t=AbCdEfGhIjKlMnOpQrStUv&shown=1#k"), "/g/1000008?t=AbCdEfGhIjKlMnOpQrStUv#k");
+  assert.equal(withoutShownMark("https://viky.cash/g/1000008"), "/g/1000008");
+  // Without the mark, on a session still open: the card says what the page is doing, in the sentence that existed,
+  // with the same wait under it, and never "Shown.".
+  assert.equal(SHOW_PROOF.checking, "Checking for your proof");
+  assert.match(page, /const asked = checkingTheirOwn && !cameBackShown \? \{ \.\.\.said, headline: SHOW_PROOF\.checking, next: null \} : said;/);
+  assert.doesNotMatch(block, /W\.checking/, "and the block under the card still draws nothing then");
+});
+
+test("the jump is one in the product, and its height gives way to the room above the character", () => {
+  // The curve, the durations, the squash and the turn are the tokens', untouched.
+  assert.deepEqual({ gatherMs: MOTION.earned.gatherMs, riseMs: MOTION.earned.riseMs, fallMs: MOTION.earned.fallMs, riseBy: MOTION.earned.riseBy, turns: MOTION.earned.turns }, { gatherMs: 80, riseMs: 170, fallMs: 130, riseBy: 0.38, turns: 1 });
+  // Where the jump is read: the rise is the smaller of the jump's own and the free room, the stretch of its top taken off.
+  assert.match(motion, /const rise = riseOf\(figure, riseBy\);/);
+  // Written as a length taken from the character at rest, never as a share of a box that grows while it turns.
+  assert.match(motion, /const share = riseWithin\(figure, riseBy\);/);
+  assert.match(motion, /if \(height > 0\) return `\$\{Math\.round\(share \* height \* 1000\) \/ 1000\}px`;/);
+  assert.match(motion, /return Math\.max\(0, Math\.round\(Math\.min\(riseBy, roomAbove\(figure\) \/ height - \(APEX_STRETCH - 1\)\) \* 1000\) \/ 1000\);/);
+  assert.match(motion, /transform: `translateY\(-\$\{rise\}\) scale\(0\.94, \$\{APEX_STRETCH\}\)`, easing: EASING\.emphasizedAccelerate \}/);
+  assert.match(motion, /const APEX_STRETCH = 1\.08;/);
+  assert.equal((motion.match(/riseBy \* 100/g) ?? []).length, 0, "no jump rises by its own figure alone any more");
+  // The room: the nearest box above on the page, or the inner edge of a box that cuts what leaves it; beside is not above.
+  assert.match(motion, /if \(\(box\.width === 0 && box\.height === 0\) \|\| box\.bottom > top \|\| OUT_OF_FLOW\.has\(getComputedStyle\(before\)\.position\)\) continue;\n\s+return top - box\.bottom;/);
+  assert.match(motion, /if \(around && getComputedStyle\(around\)\.overflowY !== "visible"\) return Math\.max\(0, top - \(around\.getBoundingClientRect\(\)\.top \+ around\.clientTop\)\);/);
+  assert.match(motion, /return Number\.POSITIVE_INFINITY;/, "nothing above is no limit");
+});
+
+test("under the card the page changes only once the moment covers it", () => {
+  const moment = readFileSync("app/kit/ReachedMoment.tsx", "utf8");
+  // The moment says when it is fully there, having risen in, and the page is told once: then, or when none is owed.
+  assert.match(moment, /animations\[0\]\.finished\.then\(\(\) => opened\.current\?\.\(\)\)\.catch\(\(\) => undefined\);/);
+  assert.match(moment, /if \(!answer\.seen\) setOwed\(true\);\n\s+else settled\.current\?\.\(\);/);
+  assert.match(moment, /\.catch\(\(\) => \{\n\s+if \(live\) settled\.current\?\.\(\);\n\s+\}\);/, "an answer that fails leaves nothing waiting");
+  // "See it again" is not drawn while the page under the moment is still as it was.
+  assert.match(moment, /\{quiet \? null : \(\s*<button type="button" onClick=\{\(\) => setAgain\(true\)\}/);
+  // The page: drawn from the gift as it was until then, the controls of the person it is for with it.
+  assert.match(page, /const release = useCallback\(\(\) => setReleased\(true\), \[\]\);/);
+  assert.match(page, /if \(status !== said && !reaching\) setSaid\(status\);/);
+  // A reader nobody plays the moment to waits for nothing.
+  assert.match(page, /const noMomentToWaitFor = landed !== null && !\(mine \|\| readerIsFunder\);/);
 });
