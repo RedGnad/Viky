@@ -237,7 +237,10 @@ test("the judges' path names the button as Me draws it, and says what each path 
   assert.ok(page.includes("Each path asks something of you: Duolingo, an account there, and a lesson done after you connect it; Chess.com, an account there, and one rating point won."));
   // With no account of a source, the short path (the audit of 9 Oct 2026): open the gift, "Stop", "End the gift". The
   // page sent that judge to a link the portal's instructions might give.
-  assert.ok(page.includes("With no account of a source, the short path is two steps down: open the gift, then end it."));
+  assert.ok(page.includes("With no account of a source, the short path is the next step: open the gift, then end it."));
+  // What the Duolingo path asks before it is one press: the name typed on the card, by the label the card gives it.
+  assert.ok(page.includes("For Duolingo, type your own Duolingo name on the card, under &quot;Their Duolingo name&quot;, and connecting is one press."));
+  assert.ok(read("src/conditions.ts").includes('label: "Their Duolingo name"'));
   assert.ok(page.includes("Press &quot;Stop&quot;, then &quot;End the gift&quot;, and confirm: all of it goes back to the account that paid."));
   assert.ok(page.indexOf("With no account of a source") < page.indexOf("data-try-short-path"));
   assert.ok(!page.includes("give you the link of a gift made for you"));
@@ -290,3 +293,25 @@ test("the sentences the audit of 9 Oct 2026 asked to redo from the code: a provi
   assert.doesNotMatch(register, /Read each morning from Duolingo|read once a morning|read every day through an attested fetch|at every daily reading/);
 });
 
+
+test("the final audit of 9 Oct 2026: a link to a section opens it, and six sentences say what the screens do", () => {
+  // The four links of the first block led to a fold that stayed shut: the page now follows the address as it changes.
+  const contents = read("app/judges/JudgesContents.tsx");
+  assert.ok(contents.includes('const followed = () => openSection(decodeURIComponent(window.location.hash.slice(1)));'));
+  assert.ok(contents.includes('window.addEventListener("hashchange", followed);') && contents.includes('return () => window.removeEventListener("hashchange", followed);'));
+  // The key stands right above the pay button since 9 Oct 2026.
+  assert.ok(page.includes("Without the link, press &quot;Have a code?&quot;, right above the pay button, and type the code from those instructions."));
+  assert.doesNotMatch(page, /under the card&apos;s button and type the code/);
+  // What comes back from the passkey alone, and what the first device kept as a convenience.
+  assert.ok(page.includes("sign out, clear this site&apos;s storage or take another device, and sign in with the same passkey. The account, its gifts and its money come back from the passkey alone."));
+  assert.ok(page.includes("What the first device kept (which passkey to offer, a gift&apos;s link, the theme) is a convenience the account does not need."));
+  assert.doesNotMatch(page, /nothing was kept on the first device/);
+  // A payment left before its end: on the device that paid, for a day.
+  assert.ok(page.includes("for a day, on the device that paid, the screen that waits leads back to it"));
+  // The race's line reads three timing companies: it is not printed under one's name.
+  const conditions = read("src/conditions.ts");
+  assert.ok(conditions.includes(`source: "the race's timing company",`));
+  assert.doesNotMatch(conditions, /source: "Breizh Chrono"/);
+  // In the index, the date of a gift is the day it was made, said so beside its state.
+  assert.ok(read("app/judges/JudgesIndex.tsx").includes("{gift.status}, made {dayOf(gift.createdAt)}"));
+});

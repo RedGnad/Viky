@@ -62,7 +62,7 @@ test("nothing counts on the frame's messages: the money arriving closes it, and 
   const judges = readFileSync("app/judges/page.tsx", "utf8").replace(/\s+/g, " ");
   assert.ok(judges.includes("? \"Rampnow's page opens in a frame inside Viky. Its limit: Rampnow finishes a payment from its own page (the card buys USDC on Base, and its page then sends it on to Monad), so the frame has to stay open until the money arrives."));
   assert.ok(judges.includes("The frame has no cross: one way out under it while no payment is known, \\\"Go back without paying\\\", and one after five minutes without the money."));
-  assert.ok(judges.includes("Left before the end, the payment waits at Rampnow: the screen that waits leads back to it, and opens another only when the person answers that they did not pay."));
+  assert.ok(judges.includes("Left before the end, the payment waits at Rampnow: for a day, on the device that paid, the screen that waits leads back to it, and opens another only when the person answers that they did not pay."));
   assert.ok(judges.includes("6 EUR paid at 21:23 UTC, the frame closed, the money held on Base for 14 minutes, then 5.60 USDC on the account at 21:38 UTC"));
   assert.equal(LATE_WAY_OUT_AFTER_MS, 5 * 60_000, "the five minutes the page says");
 });
