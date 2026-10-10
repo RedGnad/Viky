@@ -575,6 +575,12 @@ export const LOST = {
   missing: "This page does not exist.",
   failed: "This page could not be shown. Nothing was changed.",
   home: "Back to Viky",
+  /**
+   * With no connection (the audit of 9 Oct 2026). It said "Your money is safe; nothing changes while you are away.",
+   * which is not this page's to know: a day not done goes back to the person who paid while somebody is away.
+   */
+  offline: "Viky needs a connection. Nothing was changed by this page.",
+  again: "Try again",
 } as const;
 
 /**

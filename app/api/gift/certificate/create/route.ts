@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { assertSameOrigin, readJsonBody } from "@/src/api-guard";
 import { keepFunderCurrency } from "@/src/gift-store";
 import { readingCurrency } from "@/src/reader-money";
 import { isSubjectKey, keyedSubject } from "@/src/subject-key";
@@ -42,11 +43,12 @@ const HEX32 = /^0x[0-9a-fA-F]{64}$/;
 export async function POST(request: Request) {
   let account = "";
   try {
+    assertSameOrigin(request);
     const rate = checkRateLimit("relay", request);
     if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
     const auth = readAccountAuthSession(request);
     account = auth.account;
-    const body = (await request.json()) as Record<string, unknown>;
+    const body = await readJsonBody<Record<string, unknown>>(request, 8 * 1_024);
 
     const certificate = certificateById(String(body.conditionId ?? ""));
     if (!certificate) throw new GiftApiError("UNKNOWN_CONDITION", "That is not something a gift can be made for");

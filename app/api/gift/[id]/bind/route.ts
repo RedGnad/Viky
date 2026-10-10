@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { readAccountAuthSession } from "@/src/account-auth-server";
-import { readJsonBody } from "@/src/api-guard";
+import { assertSameOrigin, readJsonBody } from "@/src/api-guard";
 import { readDailyGift } from "@/src/daily-count";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { loadGift } from "@/src/gift-store";
@@ -23,6 +23,7 @@ export const maxDuration = 120;
  */
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    assertSameOrigin(request);
     const rate = checkRateLimit("verify", request);
     if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
     const { id } = await context.params;

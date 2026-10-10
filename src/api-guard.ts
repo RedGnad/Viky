@@ -28,6 +28,21 @@ export function assertSameOrigin(request: Request): void {
   }
 }
 
+/**
+ * The same check, as an answer, for a route whose refusals are not all answered in one place (the audit of 9 Oct
+ * 2026): nothing when the request may go on. Fifteen routes that write were held from another site's page by the
+ * session cookie alone, which a browser does not send on a POST from elsewhere; they now say it themselves too.
+ */
+export function refusedFromElsewhere(request: Request): Response | null {
+  try {
+    assertSameOrigin(request);
+    return null;
+  } catch (error) {
+    if (!(error instanceof RequestError)) throw error;
+    return Response.json({ error: error.message, code: error.code }, { status: error.status, headers: { "Cache-Control": "no-store" } });
+  }
+}
+
 export async function readJsonBody<T>(request: Request, maxBytes: number): Promise<T> {
   assertSameOrigin(request);
   const contentType = request.headers.get("content-type")?.toLowerCase() || "";

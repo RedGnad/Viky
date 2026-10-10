@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { assertSameOrigin } from "@/src/api-guard";
 import { getAddress, parseEther } from "viem";
 import { requireOperator } from "@/src/dev-access";
 import { giftErrorResponse, NO_STORE } from "@/src/gift-api";
@@ -18,6 +19,7 @@ const TOP_UP = parseEther("0.05");
  */
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     const auth = requireOperator(request);
     const rate = checkRateLimit("relay", request, auth.account);
     if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
