@@ -104,3 +104,28 @@ test("drawn by the server, held long enough to read, and still whenever nobody c
   assert.match(going, /className="invisible col-start-1 row-start-1"/, "the room is the longest phrase's own");
   assert.ok(MOTION.rotate.holdMs >= 2500, "long enough to read");
 });
+
+/**
+ * The phrase found gone on viky.cash (the founder, 10 Oct 2026): "Their gift can wait for" and nothing after it. The
+ * phrase that leaves is held unseen until the next is drawn, and the next was brought in by a second effect that
+ * followed the text: if it did not come, nothing brought the phrase back.
+ */
+test("the change is made in one place, an effect cleaned up does nothing more, and a net shows a phrase nothing moves", () => {
+  const going = readFileSync("app/kit/GoalsGoingBy.tsx", "utf8");
+  // As the exit ends: the next phrase written at once and its entrance started, in one gesture.
+  assert.match(going, /flushSync\(\(\) => setNow\(drawn\)\);\n\s+phrase\.getAnimations\(\)\.forEach\(\(one\) => one\.cancel\(\)\);\n\s+phrase\.animate\(\[\{ opacity: 0, transform: `translateY\(\$\{rise\}\)` \}, \{ opacity: 1, transform: "none" \}\], \{ duration: inMs, easing: inEasing \}\);/);
+  assert.equal(going.split("useEffect(").length - 1, 1, "no second effect follows the text to bring it in");
+  assert.doesNotMatch(going, /firstImage|\}, \[now\]\);/);
+  // Whatever becomes of the exit is answered: ended, the change; cancelled, the next wait.
+  assert.match(going, /exit\.finished\.then\(\n\s+\(\) => \{\n\s+if \(!alive \|\| leaving !== exit\) return;\n\s+leaving = undefined;\n\s+try \{\n\s+change\(\);\n\s+\} finally \{\n\s+schedule\(\);/);
+  assert.match(going, /\(\) => \{\n\s+if \(!alive \|\| leaving !== exit\) return;\n\s+leaving = undefined;\n\s+schedule\(\);\n\s+\},\n\s+\);/, "a cancelled exit goes on to the next wait");
+  // Never two loops: a cleaned effect is dead, its timers cleared and its exit taken back.
+  assert.match(going, /return \(\) => \{\n\s+alive = false;[\s\S]{0,260}?window\.clearTimeout\(timer\);\n\s+window\.clearTimeout\(net\);[\s\S]{0,160}?leaving\?\.cancel\(\);/);
+  assert.match(going, /const schedule = \(\) => \{\n\s+if \(!alive\) return;\n\s+mend\(\);\n\s+if \(timer === undefined && leaving === undefined && seen && !document\.hidden\) timer = window\.setTimeout\(next, holdMs\);/);
+  // The net: nothing moving, not seen, so it is shown; looked at a little after every exit and whenever the loop looks at itself.
+  assert.match(going, /if \(drawn\.some\(\(one\) => one\.playState === "running"\) \|\| Number\(getComputedStyle\(phrase\)\.opacity\) >= UNSEEN\) return;\n\s+leaving = undefined;\n\s+drawn\.forEach\(\(one\) => one\.cancel\(\)\);/);
+  assert.match(going, /net = window\.setTimeout\(\(\) => \{\n\s+net = undefined;\n\s+schedule\(\);\n\s+\}, outMs \+ NET_AFTER_MS\);/);
+  // Within the second the browser test allows: the exit's own time and the net's wait.
+  assert.ok(MOTION.rotate.outMs + 400 < 1_000);
+  assert.match(going, /const NET_AFTER_MS = 400;/);
+});
