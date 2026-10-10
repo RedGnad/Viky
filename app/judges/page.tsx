@@ -19,6 +19,7 @@ import { Shell } from "../kit/Shell";
 import { JudgesAccount } from "../components/JudgesAccount";
 import { MilestoneJudges } from "../components/MilestoneJudges";
 import { DISPLAY } from "../components/ui";
+import { providerWords } from "@/src/judges-chain";
 import { readOwnership, ownershipWords } from "@/src/judges-owner";
 import { loadPortal, portalsListedAndRead, providerCounts, witnessProviders } from "@/src/portal-store";
 import { readyOnReclaimsCheck } from "@/src/university-ready";
@@ -105,6 +106,8 @@ export default async function JudgesPage() {
   // Who owns the contracts, asked of the chain now (D187): the page said the founder's key for three days after the
   // Safe had taken them. When the chain cannot be read, the sentence says so rather than repeating a name.
   const ownership = await readOwnership().catch(() => null);
+  // Who answers the app's reads of Monad first, by the provider's name and never by its endpoint.
+  const askedFirst = providerWords();
   // Universities listed, and how many have been read at least once (D267): here, and never in the flow.
   const portals = await portalsListedAndRead();
   // The providers by sense, the requests open, and the providers read through a witness and no enclave (D312), each
@@ -350,7 +353,16 @@ export default async function JudgesPage() {
           {/* The public endpoint, the one every command on this page names. The server reads through its own, which
               is never printed: the one printed here for three days carried a key (the money path review, item 1). */}
           <dt className="text-[var(--muted)]">RPC</dt>
-          <dd className="[overflow-wrap:anywhere]">{PUBLIC_RPC_URL}</dd>
+          <dd className="[overflow-wrap:anywhere]">
+            {PUBLIC_RPC_URL}
+            {/* Who answers the app's own reads first, by name (the founder, 10 Oct 2026): read from this deployment's
+                settings, so a deployment set on another provider, or on none, does not say it. */}
+            {askedFirst ? (
+              <span className="block" data-network="provider">
+                {askedFirst}
+              </span>
+            ) : null}
+          </dd>
           <dt className="text-[var(--muted)]">AUSD</dt>
           <dd className="[overflow-wrap:anywhere]">{AUSD_ADDRESS}</dd>
           {escrowV2 && milestoneV2 && anchor ? (
@@ -481,12 +493,14 @@ export default async function JudgesPage() {
 
       <JudgesMera index={index} />
 
-      {/* How money comes in (D289): through a licensed partner, the asset named, and the next step said as it is. */}
+      {/* How money comes in (D289): through a card service, the asset named, and the next step said as it is. A licence
+          is sourced for Ramp alone, in its own block below, and Rampnow comes first: the sentence that covers them all
+          calls none of them licensed (the audits of 8 and 9 Oct 2026). */}
       <Fold id="money-in" title="How money comes in">
         {/* The order is the pay sheet's own (src/rails.ts, `waysIn`): Rampnow first where it is turned on and serves
             the payer, then Ramp, then Mercuryo. The page said Ramp was the way and Rampnow a third until 8 Oct 2026. */}
         <p className={HELP} data-ways-in-order>
-          A funder pays by card, through a licensed service, never to Viky. The pay sheet tries them in this order:{" "}
+          A funder pays by card, through a card service, never to Viky. The pay sheet tries them in this order:{" "}
           {waysIn().map((way) => way.name).join(", then ")}.{" "}
           {rampnowOn
             ? "Rampnow comes first where it serves the payer's country and takes the gift's amount; where it does not, the sheet goes on to the next."

@@ -11,9 +11,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import test from "node:test";
 import { toFunctionSelector } from "viem";
-import { RECLAIM_ALLOWANCE, reclaimAllowance } from "../src/attested-calls";
 import { consentTermsFor } from "../src/consent-terms";
-import { WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAY_IN_USDC, waysIn } from "../src/rails";
 import { HOME } from "../src/sentences";
 import { EXIT_ROUTER, USDC_ROUTER } from "../src/viky-contracts";
 
@@ -152,7 +150,7 @@ test("what the rules ask of a README is all there (section 4.1), and the licence
   assert.match(readFileSync("LICENSE", "utf8"), /^MIT License/);
   assert.match(section("Security"), /\[SECURITY\.md\]\(SECURITY\.md\)/);
   // The order: the short sections, then how to run it, then the declarations folded at the foot.
-  const order = ["## Who it is for, and the problem", "## What we know about the two people", "## What is new", "## Why Monad", "## What has run with real money", "## Path forward: how the next hundred find Viky", "## Architecture", "## Stack", "## Run", "### Deploy", "## Test", "<summary><b>AI tools</b></summary>", "<summary><b>Pre-existing code</b></summary>", "<summary><b>Environment</b></summary>", "<summary><b>Third-party licences</b></summary>", "<summary><b>Security</b></summary>", "<summary><b>License</b></summary>"].map((mark) => README.indexOf(mark));
+  const order = ["## What Viky is built on", "## Who it is for, and the problem", "## What we know about the two people", "## What is new", "## No word of crypto", "## Eighteen conditions, four families", "## Why Monad", "## What has run with real money", "## Path forward: how the next hundred find Viky", "## Architecture", "## Stack", "## Run", "### Deploy", "## Test", "<summary><b>AI tools</b></summary>", "<summary><b>Pre-existing code</b></summary>", "<summary><b>Environment</b></summary>", "<summary><b>Third-party licences</b></summary>", "<summary><b>Security</b></summary>", "<summary><b>License</b></summary>"].map((mark) => README.indexOf(mark));
   assert.ok(order.every((found) => found >= 0), "every section is there");
   assert.deepEqual(order, [...order].sort((left, right) => left - right));
   assert.equal(README.match(/<details>/g)?.length, 6);
@@ -212,17 +210,11 @@ test("the two people and the path forward say of the product what the code does"
   assert.ok(people.includes("both people confirm they are 18 or older"));
   // The button a tester's reading renamed.
   assert.ok(people.includes(`The button became "${HOME.takeItOut}".`));
-  // What each card service keeps is the register's own figure, in the order the sheet tries them.
-  assert.equal(waysIn({ rampnow: true })[0], WAY_IN_USDC);
-  const euro = (amount: number) => `€${amount.toFixed(2)}`;
-  const first = WAY_IN_USDC.fee;
-  const onTwenty = Math.max(first.minimum, (20 * first.percent) / 100 + (first.plus ?? 0));
-  const card = `${WAY_IN_USDC.name}, tried first where it serves the payer, ${first.percent} % plus ${euro(first.plus ?? 0)} and never less than ${euro(first.minimum)}, which is ${euro(onTwenty)} of a €20 payment; ${WAY_IN_GIFT_COIN.name} up to ${WAY_IN_GIFT_COIN.fee.percent} %, never less than ${euro(WAY_IN_GIFT_COIN.fee.minimum)}; ${WAY_IN_CHAIN_COIN.name} ${WAY_IN_CHAIN_COIN.fee.percent} %, from €${WAY_IN_CHAIN_COIN.smallestEur}.`;
-  assert.ok(WAY_IN_GIFT_COIN.fee.upTo && !WAY_IN_CHAIN_COIN.fee.upTo && !first.upTo);
-  assert.ok(path.includes(card), card);
-  // The month's readings are the allowance the code stops at, with no setting moving it.
-  assert.deepEqual(reclaimAllowance({}), RECLAIM_ALLOWANCE);
-  assert.ok(path.includes(`the plan in force covers ${RECLAIM_ALLOWANCE.fetches} a month, with ${RECLAIM_ALLOWANCE.verifications} proofs a person shows from their own account`));
+  // What each card service keeps and the month's readings are said once, on the judges page, from the registers
+  // themselves: the README no longer repeats either (the founder, 10 Oct 2026), so neither figure can go stale here.
+  assert.doesNotMatch(README, /What limits growth today|never less than €|the plan in force covers/);
+  assert.match(readFileSync("app/judges/JudgesAgora.tsx", "utf8"), /\{waysIn\(\)\.map\(\(way\) => \(\s*<span key=\{way\.name\} className="block">\s*\{feeSentence\(way\)\}/);
+  assert.match(readFileSync("app/judges/page.tsx", "utf8"), /allows up to \{RECLAIM_ALLOWANCE\.fetches\} attested fetches and \{RECLAIM_ALLOWANCE\.verifications\} verifications a\s+month/);
   // The words check it names exists, in the source and on rendered screens.
   assert.match(readFileSync("package.json", "utf8"), /"check:words":/);
   assert.match(readFileSync("test/browser/screens.spec.ts", "utf8"), /FORBIDDEN_WORDS/);
@@ -389,13 +381,13 @@ test("the README says the passes that run, what the word check reads, and what c
   assert.deepEqual(schedule.crons.map((cron) => `${cron.path} ${cron.schedule}`).sort(), ["/api/cron/daily 30 0 * * *", "/api/cron/recount 30 3 * * *", "/api/cron/settle 0 7 * * *", "/api/cron/watch 0 2 * * *"]);
   assert.match(readFileSync("app/api/cron/milestones/route.ts", "utf8"), /called every five minutes by cron-job\.org/);
   // The word check: its seven words, and the one place it does not read, said as it is.
-  assert.match(text, /A check looks for seven of them at every change \(wallet, gas, chain, seed, token, transaction hash, address:/);
+  assert.match(text, /A check\s+looks for seven such words at every change \(wallet, gas, chain, seed, token, transaction hash, address:/);
   assert.match(readFileSync("src/consumer-words.ts", "utf8"), /wallets\?\|gas\|chains\?\|seeds\?\|tokens\?\|transaction hash\(\?:es\)\?\|address\(\?:es\)\?/);
   const scanned = readFileSync("scripts/check-consumer-words.ts", "utf8");
   for (const place of ['"app/api/proof/**/*.ts"', '"src/rails.ts"', '"src/ramp.ts"', '"src/mercuryo.ts"', '"src/shown-verification.ts"']) assert.ok(scanned.includes(place), place);
   // The way out's routes are read since the leftovers of the audit of 8 Oct 2026, and the README says so.
   assert.ok(scanned.includes('"app/api/exit/**/*.ts"'));
-  assert.match(text, /The routes of the way out, `app\/api\/exit`, are read too: the one line there that\ncarries one of those words is written for the operator's log, and is marked as that\./);
+  assert.match(text, /The routes of the way out, `app\/api\/exit`, are read too: the one line there that\s+carries one of those words is written for the operator's log, and is marked as that\./);
   assert.match(readFileSync("app/api/exit/relay/route.ts", "utf8"), /\/\/ consumer-words: allow a line of the operator's log, never sent to the person\n\s*if \(!landed\?\.txHash\) console\.error\(/);
   // What came with the port, by name, and what has changed since.
   assert.match(text, /three files of the build and of the checks, which came in that commit too: `foundry\.toml` and `remappings\.txt`,\n  unchanged since/);
