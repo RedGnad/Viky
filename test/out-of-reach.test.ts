@@ -21,10 +21,14 @@ test("a face value above what the person holds is out of reach; one below or nea
 test("without a rate for the currency nothing is marked, and nothing is hidden", () => {
   assert.equal(surelyOutOfReach(99999, "NGN", 1n, rates), false);
   assert.equal(surelyOutOfReach(10, "XOF", 1n, undefined), false);
+  // The amounts of both screens are the kit's own since 10 Oct 2026 (app/kit/SpendChoice.tsx).
+  const amounts = readFileSync("app/kit/SpendChoice.tsx", "utf8");
+  assert.match(amounts, /disabled=\{busy \|\| beyond\}/, "the package is shown and disabled, not filtered out");
+  assert.match(amounts, /\{beyond \? <span className="block text-\[length:var\(--type-help\)\]">\{words\.outOfReach\}<\/span> : null\}/);
   for (const file of ["app/components/GiftCardOut.tsx", "app/components/PhoneTopUp.tsx"]) {
     const screen = readFileSync(file, "utf8");
-    assert.match(screen, /disabled=\{busy \|\| far\}/, `${file}: the package is shown and disabled, not filtered out`);
-    assert.match(screen, /W\.outOfReach/);
+    assert.match(screen, /<SpendChoice/, file);
+    assert.match(screen, /outOfReach: W\.outOfReach/, file);
   }
 });
 

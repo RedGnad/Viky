@@ -143,9 +143,12 @@ test("the ways out use the one button for the price, the order and the send", ()
       /<Button doing=\{stage === "sending" \? W\.sending\(amount!\.lead, chosen\.name\) : null\} waiting=\{busy && stage !== "sending"\} onPress=\{\(\) => void send\(\)\}>/,
       /<Button doing=\{stage === "ownSending" \? W\.sending\(ownNumber, "your other account"\) : null\} waiting=\{busy && stage !== "ownSending"\} onPress=\{\(\) => void sendOwn\(\)\}>/,
     ],
-    "app/components/PhoneTopUp.tsx": [/<Button doing=\{busy \? W\.confirming : null\} onPress=\{\(\) => void topUp\(\)\}>/, /<Button doing=\{busy \? W\.pricing : null\} step=\{WAITS\.price\("Bitrefill"\)\}/, /<Button doing=\{busy \? W\.finding : null\} step=\{WAITS\.operator\}/],
-    "app/components/GiftCardOut.tsx": [/<Button doing=\{busy \? W\.confirming : null\} onPress=\{\(\) => void buy\(\)\}>/, /<Button doing=\{busy \? W\.pricing : null\} step=\{WAITS\.price\("Bitrefill"\)\}/],
-    "app/components/MobileMoneyOut.tsx": [/<Button doing=\{busy \? doing : null\} onPress=\{\(\) => void send\(\)\}>/],
+    // The amount, its price and the one button of the phone and of the gift card are the kit's own (10 Oct 2026):
+    // the price is no press any more, and the button says under itself what did not happen.
+    "app/components/PhoneTopUp.tsx": [/<SpendChoice/, /askingStep: WAITS\.price\("Bitrefill"\), confirm: W\.confirm, confirming: W\.confirming/, /<Button doing=\{busy \? W\.finding : null\} step=\{WAITS\.operator\}/],
+    "app/components/GiftCardOut.tsx": [/<SpendChoice/, /askingStep: WAITS\.price\("Bitrefill"\), confirm: W\.confirm, confirming: W\.confirming/],
+    "app/kit/SpendChoice.tsx": [/<Button doing=\{paying \? words\.confirming : null\} waiting=\{!price \|\| asking\} failed=\{failed\} failedId="spend-refused" onPress=\{\(\) => void press\(\)\} data-spend-pay="">/, /<StepInProgress busy step=\{words\.askingStep\} \/>/],
+    "app/components/MobileMoneyOut.tsx": [/<Button doing=\{busy \? doing : null\} failed=\{problem\} failedId="mobile-refused" onPress=\{\(\) => void send\(\)\}>/],
   };
   for (const [file, patterns] of Object.entries(uses)) {
     const source = readFileSync(file, "utf8");

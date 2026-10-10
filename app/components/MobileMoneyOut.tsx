@@ -3,10 +3,8 @@ import { useEffect, useState } from "react";
 import type { LocalAccount } from "viem";
 import { ApiError } from "@/src/client/api";
 import { followMobileMoney, MoreThanHeld, payableFor, priceMobileMoney, sawMobilePayout, sendChangedDollars, sendToMobileMoney, type AccountOffer, type FollowedPayout, type MobilePrice, type PayableNow } from "@/src/client/mobile-money";
-import { useReaderZone } from "@/src/client/reader-zone";
-import { AUSD } from "@/src/coins";
-import { twoDecimalsDown } from "@/src/exit-steps";
-import { delayInWords, localInWords, MOBILE_REFUSALS, momentOf } from "@/src/mobile-money";
+import type { SpendMoney } from "@/src/display-currency";
+import { delayInWords, localInWords, MOBILE_REFUSALS } from "@/src/mobile-money";
 import { MOBILE_OUT as W, USE_MONEY } from "@/src/sentences";
 import { ChoiceList } from "../kit/ChoiceList";
 import { FieldRefusal } from "../kit/FieldRefusal";
@@ -36,10 +34,6 @@ type Offered = Extract<AccountOffer, { offered: true; mostUnits: string }>;
 type Step = "changing" | "placing" | "sending";
 /** A price, or why there is none, in the words of whoever refused it. */
 type Priced = MobilePrice | Readonly<{ problem: string }>;
-
-function dollarsOf(units: bigint): string {
-  return `$${twoDecimalsDown(units, AUSD.decimals)}`;
-}
 
 /** An amount typed in local money, spaces and a trailing F allowed, or nothing when it is not one. */
 function localTyped(typed: string): number | null {
@@ -123,9 +117,8 @@ export function MobilePayoutCard(props: Readonly<{ payout: FollowedPayout; onCha
   );
 }
 
-export function MobileMoneyOut(props: Readonly<{ offer: Offered; payable: PayableNow; ensureSigner: () => Promise<LocalAccount>; onSessionClosed: () => void; onChanged: () => Promise<unknown>; onBack: () => void }>) {
+export function MobileMoneyOut(props: Readonly<{ offer: Offered; payable: PayableNow; money: SpendMoney; ensureSigner: () => Promise<LocalAccount>; onSessionClosed: () => void; onChanged: () => Promise<unknown>; onBack: () => void }>) {
   const { offer } = props;
-  const zone = useReaderZone();
   const [network, setNetwork] = useState<string | null>(offer.operators.length === 1 ? offer.operators[0].code : null);
   const [number, setNumber] = useState("");
   const [holder, setHolder] = useState("");
@@ -341,7 +334,7 @@ export function MobileMoneyOut(props: Readonly<{ offer: Offered; payable: Payabl
         // Dollars already changed and not sent: the amount is theirs, and a press sends them as they are.
         <div className="flex flex-col gap-[var(--space-xs)]" data-mobile-changed>
           <p className={CARD_AMOUNT}>{W.about(localInWords(changed.local, changed.currency))}</p>
-          <p className={HELP}>{W.fromChanged(dollarsOf(BigInt(changed.units)))}</p>
+          <p className={HELP}>{W.fromChanged(props.money.say(BigInt(changed.units)))}</p>
         </div>
       ) : (
         <>
@@ -350,26 +343,25 @@ export function MobileMoneyOut(props: Readonly<{ offer: Offered; payable: Payabl
             <input value={typed} onChange={(event) => setTyped(event.target.value)} inputMode="numeric" className={FIELD} disabled={busy} aria-invalid={missing.amount ? true : undefined} aria-describedby={missing.amount ? "mobile-amount-refusal" : undefined} />
             {missing.amount ? <FieldRefusal id="mobile-amount-refusal">{missing.amount}</FieldRefusal> : <span className={HELP}>{W.amountHelp(localInWords(leastLocal, offer.currency), localInWords(mostLocal, offer.currency))}</span>}
           </label>
-          {/* The figure on the number, and when it was priced: Switch's quote, never a rate of ours. */}
+          {/* The figure on the number is Switch's quote, never a rate of ours. Under it, the account's own money as
+              the balance above says it (the founder, 10 Oct 2026). Read in the money the payout arrives in, the figure
+              above is the one amount the screen says, and only what stays follows; read in another, what leaves the
+              balance is said first. What stays is that balance as shown less what leaves it as shown. */}
           <div aria-live="polite" className="flex flex-col gap-[var(--space-xs)]" data-mobile-figure>
             {within && price === null ? <WaitLine>{W.pricing}</WaitLine> : null}
             {within && price && "problem" in price ? <p className={HELP}>{price.problem}</p> : null}
             {within && price && !("problem" in price) ? (
               <>
                 <p className={CARD_AMOUNT}>{W.about(localInWords(price.local, price.currency))}</p>
-                <p className={HELP}>{W.fromBalance(dollarsOf(price.dollars), momentOf(price.at, zone))}</p>
+                <p className={HELP}>{props.money.shown(price.dollars).code === price.currency ? W.staysWithYou(props.money.stays(price.dollars)) : W.fromBalance(props.money.say(price.dollars), props.money.stays(price.dollars))}</p>
               </>
             ) : null}
           </div>
         </>
       )}
-      {problem ? (
-        <p role="alert" className={`${HELP} font-medium`}>
-          {problem}
-        </p>
-      ) : null}
-      {/* Pressable while nothing is under way, as the giver's sheet is: a press says what is missing. */}
-      <Button doing={busy ? doing : null} onPress={() => void send()}>
+      {/* Pressable while nothing is under way, as the giver's sheet is: a press says what is missing. What did not
+          happen is said under it, as on the two other screens that spend the balance (10 Oct 2026). */}
+      <Button doing={busy ? doing : null} failed={problem} failedId="mobile-refused" onPress={() => void send()}>
         {operatorName ? W.send(operatorName) : USE_MONEY.mobile.action}
       </Button>
       <button type="button" onClick={props.onBack} disabled={busy} className={`${SMALL_BUTTON} self-start`}>

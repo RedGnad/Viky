@@ -223,3 +223,55 @@ export function ledAmount(units: bigint, currency: DisplayCurrency, rates: Rates
 export function spokenAmount(amount: LedAmount, first = false): string {
   return amount.converted ? `${first ? "About" : "about"} ${amount.lead}` : amount.lead;
 }
+
+/**
+ * An amount as a screen shows it, with the count of the smallest pieces its figure is written in: 1529 for "€15.29",
+ * 8766 for "8 766 FCFA", and the dollar cut to the cent where nothing converts. The pieces are read from the figure
+ * itself, so they are the ones that are printed and no others.
+ */
+export type ShownAmount = Readonly<{ text: string; pieces: number; code: string }>;
+
+export function amountAsShown(units: bigint, currency: DisplayCurrency, rates: Rates | undefined): ShownAmount {
+  const led = ledAmount(units, currency, rates);
+  if (!led.converted) return { text: led.lead, pieces: Number(units / 10_000n), code: "USD" };
+  const figure = figureInDisplayCurrency(units, currency, rates);
+  return { text: led.lead, pieces: Number(figureIn(figure.value, currency).replace(/\D/g, "")), code: currency };
+}
+
+/** So many of a currency's smallest pieces, written as that currency is: the dollar as the balance writes it. */
+function piecesInWords(pieces: number, code: string): string {
+  return code === "USD" ? formatAusd(BigInt(pieces) * 10_000n) : amountIn(pieces / 10 ** currencyOf(code).decimals, code);
+}
+
+/**
+ * The figures of a screen add up as they are shown (the founder, 10 Oct 2026): what is left of one amount once another
+ * leaves it is the first as it is shown less the second as it is shown, never a third figure worked out from the units
+ * and rounded on its own, which read a cent under the two it stood beside. Never under nothing.
+ */
+export function leftAsShown(of: ShownAmount, less: ShownAmount): string {
+  return piecesInWords(Math.max(0, of.pieces - less.pieces), of.code);
+}
+
+/**
+ * What an amount is over a face value written in the currency the amount is shown in, so that "a €10 card and €0.61
+ * of fees" add up to the €10.61 above them: the fee a rail names is one part of what a thing costs over its face
+ * value, and the rate it was changed at is the other. `null` where nothing is over, and `undefined` where the face
+ * value is in another currency, which no sum crosses: the caller then says the fee it knows.
+ */
+export function overFaceAsShown(amount: ShownAmount, face: number, faceCurrency: string): string | null | undefined {
+  if (faceCurrency !== amount.code || !Number.isFinite(face)) return undefined;
+  const over = amount.pieces - Math.round(face * 10 ** currencyOf(amount.code).decimals);
+  return over > 0 ? piecesInWords(over, amount.code) : null;
+}
+
+/**
+ * How a screen that spends the balance says the account's money (the founder, 10 Oct 2026): an amount as the balance
+ * says its own, what stays of that balance once the amount leaves it, and the amount with its pieces, for a sum made
+ * on the figures themselves.
+ */
+export type SpendMoney = Readonly<{ say: (units: bigint) => string; stays: (units: bigint) => string; shown: (units: bigint) => ShownAmount }>;
+
+export function spendMoney(balanceUnits: bigint, currency: DisplayCurrency, rates: Rates | undefined): SpendMoney {
+  const shown = (units: bigint) => amountAsShown(units, currency, rates);
+  return { say: (units) => shown(units).text, stays: (units) => leftAsShown(shown(balanceUnits), shown(units)), shown };
+}

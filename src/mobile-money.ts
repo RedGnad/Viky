@@ -121,24 +121,6 @@ export function delayInWords(settlement: string): string {
   return settlement.replace(/(\d+)\s*-\s*(\d+)/, "$1 to $2");
 }
 
-/**
- * "3 Oct, 10:15": the moment a quote was made, on the person's own clock (the founder, 5 Oct 2026). It was said in
- * UTC with the letters after it, which is nobody's clock in the countries this pays in. A zone the browser does not
- * know falls back to UTC rather than to nothing.
- */
-export function momentOf(iso: string, zone: string): string {
-  const at = new Date(iso);
-  if (Number.isNaN(at.getTime())) return "";
-  const said = (options: Intl.DateTimeFormatOptions) => {
-    try {
-      return new Intl.DateTimeFormat("en-GB", { ...options, timeZone: zone }).format(at);
-    } catch {
-      return new Intl.DateTimeFormat("en-GB", { ...options, timeZone: "UTC" }).format(at);
-    }
-  };
-  return `${said({ day: "numeric", month: "short" })}, ${said({ hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}`;
-}
-
 /** The last four digits of a number, which is all the screen shows of it once it is sent. */
 export function numberEnd(number: string): string {
   const digits = number.replace(/\D/g, "");

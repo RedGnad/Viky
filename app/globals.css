@@ -574,6 +574,21 @@ video {
 }
 
 /*
+ * The fixed amounts of a thing bought from the balance (app/kit/SpendChoice.tsx, the mockup of 10 Oct 2026): buttons
+ * side by side, three to a row where they fit, each as wide as its neighbours, and none narrower than 96.
+ */
+.spend-amount {
+  flex: 1 1 calc(33% - var(--tap-gap));
+  min-width: 96px;
+  padding: var(--space-sm);
+}
+
+/* The word under an amount that cannot be chosen: two short lines, close together, inside the button's own width. */
+.spend-amount > span {
+  line-height: 1.25;
+}
+
+/*
  * The one small button (rule 2): 40 high on a relief of three, as the mockup draws it. The rule asks 44 to the touch
  * at least, and the product's own floor is 48 (WCAG 2.5.5 at its strictest level, Material): the area a finger
  * reaches is drawn over the button, six pixels past its inner box above and below, which makes it 48, and nothing is

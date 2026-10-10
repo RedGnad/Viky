@@ -32,7 +32,9 @@ test("a press says under each field what it is missing, in the sentences the rou
   assert.equal(MOBILE_OUT.amountUnder("5 872 F"), "At least 5 872 F at a time.");
   assert.equal(MOBILE_OUT.amountOver("8 806 F"), "At most 8 806 F at a time.");
   // The button is pressable while nothing is under way, and a press with a field missing asks nothing of the passkey.
-  assert.match(form, /<Button doing=\{busy \? doing : null\} onPress=\{\(\) => void send\(\)\}>/);
+  // What did not happen is said under the button, as on the two other screens that spend the balance (10 Oct 2026).
+  assert.match(form, /<Button doing=\{busy \? doing : null\} failed=\{problem\} failedId="mobile-refused" onPress=\{\(\) => void send\(\)\}>/);
+  assert.doesNotMatch(form, /role="alert"/);
   assert.doesNotMatch(form, /disabled=\{!ready\}/);
   assert.match(form, /setPressed\(true\);\n\s*if \(!network \|\| !numberFits \|\| !holderFits \|\| \(!changed && \(!within \|\| local === null\)\)\) return;/);
   // A press with no price yet, or after one that failed, asks for the price and goes on (the founder, 5 Oct 2026):
@@ -70,12 +72,11 @@ test("a number typed with the country's prefix: only the digits are kept, and th
   assert.match(form, /const digits = number\.replace\(\/\\D\/g, ""\);/, "the plus and the spaces are taken off before the rule is tested");
 });
 
-test("the way out is said in the person's words: no exchange, no network, no Switch's rate, and the hour on their own clock", async () => {
-  const { momentOf } = await import("../src/mobile-money");
+test("the way out is said in the person's words: no exchange, no network, no Switch's rate, and no hour of a rate", () => {
   // Every sentence of the way out, with something in each of its blanks.
   const filled = (sentence: (...blanks: never[]) => unknown): string => {
     try {
-      return String((sentence as (...blanks: string[]) => unknown)("8 800 F", "3 Oct, 10:15", "5 to 10 minutes"));
+      return String((sentence as (...blanks: string[]) => unknown)("8 800 F", "19 F", "5 to 10 minutes"));
     } catch {
       // The one that counts dollars already sent today takes them as an amount.
       return String((sentence as (used: bigint) => unknown)(450_000_000n));
@@ -90,15 +91,15 @@ test("the way out is said in the person's words: no exchange, no network, no Swi
   assert.equal(MOBILE_REFUSALS.notChangedHere, "That is not money this account changed. Nothing was sent.");
   assert.equal(MOBILE_REFUSALS.askedForMore, "The mobile money service asked for more than was changed for it. Nothing was sent.");
   assert.equal(USE_MONEY.mobile.cost, "the rate shown before you send");
-  // The moment a quote was made, where the person is: Abidjan keeps UTC's hour, Nairobi is three hours on, and a
-  // zone nobody knows falls back rather than printing nothing.
-  assert.equal(momentOf("2026-10-03T10:15:00.000Z", "Africa/Abidjan"), "3 Oct, 10:15");
-  assert.equal(momentOf("2026-10-03T10:15:00.000Z", "Africa/Nairobi"), "3 Oct, 13:15");
-  assert.equal(momentOf("2026-10-03T23:40:00.000Z", "Africa/Douala"), "4 Oct, 00:40");
-  assert.equal(momentOf("2026-10-03T10:15:00.000Z", "Nowhere/At-all"), "3 Oct, 10:15");
-  assert.equal(MOBILE_OUT.fromBalance("$14.94", momentOf("2026-10-03T10:15:00.000Z", "Africa/Dakar")), "$14.94 from your balance, at the rate of 3 Oct, 10:15.");
-  assert.match(form, /W\.fromBalance\(dollarsOf\(price\.dollars\), momentOf\(price\.at, zone\)\)/);
-  assert.match(form, /const zone = useReaderZone\(\);/);
+  // Under the figure that arrives (the founder, 10 Oct 2026). Read in the payout's own currency, what stays, alone:
+  // the figure above is the one amount. Read in another, what leaves the balance first. The hour of the rate, which
+  // stood in that sentence since 3 Oct, is said nowhere any more.
+  assert.equal(MOBILE_OUT.staysWithYou("19 FCFA"), "19 FCFA stays with you.");
+  assert.equal(MOBILE_OUT.fromBalance("€13.80", "€1.22"), "€13.80 from your balance. €1.22 stays with you.");
+  for (const sentence of sentences) assert.doesNotMatch(sentence, /at the rate of|\d\d:\d\d/, sentence);
+  assert.match(form, /props\.money\.shown\(price\.dollars\)\.code === price\.currency \? W\.staysWithYou\(props\.money\.stays\(price\.dollars\)\) : W\.fromBalance\(props\.money\.say\(price\.dollars\), props\.money\.stays\(price\.dollars\)\)/);
+  assert.doesNotMatch(form, /dollarsOf|twoDecimalsDown|momentOf|useReaderZone/);
+  assert.doesNotMatch(readFileSync("src/mobile-money.ts", "utf8"), /export function momentOf/);
   // The changing step's own silence is said in the way out's words, never in the exchange's.
   assert.match(readFileSync("src/client/mobile-money.ts", "utf8"), /error\.code === "QUOTE_UNAVAILABLE"\) return new ApiError\(\{ status: error\.status, code: error\.code, message: MOBILE_REFUSALS\.notNow \}\);/);
 });
