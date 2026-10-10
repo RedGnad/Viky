@@ -437,7 +437,8 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, reach }: Readon
    * image when the page was read with the session open, which is the person coming back from the verification page.
    */
   const [proofSilent, setProofSilent] = useState(() => checkingAtLoad({ yours: mine, review: proofReview, openAtLoad: openProof }));
-  const checkingTheirOwn = proofSilent && mine && showsProof;
+  // Not once a review holds the proof: the block says that in its own words, whatever it was doing before.
+  const checkingTheirOwn = proofSilent && mine && showsProof && !proofReview;
   /** The card, whose words change where they stand as its character lands on a gift just reached. */
   const card = useRef<HTMLElement>(null);
   useLanding(card, reach.step);
