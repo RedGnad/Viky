@@ -1,4 +1,6 @@
 import { conditionById, DUOLINGO_DAILY } from "./conditions";
+import { formatAusd } from "./gift-reader";
+import { certificateById, milestoneById } from "./milestone-conditions";
 import { dollarsToUnits } from "./money";
 
 /**
@@ -105,11 +107,39 @@ export function pendingGiftFor(raw: string | null, account: string | undefined, 
   } catch {
     return undefined;
   }
-  // A daily gift runs seven days at least; a milestone may be a single day (D43), and needs where they stood.
+  // A daily gift runs seven days at least; a milestone may be a single day (D43).
   const milestone = conditionById(gift.conditionId)?.kind === "milestone";
-  if (!(Number(gift.days) >= (milestone ? 1 : 7)) || !(Number(gift.target) > 0)) return undefined;
-  if (milestone && (gift.cadence === undefined || gift.standing === undefined || gift.standingReadAt === undefined)) return undefined;
+  // Something had or not judges its target by its own rule, as the card and the route do: a race may ask for nothing
+  // but the finish, which it writes 0.
+  const certificate = certificateById(gift.conditionId);
+  const targetHolds = certificate ? certificate.validTarget(Number(gift.target)) : Number(gift.target) > 0;
+  if (!(Number(gift.days) >= (milestone ? 1 : 7)) || !targetHolds) return undefined;
+  // Only a climb has a cadence and a place it started from. Asked of every milestone, they refused every gift had or
+  // not (the final audit of 9 Oct 2026, A5): an enrolment or a score paid for by card was never read back as a gift
+  // kept, so Home offered no way back to its payment, and its wait was built on the wrong provider.
+  if (milestoneById(gift.conditionId) !== undefined && (gift.cadence === undefined || gift.standing === undefined || gift.standingReadAt === undefined)) return undefined;
   return gift as PendingGift;
+}
+
+/**
+ * Whether a gift kept on this device was made after all (the final audit of 9 Oct 2026, A4). The screen that makes a
+ * gift says "You can close this page", and a page closed while the creation was on its way never heard that it went
+ * through: for three days the device went on saying the gift was set up and not made, with a button that would make a
+ * second one. The account's own list knows: a gift this account paid for, for the same first name, the same amount
+ * and the same number of days, funded after this one was written down, is the gift it became.
+ */
+export function madeSince(
+  kept: Readonly<Pick<PendingGift, "recipientName" | "dollars" | "days" | "savedAtMs">>,
+  gifts: ReadonlyArray<Readonly<{ role: string; recipientName: string | null; amountDisplay: string; durationDays: number; fundedAt: number }>>,
+): boolean {
+  let amount: string;
+  try {
+    amount = formatAusd(dollarsToUnits(kept.dollars));
+  } catch {
+    return false;
+  }
+  const name = (kept.recipientName ?? "").trim();
+  return gifts.some((gift) => gift.role === "funder" && (gift.recipientName ?? "").trim() === name && gift.amountDisplay === amount && gift.durationDays === Number(kept.days) && gift.fundedAt * 1000 > kept.savedAtMs);
 }
 
 /**

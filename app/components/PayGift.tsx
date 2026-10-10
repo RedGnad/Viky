@@ -10,7 +10,7 @@ import { linkOfMade, loadEarnedInGifts, prepareGift, submitGift, takeFromGifts, 
 import { totalEarned, type EarnedInGift } from "@/src/earned-shape";
 import { prepareCertificateGift, submitCertificateGift } from "@/src/client/certificate-gift";
 import { prepareMilestoneGift, submitMilestoneGift } from "@/src/client/milestone";
-import { attemptFor, forgetsAttempt, GIFT_ATTEMPT_KEY, isCertificateRequest, isMilestoneRequest } from "@/src/gift-attempt";
+import { attemptFor, attemptKept, attemptToKeep, forgetsAttempt, GIFT_ATTEMPT_KEY, isCertificateRequest, isMilestoneRequest, type AttemptTerms, type KeptAttempt } from "@/src/gift-attempt";
 import { changeArrivedUsdc } from "@/src/client/convert";
 import { fundingQuote } from "@/src/client/funding-quote";
 import { readAusdBalance, readCoinBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
@@ -85,12 +85,21 @@ function readSession<T>(key: string): T | null {
   }
 }
 
-function writeSession(key: string, value: unknown): void {
+/** The creation this device last signed, kept for the device so a page opened again sends the same one (src/gift-attempt.ts). */
+function readAttempt(): KeptAttempt | null {
   try {
-    if (value === null) window.sessionStorage.removeItem(key);
-    else window.sessionStorage.setItem(key, JSON.stringify(value));
+    return attemptKept(window.localStorage.getItem(GIFT_ATTEMPT_KEY), Date.now());
   } catch {
-    // A tab that refuses storage keeps what it needs in memory for as long as it stays open.
+    return null;
+  }
+}
+
+function writeAttempt(attempt: KeptAttempt | null): void {
+  try {
+    if (attempt === null) window.localStorage.removeItem(GIFT_ATTEMPT_KEY);
+    else window.localStorage.setItem(GIFT_ATTEMPT_KEY, attemptToKeep(attempt, Date.now()));
+  } catch {
+    // A device that refuses storage keeps the request for as long as this page stays open, in what the page holds.
   }
 }
 
@@ -164,6 +173,8 @@ export function PayGift() {
    * went back to waiting for a payment would ask for a second one.
    */
   const awaitingCreation = useRef(false);
+  /** Whether this wait has already sent again the creation the device kept: once, at its first look. */
+  const sentKept = useRef(false);
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
   const [copyRefused, setCopyRefused] = useState<"code" | "link" | null>(null);
   const [keptOnDevice, setKeptOnDevice] = useState(true);
@@ -300,29 +311,42 @@ export function PayGift() {
     if (step === "pay" && address && ready && kept?.wayIn && phase === "waiting" && madeGift === null) replace("paying");
   }, [browser, step, madeGift, address, ready, kept, phase, router]);
 
+  /**
+   * The terms a creation is signed for, by the account that signs them: what a kept request is found by (D87). A
+   * milestone's target and starting reading are part of its terms.
+   */
+  const termsOf = useCallback(
+    (account: string): AttemptTerms | null => {
+      if (!condition || units === null || !Number.isInteger(days)) return null;
+      return {
+        account,
+        username: subject,
+        recipientName: recipient,
+        funderName: funder,
+        // A gift counted on one course is its own goal on the contract (U1), so the course is part of the terms signed.
+        goalType: milestone ? (cadence?.goalType ?? 0) : draft.course ? GOAL_TYPE_DUOLINGO_COURSE_XP : (condition.goalType ?? 0),
+        course: milestone ? "" : draft.course,
+        dailyTarget: milestone || certificate ? 0 : target,
+        durationDays: days,
+        amount: units.toString(),
+        ...(milestone ? { target, standing: draft.standing ?? 0 } : {}),
+        // A certificate's target, and the scale a grade is typed on, are its terms too (the founder, 28 Sep 2026).
+        ...(certificate ? { target, scale: draft.scale ?? "" } : {}),
+      };
+    },
+    [condition, milestone, certificate, cadence, draft.course, draft.scale, draft.standing, subject, target, days, units, recipient, funder],
+  );
+
   const give = useCallback(async () => {
     // Opens the passkey here if the page was reloaded or came back from the card page: the signature is the first
     // moment one is needed, and the account is the one the server's cookie already names.
     const account = await ensureSigner();
     if (!condition || units === null || !Number.isInteger(days)) throw new Error(W.failures.other);
     // Signed once for these terms and sent again as it is on every retry, so the server finds the same creation and
-    // never pays for the gift twice (D87). A milestone's target and starting reading are part of its terms.
-    const terms = {
-      account: account.address,
-      username: subject,
-      recipientName: recipient,
-      funderName: funder,
-      // A gift counted on one course is its own goal on the contract (U1), so the course is part of the terms signed.
-      goalType: milestone ? (cadence?.goalType ?? 0) : draft.course ? GOAL_TYPE_DUOLINGO_COURSE_XP : (condition.goalType ?? 0),
-      course: milestone ? "" : draft.course,
-      dailyTarget: milestone || certificate ? 0 : target,
-      durationDays: days,
-      amount: units.toString(),
-      ...(milestone ? { target, standing: draft.standing ?? 0 } : {}),
-      // A certificate's target, and the scale a grade is typed on, are its terms too (the founder, 28 Sep 2026).
-      ...(certificate ? { target, scale: draft.scale ?? "" } : {}),
-    };
-    let request = attemptFor(readSession(GIFT_ATTEMPT_KEY), terms);
+    // never pays for the gift twice (D87).
+    const terms = termsOf(account.address);
+    if (!terms) throw new Error(W.failures.other);
+    let request = attemptFor(readAttempt(), terms);
     if (!request && certificate) {
       request = await prepareCertificateGift({
         account,
@@ -370,7 +394,7 @@ export function PayGift() {
         amount: units,
       });
     }
-    writeSession(GIFT_ATTEMPT_KEY, { terms, request });
+    writeAttempt({ terms, request });
     let result: CreatedGift;
     try {
       // Three shapes of gift, three creations, and the attempt kept is whichever one was signed (D87).
@@ -380,10 +404,10 @@ export function PayGift() {
           ? await submitMilestoneGift(request)
           : await submitGift(request);
     } catch (error) {
-      if (error instanceof ApiError && forgetsAttempt(error.code)) writeSession(GIFT_ATTEMPT_KEY, null);
+      if (error instanceof ApiError && forgetsAttempt(error.code)) writeAttempt(null);
       throw error;
     }
-    writeSession(GIFT_ATTEMPT_KEY, null);
+    writeAttempt(null);
     // The gift's link: the server's answer, or on the second version of the contracts the one this browser makes from
     // the funder's own signature, since the server was never given what opens the gift (src/client/v2.ts).
     const claimUrl = await linkOfMade(account, result, request.salt);
@@ -399,7 +423,7 @@ export function PayGift() {
     // The gift's own page is the screen after paying (the UI pass of 8 Oct 2026, screen 3): its card says "Send it",
     // with the link under it. A screen of its own said the amount and the condition a second time.
     router.replace(`/g/${result.giftId}`);
-  }, [router, ensureSigner, condition, milestone, certificate, cadence, draft.course, draft.standing, draft.standingReadAt, subject, target, days, units, recipient, funder]);
+  }, [router, ensureSigner, termsOf, condition, milestone, certificate, cadence, draft.course, draft.scale, draft.standing, draft.standingReadAt, subject, target, days, units, recipient, funder]);
 
   // While paying: watch the account, turn what arrived into what a gift holds, then make the gift.
   useEffect(() => {
@@ -434,6 +458,13 @@ export function PayGift() {
               setProblem(readable(error));
               setProblemCode(error instanceof ApiError ? error.code : null);
               setPhase("failed");
+              // Made already: from the moment it is read, nothing on this device says "not made yet" (the final
+              // audit of 9 Oct 2026, A4). It was forgotten at the press of the button below, so a page closed on this
+              // screen left Home saying so for three days. The card keeps what was typed until the person leaves.
+              if (error instanceof ApiError && error.code === "ALREADY_MADE") {
+                forgetPendingGift();
+                setKept(undefined);
+              }
             }
           }
           working.current = false;
@@ -441,6 +472,18 @@ export function PayGift() {
         if (awaitingCreation.current) {
           if (!pausedAfterFailure(unansweredAtMs.current, Date.now())) await make();
           return;
+        }
+        // A creation this device signed for this very gift is sent again first, the same request, whatever the
+        // account holds (the final audit of 9 Oct 2026, A4). The page was closed while it was on its way: if it went
+        // through, the money has left the account and this wait would ask for a payment that was made; and if the
+        // account still holds the amount, a request signed anew would be a second gift. The same one cannot be (D87).
+        if (!sentKept.current) {
+          sentKept.current = true;
+          const terms = termsOf(address);
+          if (terms && attemptFor(readAttempt(), terms)) {
+            await make();
+            return;
+          }
         }
         const read = await refresh();
         if (!read) return;
@@ -578,7 +621,7 @@ export function PayGift() {
       live = false;
       clearInterval(timer);
     };
-  }, [step, address, units, phase, refresh, give, ensureSigner, earned]);
+  }, [step, address, units, phase, refresh, give, termsOf, ensureSigner, earned]);
 
   const copy = (what: "code" | "link", text: string) => {
     void navigator.clipboard

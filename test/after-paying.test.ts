@@ -89,7 +89,7 @@ test("the screen that waits: a call that fails after the money arrived keeps the
   assert.match(screen, /function readable\(error: unknown\): string \{\n\s*return refusalAfterPaying\(error, W\.failures\.notMade\);\n\}/);
   // The creation: kept and asked again when it did not answer, after a pause; a refusal is said once.
   assert.match(screen, /const after = afterPaying\(error, W\.arrived\.notAnswered\);\n\s*if \(after\.keep\) \{[\s\S]{0,400}awaitingCreation\.current = true;\n\s*unansweredAtMs\.current = Date\.now\(\);\n\s*setAsksAgain\(after\.says\);/);
-  assert.match(screen, /if \(awaitingCreation\.current\) \{\n\s*if \(!pausedAfterFailure\(unansweredAtMs\.current, Date\.now\(\)\)\) await make\(\);\n\s*return;\n\s*\}\n\s*const read = await refresh\(\);/, "asked again before the account is read: the money may have gone into the gift");
+  assert.match(screen, /if \(awaitingCreation\.current\) \{\n\s*if \(!pausedAfterFailure\(unansweredAtMs\.current, Date\.now\(\)\)\) await make\(\);\n\s*return;\n\s*\}\n(\s*\/\/[^\n]*\n)+\s*if \(!sentKept\.current\) \{[\s\S]{0,220}?\n\s*\}\n\s*const read = await refresh\(\);/, "asked again before the account is read: the money may have gone into the gift");
   // The two changes: the screen stays on the change, and never goes back to the one that offers to pay.
   const watch = screen.slice(screen.indexOf('if (next.do === "convertUsdc")'), screen.indexOf("void look();"));
   assert.doesNotMatch(watch, /setPhase\("waiting"\)/);

@@ -43,8 +43,8 @@ test("the funder's page keeps the signed request before sending it, and forgets 
   const pay = readFileSync("app/components/PayGift.tsx", "utf8");
   // Up to where the gift is made: what follows builds its link and its record on this device.
   const give = pay.slice(pay.indexOf("const give = useCallback"), pay.indexOf("// The gift's link:"));
-  assert.ok(give.indexOf("attemptFor(readSession(GIFT_ATTEMPT_KEY), terms)") < give.indexOf("await prepareGift({"), "the kept request is looked for before signing");
-  assert.ok(give.indexOf("writeSession(GIFT_ATTEMPT_KEY, { terms, request })") < give.indexOf("await submitGift(request)"), "kept before it is sent");
-  assert.match(give, /writeSession\(GIFT_ATTEMPT_KEY, null\);\s*$/, "forgotten once made");
+  assert.ok(give.indexOf("attemptFor(readAttempt(), terms)") > 0 && give.indexOf("attemptFor(readAttempt(), terms)") < give.indexOf("await prepareGift({"), "the kept request is looked for before signing");
+  assert.ok(give.indexOf("writeAttempt({ terms, request })") > 0 && give.indexOf("writeAttempt({ terms, request })") < give.indexOf("await submitGift(request)"), "kept before it is sent");
+  assert.match(give, /writeAttempt\(null\);\s*$/, "forgotten once made");
   assert.doesNotMatch(give, /createGift\(/, "never signs again behind the page's back");
 });
