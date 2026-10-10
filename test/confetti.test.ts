@@ -29,6 +29,22 @@ test("once per account, kept by the server, never by the device", () => {
   assert.match(readFileSync("src/my-gifts.ts", "utf8"), /reachedSeenOf\(account, reached\)\.catch\(\(\) => new Set\(reached\)\)/, "a store that cannot be read counts them seen");
 });
 
+test("Home owes a moment from the list it read itself, never from the list its page was rendered with", () => {
+  // The founder, 10 Oct 2026: the moment played again at every return from a gift. Its row was written the first
+  // time, and the gift's own page, which asks the server each time, did not play it twice. Home was given its list
+  // with the page, and a step back in the browser's history draws a page from what the browser kept of it, without
+  // asking the server: the list of before the moment, which still owed it.
+  const home = readFileSync("app/kit/Home.tsx", "utf8");
+  assert.match(home, /const \{ gifts, problem, read \} = useMyGifts\(address, initialGifts\);/);
+  assert.match(home, /const owed = \(read \? \(gifts \?\? \[\]\) : \[\]\)\.filter\(\(gift\) => gift\.reachedSeen === false\)/);
+  const list = readFileSync("app/kit/my-gifts.ts", "utf8");
+  assert.match(list, /const \[read, setRead\] = useState\(false\);/, "the list a page starts with is not one that was read");
+  assert.match(list, /setGifts\(result\.gifts\);\n\s+setRead\(true\);/, "read once the browser's own asking has answered");
+  assert.match(list, /return \{ gifts: address \? gifts : null, problem, read: Boolean\(address\) && read \};/);
+  // On its own page the moment asks the server at each arrival, and is given nothing with the page.
+  assert.match(MOMENT, /loadReachedSeen\(gift\.giftId\)/);
+});
+
 test("after the page has loaded, one after another, and long enough to be seen", () => {
   assert.match(MOMENT, /document\.readyState === "complete"/);
   assert.match(MOMENT, /document\.fonts\.ready/);

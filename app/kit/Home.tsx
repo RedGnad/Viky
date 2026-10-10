@@ -92,7 +92,7 @@ export function Home({
   const [making, setMaking] = useState(false);
   const address = making ? undefined : account;
   const holdings = useHoldings(address, fromTheServer);
-  const { gifts, problem } = useMyGifts(address, initialGifts);
+  const { gifts, problem, read } = useMyGifts(address, initialGifts);
   const nowMs = useMinute();
   /** Whether the list has answered at all, with gifts or with a reading that failed. */
   const giftsRead = gifts !== null || problem !== null;
@@ -182,7 +182,10 @@ export function Home({
   const held = gifts === null && !problem ? Math.min(SHOWN, sawGifts ?? 0) : 0;
 
   // Every reached gift this account has not had the moment of, played over Home once it has loaded (the founder).
-  const owed = (gifts ?? []).filter((gift) => gift.reachedSeen === false).map(reachedOfSummary).filter((gift): gift is ReachedGift => gift !== null);
+  // Taken from the list this screen read itself, never from the one the page was rendered with: a step back draws
+  // Home from the page the browser kept, whose list still owed a moment played since, and the moment was played again
+  // at every return from a gift, with its row written the first time (the founder, 10 Oct 2026).
+  const owed = (read ? (gifts ?? []) : []).filter((gift) => gift.reachedSeen === false).map(reachedOfSummary).filter((gift): gift is ReachedGift => gift !== null);
   // What changed since the last visit, per gift, which the arrival replays once and in order (brief, section 6).
   const arriving: ArrivalGift[] = moving.map((gift) => {
     const days = gift.milestone ? [] : charactersOf(gift, gift.catchUpSeconds, nowMs, gift.days);
