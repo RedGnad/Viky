@@ -380,15 +380,17 @@ test("the README says the passes that run, what the word check reads, and what c
   const schedule = JSON.parse(readFileSync("vercel.json", "utf8")) as { crons: { path: string; schedule: string }[] };
   assert.deepEqual(schedule.crons.map((cron) => `${cron.path} ${cron.schedule}`).sort(), ["/api/cron/daily 30 0 * * *", "/api/cron/recount 30 3 * * *", "/api/cron/settle 0 7 * * *", "/api/cron/watch 0 2 * * *"]);
   assert.match(readFileSync("app/api/cron/milestones/route.ts", "utf8"), /called every five minutes by cron-job\.org/);
-  // The word check: its seven words, and the one place it does not read, said as it is.
+  // The word check: its seven words, and where it reads.
   assert.match(text, /A check\s+looks for seven such words at every change \(wallet, gas, chain, seed, token, transaction hash, address:/);
   assert.match(readFileSync("src/consumer-words.ts", "utf8"), /wallets\?\|gas\|chains\?\|seeds\?\|tokens\?\|transaction hash\(\?:es\)\?\|address\(\?:es\)\?/);
   const scanned = readFileSync("scripts/check-consumer-words.ts", "utf8");
   for (const place of ['"app/api/proof/**/*.ts"', '"src/rails.ts"', '"src/ramp.ts"', '"src/mercuryo.ts"', '"src/shown-verification.ts"']) assert.ok(scanned.includes(place), place);
-  // The way out's routes are read since the leftovers of the audit of 8 Oct 2026, and the README says so.
+  // The way out's routes are read since the leftovers of the audit of 8 Oct 2026, and the one line there that keeps
+  // such a word is marked in the route itself. The README's sentence on it was taken out with the section's last
+  // line (the founder, 10 Oct 2026): the mark is where a reader of the code finds it.
   assert.ok(scanned.includes('"app/api/exit/**/*.ts"'));
-  assert.match(text, /The routes of the way out, `app\/api\/exit`, are read too: the one line there that\s+carries one of those words is written for the operator's log, and is marked as that\./);
-  assert.match(readFileSync("app/api/exit/relay/route.ts", "utf8"), /\/\/ consumer-words: allow a line of the operator's log, never sent to the person\n\s*if \(!landed\?\.txHash\) console\.error\(/);
+  assert.doesNotMatch(text, /written for the operator's log/);
+  assert.match(readFileSync("app/api/exit/relay/route.ts", "utf8"),/\/\/ consumer-words: allow a line of the operator's log, never sent to the person\n\s*if \(!landed\?\.txHash\) console\.error\(/);
   // What came with the port, by name, and what has changed since.
   assert.match(text, /three files of the build and of the checks, which came in that commit too: `foundry\.toml` and `remappings\.txt`,\n  unchanged since/);
   assert.match(text, /`\.github\/workflows\/ci\.yml`, one job\n  then and rewritten since/);

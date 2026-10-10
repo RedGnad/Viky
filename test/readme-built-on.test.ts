@@ -39,14 +39,16 @@ test("what Viky is built on: six rows, each figure the register's own, each file
   assert.equal(run.ausdIn, 10_000_000n);
   assert.equal(run.otherCoinOut, 10n * 10n ** 18n);
   assert.ok(built.includes(`On ${run.day}, on Monad testnet, the way out sent 10.00 test AUSD through Agora's Instant Settlement pair and got 10.00 of the pair's other test coin back, one for one, on one signature.`));
-  assert.ok(built.includes("No gift's money has gone through it on mainnet."));
   assert.ok(README.includes(`[\`${run.exit.slice(0, 6)}…${run.exit.slice(-4)}\`](${testnetTransactionUrl(run.exit)})`));
-  assert.match(readFileSync("app/judges/JudgesInstantSettlement.tsx", "utf8"), /No money\s+of a gift has gone through Instant Settlement/);
+  // The row ends on the run, which it says was made on testnet: what has not run on mainnet is the judges page's to say.
+  assert.ok(built.includes("one for one, on one signature. | `pnpm agora:testnet check`"));
   // Mera: the gestures counted, and the two keys of one prompt.
   assert.equal(ARRIVAL.gestures.length, 2);
   assert.ok(built.includes("Two gestures take a person from a gift's link to their first transaction."));
-  // Envio: every contract but the converter, as the index's own document says.
-  assert.ok(built.includes("The events of every contract but the converter are indexed."));
+  // Envio: the contracts the index follows, as the judges page says them from the index it reads. The converter of
+  // card payments is not one of them, and the row does not say every contract.
+  assert.ok(built.includes("The events of the gift contracts, the way out and the anchor of agreements are indexed."));
+  assert.match(readFileSync("app/judges/JudgesIndex.tsx", "utf8"), /It follows the two gift contracts of each of\s+the first two versions, the earlier gift contract, [^]*?the way out and\s+the anchor of agreements\./);
   assert.match(readFileSync("docs/INDEXER.md", "utf8"), /names the contracts of \[Contracts\]\(CONTRACTS\.md\), all but the converter/);
   // Every file and every command a row sends to is there.
   for (const file of ["src/account/mera.ts", "src/client/consent-key.ts", "src/monad/chain.ts", "docs/VERIFICATION.md"]) assert.ok(built.includes(file) && existsSync(file), file);
@@ -162,12 +164,13 @@ test("how money leaves is the register's six ways, and the word check is said in
   assert.doesNotMatch(path, /A check looks for seven/);
 });
 
-test("the two sentences that stood as notes are written, dated, and the studies are not proof", () => {
+test("the two sentences that stood as notes are written, dated, and the studies are said in one sentence", () => {
   const people = section("What we know about the two people");
   assert.ok(people.includes("By 10 Oct 2026, four people outside the team had used Viky: two funded a gift, three opened one, and one who earned a gift used that money to offer one in turn."));
   assert.doesNotMatch(README, /\[N\] people outside the team/);
-  assert.ok(people.includes("These studies are why the design is what it is, not proof that Viky works."));
-  assert.doesNotMatch(README, /These studies have their limits/);
+  // The studies are said as what they are for, in one sentence, with nothing after it (the founder, 10 Oct 2026).
+  assert.ok(people.includes("These studies are why the design is what it is. **What using it with people showed us.**"));
+  assert.doesNotMatch(README, /These studies have their limits|not proof that Viky works/);
   const path = section("Path forward: how the next hundred find Viky");
   assert.ok(path.includes("The student channel is open. On 7 Oct 2026 a student in Toulouse showed his enrolment from his university's own portal and the gift paid. On 9 Oct 2026 a second gift paid 60 seconds after the verification opened, with nobody reviewing it."));
   assert.doesNotMatch(README, /The student channel opens once/);

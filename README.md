@@ -51,9 +51,9 @@ the last run of the checks on `main`: types, lint, the policy tests, the contrac
 | | What it does in Viky | Where to look |
 |---|---|---|
 | **Monad** | Every gift is made, credited and closed on mainnet. A step is final one or two blocks after its own, at a block every 0.302 s. A credited day costs 0.017544 MON, about $0.0006, and Viky's relayer pays it. | [Why Monad](#why-monad), below |
-| **AUSD, Agora's dollar** | The only currency a gift holds. One EIP-3009 signature funds a gift, and a plain send between two accounts is one relayed transaction. On 8 Oct 2026, on Monad testnet, the way out sent 10.00 test AUSD through Agora's Instant Settlement pair and got 10.00 of the pair's other test coin back, one for one, on one signature. No gift's money has gone through it on mainnet. | `pnpm agora:testnet check`, transaction [`0x854e…b95c`](https://testnet.monadscan.com/tx/0x854e8518cc0c1be79a90500c7f2129deec0232bd8ee1f2d8edbf14c70453b95c), the [judges page](https://viky.cash/judges), "AUSD, Agora's dollar" |
+| **AUSD, Agora's dollar** | The only currency a gift holds. One EIP-3009 signature funds a gift, and a plain send between two accounts is one relayed transaction. On 8 Oct 2026, on Monad testnet, the way out sent 10.00 test AUSD through Agora's Instant Settlement pair and got 10.00 of the pair's other test coin back, one for one, on one signature. | `pnpm agora:testnet check`, transaction [`0x854e…b95c`](https://testnet.monadscan.com/tx/0x854e8518cc0c1be79a90500c7f2129deec0232bd8ee1f2d8edbf14c70453b95c), the [judges page](https://viky.cash/judges), "AUSD, Agora's dollar" |
 | **Mera** | The whole account layer: an account is a passkey and nothing else. Two gestures take a person from a gift's link to their first transaction. One prompt yields two keys: the account's, and an Ed25519 key that signs the recipient's yes and their stop and can move no money. | `src/account/mera.ts`, `src/client/consent-key.ts`, `pnpm verify:consent` |
-| **Envio HyperIndex** | The events of every contract but the converter are indexed. The judges page reads the index each time it is served, and sets it beside AUSD's own `balanceOf`, contract by contract. | [`RedGnad/Viky-index`](https://github.com/RedGnad/Viky-index), the [judges page](https://viky.cash/judges), "The index of the contracts' events" |
+| **Envio HyperIndex** | The events of the gift contracts, the way out and the anchor of agreements are indexed. The judges page reads the index each time it is served, and sets it beside AUSD's own `balanceOf`, contract by contract. | [`RedGnad/Viky-index`](https://github.com/RedGnad/Viky-index), the [judges page](https://viky.cash/judges), "The index of the contracts' events" |
 | **Alchemy** | On viky.cash, every read a browser makes of Monad goes through Alchemy's Monad RPC first, with Monad's public endpoint behind it. | `monadTransport`, `src/monad/chain.ts`; the [judges page](https://viky.cash/judges) names it under "Network", from the deployment's own setting |
 | **Reclaim** | The attested reading of a source, and the proof a person shows from their own account, in a tab where they sign in themselves. | [Verification](docs/VERIFICATION.md) |
 
@@ -93,7 +93,7 @@ money tied to effort, and on being watched, points the same way. Each line is wh
 | Making participation public lowers it: among students in non-honours classes, sign-up for a course was 11 points lower when the choice was public ([Bursztyn and Jensen, Quarterly Journal of Economics, 2015](https://www.nber.org/papers/w20714)). | No feed and no profile. On a gift's page, the names and the account read are shown only to its two people and to whoever holds its link, and the page is kept out of search engines. |
 | What makes people share an account is control. Among 3,539 US adults, consent, deletion, oversight and transparency together weighed 51.5 % of the decision to share ([Gupta et al., JAMA Network Open, 2023](https://pubmed.ncbi.nlm.nih.gov/36862410/)). In a survey of 5,470 Canadian adults, 63 % said they would be more likely to share if they could stop at any time ([Financial Consumer Agency of Canada, 2023](https://www.canada.ca/en/financial-consumer-agency/programs/research/open-banking-consumer-protection.html)). | The recipient agrees with a signature of their own before any reading that can move money, can stop being read, and can end the gift and keep what they earned. |
 
-These studies are why the design is what it is, not proof that Viky works.
+These studies are why the design is what it is.
 
 **What using it with people showed us.** By 10 Oct 2026, four people outside the team had used Viky: two funded a
 gift, three opened one, and one who earned a gift used that money to offer one in turn. The judges page counts who
@@ -121,8 +121,7 @@ it does not, Viky says what to pick there in the service's own two words, quoted
 looks for seven such words at every change (wallet, gas, chain, seed, token, transaction hash, address:
 `pnpm check:words`, `src/consumer-words.ts`): in the source of the screens, in the sentences they print, in the
 routes that answer them (its list of files is `scripts/check-consumer-words.ts`) and in what a browser renders
-(`test/browser/screens.spec.ts`). The routes of the way out, `app/api/exit`, are read too: the one line there that
-carries one of those words is written for the operator's log, and is marked as that.
+(`test/browser/screens.spec.ts`).
 
 ## Eighteen conditions, four families
 
