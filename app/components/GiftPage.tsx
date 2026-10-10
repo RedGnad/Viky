@@ -48,6 +48,7 @@ import { contractDayInWords, contractRangeInWords, dateInWords, hourInWords, mom
 import { COUNTING_PASS_UTC, settlingTimeInWords } from "@/src/pass-schedule";
 import { reserveOf } from "@/src/reserves";
 import { ACCOUNT_DOOR, CONSENT as C, GIFT_LIVE as L, GIFT_PAGE as W, LIMIT, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M, SHOW_PROOF, WAITS } from "@/src/sentences";
+import { waitsForResults } from "@/src/condition-proof";
 import { AskAgain } from "../kit/AskAgain";
 import { Button } from "../kit/Button";
 import { CertificateProof } from "../kit/CertificateProof";
@@ -83,7 +84,7 @@ import { Shell } from "../kit/Shell";
 import { ButtonWords, StepInProgress, WaitLine } from "../kit/Waiting";
 import { YouDecide } from "../kit/YouDecide";
 import { AccountPanel } from "./AccountPanel";
-import { BODY, HELP, PRIMARY_BUTTON, SMALL_BUTTON } from "./ui";
+import { BODY, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "./ui";
 
 /**
  * A gift's page: the card of Home, alive (the vision of 19 Sep 2026, section 5; document J).
@@ -453,6 +454,15 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
    * image when the page was read with the session open, which is the person coming back from the verification page.
    */
   const [proofSilent, setProofSilent] = useState(() => checkingAtLoad({ yours: mine, review: proofReview, openAtLoad: openProof }));
+  /**
+   * A gift on a year's results waits for them (the founder, 10 Oct 2026): the card says the wait to both people, and
+   * the one press of the person it is for is "My results are out", which opens the block that shows them, unchanged.
+   * Nothing is waited for once something was shown: a session open when the page was read, or a proof under review or
+   * refused, is the block's own to say. Enrolment is not a wait: it can be shown the day the gift is opened.
+   */
+  const resultsGift = Boolean(milestone && waitsForResults(milestone.conditionId));
+  const [resultsOut, setResultsOut] = useState(() => Boolean(openProof) || proofReview !== null);
+  const resultsWait = resultsGift && proofStands === null && (!mine || !resultsOut);
   // Not once a review holds the proof: the block says that in its own words, whatever it was doing before.
   const checkingTheirOwn = proofSilent && mine && showsProof && !proofReview;
   /** The card, whose words change where they stand as its character lands on a gift just reached. */
@@ -484,6 +494,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
     started: milestone ? milestone.connected : Boolean(daily && daily.creditedDays + daily.missedDays > 0),
     lastJudged,
     shown: condition?.nature === "shown",
+    waitsForResults: resultsWait,
     shape: milestone ? (milestone.shape === "certificate" ? "stamp" : "climb") : "days",
     openBy,
     linkHere,
@@ -816,8 +827,24 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
         // A marathon takes a bib before the start and a reading after the finish, on its own screen (D273).
         if (milestone.conditionId === "marathon-finish") return <MarathonProof giftId={giftId} status={milestone} yours={mine} onChanged={reloadAll} />;
         if (milestone.conditionId === "wca-time") return <WcaProof giftId={giftId} status={milestone} yours={mine} onChanged={reloadAll} />;
+        // A gift on a year's results: the wait's one press, in the secondary look, before the block is drawn (the
+        // founder, 10 Oct 2026). "Not yet" under the block puts the wait back, while nothing of a proof stands.
+        if (showsProof && mine && resultsWait) {
+          return (
+            <button type="button" onClick={() => setResultsOut(true)} className={SECONDARY_BUTTON} data-results-out="">
+              {SHOW_PROOF.resultsOut}
+            </button>
+          );
+        }
         return showsProof ? (
-          <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} review={proofReview} reviewMessage={milestone.review?.message ?? null} limitReached={emptyReserve === "proofs"} openAtLoad={openProof} onChecking={setProofSilent} onShown={reloadAll} />
+          <>
+            <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} review={proofReview} reviewMessage={milestone.review?.message ?? null} limitReached={emptyReserve === "proofs"} openAtLoad={openProof} onChecking={setProofSilent} onShown={reloadAll} />
+            {resultsGift && mine && !checkingTheirOwn && !proofReview ? (
+              <button type="button" onClick={() => setResultsOut(false)} className={`${SMALL_BUTTON} self-start`} data-results-not-yet="">
+                {SHOW_PROOF.notYet}
+              </button>
+            ) : null}
+          </>
         ) : (
           <CertificateProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} onProved={reloadAll} />
         );
