@@ -1,4 +1,5 @@
 import { conditionById, DUOLINGO_DAILY } from "./conditions";
+import { certificateById, milestoneById } from "./milestone-conditions";
 import { dollarsToUnits } from "./money";
 
 /**
@@ -105,10 +106,17 @@ export function pendingGiftFor(raw: string | null, account: string | undefined, 
   } catch {
     return undefined;
   }
-  // A daily gift runs seven days at least; a milestone may be a single day (D43), and needs where they stood.
+  // A daily gift runs seven days at least; a milestone may be a single day (D43).
   const milestone = conditionById(gift.conditionId)?.kind === "milestone";
-  if (!(Number(gift.days) >= (milestone ? 1 : 7)) || !(Number(gift.target) > 0)) return undefined;
-  if (milestone && (gift.cadence === undefined || gift.standing === undefined || gift.standingReadAt === undefined)) return undefined;
+  // Something had or not judges its target by its own rule, as the card and the route do: a race may ask for nothing
+  // but the finish, which it writes 0.
+  const certificate = certificateById(gift.conditionId);
+  const targetHolds = certificate ? certificate.validTarget(Number(gift.target)) : Number(gift.target) > 0;
+  if (!(Number(gift.days) >= (milestone ? 1 : 7)) || !targetHolds) return undefined;
+  // Only a climb has a cadence and a place it started from. Asked of every milestone, they refused every gift had or
+  // not (the final audit of 9 Oct 2026, A5): an enrolment or a score paid for by card was never read back as a gift
+  // kept, so Home offered no way back to its payment, and its wait was built on the wrong provider.
+  if (milestoneById(gift.conditionId) !== undefined && (gift.cadence === undefined || gift.standing === undefined || gift.standingReadAt === undefined)) return undefined;
   return gift as PendingGift;
 }
 

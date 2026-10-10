@@ -107,3 +107,25 @@ test("anything unreadable, or terms the gift would refuse, is not picked up", ()
     assert.equal(pendingGiftFor(raw, A, NOW), undefined, JSON.stringify(bad));
   }
 });
+
+/**
+ * A gift had or not is read back as a gift kept (the final audit of 9 Oct 2026, A5). The cadence and the place a climb
+ * started from were asked of every milestone, so an enrolment paid for by card never came back: Home offered no way to
+ * its payment, and outside the countries of the card service its wait was built on that service all the same.
+ */
+test("a gift had or not comes back with the way it is paid by, and a climb still needs where it started", () => {
+  const enrolment = { ...terms, conditionId: "university-enrollment-shown", username: "Léa Martin", days: "30", target: "1", wayIn: "Ramp", course: "utoulouse" };
+  assert.deepEqual(pendingGiftFor(pendingGiftToStore(enrolment, NOW), A, NOW + 1), { ...enrolment, account: A.toLowerCase(), savedAtMs: NOW });
+  assert.equal(pendingGiftExists(pendingGiftToStore(enrolment, NOW), NOW + 1), true);
+  // Its target is judged by its own rule: an enrolment is had or not, and no other figure is one of its targets.
+  assert.equal(pendingGiftFor(pendingGiftToStore({ ...enrolment, target: "7" }, NOW), A, NOW + 1), undefined);
+  // A race may ask for nothing but the finish, which its rule writes 0; a daily gift's target is still above nothing.
+  const race = { ...terms, conditionId: "marathon-finish", username: "Léa Martin", days: "30", target: "0", wayIn: "Ramp", course: "paris-marathon" };
+  assert.ok(pendingGiftFor(pendingGiftToStore(race, NOW), A, NOW + 1));
+  assert.equal(pendingGiftFor(pendingGiftToStore({ ...terms, target: "0" }, NOW), A, NOW + 1), undefined);
+  // A climb with no cadence or no place it started from is refused, as before; with them it comes back.
+  const climb = { ...terms, conditionId: "chess-rating", username: "boo_plays", days: "30", target: "1200" };
+  assert.equal(pendingGiftFor(pendingGiftToStore(climb, NOW), A, NOW + 1), undefined);
+  assert.equal(pendingGiftFor(pendingGiftToStore({ ...climb, cadence: "rapid" }, NOW), A, NOW + 1), undefined);
+  assert.ok(pendingGiftFor(pendingGiftToStore({ ...climb, cadence: "rapid", standing: 1100, standingReadAt: new Date(NOW).toISOString() }, NOW), A, NOW + 1));
+});
