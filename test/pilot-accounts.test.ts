@@ -131,8 +131,9 @@ test("a gift paid by an account the judge code credited is counted apart, and it
 
 test("the judges page reads the journal of credits once, shows no count when it cannot, and prints the list's length", () => {
   const page = readFileSync("app/judges/page.tsx", "utf8");
-  assert.equal(page.match(/loadJudgeCredits\(\)/g)?.length, 1, "read once, for the two blocks");
-  assert.match(page, /const credited = judgeCredit \? await loadJudgeCredits\(\)\.then\(creditedAccountsOf\)\.catch\(\(\) => null\) : new Set<string>\(\);/);
+  assert.equal(page.match(/creditedByTheJudgeCode\(\)/g)?.length, 1, "read once, for the two blocks");
+  assert.match(page, /const credited = judgeCredit \? await creditedByTheJudgeCode\(\)\.catch\(\(\) => null\) : new Set<string>\(\);/);
+  assert.match(readFileSync("src/judge-credit.ts", "utf8"), /return creditedAccountsOf\(await loadJudgeCredits\(\)\);/);
   assert.match(page, /<JudgesWhoUsed index=\{index\} credited=\{credited\} \/>/);
   const who = readFileSync("app/judges/JudgesWhoUsed.tsx", "utf8");
   // No journal, no count: who was credited is not known, and a judge's try would be read as somebody's use.

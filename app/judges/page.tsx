@@ -4,7 +4,7 @@ import { RACE_RESULT_RACES } from "@/src/race-result-races";
 import { LIMIT } from "@/src/sentences";
 import { PROOF_EVERY_SECONDS } from "@/src/milestone-reading";
 import { formatAusd } from "@/src/gift-reader";
-import { creditedAccountsOf, JUDGE_CREDIT_ENDS, judgeCreditConfig, judgeCreditsStanding, loadJudgeCredits, standingInWords } from "@/src/judge-credit";
+import { creditedByTheJudgeCode, JUDGE_CREDIT_ENDS, judgeCreditConfig, judgeCreditsStanding, standingInWords } from "@/src/judge-credit";
 import { rampHostApiKey, rampnowWayIn, WAY_OUT_CARD, WAY_OUT_EURO, waysIn } from "@/src/rails";
 import { rampnowFrameOn } from "@/src/rampnow-frame";
 import { rampnowQuotesOn } from "@/src/rampnow-quote";
@@ -151,7 +151,7 @@ export default async function JudgesPage() {
   // Whom the judge code credited, read once from the journal for the two blocks that count who used Viky: a gift such
   // an account paid for is counted apart. Nobody where no credit is set; and when the journal cannot be read nothing
   // says who was credited, so neither block shows a count.
-  const credited = judgeCredit ? await loadJudgeCredits().then(creditedAccountsOf).catch(() => null) : new Set<string>();
+  const credited = judgeCredit ? await creditedByTheJudgeCode().catch(() => null) : new Set<string>();
   // How money comes in, a block for each service, drawn in the order the pay sheet tries them (src/rails.ts, `waysIn`).
   const rampWay = (
     <>
