@@ -335,7 +335,8 @@ async function sceneCard(w: Walk): Promise<void> {
   await sheetTo(w, "bottom");
   await shot(w, "14b university, the foot of the first hundred", "The same sheet, scrolled to its end");
   await sheetTo(w, "top");
-  const search = sheet(w).getByLabel("Search universities");
+  // The field says how many universities it searches since 10 Oct 2026.
+  const search = sheet(w).getByLabel(/^Search (\d[\d,]* )?universit(y|ies)$/);
   await search.fill("dakar");
   await settle(w);
   await shot(w, "14c university, dakar searched", "On the university questions: dakar typed in the search");
