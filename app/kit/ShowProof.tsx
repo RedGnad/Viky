@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { agreeFirst } from "@/src/client/consent";
 import { ApiError } from "@/src/client/api";
 import { awaitShownProof, openShownProof, openShownSessionOf, type OpenShown } from "@/src/client/gift";
@@ -33,8 +33,20 @@ import { Said } from "./Said";
  *
  * The character at the head of the page answers a proof shown as it answers a day earned: once, from the button,
  * the happy face (app/kit/mood.ts), and back to rest by itself.
+ *
+ * And while the proof is asked about, or once it has paid, this block draws nothing (the founder, 10 Oct 2026). The
+ * person came back from the verification page to the "Show it" block with "Checking for your proof" in small under
+ * it, then "Shown: ..." in small, and the card changed after that. Now the card says where the proof stands, as its
+ * own state with the wheel under it, and this block tells the page when (`onChecking`, before the browser paints what
+ * it draws, so the two are never seen out of step). The link, the button and a refusal are still its own.
  */
-type State = { at: "asking" } | { at: "preparing" } | { at: "checking" } | { at: "waiting"; requestUrl: string } | { at: "done"; score: string } | { at: "held" } | { at: "refused"; message: string };
+type State = { at: "asking" } | { at: "preparing" } | { at: "checking" } | { at: "waiting"; requestUrl: string } | { at: "done" } | { at: "held" } | { at: "refused"; message: string };
+
+/** Whether the block is silent in this state: the card says it. */
+const saidByTheCard = (state: State) => state.at === "checking" || state.at === "done";
+
+/** Whether a page read with this session open starts on the card's own "checking": the block's first state, said once. */
+export const checkingAtLoad = (input: Readonly<{ yours: boolean; review: "building" | "pending" | "refused" | null; openAtLoad: OpenShown | null }>) => input.yours && !input.review && Boolean(input.openAtLoad);
 
 const CARD = "on-paper flex flex-col gap-[var(--space-md)] rounded-[var(--radius-card)] p-[var(--space-lg)]";
 /** Why a wait was stopped when it was the page being left and not the person's own press. */
@@ -48,12 +60,20 @@ export function ShowProof({
   reviewMessage = null,
   limitReached = false,
   openAtLoad = null,
+  onChecking,
   onShown,
-}: Readonly<{ giftId: string; conditionId: string; yours: boolean; /** A first proof under review, or refused by it (D312). */ review?: "building" | "pending" | "refused" | null; /** A refusal in its own words, where it has them. */ reviewMessage?: string | null; /** The month's limit of proofs is reached: said before the person starts (the founder, 3 Oct 2026). */ limitReached?: boolean; /** The session open for this gift when the page was read on the server, or nothing. */ openAtLoad?: OpenShown | null; onShown: () => Promise<void> | void }>) {
+}: Readonly<{ giftId: string; conditionId: string; yours: boolean; /** A first proof under review, or refused by it (D312). */ review?: "building" | "pending" | "refused" | null; /** A refusal in its own words, where it has them. */ reviewMessage?: string | null; /** The month's limit of proofs is reached: said before the person starts (the founder, 3 Oct 2026). */ limitReached?: boolean; /** The session open for this gift when the page was read on the server, or nothing. */ openAtLoad?: OpenShown | null; /** Told whether the proof is being asked about or was just answered: the block draws nothing then, and the card says it. */ onChecking?: (checking: boolean) => void; onShown: () => Promise<void> | void }>) {
   const condition = conditionById(conditionId);
   // A session open when the page was read is "checking" from the first image: the person is back from the
   // verification page, and the button to start over is never drawn for the moment the browser takes to ask.
-  const [state, setState] = useState<State>(() => (yours && !review && openAtLoad ? { at: "checking" } : { at: "asking" }));
+  const [state, setState] = useState<State>(() => (checkingAtLoad({ yours, review, openAtLoad }) ? { at: "checking" } : { at: "asking" }));
+  const tell = useRef(onChecking);
+  // The page hears of it before the browser paints what this block draws, and that it draws again once it is gone.
+  const silent = saidByTheCard(state);
+  useLayoutEffect(() => {
+    tell.current?.(silent);
+    return () => tell.current?.(false);
+  }, [silent]);
   /** The session handed with the page is taken up once; after that the server is asked. */
   const handed = useRef<OpenShown | null>(openAtLoad);
   /** The wait this page is running, or nothing: a page with none asks the server itself when it comes to the front. */
@@ -64,6 +84,7 @@ export function ShowProof({
   const reload = useRef(onShown);
   useEffect(() => {
     reload.current = onShown;
+    tell.current = onChecking;
   });
 
   /** Waits for one session's proof and says how it ended. A wait stopped by the page being left says nothing. */
@@ -81,7 +102,8 @@ export function ShowProof({
         onPhase: (phase) => setState(phase === "checking" ? { at: "checking" } : { at: "waiting", requestUrl: session.requestUrl }),
       });
       if (outcome.kind === "reached") {
-        setState({ at: "done", score: outcome.shown });
+        // Paid: the card goes on saying it is checked until the gift is read again, and then says it is theirs.
+        setState({ at: "done" });
         await reload.current();
         return;
       }
@@ -199,17 +221,13 @@ export function ShowProof({
     );
   }
 
-  if (state.at === "done") {
-    return (
-      <section className={CARD} role="status">
-        <p className="font-medium">{W.shown(state.score)}</p>
-      </section>
-    );
-  }
+  // Asked about, or paid: the card says it, and nothing is drawn here. No link either while the server is asked: it
+  // may be a verification that is over.
+  if (saidByTheCard(state)) return null;
 
   // The month's reserve of proofs is used up: the card says so above, quietly, with what the person can do (the
   // founder, 3 Oct 2026). Nothing is offered here, so nothing is opened or asked of them.
-  if (limitReached && state.at !== "waiting" && state.at !== "checking") return null;
+  if (limitReached && state.at !== "waiting") return null;
 
   return (
     <section className={CARD}>
@@ -228,11 +246,6 @@ export function ShowProof({
             {W.stopWaiting}
           </button>
         </>
-      ) : state.at === "checking" ? (
-        // No link and no button while the server is asked: the link may be a verification that is over.
-        <p className={HELP} role="status">
-          {W.checking}
-        </p>
       ) : (
         <button type="button" onClick={() => void show()} disabled={state.at === "preparing"} className={PRIMARY_BUTTON}>
           {state.at === "preparing" ? W.preparing : W.button}

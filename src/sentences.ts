@@ -1259,6 +1259,12 @@ export const GIFT_LIVE = {
      * "Show it" and the funder read "has not shown it yet" over a proof held, refused, waited for or late).
      */
     checkingYours: "Shown. Viky is checking it.",
+    /**
+     * Under it, beside the wheel, while this page asks what became of the person's own proof (the founder, 10 Oct
+     * 2026): the words the verification page itself shows while it reads, so the two screens say one thing. True of
+     * the page: the wait is this page's own, and the answer is drawn on it.
+     */
+    keepOpen: "Keep this page open.",
     checkingTheirs: (recipient: string | null) => `${recipient ?? "They"} showed it. Viky is checking it.`,
     refused: "It was checked and did not show what the gift asks.",
     /**
@@ -1864,10 +1870,13 @@ export const SHOW_PROOF = {
    * once the proof is made (`setRedirectUrl`, app/api/proof/session/route.ts): both screens now say the same thing.
    */
   waiting: "Sign in there and stay on that page. It brings you back here.",
-  /** While the page asks the server what became of the proof: no link is offered until the answer, since it may be dead. */
+  /**
+   * The card's own headline while the page asks what became of a verification it cannot say was finished: a page
+   * loaded again, or brought back to the front, on a session still open (the founder, 10 Oct 2026). It stood in small
+   * under the block until then. "Shown." is said only to a person the verification page brought back with a proof made.
+   */
   checking: "Checking for your proof",
   stopWaiting: "Stop waiting",
-  shown: (score: string) => `Shown: ${score}. It is yours.`,
   /**
    * Under the target (D185): said with the number, to the person who showed it and to nobody else, since the number
    * is kept nowhere; nothing was relayed, and the gift stays theirs to earn until its deadline.

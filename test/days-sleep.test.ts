@@ -49,7 +49,7 @@ test("a day earned wakes in its jump: eyes shut until it lands, one small turn i
   // The turn is in the air only: it starts when the day leaves the floor and is over as it lands.
   assert.match(earned, /\{ offset: gatherMs \/ total, transform: `rotate\(\$\{-360 \* turns\}deg\)`, easing: EASING\.emphasizedDecelerate \},\n\s*\{ offset: jumpMs \/ total, transform: "rotate\(0deg\)" \},/);
   // The day in an arrival wakes; the head of a screen keeps the plain jump, eyes open.
-  assert.match(motion, /step\.moment === "earned" \? playEarned\(element, step\.delay, true\) : step\.moment === "woken" \? playWoken\(element, step\.delay\) : playReturned\(element, step\.delay\)/);
+  assert.match(motion, /step\.moment === "earned" \? playEarned\(element, step\.delay, from \? "becomes" : true\) : step\.moment === "woken" \? playWoken\(element, step\.delay\) : playReturned\(element, step\.delay\)/);
   assert.match(motion, /const jumping = playEarned\(element, 0\);/);
   // The drawing gives the turn its group, turning from its own middle, and the characters' file is made from it.
   assert.match(readFileSync("app/kit/Character.tsx", "utf8"), /\{\.\.\.\(withLimbs \|\| state === "earned" \? \{ "data-part": "whirl", style: FROM_MIDDLE \} : \{\}\)\}/);
@@ -58,8 +58,9 @@ test("a day earned wakes in its jump: eyes shut until it lands, one small turn i
 test("a day done since the last visit is there from the first image, asleep, and its turn comes in the arrival's order", () => {
   // The first image: there, eyes shut and smile small, at the figures the movement starts from.
   assert.match(css, /\.arrival-pending svg\[data-character="earned"\] \{\n  opacity: 1;\n\}/);
-  assert.match(css, new RegExp(`\\.arrival-pending svg\\[data-character="earned"\\] \\[data-part="eye"\\] \\{\\n  transform: scaleY\\(${MOTION.earned.eyesShut}\\);\\n\\}`));
-  assert.match(css, new RegExp(`\\.arrival-pending svg\\[data-character="earned"\\] \\[data-part="mouth"\\] \\{\\n  transform: scale\\(${MOTION.earned.mouthShut}\\);\\n\\}`));
+  // (A day earned while this screen stood is the triangle it was instead: test/back-from-the-check.test.ts.)
+  assert.match(css, new RegExp(`\\.arrival-pending svg\\[data-character="earned"\\]:not\\(\\[data-from\\]\\) \\[data-part="eye"\\] \\{\\n  transform: scaleY\\(${MOTION.earned.eyesShut}\\);\\n\\}`));
+  assert.match(css, new RegExp(`\\.arrival-pending svg\\[data-character="earned"\\]:not\\(\\[data-from\\]\\) \\[data-part="mouth"\\] \\{\\n  transform: scale\\(${MOTION.earned.mouthShut}\\);\\n\\}`));
   // With less motion asked for: the final state, eyes open.
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.arrival-pending svg\[data-character="earned"\] \[data-part="eye"\],\n  \.arrival-pending svg\[data-character="earned"\] \[data-part="mouth"\] \{\n    transform: none;\n  \}/);
   // Only a day gone back is held invisible until its turn; a day earned is held asleep by its own animation.
@@ -130,5 +131,5 @@ test("a day wakes when it opens: at the connection of a gift paid the same day, 
   // A gift that changes while the screen stands is decided again, and drawn in its starting state from the render
   // that brings the change: what this screen already showed is not pending again.
   assert.match(arrival, /list\.map\(\(gift, index\) => shown\[gift\.id\]\?\.settled \?\? settled\[index\]\),\n\s*list\.map\(\(gift, index\) => shown\[gift\.id\]\?\.open \?\? open\[index\]\),/);
-  assert.match(arrival, /plan\.decided && plan\.about === giftsKey \? plan : \{ \.\.\.plan, decided: false, pending: changed\.pending \}/);
+  assert.match(arrival, /plan\.decided && plan\.about === giftsKey \? plan : \{ \.\.\.plan, decided: false, pending: changed\.pending, from: changed\.from \}/);
 });

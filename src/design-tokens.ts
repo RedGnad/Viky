@@ -439,6 +439,10 @@ export const MOTION = {
    * shut until its turn, jumps with one small turn in the air, as the landing's character whirls out (`hero.turns`),
    * and opens its eyes as it lands. `eyesShut` is how flat an open eye is drawn while it sleeps, the closed eye's 2.4
    * over the open eye's height; `mouthShut` how small its smile, as the landing's character's before it opens.
+   *
+   * A day earned while its screen stands was the triangle a moment ago (the founder, 10 Oct 2026: a character never
+   * changes shape without its movement): it jumps as that triangle and is the circle when it comes down, the one
+   * fading into the other across the top of the jump in `becomeMs`. The figure is the founder's, as the jump's are.
    */
   earned: {
     gatherMs: 80,
@@ -449,7 +453,16 @@ export const MOTION = {
     turns: 1,
     eyesShut: 0.36,
     mouthShut: 0.4,
+    becomeMs: 120,
   },
+  /**
+   * A gift had or not that is reached while its page stands (the founder's mockup of 10 Oct 2026): its character
+   * jumps first, and the card says it as the character lands. The words that stood go out on Material's short2 and
+   * the new ones come in where they stood on short4, so nothing on the card moves; the amount swells once under its
+   * new word, on the landing's own spring, by less than it does in the moment; and the moment opens `momentAfterMs`
+   * after the landing, Material's extra-long1.
+   */
+  landing: { wordsOutMs: 100, wordsInMs: 200, swell: 1.08, momentAfterMs: 700 },
   /**
    * A day that opens wakes (the founder, 4 Oct 2026): the sleeping capsule becomes the triangle, risen from the
    * capsule's own height, then its eyes open. A small movement, well under the jump of a day earned, which stays the

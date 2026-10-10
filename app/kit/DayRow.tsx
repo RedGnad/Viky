@@ -125,15 +125,18 @@ export function DayRow({
             <ArrivalDay gift={id} index={index}>
               {/* A day earned jumps, a day gone back leaves and the day that opens wakes, in the arrival: those three are
                   written into the page (D206); the others name their drawing, since nothing follows the pointer any more
-                  (D216). */}
-              <Character
-                state={characterOf(state)}
-                variant={index}
-                standing={false}
-                drawn={characterOf(state) === "earned" || characterOf(state) === "returned" || characterOf(state) === "today" ? "inline" : "referenced"}
-                wakes={characterOf(state) === "today"}
-                className="h-auto w-full"
-              />
+                  (D216). A day earned while this page stood carries the triangle it was (the founder, 10 Oct 2026). */}
+              {(from) => (
+                <Character
+                  state={characterOf(state)}
+                  variant={index}
+                  standing={false}
+                  drawn={characterOf(state) === "earned" || characterOf(state) === "returned" || characterOf(state) === "today" ? "inline" : "referenced"}
+                  wakes={characterOf(state) === "today"}
+                  from={characterOf(state) === "earned" ? from : undefined}
+                  className="h-auto w-full"
+                />
+              )}
             </ArrivalDay>
             {each ? (
               <span aria-hidden className="day-row-worth">

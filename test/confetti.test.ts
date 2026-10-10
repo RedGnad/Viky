@@ -16,7 +16,8 @@ test("the moment is played in two places only, Home and the gift's page, to the 
   const users = globSync("app/**/*.tsx").filter((file) => /<ReachedMoments\b|<ReachedOnItsPage\b/.test(readFileSync(file, "utf8"))).sort();
   assert.deepEqual(users, ["app/components/GiftPage.tsx", "app/kit/Home.tsx", "app/kit/ReachedMoment.tsx"]);
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
-  assert.match(page, /\{milestone\?\.reached && \(mine \|\| readerIsFunder\) \? \(\s*<ReachedOnItsPage/);
+  assert.match(page, /const reachedNow = landed \?\? \(milestone\?\.reached \? milestone : null\);/);
+  assert.match(page, /\{reachedNow && \(mine \|\| readerIsFunder\) \? \(\s*<ReachedOnItsPage/);
   assert.match(MOMENT, /gift\.role === "reader"\) return null/, "a reader who is neither of the two is owed nothing");
 });
 

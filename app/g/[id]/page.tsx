@@ -3,10 +3,11 @@ import { notFound } from "next/navigation";
 import { giftPreview } from "@/src/gift-preview";
 import { giftStatusFor, type AnyGiftStatus } from "@/src/gift-status";
 import { loadOpenShownSession, type OpenShownSession } from "@/src/proof-session-store";
+import { cameBackShown } from "@/src/shown-return";
 import { originOfThePage, signedInAccount } from "@/src/who-is-reading";
 import { GiftPage } from "../../components/GiftPage";
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ t?: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ t?: string; shown?: string }> };
 
 /**
  * What the link carries in `?t=` as the page accepts it, or nothing: the link's key on the first version of the
@@ -77,9 +78,10 @@ async function openProofOnTheServer(id: string): Promise<OpenShownSession | null
 /** The page a recipient lands on from the link. No install, no crypto words, one screen. */
 export default async function Page(props: Props) {
   const { id } = await props.params;
-  const { t } = await props.searchParams;
+  const { t, shown } = await props.searchParams;
   if (!/^\d{1,78}$/.test(id)) notFound();
   const linkKey = keyOf(t);
   const [initialStatus, openProof] = await Promise.all([giftOnTheServer(id, linkKey), openProofOnTheServer(id)]);
-  return <GiftPage giftId={id} linkKey={linkKey} initialStatus={initialStatus} openProof={openProof} />;
+  // Brought back by the verification page with a proof made, or not (src/shown-return.ts): read here, with the page.
+  return <GiftPage giftId={id} linkKey={linkKey} initialStatus={initialStatus} openProof={openProof} cameBackShown={cameBackShown(shown)} />;
 }
