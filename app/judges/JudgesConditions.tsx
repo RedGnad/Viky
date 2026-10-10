@@ -47,6 +47,12 @@ export async function JudgesConditions() {
                   {condition.source}, {stateOf(condition).title.toLowerCase()}, {CATALOGUE.realProofs(counts ? (counts.get(condition.id) ?? 0) : null)}
                 </span>
               </h4>
+              {/* What the gift waits for, where the thing to show comes at a set time: a year's results (10 Oct 2026). */}
+              {proof.waits ? (
+                <p className={HELP} data-condition-waits="">
+                  {proof.waits}
+                </p>
+              ) : null}
               <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] [@media(min-width:600px)]:grid-cols-[14rem_1fr]">
                 <dt className={MUTED}>Does the data come from the source&apos;s own servers?</dt>
                 <dd className={HELP}>{proof.data}</dd>

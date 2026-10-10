@@ -23,7 +23,12 @@ today (`PROOF_VERIFIER` unset):
    publishes at Reclaim (`--ahead <version>`): the first proof that fits that pin is paid at once and bears it out;
    one that does not is held, never refused. Under a pin, every session asks for the pinned version, whatever an
    earlier session came to, and a rule written by hand runs with no agent (`ruleAsked` in `src/witness-portal.ts`):
-   Reclaim's agent writes a rule only for the first proof of a university that has none yet. A session of a pinned
+   Reclaim's agent writes a rule only for the first proof of a university that has none yet. A results page is pinned
+   on the academic year under way and on no other (the operator's rule, 10 Oct 2026): `--year` is asked for, and a page
+   of another year than the pin names pays nothing (`wrongTerm`, `src/university-shown.ts`). Pinned on a year already
+   over, a university would pay at once every gift made since on results that were out before the gift. So until the
+   year's results are published its results provider carries no pin, every proof of it is held, and the operator
+   refuses by hand a page of an earlier year. The gift itself names no year yet. A session of a pinned
    rule that Reclaim ended with no proof is said to the operator by email when the gift's page asks about it, in one
    line: the university, the gift and the state it ended in. The judges
    page prints what each pinned provider reads, from the pin itself, and says of a pin made ahead that no proof has
