@@ -572,10 +572,25 @@ export const MOTION = {
       back: { from: "4.4em", fromTurn: 50, startAt: 0.96, homeAt: 0.48, ease: "power2.out", origin: "50% 60%" },
       /** The sunglasses come down onto the face as the title reaches mid screen, and the head tilts as it goes by. */
       shades: { drop: -15, fromTurn: -22, startAt: 0.72, onAt: 0.46, ease: "back.out(2.4)", origin: "50% 50%", tilt: 12, tiltOrigin: "50% 60%" },
+      /**
+       * The one who reads its book reads it (the founder, 10 Oct 2026): its eyes go along a line, come back to the
+       * start of the next a little lower, line after line, as the page is scrolled. Lengths are the drawing's own
+       * units, on the group that holds the two eyes; the way back is a fifth of the time a line takes.
+       */
+      read: { lines: 4, sweep: 0.9, down: 0.22, lineS: 1, backS: 0.2, backEase: "power1.inOut" },
     },
     /** How long the posters wait for their script before they are simply shown, still. */
     giveUpMs: 5000,
   },
+  /**
+   * The app's icon on the landing, arriving once as its card enters the screen (the founder's mockup of 10 Oct 2026;
+   * the figures are his). It lands as an icon is placed on a home screen: its size on the expressive fast spring,
+   * its opacity without overshoot. Its face settles a moment after its body, the eyes and the mouth coming up from
+   * `faceDrop` of the drawing's units lower. It blinks once, then glances at its button, wherever the button stands:
+   * `glance.by` units towards it, there by `thereAt` of the glance's time, held until `backFrom`, then back. After
+   * `restMs` it blinks now and then with every drawing in view.
+   */
+  icon: { fromScale: 0.82, spring: SPRING.expressiveFastSpatial, fadeMs: 120, faceAfterMs: 90, faceDrop: 1.2, blinkAtMs: 480, glanceAtMs: 760, glance: { by: 1.1, durationMs: 1000, thereAt: 0.22, backFrom: 0.74 }, restMs: 1800, inView: 0.6 },
   /**
    * A pointer over a button lifts it; over a character, its face turns towards the pointer. Material's short4.
    * A screen with no pointer has no hover: an expression plays once when something is chosen, and `heldMs` is how

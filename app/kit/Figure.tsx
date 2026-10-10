@@ -631,8 +631,11 @@ export function Figure({ className, ...figure }: FigureProps & Readonly<{ classN
  * quarter larger. It is made of the figure's own pieces in the figure's own coordinates, never drawn apart: the square
  * is the forty units around the face, so the gloss and the face stand in it where they stand on the body.
  *
- * It is the one drawing here that is clipped, the dots having no edge to stop under. Nothing moves it, which is what
- * made a clip costly on the body (D288).
+ * It is the one drawing here that is clipped, the dots having no edge to stop under. On the body a clip was costly
+ * because the body moved under it at every image (D288). The icon moves once, as its card enters the screen
+ * (app/kit/LandingStory.tsx, the founder, 10 Oct 2026): the whole drawing is scaled and faded from outside the clip,
+ * which the browser does on the picture it already has, and inside it only the eyes and the mouth move, for half a
+ * second, then a lid now and then.
  */
 const ICON = { left: 12, top: 1.5, side: 40, round: 0.224, face: { scale: 1.25, x: 32, y: 21.23 } } as const;
 /** The icon's region of the grid: two rows above the body's and five columns in, out to just past the square. */

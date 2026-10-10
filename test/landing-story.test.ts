@@ -59,13 +59,14 @@ test("the landing lays five posters under its column, then the phone, then the w
   for (const block of LANDING_STORY.blocks) assert.ok(block.title.split(" ").includes(block.characterAfter), `${block.key}: after a word of its own title`);
   assert.match(
     story,
-    /theirs: \{ state: "earned", act: "roll" \},\n\s*checked: \{ state: "book" \},\n\s*back: \{ state: "toCome", act: "back" \},\n\s*yes: \{ state: "today", act: "hop" \},\n\s*key: \{ state: "shades", act: "shades" \},/,
+    /theirs: \{ state: "earned", act: "roll" \},\n\s*checked: \{ state: "book", act: "read" \},\n\s*back: \{ state: "toCome", act: "back" \},\n\s*yes: \{ state: "today", act: "hop" \},\n\s*key: \{ state: "shades", act: "shades" \},/,
   );
   assert.match(story, /<span className="whitespace-nowrap">\n\s*\{said\} \{character\}\n\s*<\/span>/, "tied to the word before it");
   // The days' own character, with no floor under it; the one that rolls is written into the page, since a part of it turns.
   assert.match(story, /<Character state=\{state\} standing=\{false\} drawn=\{act === "roll" \? "inline" : "referenced"\} className="block h-full w-full" \/>/);
   // What is checked holds the hero with its book (the founder, 9 Oct 2026): the figure of the family that learns, whole,
-  // the chooser's own, taller than a shape in its title. It lands in its word like the others and has no act.
+  // the chooser's own, taller than a shape in its title. It lands in its word like the others, and reads as the page
+  // is scrolled (the founder, 10 Oct 2026; test/landing-blink-and-icon.test.ts).
   assert.match(story, /<Figure id="story-book" halftone \{\.\.\.FAMILY_FIGURES\.learn\} \/>/);
   assert.deepEqual(FAMILY_FIGURES.learn, { arms: "read", props: ["book"], mouth: "soft", gaze: { x: 0, y: 0.7 } });
   assert.match(story, /<span data-ch=\{act === "back" \? "back" : "lands"\} \{\.\.\.\(act \? \{ "data-act": act \} : \{\}\)\}/, "no act, no act named");
