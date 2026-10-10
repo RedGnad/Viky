@@ -1,13 +1,14 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { useAccount } from "@/src/account/provider";
-import { subscribeToCardDraft } from "@/src/card-draft";
+import { clearedCardDraft, subscribeToCardDraft } from "@/src/card-draft";
+import type { GiftSummary } from "@/src/client/gift";
 import { useRampnowPending } from "@/src/client/rampnow-pending";
 import { formatAusd } from "@/src/gift-reader";
 import { dollarsToUnits } from "@/src/money";
 import { giftAsTyped } from "@/src/pay-sum";
-import { loadPendingGift, peekPendingGift } from "@/src/pending-gift";
+import { forgetPendingGift, loadPendingGift, madeSince, peekPendingGift } from "@/src/pending-gift";
 import { WAY_IN_USDC } from "@/src/rails";
 import { rampnowFrameOn } from "@/src/rampnow-frame";
 import { FUND, HOME, PAY } from "@/src/sentences";
@@ -26,10 +27,15 @@ import { Place } from "./Place";
  * Read after the page has woken, from the device: with an account, the gift kept for that account and never the one
  * kept for another (D74); with none, whatever this device keeps, since signing in is the first thing the wait asks.
  * Shown only for a gift whose payment was started (`wayIn`), never for a card that is merely filled in.
+ *
+ * And never for a gift that was made (the final audit of 9 Oct 2026, A4). A page closed while the creation was on its
+ * way never heard that it went through, so this block went on saying "set up on this device and not made yet" for
+ * three days, over a button that could make a second gift. The screen hands it the account's gifts as it read them:
+ * a kept gift whose twin is in that list (src/pending-gift.ts, `madeSince`) is forgotten, and nothing is said of it.
  */
 const nothingOnTheServer = () => null;
 
-export function FinishTheGift() {
+export function FinishTheGift({ gifts = null }: Readonly<{ /** The account's gifts as the screen read them, or nothing yet. */ gifts?: readonly GiftSummary[] | null }>) {
   const { address } = useAccount();
   // One line of text and not the gift itself: React compares what a store answers by identity.
   const kept = useSyncExternalStore(
@@ -39,15 +45,22 @@ export function FinishTheGift() {
       if (!kept?.wayIn) return null;
       // The gift as it was typed, in the money it was typed in (src/pay-sum.ts): somebody who typed 45 euros read
       // "$50.51 for Boo" here (the founder, 4 Oct 2026).
-      return JSON.stringify({ amount: giftAsTyped(kept, formatAusd(dollarsToUnits(kept.dollars))), recipient: kept.recipientName ?? "", byRampnow: kept.wayIn === WAY_IN_USDC.name });
-    }, [address]),
+      return JSON.stringify({ amount: giftAsTyped(kept, formatAusd(dollarsToUnits(kept.dollars))), recipient: kept.recipientName ?? "", byRampnow: kept.wayIn === WAY_IN_USDC.name, made: gifts ? madeSince(kept, gifts) : false });
+    }, [address, gifts]),
     nothingOnTheServer,
   );
-  const waiting = useMemo(() => (kept === null ? null : (JSON.parse(kept) as { amount: string; recipient: string; byRampnow: boolean })), [kept]);
+  const waiting = useMemo(() => (kept === null ? null : (JSON.parse(kept) as { amount: string; recipient: string; byRampnow: boolean; made: boolean })), [kept]);
+  const made = waiting?.made === true;
+  // Made while the page that was making it was closed: forgotten here, with the card it was typed on.
+  useEffect(() => {
+    if (!made) return;
+    forgetPendingGift();
+    clearedCardDraft();
+  }, [made]);
   // A card payment that may be at Rampnow, kept on this device for this account (src/client/rampnow-pending.ts).
   const pending = useRampnowPending(address);
   const minute = useMinute();
-  if (!waiting) return null;
+  if (!waiting || made) return null;
   // One gift, one payment (the founder, 3 and 4 Oct 2026): where "not made yet" stood, one sentence saying a card
   // payment was started, and one button, at the weight of the one it replaces, which leads to the screen that waits.
   // Whether the person paid is asked there and nowhere else, and nothing here could start another payment.

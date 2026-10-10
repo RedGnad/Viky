@@ -140,10 +140,16 @@ function nameGiven(value: string): boolean {
 
 function targetNumber(draft: GiftDraft): number | undefined {
   const value = Number(draft.target);
+  const certificate = certificateById(draft.conditionId);
+  // A race and a competition may ask for nothing but the finish, which their own rule writes 0, and it is what the
+  // card suggests for them. Read as no target at all, it left "Done" out of reach until a time was typed (the final
+  // audit of 9 Oct 2026, A5, asked whether it passed: it did not). Only where the condition itself suggests it: a
+  // score whose scale starts at 0 is not asked for at 0, which anybody has. A field left empty is still no target.
+  if (value === 0 && draft.target.trim() !== "" && certificate?.target.suggested === 0 && certificate.validTarget(0)) return 0;
   if (!Number.isFinite(value) || value <= 0) return undefined;
   // A grade is typed on its own scale, with decimals, and the condition says so by a step under one (D174); every
   // other target is a whole number, as it always was.
-  const step = certificateById(draft.conditionId)?.target.step ?? 1;
+  const step = certificate?.target.step ?? 1;
   return step < 1 || Number.isInteger(value) ? value : undefined;
 }
 

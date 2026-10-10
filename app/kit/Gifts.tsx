@@ -96,7 +96,7 @@ export function Gifts({ initialGifts }: Readonly<{ initialGifts?: GiftSummary[] 
     <Arrival storageKey="viky.seen.days" gifts={arriving}>
     <Shell kind="destination" active="gifts" title={W.title} character={<HeadCharacter scene="gifts" />}>
       {/* A gift whose payment was started and which is not made yet is no line of either list: it is said above them. */}
-      <FinishTheGift />
+      <FinishTheGift gifts={gifts} />
       <Place open={problem !== null}>
         <p className={BODY}>{problem}</p>
       </Place>

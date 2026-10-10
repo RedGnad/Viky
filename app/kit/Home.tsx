@@ -208,7 +208,7 @@ export function Home({
           {/* A key this computer keeps for itself alone, said once (the founder, 5 Oct 2026): nothing on any other device. */}
           <KeyKeptNotice />
           {/* A payment started for a gift never made: said first, since the money for it may be what stands below (D74). */}
-          <FinishTheGift />
+          <FinishTheGift gifts={gifts} />
           <MoneyHero address={address} holdings={holdings} gifts={gifts} giftsUnread={problem !== null} />
           {/* The balance's own action, small and under it (the founder, 29 Sep 2026). It is there while the balance is
               being read on a device that saw money here last time (D147), so nothing under it moves when the answer
