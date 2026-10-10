@@ -84,10 +84,11 @@ export function JudgesMinute({
               ) : (
                 ": funded by "
               )}
-              {count(usage.funders.all, "account", "accounts")} and opened by {usage.recipients.all}, of which{" "}
-              {usage.funders.all - usage.funders.founders} and {usage.recipients.all - usage.recipients.founders} are not the
-              founder&apos;s own test accounts. {formatAusd(usage.earned)} earned, {formatAusd(usage.sentBack)} gone back. Counted
-              from the index as this page is served:{" "}
+              {/* Each count with its own share that is not the founder's (the founder's words, 10 Oct 2026). */}
+              {count(usage.funders.all, "account", "accounts")}, {usage.funders.all - usage.funders.founders} of them not the
+              founder&apos;s, and opened by {usage.recipients.all}, {usage.recipients.all - usage.recipients.founders} of them not
+              his. {formatAusd(usage.earned)} earned, {formatAusd(usage.sentBack)} gone back. Counted from the index as this page
+              is served:{" "}
             </>
           ) : index ? (
             "The journal of judge credits could not be read just now, so no count is given here: "
