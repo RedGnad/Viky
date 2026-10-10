@@ -78,7 +78,13 @@ test("the one who reads its book reads it by itself: the three lines of the left
   assert.match(story, /following\.push\(\{ offset: time \/ turnMs, transform: at\(where\[0\] \* R\.mouth, where\[1\] \* R\.mouth\), easing: step\.easing \}\);/);
   assert.match(story, /\{ offset: read\[index\]\.from, strokeDashoffset: 1, opacity: 1, easing: R\.lineEasing \},\n\s+\{ offset: read\[index\]\.to, strokeDashoffset: 0, opacity: 1 \},\n\s+\{ offset: \(turnMs - R\.fadeMs\) \/ turnMs, strokeDashoffset: 0, opacity: 1, easing: "ease-out" \},\n\s+\{ offset: 1, strokeDashoffset: 0, opacity: 0 \},/);
   // Only in front of somebody, as the blink: on the screen, in the tab in front; nothing under reduced motion.
-  assert.match(story, /const follow = \(\) => running\.forEach\(\(one\) => \(seen && !document\.hidden \? one\.play\(\) : one\.pause\(\)\)\);/);
+  // Off the screen nothing of it is left on the page, no animation and no dark line: a screen that waits for every
+  // movement to end (test/browser/arrival.spec.ts) must find none. Behind another tab it is held where it is.
+  assert.match(story, /const follow = \(\) => \{\n\s+if \(!seen\) return end\(\);\n\s+begin\(\);\n\s+running\.forEach\(\(one\) => \(document\.hidden \? one\.pause\(\) : one\.play\(\)\)\);/);
+  assert.match(story, /const end = \(\) => \{\n\s+running\.forEach\(\(one\) => one\.cancel\(\)\);\n\s+running = \[\];\n\s+marks\.forEach\(\(mark\) => mark\.remove\(\)\);/);
+  // The dark of a line is the face's ink, named by the drawing's own file: the story names no colour of a character.
+  assert.doesNotMatch(story, /var\(--character-/);
+  assert.match(story, /stroke: READ_INK,/);
   assert.match(story, /const story = root\.current;\n\s+if \(!story \|\| reduced\(\)\) return;/);
   assert.doesNotMatch(story.slice(story.indexOf("function reads"), story.indexOf("function useLandingAlive")), /setTimeout|setInterval/, "nothing here waits on a clock");
   // The turn, as the mockup plays it: 7.2 s, of which 1.7 s with the eyes up.

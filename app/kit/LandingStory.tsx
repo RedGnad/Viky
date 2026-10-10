@@ -11,7 +11,7 @@ import { blinkOnce, blinksNowAndThen, noteBlink } from "./blink-clock";
 import { Character, type CharacterState } from "./Character";
 import { ConditionIcon } from "./ConditionIcon";
 import { FAMILY_FIGURES } from "./FamilyArt";
-import { BOOK_LINES, FaceIcon, Figure, Scene } from "./Figure";
+import { BOOK_LINES, FaceIcon, Figure, READ_INK, Scene } from "./Figure";
 import { Install, isStandalone } from "./Install";
 import { MarkNotice } from "./MarkNotice";
 import { reduced } from "./Motion";
@@ -357,7 +357,7 @@ const twoPlaces = (value: number) => Math.round(value * 100) / 100;
  *
  * One turn of it is written whole, as the keyframes of a few animations that repeat, each line darkening at the very
  * moments the eyes are on it: nothing here waits on a clock, and nothing can fall out of step. It plays only while
- * the drawing is on the screen and the tab in front, as the blink does; the way out takes the dark lines away again.
+ * the drawing is on the screen and the tab in front, as the blink does.
  */
 function reads(held: Element): () => void {
   const drawn = held.querySelector("svg");
@@ -366,15 +366,6 @@ function reads(held: Element): () => void {
   const book = drawn?.querySelector('[data-prop="book"]');
   if (!eyes || !book) return () => {};
   const R = MOTION.reading;
-  const marks = BOOK_LINES.map((line) => {
-    const mark = document.createElementNS(SVG, "path");
-    mark.setAttribute("d", line.d);
-    mark.setAttribute("pathLength", "1");
-    mark.setAttribute("data-part", "read");
-    Object.assign(mark.style, { fill: "none", stroke: "var(--character-face)", strokeOpacity: String(R.mark.opacity), strokeWidth: String(R.mark.width), strokeLinecap: "round", strokeDasharray: "1 2", strokeDashoffset: "1" });
-    book.appendChild(mark);
-    return mark;
-  });
   // One turn: where the eyes go, in how long, on which curve, and which line they are on meanwhile.
   const steps: Array<Readonly<{ ms: number; to: readonly [number, number]; easing: string; line?: number }>> = [];
   let page: "left" | "right" | null = null;
@@ -406,26 +397,52 @@ function reads(held: Element): () => void {
   looking.push({ offset: 1, transform: at(0, 0) });
   following.push({ offset: 1, transform: at(0, 0) });
   const turning = { duration: turnMs, iterations: Number.POSITIVE_INFINITY };
-  const running = [
-    eyes.animate(looking, turning),
-    ...(mouth ? [mouth.animate(following, turning)] : []),
-    ...marks.map((mark, index) =>
-      mark.animate(
-        [
-          { offset: 0, strokeDashoffset: 1, opacity: 1 },
-          { offset: read[index].from, strokeDashoffset: 1, opacity: 1, easing: R.lineEasing },
-          { offset: read[index].to, strokeDashoffset: 0, opacity: 1 },
-          { offset: (turnMs - R.fadeMs) / turnMs, strokeDashoffset: 0, opacity: 1, easing: "ease-out" },
-          { offset: 1, strokeDashoffset: 0, opacity: 0 },
-        ],
-        turning,
+
+  // The turn exists only in front of somebody. Off the screen there is nothing of it on the page, no dark line and no
+  // animation: a page that waits for every movement to end must find none here. It starts again from the eyes going
+  // down when the drawing comes back, and is held where it is while the tab is behind another.
+  let marks: SVGPathElement[] = [];
+  let running: Animation[] = [];
+  const begin = () => {
+    if (running.length > 0) return;
+    marks = BOOK_LINES.map((line) => {
+      const mark = document.createElementNS(SVG, "path");
+      mark.setAttribute("d", line.d);
+      mark.setAttribute("pathLength", "1");
+      mark.setAttribute("data-part", "read");
+      Object.assign(mark.style, { fill: "none", stroke: READ_INK, strokeOpacity: String(R.mark.opacity), strokeWidth: String(R.mark.width), strokeLinecap: "round", strokeDasharray: "1 2", strokeDashoffset: "1" });
+      book.appendChild(mark);
+      return mark;
+    });
+    running = [
+      eyes.animate(looking, turning),
+      ...(mouth ? [mouth.animate(following, turning)] : []),
+      ...marks.map((mark, index) =>
+        mark.animate(
+          [
+            { offset: 0, strokeDashoffset: 1, opacity: 1 },
+            { offset: read[index].from, strokeDashoffset: 1, opacity: 1, easing: R.lineEasing },
+            { offset: read[index].to, strokeDashoffset: 0, opacity: 1 },
+            { offset: (turnMs - R.fadeMs) / turnMs, strokeDashoffset: 0, opacity: 1, easing: "ease-out" },
+            { offset: 1, strokeDashoffset: 0, opacity: 0 },
+          ],
+          turning,
+        ),
       ),
-    ),
-  ];
-  // Only in front of somebody: on the screen, in the tab in front.
+    ];
+  };
+  const end = () => {
+    running.forEach((one) => one.cancel());
+    running = [];
+    marks.forEach((mark) => mark.remove());
+    marks = [];
+  };
   let seen = false;
-  const follow = () => running.forEach((one) => (seen && !document.hidden ? one.play() : one.pause()));
-  follow();
+  const follow = () => {
+    if (!seen) return end();
+    begin();
+    running.forEach((one) => (document.hidden ? one.pause() : one.play()));
+  };
   const watch = new IntersectionObserver((entries) => {
     seen = entries[entries.length - 1].isIntersecting;
     follow();
@@ -435,8 +452,7 @@ function reads(held: Element): () => void {
   return () => {
     watch.disconnect();
     document.removeEventListener("visibilitychange", follow);
-    running.forEach((one) => one.cancel());
-    marks.forEach((mark) => mark.remove());
+    end();
   };
 }
 

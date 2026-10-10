@@ -11,7 +11,7 @@ import { profile, shot as capture, sizesFor } from "./gift-kit";
  * left page, the third shorter, across to the right page and along its two, then up to whoever reads the landing. The
  * mouth follows a third of the way. Each line of the book darkens along its length as the eyes pass over it, and the
  * five are back to their grey before the eyes go down again. It blinks now and then with the drawings in view. Off the
- * screen the turn is held; with less motion asked for, nothing reads and no line is drawn over.
+ * screen nothing of the turn is left on the page; with less motion asked for, nothing reads and no line is drawn over.
  *
  * The turn is put at its instants as the mockup takes its stills: every animation of it paused and set to one time.
  *
@@ -32,7 +32,6 @@ const HERO_LIDS = `[...document.querySelectorAll('.hero-stage [data-part="lid"]'
 const TURN = `${READER}.getAnimations({ subtree: true }).filter((one) => one.effect.getComputedTiming().iterations === Infinity)`;
 /** Whether the turn is running: the eyes, the mouth and the five lines, every one of them. */
 const READING_RUNS = `(() => { const turn = ${TURN}; return turn.length === 7 && turn.every((one) => one.playState === "running"); })()`;
-const READING_HELD = `(() => { const turn = ${TURN}; return turn.length === 7 && turn.every((one) => one.playState === "paused"); })()`;
 /** Puts the turn at one instant: every animation of it, kept in hand once taken, paused and set there. */
 const setReadingAt = (page: Page, ms: number) => page.evaluate(`(window.__turn = window.__turn || ${TURN}).forEach((one) => { one.pause(); one.currentTime = ${ms}; })`);
 /** Where a part of the drawing has been moved to, in the drawing's own units. */
@@ -121,11 +120,12 @@ test.describe("the one who reads its book, and the icon after dark", () => {
       // And before the eyes go down again, the five are back to their grey.
       expect(Math.max(...(await at(7_200)).lines.map((line) => line.shown))).toBeLessThan(0.1);
 
-      // Only in front of somebody: off the screen the turn is held where it is, and it goes on once the drawing is back.
+      // Only in front of somebody: off the screen nothing of the turn is left on the page, no animation and no dark
+      // line, so a page that waits for every movement to end finds none; it starts again once the drawing is back.
       await page.evaluate(`(window.__turn || []).forEach((one) => one.play())`);
       await expect.poll(() => page.evaluate(READING_RUNS)).toBe(true);
       await page.evaluate(`window.scrollTo({ top: 0, behavior: "instant" })`);
-      await expect.poll(() => page.evaluate(READING_HELD)).toBe(true);
+      await expect.poll(() => page.evaluate(`${TURN}.length + ${READER}.querySelectorAll('[data-part="read"]').length`)).toBe(0);
       await page.evaluate(`${READER}.scrollIntoView({ block: "center", behavior: "instant" })`);
       await expect.poll(() => page.evaluate(READING_RUNS)).toBe(true);
       await context.close();

@@ -479,6 +479,9 @@ const SHINE = "rgba(255, 255, 255, 0.55)";
  * The book's five lines, as it is drawn: three on the left page, the third shorter, and two on the right. Said one by
  * one because the one who reads the book on the landing reads them one by one (app/kit/LandingStory.tsx).
  */
+/** The ink a line of the book is darkened in as it is read: the face's own, which only a drawing may name. */
+export const READ_INK = INK;
+
 export const BOOK_LINES: ReadonlyArray<Readonly<{ d: string; page: "left" | "right"; short?: true }>> = [
   { d: "M14 33.1 Q21 30.9 28.5 33.1", page: "left" },
   { d: "M14 35.8 Q21 33.6 28.5 35.8", page: "left" },
