@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { NO_STORE } from "@/src/gift-api";
 import { cardSellMinimum } from "@/src/mercuryo";
+import { payoutMinimum } from "@/src/ramp";
 import { euroRailMethods, payoutMethodFor, reachOfWaysIn, reachOfWaysOut } from "@/src/rail-availability";
 import { countryCode, guessCountry, regionOfLocale } from "@/src/rail-country";
 import { cardOffered, cardReach, payerCountry } from "@/src/card-rail";
@@ -34,10 +35,11 @@ export async function GET(request: Request) {
   // Adding money by card is decided for the payer's country (the account's, else the connection's), each partner by its
   // own list first; paying out keeps the guess above.
   const payer = payerCountry({ account: accountCountry, connection: fromConnection });
-  const [waysOut, live, methods, cardSmallest] = await Promise.all([reachOfWaysOut(guess.country), reachOfWaysIn(payer ?? guess.country), euroRailMethods(), cardSellMinimum()]);
+  const [waysOut, live, methods, cardSmallest, bankSmallest] = await Promise.all([reachOfWaysOut(guess.country), reachOfWaysIn(payer ?? guess.country), euroRailMethods(), cardSellMinimum(), payoutMinimum()]);
   const waysIn = cardReach(payer, live);
-  // How the bank service pays in that country and the card service's smallest sale, each as its own service publishes
-  // it today, for the two cards of the way out to say (the audit of 1 Oct 2026). Nothing when it could not be read.
-  const out = { bank: payoutMethodFor(guess.country, methods), cardSmallest };
+  // How the bank service pays in that country, and the smallest payout of the bank service and of the card service,
+  // each as its own service publishes it today, for the two cards of the way out to say (the audits of 1 and 9 Oct
+  // 2026). Nothing when it could not be read.
+  const out = { bank: payoutMethodFor(guess.country, methods), cardSmallest, bankSmallest };
   return NextResponse.json({ ...guess, waysOut, waysIn, card: { offered: cardOffered(waysIn), country: payer }, out }, { headers: NO_STORE });
 }

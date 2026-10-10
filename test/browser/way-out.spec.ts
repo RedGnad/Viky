@@ -44,7 +44,7 @@ async function person(device: Profile, holdings: Holdings, where: Where, open: O
         waysOut: { Ramp: where.bank, Mercuryo: where.card },
         waysIn: {},
         card: { offered: true, country: where.country },
-        out: { bank: where.method ?? null, cardSmallest: { amount: 15, currency: "EUR" } },
+        out: { bank: where.method ?? null, cardSmallest: { amount: 15, currency: "EUR" }, bankSmallest: { amount: 6.69, currency: "EUR" } },
       }),
     ),
   );
@@ -75,6 +75,8 @@ test.describe("taking money out", () => {
       // One sentence in the open on the card that decides, and four lines folded under "How it works": what the
       // person gets, in how long, what it costs, what it takes (the founder, 4 Oct 2026).
       await expect(page.getByText("A transfer in euros to your IBAN, within two working days.", { exact: true })).toBeVisible();
+      // The bank service's smallest payout is on its card before anything is changed for it (the audit of 9 Oct 2026).
+      await expect(page.locator("[data-bank-from]")).toHaveText("From €6.69 at a time.");
       const how = page.locator('[data-how-it-works="bank"]');
       await how.locator("summary").click();
       await expect(how.locator("dl.said-lines > div")).toHaveText(["You geteuros on your IBAN", "Timewithin two working days", "Cost0.99 %, at least €1.99", "You needyour ID, once, and your own account"]);
@@ -173,6 +175,8 @@ test.describe("taking money out", () => {
       // A hundred dollars less the service's 1.99 EUR minimum, counted back at the day's rate: said in dollars.
       await expect(bank.getByText("$97.74")).toBeVisible();
       await bank.scrollIntoViewIfNeeded();
+      // Its smallest payout is in the card's own money: dollars here, converted, so "about" (the founder, 10 Oct 2026).
+      await expect(american.page.locator("[data-bank-from]")).toHaveText("From about $7.60 at a time.");
       await shot(american.page, size.name, "3a-a-bank-in-the-united-states");
       await american.context.close();
 

@@ -20,7 +20,7 @@ export type RailsWhere = Readonly<{
    * What the two ways out publish for that country today: the method and the currency the bank service pays by, and
    * the card service's smallest sale. Each is absent when its service did not answer.
    */
-  out?: Readonly<{ bank: Readonly<{ method: string; currency: string }> | null; cardSmallest: Readonly<{ amount: number; currency: string }> | null }>;
+  out?: Readonly<{ bank: Readonly<{ method: string; currency: string }> | null; cardSmallest: Readonly<{ amount: number; currency: string }> | null; bankSmallest?: Readonly<{ amount: number; currency: string }> | null }>;
 }>;
 
 export function whereTheRailsServe(answered?: string | null): Promise<RailsWhere> {

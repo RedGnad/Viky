@@ -6,8 +6,8 @@ import { GiftApiError } from "./gift-api";
  *
  * Their smallest and largest sale are published in euros and move with the rate: read twice on 16 Sep, USDC on
  * Monad was 6.51 EUR to 14,738.33 EUR, while their buy endpoint said 6.25 at the same moment. A sentence on a
- * screen saying "from 6.50 EUR" would therefore be wrong on most days, so nothing says it: the screen prints
- * what this returns.
+ * screen saying "from 6.50 EUR" would therefore be wrong on most days, so no figure is written anywhere: the
+ * screen prints what this returns, on the card of the way out (`payoutMinimum`) and in a quote's refusal.
  *
  * Their endpoint takes no country, so what comes back is the euro-zone list and not an answer about any one
  * person: who may sell from where is decided further along their own flow, and Viky does not pretend to know
@@ -82,6 +82,20 @@ export async function payoutAsset(symbol = "USDC", currency = "EUR"): Promise<Pa
   };
   cached = { at: now, asset, symbol };
   return asset;
+}
+
+/**
+ * The same read for a screen that only says the figure (the audit of 9 Oct 2026): the card of the bank's way out
+ * showed what a balance would leave and no smallest payout, so three dollars read "€0.69" there, and the service's
+ * refusal came after the press. Nothing rather than a refusal when it does not answer.
+ */
+export async function payoutMinimum(): Promise<Readonly<{ amount: number; currency: string }> | null> {
+  try {
+    const asset = await payoutAsset();
+    return { amount: asset.minFiat, currency: asset.currency };
+  } catch {
+    return null;
+  }
 }
 
 /** What an amount of the coin is worth in their currency, by their own price. */
