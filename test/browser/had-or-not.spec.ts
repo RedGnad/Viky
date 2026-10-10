@@ -31,6 +31,41 @@ async function answer(page: Page, status: () => unknown) {
 
 const title = (page: Page) => page.locator("main h1, main h2").first();
 
+/**
+ * How the card's state stands on its lines: how many lines, how many words on the last one, and the same two with the
+ * sharing out taken off, with the card's height each way. Sent as text: a function sent to the page loses its name.
+ */
+const STATE_LINES = `(() => {
+  const state = document.querySelector("section.gift-card-placed .gift-state");
+  const card = state.closest("section");
+  const words = state.firstChild;
+  const read = () => {
+    const tops = [];
+    const range = document.createRange();
+    for (const word of words.textContent.matchAll(/\\S+/g)) {
+      range.setStart(words, word.index);
+      range.setEnd(words, word.index + word[0].length);
+      tops.push(Math.round(range.getBoundingClientRect().top));
+    }
+    const last = Math.max(...tops);
+    return { lines: new Set(tops).size, onLast: tops.filter((top) => top === last).length, card: card.getBoundingClientRect().height };
+  };
+  const shared = read();
+  state.style.textWrap = "wrap";
+  const unshared = read();
+  state.style.textWrap = "";
+  return { shared, unshared };
+})()`;
+
+/** No word alone on the state's last line, on as many lines as before, the card no taller (the founder, 10 Oct 2026). */
+async function stateIsSharedOut(page: Page) {
+  const { shared, unshared } = (await page.evaluate(STATE_LINES)) as Record<"shared" | "unshared", { lines: number; onLast: number; card: number }>;
+  expect(shared.lines, "sharing out changes no line count").toBe(unshared.lines);
+  expect(shared.card, "so the card keeps its height").toBe(unshared.card);
+  if (shared.lines > 1) expect(shared.onLast, "no word alone on the last line").toBeGreaterThan(1);
+  return { shared, unshared };
+}
+
 test.describe("a gift had or not, as its two people read it", () => {
   test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each test opens its own windows");
 
@@ -47,6 +82,9 @@ test.describe("a gift had or not, as its two people read it", () => {
       // Nothing shown yet: the gesture, and what was agreed in the register's words.
       await page.goto(`/g/${GIFT}`);
       await expect(page.getByText("Show it from your own university account, and it is yours.")).toBeVisible();
+      // Its lines are shared out: "yours." stood alone on the last one, at a phone's width.
+      const gesture = await stateIsSharedOut(page);
+      if (process.env.VIKY_SAY_LINES) console.log(`state lines (${size.name}): ${JSON.stringify(gesture)}`);
       // Being told is offered in the open, under the card, never inside a fold (the founder, 1 Oct 2026): a round
       // button, and what it is for in the sheet it opens.
       await expect(page.locator("details [data-decide]")).toHaveCount(0);
@@ -87,10 +125,22 @@ test.describe("a gift had or not, as its two people read it", () => {
       await shot(page, size.name, "3c-yours-refused");
 
       // The university's page still being built.
+      // Said by what the person will be able to do, with the day: two days after the gift was made, here today.
+      state = { review: { status: "building" }, createdAtChain: now() };
+      await page.goto(`/g/${GIFT}`);
+      await expect(page.getByText(/^Your university is being set up\. You can show your page here from \d{1,2} [A-Z][a-z]{2} at the latest\.$/)).toBeVisible();
+      // The card says it once: the block under it, which said "within two days", draws nothing.
+      await expect(page.getByText(/within two days/)).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Show it", exact: true })).toHaveCount(0);
+      await shot(page, size.name, "3d-yours-being-built");
+      // Past the day named (this gift was made five days ago): the sentence stays and the day goes.
       state = { review: { status: "building" } };
       await page.goto(`/g/${GIFT}`);
-      await expect(page.getByText("Your university's page is being set up. Then you show it here.")).toBeVisible();
-      await shot(page, size.name, "3d-yours-being-built");
+      await expect(page.getByText("Your university is being set up. The money waits in your name.", { exact: true })).toBeVisible();
+      await expect(page.getByText(/at the latest/)).toHaveCount(0);
+      const late = await stateIsSharedOut(page);
+      if (process.env.VIKY_SAY_LINES) console.log(`state lines, past the day (${size.name}): ${JSON.stringify(late)}`);
+      await shot(page, size.name, "3d2-yours-being-built-past-the-day");
 
       // The last day has passed. An enrolment is dated the day it is shown, so nothing shown now can pay: no gesture
       // is offered, and the page says when it goes back.
@@ -143,6 +193,19 @@ test.describe("a gift had or not, as its two people read it", () => {
       await expect(agreed.nth(2)).toHaveText("If notback to you, two weeks later");
       await expect(page.getByText(/Reach 1 on|reach 1,|Target 1/)).toHaveCount(0);
       await shot(page, size.name, "3g-theirs-what-was-agreed");
+
+      // The university's page still being set up, said by what the person will be able to do, with the day.
+      state = { review: { status: "building" }, createdAtChain: now() };
+      await page.goto(`/g/${GIFT}`);
+      await expect(page.getByText(/^Their university is being set up\. They can show their page from \d{1,2} [A-Z][a-z]{2} at the latest\.$/)).toBeVisible();
+      await shot(page, size.name, "3g2-theirs-being-built");
+      state = { review: { status: "building" } };
+      await page.goto(`/g/${GIFT}`);
+      await expect(page.getByText("Their university is being set up.", { exact: true })).toBeVisible();
+      await expect(page.getByText(/at the latest/)).toHaveCount(0);
+      const theirs = await stateIsSharedOut(page);
+      if (process.env.VIKY_SAY_LINES) console.log(`state lines, theirs past the day (${size.name}): ${JSON.stringify(theirs)}`);
+      await shot(page, size.name, "3g3-theirs-being-built-past-the-day");
 
       state = { review: { status: "pending" } };
       await page.goto(`/g/${GIFT}`);

@@ -1406,6 +1406,9 @@ dialog.sheet[open] {
   margin: -8px 0 14px;
 }
 
+/* The state's lines are shared out, as the promise's, the sentence under Home's card and the moment's are (the founder,
+   10 Oct 2026): no word is left alone on the last line. Sharing out never changes how many lines there are, so the
+   card is the same height and nothing moves when the words change at a landing. */
 .gift-state {
   font-family: var(--font-title);
   font-weight: var(--font-title-weight);
@@ -1413,6 +1416,7 @@ dialog.sheet[open] {
   line-height: var(--type-gift-state-leading);
   letter-spacing: -0.4px;
   margin: 2px 0 4px;
+  text-wrap: balance;
 }
 
 /* The wheel of a look still under way, after the state's last word. Its place has no width and no height, so it

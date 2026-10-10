@@ -126,7 +126,8 @@ test("one list: the field says how many it searches, the ready come first with a
 });
 
 test("the two days are said once, to a payer, under the university chosen", () => {
-  assert.equal(UNIVERSITY_CHOICE.setUpInTwoDays, "Its page is set up within two days of your gift. The money waits in their name meanwhile.");
+  // Said by what the student will be able to do (the founder, 10 Oct 2026, the same afternoon).
+  assert.equal(UNIVERSITY_CHOICE.setUpInTwoDays, "They can show their page two days after you pay, at the latest. The money waits in their name meanwhile.");
   assert.equal(UNIVERSITY_CHOICE.showToday, "Its students show their page today.");
   const chooser = readFileSync("app/kit/offer/UniversityChooser.tsx", "utf8");
   // Said from the list, by what the gift asks, and not at all while the list is unread: either line would be a guess.

@@ -1293,8 +1293,16 @@ export const GIFT_LIVE = {
      */
     unreadYours: "Viky did not check your proof in time.",
     unreadTheirs: (recipient: string | null) => `Viky did not check ${recipient ? `${recipient}'s` : "their"} proof in time.`,
-    buildingYours: "Your university's page is being set up. Then you show it here.",
-    buildingTheirs: (recipient: string | null) => `${recipient ? `${recipient}'s` : "Their"} university page is being set up.`,
+    /**
+     * The university's page not read yet, said by what the person will be able to do and when (the founder, 10 Oct
+     * 2026): the day is the gift's making plus two days, in the reader's clock. True of the code: the provider is
+     * built within two days of a first gift (app/api/gift/certificate/create/route.ts).
+     */
+    buildingYours: (from: string) => `Your university is being set up. You can show your page here from ${from} at the latest.`,
+    buildingTheirs: (from: string) => `Their university is being set up. They can show their page from ${from} at the latest.`,
+    /** Once the day named has passed and the page is still not read: the sentence stays and the day goes (the founder, 10 Oct 2026). */
+    buildingLateYours: "Your university is being set up. The money waits in your name.",
+    buildingLateTheirs: "Their university is being set up.",
     /**
      * Past the last day. True of the contract: what a source dates itself (a certificate granted, a test taken, a race
      * run) may be proved for fourteen days more if its date is in time, and then the gift goes back. The state is the
@@ -1867,7 +1875,7 @@ export const UNIVERSITY_CHOICE = {
    * True of the code: a gift on a university Viky does not read yet is made and paid like any other, the contract
    * holds the money in the recipient's name, and its provider is built within two days of that first gift.
    */
-  setUpInTwoDays: "Its page is set up within two days of your gift. The money waits in their name meanwhile.",
+  setUpInTwoDays: "They can show their page two days after you pay, at the latest. The money waits in their name meanwhile.",
   showToday: "Its students show their page today.",
   /** Under a search that found nothing, and nowhere else: the way to the page where a university is asked for. */
   askForIt: "Ask for it",
@@ -1929,11 +1937,6 @@ export const SHOW_PROOF = {
    * the operator's review, nothing relayed. True of `pnpm portal:pin`: the operator reads it and settles or refuses.
    */
   held: "First proof from this university: checked within an hour.",
-  /**
-   * A university chosen for a sense it has no provider for yet (D313): the operator was asked when the gift was made and
-   * builds it within two days. Nothing can be shown until then, and nothing is lost: the contract holds the money.
-   */
-  building: "Your university's page is being set up within two days. Then you show it here.",
   /** The review found the page does not show what the gift is for (D312): nothing relayed, the contract untouched. */
   reviewRefused: "This university's page did not show what this gift is for, so nothing was counted. The money stays where it is.",
   refusals: {

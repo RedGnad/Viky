@@ -10,7 +10,8 @@ import { CONDITIONS } from "../src/conditions";
 import { liveOf, type LiveInput } from "../src/gift-live";
 import { askedInWords, certificateById } from "../src/milestone-conditions";
 import { marathonTargetUnderHours } from "../src/marathon";
-import { GIFT_CARD, GIFT_PAGE, MILESTONE_PAGE } from "../src/sentences";
+import { onALaterDay } from "../src/moments";
+import { GIFT_CARD, GIFT_PAGE, MILESTONE_PAGE, SHOW_PROOF } from "../src/sentences";
 
 test("what it asks is said in the register's words, from the contract's own target", () => {
   const asked = (id: string, units: number) => askedInWords(certificateById(id)!, units);
@@ -99,8 +100,17 @@ test("the title says where the proof stands, to each of the two people", () => {
   assert.equal(title({ proof: "refused" }), "It was checked and did not show what the gift asks.");
   assert.equal(title({ proof: "refused", voice: "funder" }), "It was checked and did not show what the gift asks.");
   // The university's page still being built.
-  assert.equal(title({ proof: "building" }), "Your university's page is being set up. Then you show it here.");
-  assert.equal(title({ proof: "building", voice: "funder" }), "Boo's university page is being set up.");
+  // Said by what the person will be able to do and when (the founder, 10 Oct 2026).
+  assert.equal(title({ proof: "building", builtByInWords: "12 Oct" }), "Your university is being set up. You can show your page here from 12 Oct at the latest.");
+  assert.equal(title({ proof: "building", builtByInWords: "12 Oct", voice: "funder" }), "Their university is being set up. They can show their page from 12 Oct at the latest.");
+  // Once the day named has passed, the sentence stays and the day goes.
+  assert.equal(title({ proof: "building", builtByInWords: null }), "Your university is being set up. The money waits in your name.");
+  assert.equal(title({ proof: "building", builtByInWords: null, voice: "funder" }), "Their university is being set up.");
+  assert.deepEqual([onALaterDay(Date.UTC(2026, 9, 13, 0, 5), Date.UTC(2026, 9, 12, 15), "UTC"), onALaterDay(Date.UTC(2026, 9, 12, 23, 55), Date.UTC(2026, 9, 12, 15), "UTC"), onALaterDay(Date.UTC(2026, 9, 12, 23, 55), Date.UTC(2026, 9, 12, 15), "Asia/Tokyo")], [true, false, false]);
+  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /builtByInWords: nowMs !== 0 && onALaterDay\(nowMs, \(status\.createdAtChain \+ 2 \* 86_400\) \* 1000, zone\) \? null : dayInWords\(\(status\.createdAtChain \+ 2 \* 86_400\) \* 1000, zone\),/);
+  // The card says it once: the block under it draws nothing while the university is being set up.
+  assert.match(readFileSync("app/kit/ShowProof.tsx", "utf8"), /if \(review === "building" && state\.at !== "held"\) return null;/);
+  assert.equal("building" in SHOW_PROOF, false);
   // Past the last day, where the source dates what it grants: what was had in time can still be proved.
   // The state is the title and what follows from it is the line under it (1 Oct 2026): one title said both before.
   const under = (over: Partial<LiveInput>) => liveOf({ ...WAITING, ...over }).next;
@@ -130,4 +140,16 @@ test("the title says where the proof stands, to each of the two people", () => {
   // No gesture is offered for a showing that can no longer pay.
   assert.match(page, /if \(proofStands === "ended" \|\| proofStands === "unread"\) return null;/);
   assert.match(page, /hadOrNot\.deadlineMs \+ MILESTONE_LATE_PROOF_SECONDS \* 1000/);
+});
+
+test("the state's lines are shared out, as the kit's other titles are, and its wheel still takes no room", () => {
+  const css = readFileSync("app/globals.css", "utf8");
+  // No word alone on the last line (the founder, 10 Oct 2026). Sharing out keeps the number of lines, so the card is
+  // the same height before and after the words change at a landing: test/browser/had-or-not.spec.ts measures it.
+  assert.match(css, /\.gift-state \{[^}]*\n  text-wrap: balance;\n\}/);
+  assert.match(css, /\.gift-state-wheel-place \{\s*position: relative;\s*display: inline-block;\s*width: 0;\s*height: 0;\s*\}/);
+  // The same rule the promise, the goal said and the moment already follow.
+  const kit = readFileSync("app/components/ui.ts", "utf8");
+  assert.match(kit, /export const HERO = [^\n]*\[text-wrap:balance\]/);
+  assert.match(readFileSync("app/kit/ReachedMoment.tsx", "utf8"), /\[text-wrap:balance\]/);
 });

@@ -212,11 +212,16 @@ export function ShowProof({
     }
   };
 
+  // A university still being set up: the card says it, with the day its page can be shown from (the founder, 10 Oct
+  // 2026), and nothing is drawn here. This block said the same under the card, in the words of before, "within two
+  // days", counted from no day.
+  if (review === "building" && state.at !== "held") return null;
+
   // Held for review, or refused by it (D312): said in the button's place, since showing it again changes nothing.
   if (state.at === "held" || review) {
     return (
       <section className={CARD} role="status">
-        <Said className="font-medium" text={state.at === "held" ? W.held : review === "refused" ? (reviewMessage ?? W.reviewRefused) : review === "building" ? W.building : W.held} />
+        <Said className="font-medium" text={state.at === "held" || review !== "refused" ? W.held : (reviewMessage ?? W.reviewRefused)} />
       </section>
     );
   }
