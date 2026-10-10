@@ -89,6 +89,9 @@ test("the title says where the proof stands, to each of the two people", () => {
   // Nothing yet: the gesture, as before.
   assert.equal(title({}), "Show it from your own university account, and it is yours.");
   assert.equal(title({ voice: "funder" }), "Boo has not shown it yet.");
+  // A year's results not out yet (the founder, 10 Oct 2026): the wait, to both.
+  assert.equal(title({ waitsForResults: true }), "Waiting for your results.");
+  assert.equal(title({ waitsForResults: true, voice: "funder" }), "Waiting for their results.");
   // Held for review.
   assert.equal(title({ proof: "pending" }), "Shown. Viky is checking it.");
   assert.equal(title({ proof: "pending", voice: "funder" }), "Boo showed it. Viky is checking it.");

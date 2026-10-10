@@ -295,6 +295,15 @@ export function proofOfCondition(conditionId: string): ConditionProof | undefine
 }
 
 /** Every condition with what it proves, for the judges page: the register's order, so nothing can be left out quietly. */
+/**
+ * Whether a gift on this condition waits for a year's results (`waits`): its page says the wait before it offers to show
+ * anything (the founder, 10 Oct 2026). A student who pressed "Show it" in October waited ten minutes, read a refusal,
+ * and one of the month's proofs was spent on last year's page.
+ */
+export function waitsForResults(conditionId: string): boolean {
+  return proofOfCondition(conditionId)?.waits !== undefined;
+}
+
 export function conditionsWithProof(): ReadonlyArray<{ condition: Condition; proof: ConditionProof }> {
   return CONDITIONS.flatMap((condition) => {
     const proof = proofOfCondition(condition.id);

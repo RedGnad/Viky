@@ -74,7 +74,8 @@ test("the page and the block are never seen out of step, from the first image on
   assert.match(block, /useState<State>\(\(\) => \(checkingAtLoad\(\{ yours, review, openAtLoad \}\) \? \{ at: "checking" \} : \{ at: "asking" \}\)\);/);
   // Said only where the block is mounted, by the one test that mounts it.
   assert.match(page, /const checkingTheirOwn = proofSilent && mine && showsProof && !proofReview;/);
-  assert.match(page, /return showsProof \? \(\s*<ShowProof /);
+  // Inside a fragment since 10 Oct 2026: a results gift draws "Not yet" under the block.
+  assert.match(page, /return showsProof \? \(\s*<>\s*<ShowProof /);
   // The link, the button and a refusal are still the block's own.
   for (const kept of ["{W.signInTo(condition.source)}", "{W.waiting}", "{W.stopWaiting}", "W.button", "{state.message}"]) assert.ok(block.includes(kept), kept);
 });
