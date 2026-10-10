@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 import { JUDGES_CONTENTS } from "../app/judges/JudgesContents";
-import { secondsToPay, TOULOUSE_PASSES } from "../src/judges-first-use";
+import { secondsBetween, TOULOUSE_PASSES } from "../src/judges-first-use";
 
 /**
  * The judges page for a judge in a hurry (the audit of 1 Oct 2026, D-11; the founder, 2 Oct 2026): a block that says
@@ -84,20 +84,31 @@ test("the minute says what Viky is, for whom, who used it, where it runs, why Mo
 test("the universities are lines a judge reads in a minute, and Rome's is written once its row holds the right hash (the UI pass of 8 Oct 2026)", () => {
   const minute = read("app/judges/JudgesMinute.tsx");
   // The day's fact first (the founder, 9 Oct 2026), the first pass under it, each with the transaction that paid.
-  assert.match(minute, /Toulouse, \{TOULOUSE_PASSES\.onTheFixedRule\.day\}: a student showed their enrolment, and\{" "\}\s+<a className="underline" href=\{`https:\/\/monadvision\.com\/tx\/\$\{TOULOUSE_PASSES\.onTheFixedRule\.paidTx\}`\}>\s+the gift paid\s+<\/a>\{" "\}\s+\{secondsToPay\(TOULOUSE_PASSES\.onTheFixedRule\)\} seconds after the verification opened, with no review\./);
+  assert.match(minute, /Toulouse, \{TOULOUSE_PASSES\.onTheFixedRule\.day\}: a student showed their enrolment, and\{" "\}\s+<a className="underline" href=\{`https:\/\/monadvision\.com\/tx\/\$\{TOULOUSE_PASSES\.onTheFixedRule\.paidTx\}`\}>\s+the gift paid\s+<\/a>\{" "\}\s+\{TOULOUSE_PASSES\.onTheFixedRule\.secondsFromSignIn\} seconds after they signed in to their university&apos;s portal, with no review\./);
   assert.match(minute, /Toulouse, \{TOULOUSE_PASSES\.first\.day\}, the first pass: a real student showed their enrolment, and\{" "\}/);
   assert.ok(minute.indexOf('data-toulouse="on-the-fixed-rule"') < minute.indexOf('data-toulouse="first"'), "the first pass stays under it");
-  // Sixty seconds is worked out from the two moments, never typed: the verification opened, the block that paid.
-  assert.equal(TOULOUSE_PASSES.onTheFixedRule.day, "9 Oct 2026");
-  assert.equal(secondsToPay(TOULOUSE_PASSES.onTheFixedRule), 60);
+  // Counted from the student's sign-in to their portal, not from the verification opening, which holds the time
+  // they type (the founder, 10 Oct 2026). Twenty seconds is his measure on his recording of the pass, from the
+  // press that sent the sign-in to the payment. It stands between what the two logged moments allow: the portal's
+  // sign-in form was gone eighteen seconds before the block that paid, and the verification had opened sixty before.
+  const pass = TOULOUSE_PASSES.onTheFixedRule;
+  assert.equal(pass.day, "9 Oct 2026");
+  assert.equal(pass.secondsFromSignIn, 20);
+  assert.equal(secondsBetween(pass.opened, pass.paid), 60);
+  assert.equal(secondsBetween(pass.signInFormGone, pass.paid), 18);
+  assert.ok(secondsBetween(pass.signInFormGone, pass.paid) <= pass.secondsFromSignIn && pass.secondsFromSignIn < secondsBetween(pass.opened, pass.paid));
+  assert.equal(pass.signInFormGone.toISOString(), "2026-10-09T12:55:09.000Z");
   assert.equal(TOULOUSE_PASSES.onTheFixedRule.opened.toISOString(), "2026-10-09T12:54:27.000Z");
   assert.equal(TOULOUSE_PASSES.onTheFixedRule.paid.toISOString(), "2026-10-09T12:55:27.000Z");
   assert.equal(TOULOUSE_PASSES.onTheFixedRule.paidTx, "0xd950295c4c3d51480496003fd6547b0fc6c3546ac0c5747d377e6259cd3277e2");
   assert.equal(TOULOUSE_PASSES.first.paidTx, "0x9c5508e83b0dd20668bb6a8c683faa047820734d6938387f8b6f516c3467c4fd");
-  assert.doesNotMatch(minute, /60 seconds/, "the figure is the code's");
+  assert.doesNotMatch(minute, /(20|60) seconds/, "the figure is the register's");
   // The README says the same fact in the founder's sentence, with the same transaction, over the first pass.
   const readme = read("README.md");
-  assert.match(readme, /\*\*Toulouse, 9 Oct 2026: a student showed their enrolment, and the gift paid 60 seconds after the verification\s+opened, with no review\.\*\*/);
+  assert.match(readme, /\*\*Toulouse, 9 Oct 2026: a student showed their enrolment, and the gift paid 20 seconds after they signed in to\s+their university's portal, with no review\.\*\*/);
+  // The three hours stay, and no number of the session is in a text anybody reads.
+  assert.ok(readme.replace(/\s+/g, " ").includes("The verification opened at 12:54:27 UTC, on the rule fixed ahead of the pass, the portal's sign-in form was gone from the page at 12:55:09, and the gift paid in the block of 12:55:27"));
+  assert.doesNotMatch(readme + minute, /LOGIN_INDICATORS_NOT_FOUND|session (id|number) [0-9a-f-]{8,}/i);
   assert.ok(readme.includes(`https://monadvision.com/tx/${TOULOUSE_PASSES.onTheFixedRule.paidTx}`));
   assert.ok(readme.indexOf("Toulouse, 9 Oct 2026") < readme.indexOf("The first pass, two days before"), "and the first pass stays under it");
   assert.match(readme, /Gift 1000008 on the second `MilestoneGift`, 5\.02 AUSD for staying enrolled/);
