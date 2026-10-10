@@ -3,14 +3,43 @@ import type { GiftRequest } from "./client/gift";
 import type { MilestoneGiftRequest } from "./client/milestone";
 
 /**
- * The creation a funder's page last sent, kept for the tab so "Try again" sends the same signed request (D87).
+ * The creation a funder's page last sent, kept so "Try again" sends the same signed request (D87).
  *
  * The server finds a creation by its authorization's nonce, the hash of the exact terms and a random salt. Signing
  * again draws a new salt, so a retry that signs again is a new gift to the server: if the first one's money had moved
  * and only its record failed, a second signature could pay for the same gift twice. So the page signs once per set of
  * terms, keeps the request, and sends it again until the server says it is made, or refuses the terms themselves.
+ *
+ * Kept for the device and not for the tab, for as long as the gift itself is kept (the final audit of 9 Oct 2026, A4).
+ * A page closed while the creation was on its way took the request with it: the page opened again signed a new one,
+ * and a new request is a second gift when the account still holds the amount. The request moves nothing by being
+ * kept: its authorization pays this one gift's contract and nobody else, once.
  * Browser safe.
  */
+
+/** As long as a gift set up on the device is kept (src/pending-gift.ts): a request older than that is of no gift. */
+export const GIFT_ATTEMPT_MAX_AGE_MS = 72 * 60 * 60 * 1000;
+
+/** The attempt as the device keeps it, with the moment it was written down. */
+export function attemptToKeep(attempt: KeptAttempt, nowMs: number): string {
+  return JSON.stringify({ ...attempt, keptAtMs: nowMs });
+}
+
+/** What the device keeps, or nothing: unreadable, written in the future, or older than a gift is kept. */
+export function attemptKept(raw: string | null, nowMs: number): KeptAttempt | null {
+  if (!raw) return null;
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!value || typeof value !== "object") return null;
+  const kept = value as Partial<KeptAttempt> & { keptAtMs?: unknown };
+  if (typeof kept.keptAtMs !== "number" || kept.keptAtMs > nowMs + 60_000 || nowMs - kept.keptAtMs > GIFT_ATTEMPT_MAX_AGE_MS) return null;
+  if (!kept.terms || !kept.request || typeof kept.request !== "object") return null;
+  return { terms: kept.terms, request: kept.request };
+}
 
 export const GIFT_ATTEMPT_KEY = "viky.giftAttempt";
 

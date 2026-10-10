@@ -77,7 +77,7 @@ test("the screen keeps the time of the failure, and its watch still depends on t
   assert.ok(failure.includes("failedAtMs.current = Date.now()"), "the time of the failure is kept");
   assert.doesNotMatch(failure, /setPhase\("waiting"\)/, "the screen does not go back to the one that offers to pay");
   assert.match(failure, /setAsksAgain\(after\.keep \? after\.says : W\.arrived\.priceMoved\);/, "what is known is said under the ring");
-  assert.match(watch, /\}, \[step, address, units, phase, refresh, give, ensureSigner, earned\]\);/, "the phase stays among what the watch depends on");
+  assert.match(watch, /\}, \[step, address, units, phase, refresh, give, termsOf, ensureSigner, earned\]\);/, "the phase stays among what the watch depends on");
   assert.match(watch, /setInterval\(\(\) => void look\(\), POLL_MS\)/);
 });
 
