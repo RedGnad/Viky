@@ -141,3 +141,15 @@ test("the title says where the proof stands, to each of the two people", () => {
   assert.match(page, /if \(proofStands === "ended" \|\| proofStands === "unread"\) return null;/);
   assert.match(page, /hadOrNot\.deadlineMs \+ MILESTONE_LATE_PROOF_SECONDS \* 1000/);
 });
+
+test("the state's lines are shared out, as the kit's other titles are, and its wheel still takes no room", () => {
+  const css = readFileSync("app/globals.css", "utf8");
+  // No word alone on the last line (the founder, 10 Oct 2026). Sharing out keeps the number of lines, so the card is
+  // the same height before and after the words change at a landing: test/browser/had-or-not.spec.ts measures it.
+  assert.match(css, /\.gift-state \{[^}]*\n  text-wrap: balance;\n\}/);
+  assert.match(css, /\.gift-state-wheel-place \{\s*position: relative;\s*display: inline-block;\s*width: 0;\s*height: 0;\s*\}/);
+  // The same rule the promise, the goal said and the moment already follow.
+  const kit = readFileSync("app/components/ui.ts", "utf8");
+  assert.match(kit, /export const HERO = [^\n]*\[text-wrap:balance\]/);
+  assert.match(readFileSync("app/kit/ReachedMoment.tsx", "utf8"), /\[text-wrap:balance\]/);
+});
