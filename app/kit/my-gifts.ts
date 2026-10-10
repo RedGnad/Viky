@@ -5,17 +5,27 @@ import { HOME } from "@/src/sentences";
 import { ApiError } from "@/src/client/api";
 import { useAccount } from "@/src/account/provider";
 
-/** The account's gifts, read once for a screen, with the two states a list can be in besides full. */
-export function useMyGifts(address: string | undefined, start?: GiftSummary[] | null): { gifts: GiftSummary[] | null; problem: string | null } {
+/**
+ * The account's gifts, read once for a screen, with the two states a list can be in besides full.
+ *
+ * `read` says the list is the one this screen asked for itself. The list a page is rendered with (`start`) is as old
+ * as the page: a step back in the browser's history draws the page again from what the browser kept of it, and the
+ * server is not asked (measured on a production build, 10 Oct 2026: a push asks for the page's payload, a step back
+ * asks for nothing). So that list is good for a first image, and for nothing that is owed once.
+ */
+export function useMyGifts(address: string | undefined, start?: GiftSummary[] | null): { gifts: GiftSummary[] | null; problem: string | null; read: boolean } {
   const { serverForgot } = useAccount();
   const [gifts, setGifts] = useState<GiftSummary[] | null>(start ?? null);
+  const [read, setRead] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   useEffect(() => {
     if (!address) return;
     let live = true;
     loadMyGifts().then(
       (result) => {
-        if (live) setGifts(result.gifts);
+        if (!live) return;
+        setGifts(result.gifts);
+        setRead(true);
       },
       (error) => {
         if (!live) return;
@@ -29,5 +39,5 @@ export function useMyGifts(address: string | undefined, start?: GiftSummary[] | 
       live = false;
     };
   }, [address, serverForgot]);
-  return { gifts: address ? gifts : null, problem };
+  return { gifts: address ? gifts : null, problem, read: Boolean(address) && read };
 }
