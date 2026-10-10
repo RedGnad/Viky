@@ -1265,6 +1265,15 @@ export const GIFT_LIVE = {
     shownYours: (source: string) => `Show it from your own ${yourOwn(source)} account, and it is yours.`,
     shownTheirs: (recipient: string | null) => `${recipient ? `${recipient} has` : "They have"} not shown it yet.`,
     /**
+     * A gift on a year's results, before anybody says they are out (the founder, 10 Oct 2026): the wait is the state,
+     * and "Show it" is not the first thing on the page. True of the code: a results provider is pinned on the year
+     * under way and on no other (src/condition-proof.ts, RESULTS_WAIT_FOR_THE_YEAR), so a page of an earlier year
+     * pays nothing. The gift names no year yet; when it does, these lines will name it.
+     */
+    resultsYours: "Waiting for your results.",
+    resultsTheirs: "Waiting for their results.",
+    resultsNextYours: "This gift is for the year under way. Your university publishes its results at the end of the year: show them here that day.",
+    /**
      * Where a proof stands once there is one, or once the last day has passed (the audit of 1 Oct 2026: the title stayed
      * "Show it" and the funder read "has not shown it yet" over a proof held, refused, waited for or late).
      */
@@ -1882,6 +1891,12 @@ export const SHOW_PROOF = {
   keptVerdict: "Viky keeps only whether it reaches what this gift is for.",
   keptNumber: "Viky keeps what it proves and nothing else.",
   button: "Show it",
+  /**
+   * On a gift that waits for a year's results (the founder, 10 Oct 2026): the wait's one press, in the secondary look,
+   * which says what it takes for granted; and under the block it opens, the way back to the wait.
+   */
+  resultsOut: "My results are out",
+  notYet: "Not yet",
   preparing: "Preparing the verification",
   /** The link the person presses themselves, named after where they sign in: it opens the verification page in a new tab. */
   signInTo: (source: string) => `Sign in to ${spokenTo(source)}`,

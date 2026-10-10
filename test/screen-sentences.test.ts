@@ -126,6 +126,8 @@ const DOCUMENT = "a page read like Help (the shell's document kind): the rule do
  * the note of non-affiliation, and the two pages read like Help. A sentence joins this list only by his word.
  */
 const ACCEPTED: Readonly<Record<string, string>> = {
+  // His line of 10 Oct 2026, under the wait of a gift on a year's results, in his brief's own words.
+  "GIFT_LIVE.awaitingProof.resultsNextYours": "the founder's line, 10 Oct 2026: when the results come, under the wait",
   "CATALOGUE.intro": DOCUMENT,
   "CATALOGUE.limits": DOCUMENT,
   "ADD_UNIVERSITY.intro": DOCUMENT,

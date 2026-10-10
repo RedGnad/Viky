@@ -34,6 +34,11 @@ export type LiveInput = Readonly<{
   /** Whether the proof is shown by the person from their own account (D162) rather than a page they share. */
   shown?: boolean;
   /**
+   * A gift on a year's results that nobody has said are out yet (the founder, 10 Oct 2026): the wait is the headline,
+   * to both people, and the person it is for reads when to come back. Once a proof stands, where it stands is said.
+   */
+  waitsForResults?: boolean;
+  /**
    * Where the one proof of a gift had or not stands, when that is not "nothing yet": held for review, refused by it,
    * waiting for the university's page to be built, or past the last day: "late" where the source dates what it grants,
    * so what was had in time can still be proved, and "ended" where the showing itself is what is dated.
@@ -274,10 +279,15 @@ export function liveOf(input: LiveInput): Live {
     case "awaitingProof":
       return {
         // The one gesture, said as the headline: sharing a page, or showing it from their own account (D162). Once
-        // there is a proof, or once the last day has passed, the headline says where it stands instead.
+        // there is a proof, or once the last day has passed, the headline says where it stands instead. A gift on a
+        // year's results says the wait first, until the person says the results are out (10 Oct 2026).
         headline: input.proof
           ? proofHeadline(input.proof, voice, recipientName)
-          : input.shown
+          : input.waitsForResults
+            ? yours
+              ? L.awaitingProof.resultsYours
+              : L.awaitingProof.resultsTheirs
+            : input.shown
           ? yours
             ? L.awaitingProof.shownYours(source)
             : L.awaitingProof.shownTheirs(recipientName)
@@ -285,7 +295,7 @@ export function liveOf(input: LiveInput): Live {
             ? L.awaitingProof.yours
             : L.awaitingProof.theirs(recipientName),
         figure: { label: yours ? L.awaitingProof.label.yours : L.awaitingProof.label.theirs, value: input.amountDisplay },
-        next: input.proof ? proofNext(input.proof, voice, funderName, input.lateUntilInWords ?? null) : null,
+        next: input.proof ? proofNext(input.proof, voice, funderName, input.lateUntilInWords ?? null) : input.waitsForResults && yours ? L.awaitingProof.resultsNextYours : null,
         back,
       };
 
