@@ -56,6 +56,16 @@ export function inGroups(universities: readonly ListedUniversity[], words: strin
 
 const readyOn = (one: ListedUniversity, sense: UniversitySense) => one.ready?.includes(sense) === true;
 
+/** Whether a student of this university can show their page today, for what the gift asks: its mark, and its line once chosen. */
+export function readyFor(one: ListedUniversity, sense: UniversitySense): boolean {
+  return readyOn(one, sense);
+}
+
+/** How many universities the field searches: every one of the list, or the chosen country's. */
+export function searchedCount(index: readonly IndexedUniversity[], country: string | null): number {
+  return country ? index.filter((entry) => entry.one.country === country).length : index.length;
+}
+
 /**
  * What a university is sorted by (the founder, 29 Sep 2026): its own name, without the word every university's name
  * starts with, in any of the list's languages, and the "de", "of" after it. "Université de Toulouse" sorts as

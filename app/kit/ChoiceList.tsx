@@ -32,6 +32,12 @@ export type Choice<T extends string> = Readonly<{
    */
   tag?: ReactNode;
   /**
+   * A small mark at the end of the line, said of this option and not of the others ("Ready today" on a university
+   * whose students can show their page): what set it apart in a group of its own before, on its own line now. The
+   * words of the line then take the room that is left and wrap inside it.
+   */
+  mark?: ReactNode;
+  /**
    * Drawn right under this option while it is the chosen one, outside its row: the question a choice opens ("Which
    * distance?" under the race just picked), where the person is looking, rather than under the whole list.
    */
@@ -101,12 +107,13 @@ export function ChoiceList<T extends string>({
               // surface, filled with ink and a ring of surface once chosen, in both appearances (structure, section 7).
               className={`${lines && !chosen ? "" : "mt-[3px]"} h-[22px] w-[22px] shrink-0 cursor-pointer appearance-none rounded-full border-2 border-[var(--control-border)] bg-[var(--surface)] checked:bg-[var(--text)] checked:[box-shadow:inset_0_0_0_4px_var(--surface)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)] disabled:cursor-default disabled:opacity-50`}
             />
-            <span className="flex flex-col">
+            <span className={option.mark ? "flex min-w-0 flex-1 flex-col" : "flex flex-col"}>
               <span className={lines ? CHOICE : undefined}>{option.label}</span>
               {option.tag ? option.tag : null}
               {option.help && (chosen || !lines) ? <span className={HELP}>{option.help}</span> : null}
               {option.note && (chosen || !lines) ? <span className={HELP}>{option.note}</span> : null}
             </span>
+            {option.mark ? <span className="shrink-0 self-center">{option.mark}</span> : null}
           </label>
           {chosen && option.under ? <div className="pl-[var(--space-lg)]">{option.under}</div> : null}
           </Fragment>
