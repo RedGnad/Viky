@@ -1512,6 +1512,17 @@ dialog.sheet[open] {
   gap: var(--tap-gap);
 }
 
+/* An action that draws nothing takes no room: the block a proof is shown from is silent while the card itself says
+   where the proof stands (app/kit/ShowProof.tsx, the founder, 10 Oct 2026). */
+.gift-action:empty {
+  display: none;
+}
+
+/* The amount swells from where it is written, its left edge, as the card's character lands (app/kit/Motion.tsx). */
+[data-turns="amount"] {
+  transform-origin: 0 50%;
+}
+
 .gift-fold {
   margin-top: 16px;
   border-top: 1px solid var(--surface-rule);
@@ -2067,11 +2078,27 @@ dialog.reached-moment::backdrop {
 .arrival-pending svg[data-character="earned"] {
   opacity: 1;
 }
-.arrival-pending svg[data-character="earned"] [data-part="eye"] {
+.arrival-pending svg[data-character="earned"]:not([data-from]) [data-part="eye"] {
   transform: scaleY(0.36);
 }
-.arrival-pending svg[data-character="earned"] [data-part="mouth"] {
+.arrival-pending svg[data-character="earned"]:not([data-from]) [data-part="mouth"] {
   transform: scale(0.4);
+}
+
+/* A day earned while its screen stood carries the triangle it was a moment ago (the founder, 10 Oct 2026), out of
+   sight outside its jump. While it waits for its turn the triangle is what is drawn, awake, as the row showed it. */
+[data-character="earned"] [data-part="was"],
+[data-character="earned"] [data-part="was-gloss"] {
+  opacity: 0;
+}
+.arrival-pending svg[data-character="earned"][data-from] [data-part="was"],
+.arrival-pending svg[data-character="earned"][data-from] [data-part="was-gloss"] {
+  opacity: 1;
+}
+.arrival-pending svg[data-character="earned"][data-from] [data-part="body"],
+.arrival-pending svg[data-character="earned"][data-from] [data-part="face"],
+.arrival-pending svg[data-character="earned"][data-from] [data-part="figure"] > [data-part="gloss"] {
+  opacity: 0;
 }
 
 /* A day that opens wakes (the founder, 4 Oct 2026): it carries the sleeping capsule it was, out of sight outside that
@@ -2098,6 +2125,15 @@ dialog.reached-moment::backdrop {
   .arrival-pending svg[data-character="earned"] [data-part="eye"],
   .arrival-pending svg[data-character="earned"] [data-part="mouth"] {
     transform: none;
+  }
+  .arrival-pending svg[data-character="earned"][data-from] [data-part="was"],
+  .arrival-pending svg[data-character="earned"][data-from] [data-part="was-gloss"] {
+    opacity: 0;
+  }
+  .arrival-pending svg[data-character="earned"][data-from] [data-part="body"],
+  .arrival-pending svg[data-character="earned"][data-from] [data-part="face"],
+  .arrival-pending svg[data-character="earned"][data-from] [data-part="figure"] > [data-part="gloss"] {
+    opacity: 1;
   }
   .arrival-pending svg[data-character="today"] [data-part="was"] {
     opacity: 0;

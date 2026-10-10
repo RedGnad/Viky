@@ -241,9 +241,10 @@ test("a session open when the page is read on the server is checking from the fi
   const page = readFileSync("app/g/[id]/page.tsx", "utf8");
   assert.match(page, /return account \? await loadOpenShownSession\(id, account\) : null;/, "by the signed-in account and the gift, on the server");
   assert.match(page, /<GiftPage giftId=\{id\} linkKey=\{linkKey\} initialStatus=\{initialStatus\} openProof=\{openProof\} \/>/);
-  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /openAtLoad=\{openProof\} onShown=\{reloadAll\}/);
+  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /openAtLoad=\{openProof\} onChecking=\{setProofSilent\} onShown=\{reloadAll\}/);
   const source = readFileSync("app/kit/ShowProof.tsx", "utf8");
-  assert.match(source, /useState<State>\(\(\) => \(yours && !review && openAtLoad \? \{ at: "checking" \} : \{ at: "asking" \}\)\);/);
+  assert.match(source, /useState<State>\(\(\) => \(checkingAtLoad\(\{ yours, review, openAtLoad \}\) \? \{ at: "checking" \} : \{ at: "asking" \}\)\);/);
+  assert.match(source, /export const checkingAtLoad = \(input: [^)]+\) => input\.yours && !input\.review && Boolean\(input\.openAtLoad\);/);
   // Handed once: a later look for the open session asks the server, which alone knows what became of it.
   assert.match(source, /const given = handed\.current;\n\s+handed\.current = null;\n\s+find\.current\(giftId, false, left\.signal, given\);/);
 });
@@ -254,7 +255,9 @@ test("no page offers the link of a verification that is over", () => {
   assert.match(source, /setState\(resumed \? \{ at: "checking" \} : \{ at: "waiting", requestUrl: session\.requestUrl \}\);/);
   assert.equal(source.split("href={state.requestUrl}").length, 2, "one link, in one state");
   assert.ok(source.indexOf('state.at === "waiting" ? (') < source.indexOf("href={state.requestUrl}"));
-  assert.match(source, /state\.at === "checking" \? \(/);
+  // While the server is asked the block draws nothing at all: the card says it (test/back-from-the-check.test.ts).
+  assert.match(source, /const saidByTheCard = \(state: State\) => state\.at === "checking" \|\| state\.at === "done";/);
+  assert.match(source, /if \(saidByTheCard\(state\)\) return null;/);
   // The server's row is what says a session is still the open one, and a lookup that fails drops nothing.
   assert.match(source, /stillOpen: \(\) => openShownSessionOf\(gift\)\.then\(\(open\) => open\?\.sessionId === session\.sessionId, \(\) => true\)/);
   // Answered from another page of the gift, aged out, or ended by Reclaim: the gift is read again, then said.

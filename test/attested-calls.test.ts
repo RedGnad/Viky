@@ -633,7 +633,7 @@ test("the gift's page says the limit where it says where the gift stands, folds 
   assert.match(page, /const readsTheDay = Boolean\(asItGoes && \(mine \|\| readerIsFunder\) && !readingsStopped && lessonWouldPay\(today\)\);/, "nor does a habit read as its page opens look");
   // A proof a person shows: the card says it too, and nothing is offered to start one.
   assert.match(page, /limitReached=\{emptyReserve === "proofs"\}/);
-  assert.match(readFileSync("app/kit/ShowProof.tsx", "utf8"), /if \(limitReached && state\.at !== "waiting" && state\.at !== "checking"\) return null;/);
+  assert.match(readFileSync("app/kit/ShowProof.tsx", "utf8"), /if \(saidByTheCard\(state\)\) return null;\n\n[^\n]+\n[^\n]+\n  if \(limitReached && state\.at !== "waiting"\) return null;/);
   // Under a press it reads the same: the one refusal that takes a colour, where every other carries a mark.
   assert.match(readFileSync("app/kit/FieldRefusal.tsx", "utf8"), /if \(LIMIT\.isSaid\(children\)\) \{\n\s*return \(\n\s*<p id=\{id\} role="alert" className="limit-refused">/);
   // Before a gift is paid for: the route says which reserves are used up, and the card and the chooser say it.

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { agreeFirst } from "@/src/client/consent";
 import { useMinute } from "../kit/clock";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { openWithTheLinkSecret, type StartStep } from "@/src/client/v2";
 import { openingSecretOf } from "@/src/v2-protocol";
 import { opensByItsLink, paysTheSameDay } from "@/src/v2";
@@ -40,6 +40,7 @@ import { notTheirs, voiceOf, type Voice } from "@/src/gift-voice";
 import { datedTheDayItIsRead, milestoneById } from "@/src/milestone-conditions";
 import { previewLine, sharedWith } from "@/src/preview-line";
 import { MILESTONE_LATE_PROOF_SECONDS } from "@/src/milestone-protocol";
+import { MOTION } from "@/src/design-tokens";
 import type { AnyGiftStatus } from "@/src/gift-status";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { contractDayInWords, contractRangeInWords, dateInWords, hourInWords, momentInWords, nextPassMs } from "@/src/moments";
@@ -53,7 +54,7 @@ import { MarathonProof, marathonLine } from "../kit/MarathonProof";
 import { WcaProof, wcaLine } from "../kit/WcaProof";
 import { ReachedOnItsPage, reachedOfStatus } from "../kit/ReachedMoment";
 import { Nature } from "../kit/Nature";
-import { ShowProof } from "../kit/ShowProof";
+import { checkingAtLoad, ShowProof } from "../kit/ShowProof";
 import { CheckThisDay } from "../kit/CheckThisDay";
 import { CheckThisReading } from "../kit/CheckThisReading";
 import { ConnectTheAccount } from "../kit/ConnectTheAccount";
@@ -76,7 +77,7 @@ import { LiveLine, useLiveReading } from "../kit/LiveReading";
 import { openDayLine } from "@/src/client/limit";
 import { contactEmail } from "@/src/contact";
 import { Figure } from "../kit/Figure";
-import { Arrival, ArrivalAmount, Reacts, Success, useLastSeen } from "../kit/Motion";
+import { Arrival, ArrivalAmount, EARNED_AIRBORNE_MS, Reacts, Success, useLanding, useLastSeen, useReducedMotion } from "../kit/Motion";
 import { Shell } from "../kit/Shell";
 import { ButtonWords, StepInProgress, WaitLine } from "../kit/Waiting";
 import { YouDecide } from "../kit/YouDecide";
@@ -165,6 +166,7 @@ export function GiftPage({
     }
     void reload();
   }, [reload, address]);
+  const reach = useReachOnItsPage(status);
 
   if (loadError) {
     return (
@@ -173,14 +175,70 @@ export function GiftPage({
       </Shell>
     );
   }
-  if (!status) {
+  if (!status || !reach.said) {
     return (
       <Shell kind="task" card back="/gifts" backLabel={W.backToGifts}>
         <WaitLine>{W.loading}</WaitLine>
       </Shell>
     );
   }
-  return <LiveGift status={status} linkKey={linkKey} reload={reload} refresh={refresh} openProof={openProof} />;
+  return <LiveGift status={reach.said} linkKey={linkKey} reload={reload} refresh={refresh} openProof={openProof} reach={reach} />;
+}
+
+/** A gift had or not, reached: the one whose character is the circle. */
+const hadAndReached = (status: GiftStatus | MilestoneStatus | null) => Boolean(status && status.kind === "milestone" && status.shape === "certificate" && status.reached);
+
+/** What the page does with a reach it sees happen: whether it is under way, the step of the landing, and the moment held back. */
+type Reach = Readonly<{ reaching: boolean; step: 0 | 1 | 2; momentHeld: boolean }>;
+
+/**
+ * A gift had or not that is reached while its page stands (the founder's mockup of 10 Oct 2026). The page read the
+ * gift again and everything changed in one image: another drawing, another title, a line that pushed the amount down,
+ * then the moment. Now the character moves first and the card says it as the character lands.
+ *
+ * So for the time of a jump the card is still drawn from the gift as it was (`said`), while its character is told at
+ * once (`reaching`). As it lands the words that stood go out (`step` 1); once they are out the card is drawn from the
+ * gift as it is, and its words come in where the others stood (`step` 2); and the moment, which the gift read again
+ * owes at once, is held until its own time after the landing (`momentHeld`). Each is timed by an animation that moves
+ * nothing, on the clock the character's own jump runs on, never by a timer.
+ *
+ * Under reduced motion nothing is held: the gift as it is, at once. Anything else the page reads of a gift is said at
+ * once too, as before.
+ */
+function useReachOnItsPage(status: GiftStatus | MilestoneStatus | null): Reach & Readonly<{ said: GiftStatus | MilestoneStatus | null }> {
+  const still = useReducedMotion();
+  const [said, setSaid] = useState(status);
+  /** The gift this page saw reached, once it has: what the landing is timed from. */
+  const [reachedHere, setReachedHere] = useState<string | null>(null);
+  const [step, setStep] = useState<0 | 1 | 2>(0);
+  const [momentFree, setMomentFree] = useState(false);
+  const reaching = !still && Boolean(status && said && status !== said && status.giftId === said.giftId && hadAndReached(status) && !hadAndReached(said));
+  if (status !== said && !reaching) setSaid(status);
+  if (reaching && status && reachedHere !== status.giftId) setReachedHere(status.giftId);
+  /** The gift as it was last read: what the card is drawn from once its character has landed. */
+  const read = useRef(status);
+  useLayoutEffect(() => {
+    read.current = status;
+  });
+  useLayoutEffect(() => {
+    if (reachedHere === null) return;
+    const { wordsOutMs, momentAfterMs } = MOTION.landing;
+    const after = (ms: number, then: () => void) => {
+      const cue = document.documentElement.animate([], { duration: ms });
+      cue.finished.then(then).catch(() => undefined);
+      return cue;
+    };
+    const cues = [
+      after(EARNED_AIRBORNE_MS, () => setStep(1)),
+      after(EARNED_AIRBORNE_MS + wordsOutMs, () => {
+        setSaid(read.current);
+        setStep(2);
+      }),
+      after(EARNED_AIRBORNE_MS + momentAfterMs, () => setMomentFree(true)),
+    ];
+    return () => cues.forEach((cue) => cue.cancel());
+  }, [reachedHere]);
+  return { said, reaching, step, momentHeld: reachedHere !== null && !momentFree };
 }
 
 const onHashChange = (changed: () => void) => {
@@ -197,7 +255,7 @@ function useOpeningSecret(): string | null {
   return useSyncExternalStore(onHashChange, () => openingSecretOf(window.location.hash), () => null);
 }
 
-function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ status: GiftStatus | MilestoneStatus; linkKey: string | null; reload: () => Promise<void>; refresh: () => Promise<void>; openProof: OpenShown | null }>) {
+function LiveGift({ status, linkKey, reload, refresh, openProof, reach }: Readonly<{ status: GiftStatus | MilestoneStatus; linkKey: string | null; reload: () => Promise<void>; refresh: () => Promise<void>; openProof: OpenShown | null; /** A reach this page is seeing happen (useReachOnItsPage). */ reach: Reach }>) {
   const { address, hasCredential, ensureSigner, status: accountStatus, createAccount, signIn } = useAccount();
   const openingSecret = useOpeningSecret();
   const door = useDoor();
@@ -369,6 +427,20 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
   const unread = hadOrNot?.review?.status === "unread";
   // A race and a competition are dated the day their result is read, so they stand with what is shown.
   const proofStands = !hadOrNot || !hadOrNot.opened ? null : unread ? "unread" : gift.finished ? null : (hadOrNot.review?.status ?? (pastTheLastDay ? (condition?.nature === "shown" || datedTheDayItIsRead(hadOrNot.conditionId) ? "ended" : "late") : null));
+  /** A first proof under review, or refused by it, as the block a proof is shown from is told (D312). */
+  const proofReview = !milestone || milestone.review?.status === "unread" ? null : (milestone.review?.status ?? null);
+  /** Whether this page mounts that block (the one action of this moment, below): the same test, said once. */
+  const showsProof = Boolean(milestone && (address || gift.cancelled) && !outsider && read.action === "shareProof" && proofStands !== "ended" && proofStands !== "unread" && milestone.conditionId !== "marathon-finish" && milestone.conditionId !== "wca-time" && condition?.nature === "shown");
+  /**
+   * The person's own proof is being asked about, or has just paid (the founder, 10 Oct 2026): the block draws nothing
+   * then, and the card says it, the state as its headline and the wait where the next moment is said. From the first
+   * image when the page was read with the session open, which is the person coming back from the verification page.
+   */
+  const [proofSilent, setProofSilent] = useState(() => checkingAtLoad({ yours: mine, review: proofReview, openAtLoad: openProof }));
+  const checkingTheirOwn = proofSilent && mine && showsProof;
+  /** The card, whose words change where they stand as its character lands on a gift just reached. */
+  const card = useRef<HTMLElement>(null);
+  useLanding(card, reach.step);
   /** The target as a sentence may name it: a climb's number, a grade's words, and nothing for something had or not. */
   const targetToName = !milestone ? null : hadOrNot ? (milestone.targetWords ?? null) : (milestone.targetWords ?? (milestone.target === null ? null : String(milestone.target)));
 
@@ -405,7 +477,8 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
     // Where today stands, once the clock is known: before it, the card says what it always said of a gift counting.
     asItGoes: daily && asItGoes && nowMs !== 0 ? asItGoesNow(today, nowMs, daily.perDayDisplay, dayReading.phase === "certifying", asItGoes) : null,
   } as const;
-  const said = liveOf(liveInput);
+  // Their own proof being checked reads as a proof under review does: "Shown. Viky is checking it.", and no next moment.
+  const said = liveOf(checkingTheirOwn ? { ...liveInput, proof: "pending" } : liveInput);
   // Under the state, after what the next lesson pays: a sentence of that length has no place beside the figures.
   const live = dayFailureLine ? { ...said, next: [said.next, dayFailureLine].filter(Boolean).join(" ") } : said;
 
@@ -707,8 +780,8 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
         // A marathon takes a bib before the start and a reading after the finish, on its own screen (D273).
         if (milestone.conditionId === "marathon-finish") return <MarathonProof giftId={giftId} status={milestone} yours={mine} onChanged={reloadAll} />;
         if (milestone.conditionId === "wca-time") return <WcaProof giftId={giftId} status={milestone} yours={mine} onChanged={reloadAll} />;
-        return conditionById(milestone.conditionId)?.nature === "shown" ? (
-          <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} review={milestone.review?.status === "unread" ? null : (milestone.review?.status ?? null)} reviewMessage={milestone.review?.message ?? null} limitReached={emptyReserve === "proofs"} openAtLoad={openProof} onShown={reloadAll} />
+        return showsProof ? (
+          <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} review={proofReview} reviewMessage={milestone.review?.message ?? null} limitReached={emptyReserve === "proofs"} openAtLoad={openProof} onChecking={setProofSilent} onShown={reloadAll} />
         ) : (
           <CertificateProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} onProved={reloadAll} />
         );
@@ -732,7 +805,8 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
   // it, so none of the three repeats a figure the state or the money carries.
   const shape = milestone ? (
     milestone.shape === "certificate" ? (
-      <HadOrNot state={milestone.reached ? "reached" : milestone.finished || milestone.cancelled ? "void" : "waiting"} asleep={!milestone.opened} />
+      // Reached while this page stands: the character is told at once, and jumps before the card says it.
+      <HadOrNot state={reach.reaching || milestone.reached ? "reached" : milestone.finished || milestone.cancelled ? "void" : "waiting"} asleep={!milestone.opened} />
     ) : (
       <Climb giftId={giftId} status={milestone} />
     )
@@ -915,6 +989,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
         {...(address || hadAccount ? { back: "/gifts", backLabel: W.backToGifts } : { back: "/", backLabel: W.aboutViky, backFollows: true })}
       >
         <GiftLive
+          card={card}
           from={eyebrowOf(voice, funderName)}
           who={titleOf(voice, recipientName ?? account.username)}
           what={condition?.name ?? ""}
@@ -936,7 +1011,8 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
           /* The month's limit of readings: in the place a reading would have been told. */
           limit={limitSaid}
           /* A lesson was seen: the attested reading runs by itself, and says what it is doing. */
-          waiting={dayReading.phase === "certifying" ? WAITS.counting(source) : null}
+          /* Or their own proof is being checked: the wait, where the block under the card said it in small. */
+          waiting={checkingTheirOwn ? L.awaitingProof.keepOpen : dayReading.phase === "certifying" ? WAITS.counting(source) : null}
           looking={dayReading.phase === "looking"}
           action={action}
           agreed={{ open: read.agreementOpen, children: agreed }}
@@ -974,7 +1050,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof }: Readonly<{ st
         {/* The moment a gift is reached, to its two people and to nobody else (decision B): played here when this is
             where they arrive first, and again whenever they ask. */}
         {milestone?.reached && (mine || readerIsFunder) ? (
-          <ReachedOnItsPage gift={reachedOfStatus(milestone, mine ? "recipient" : "funder", { recipientName, funderName })} />
+          <ReachedOnItsPage gift={reachedOfStatus(milestone, mine ? "recipient" : "funder", { recipientName, funderName })} held={reach.momentHeld} />
         ) : null}
 
         {/* A gift that names the TOEFL: what its owner asks at the bottom of a page that names it. */}

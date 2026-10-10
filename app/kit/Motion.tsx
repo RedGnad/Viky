@@ -68,8 +68,15 @@ const part = (root: Element, name: string) => root.querySelector<SVGElement>(`[d
  * `wakes` is the day itself, in an arrival (the founder, 4 Oct 2026): a day sleeps until it is done, so it stands with
  * its eyes shut until its turn, makes one small turn in the air, and opens its eyes and its smile as it lands. Without
  * it, the same jump as the head of a screen makes it, eyes open: its face squeezes shut in the air and nothing turns.
+ *
+ * `becomes` is a day earned while its screen stood (the founder, 10 Oct 2026): a moment ago it was the triangle, awake,
+ * and a character never changes shape without its movement. So the triangle it carries gathers and jumps, turning once
+ * as a day earned does, and is the circle when it comes down: the one fades into the other across the top of the jump,
+ * as a day that wakes makes the capsule the triangle. Its eyes are open all along, and its highlights stay where the
+ * light is.
  */
-function playEarned(root: Element, delay: number, wakes = false): Animation[] {
+function playEarned(root: Element, delay: number, how: boolean | "becomes" = false): Animation[] {
+  const wakes = how === true;
   const figure = part(root, "figure");
   if (!figure) return [];
   const face = part(root, "face");
@@ -100,6 +107,8 @@ function playEarned(root: Element, delay: number, wakes = false): Animation[] {
     for (const eye of root.querySelectorAll<SVGElement>('[data-part="eye"]')) animations.push(eye.animate(opens(`scaleY(${eyesShut})`), { duration: total, delay, fill: "backwards" }));
     const mouth = part(root, "mouth");
     if (mouth) animations.push(mouth.animate(opens(`scale(${mouthShut})`), { duration: total, delay, fill: "backwards" }));
+  }
+  if (how) {
     // The small turn: in the air only, slowing down so the day is upright as it touches the floor.
     const whirl = part(root, "whirl");
     if (whirl) {
@@ -128,6 +137,13 @@ function playEarned(root: Element, delay: number, wakes = false): Animation[] {
         { duration: total, delay },
       ),
     );
+  }
+  if (how === "becomes") {
+    // Centred on the top of the jump. Each side holds its first image until then, so the first frame is the triangle.
+    const { becomeMs } = MOTION.earned;
+    const fade = (element: Element, from: number, to: number) => element.animate([{ opacity: from }, { opacity: to }], { duration: becomeMs, delay: delay + gatherMs + riseMs - becomeMs / 2, easing: EASING.standard, fill: "backwards" });
+    for (const was of root.querySelectorAll('[data-part="was"], [data-part="was-gloss"]')) animations.push(fade(was, 1, 0));
+    for (const now of root.querySelectorAll('[data-part="body"], [data-part="face"], [data-part="figure"] > [data-part="gloss"]')) animations.push(fade(now, 0, 1));
   }
   if (shadow) {
     animations.push(
@@ -232,6 +248,47 @@ export function playMoment(moment: "earned" | "returned" | "woken", root: Elemen
 }
 
 /**
+ * A character that stands alone, changing shape while its screen stands (the founder, 10 Oct 2026: a character never
+ * changes shape without its movement, on arrival as when the state changes under the person's eyes). The gift had or
+ * not that is reached makes the jump of a day earned, and the one that is opened wakes as a day that opens does. Called
+ * before the browser paints the change, so the shape it had is the first image of the movement. Nothing moves under
+ * reduced motion: the new shape is simply there.
+ */
+export function playChange(root: Element, change: "earned" | "woken"): Animation[] {
+  if (reduced()) return [];
+  return change === "earned" ? playEarned(root, 0, "becomes") : playWoken(root, 0);
+}
+
+/** How long a jump is in the air: the moment it lands is when a screen may say what it earned. */
+export const EARNED_AIRBORNE_MS = MOTION.earned.gatherMs + MOTION.earned.riseMs + MOTION.earned.fallMs;
+
+/**
+ * The card of a gift as its character lands (the founder's mockup of 10 Oct 2026). At `step` 1, the landing, the words
+ * that stood go out and the amount swells once under them; at 2 the card says the new state, and its words come in
+ * where the old ones stood. The words are the lines the card marks `data-turns="words"`, the amount the one it marks
+ * `data-turns="amount"` (app/kit/GiftLive.tsx), inside the card `root` names. Both steps start before the browser
+ * paints, so no word is seen whole and then gone. Under reduced motion the page never takes these steps: the new state
+ * is simply there.
+ */
+export function useLanding(root: RefObject<HTMLElement | null>, step: 0 | 1 | 2): void {
+  /** The swell runs across both steps, so it is not the business of either one's ending. */
+  const swell = useRef<Animation | null>(null);
+  useLayoutEffect(() => {
+    const element = root.current;
+    if (!element || step === 0 || reduced()) return;
+    const { wordsOutMs, wordsInMs, swell: by } = MOTION.landing;
+    const words = [...element.querySelectorAll<HTMLElement>('[data-turns="words"]')];
+    if (step === 1) {
+      const spring = springEasing(MOTION.earned.landing);
+      swell.current = element.querySelector<HTMLElement>('[data-turns="amount"]')?.animate([{ transform: "scale(1)" }, { transform: `scale(${by})` }, { transform: "scale(1)" }], { duration: spring.durationMs * 1.5, easing: spring.easing }) ?? null;
+    }
+    const running = words.map((line) => (step === 1 ? line.animate([{ opacity: 1 }, { opacity: 0 }], { duration: wordsOutMs, easing: EASING.standard, fill: "forwards" }) : line.animate([{ opacity: 0 }, { opacity: 1 }], { duration: wordsInMs, easing: EASING.standard })));
+    return () => running.forEach((animation) => animation.cancel());
+  }, [root, step]);
+  useEffect(() => () => swell.current?.cancel(), []);
+}
+
+/**
  * The gift character answering a gesture that succeeded: it arrives once when it is mounted, which is when the gesture
  * brought the person here, and again each time `gesture` changes, which is each time the gesture is made again.
  */
@@ -294,12 +351,22 @@ type Plan = Readonly<{
    * draws them not yet there, and the browser starts them from there. Never the final state followed by a restart.
    */
   pending: ReadonlySet<string>;
+  /**
+   * The triangle a day earned was, when this screen drew it so before the day was earned (the founder, 10 Oct 2026):
+   * it jumps as that triangle and becomes the circle in the air. Nothing for a day earned since another visit, which
+   * this screen never drew otherwise: it stands asleep until its turn, as before.
+   */
+  from: ReadonlyMap<string, Triangle>;
   /** The gifts this plan was decided for: gifts that change while the screen stands are decided again. */
   about: string;
 }>;
 
+/** The two shapes a day has while it can still be done: awake, or leaning and yawning. Both are the triangle. */
+type Triangle = "today" | "catchable";
+const NO_TRIANGLE: ReadonlyMap<string, Triangle> = new Map();
+
 /** Outside any arrival there is nothing to wait for, so the question is settled from the first paint. */
-const NOTHING: Plan = { round: 0, days: new Map(), amountAt: null, decided: true, pending: new Set(), about: "" };
+const NOTHING: Plan = { round: 0, days: new Map(), amountAt: null, decided: true, pending: new Set(), from: NO_TRIANGLE, about: "" };
 /** Inside one, before the first frame: what plays is not known yet. */
 const UNDECIDED: Plan = { ...NOTHING, decided: false };
 const ArrivalContext = createContext<Plan>(NOTHING);
@@ -327,8 +394,8 @@ const ARRIVAL_TIMINGS = {
   staggerMs: MOTION.arrival.staggerMs,
 } as const;
 
-/** What a screen has shown of a gift since it arrived: its settled days, and which day was open (-1 for none). */
-type Shown = Readonly<Record<string, Readonly<{ settled: number; open: number }>>>;
+/** What a screen has shown of a gift since it arrived: its settled days, which day was open (-1 for none), and each day's shape. */
+type Shown = Readonly<Record<string, Readonly<{ settled: number; open: number; days: readonly CharacterState[] }>>>;
 
 /**
  * The arrival on a screen (brief, section 6): what changed since the last visit plays once, in order, every day earned,
@@ -362,9 +429,12 @@ export function Arrival({ storageKey, gifts, amount = false, children }: Readonl
       list,
       list.map((gift, index) => shown[gift.id]?.settled ?? settled[index]),
       list.map((gift, index) => shown[gift.id]?.open ?? open[index]),
+      list.map((gift) => shown[gift.id]?.days),
     );
   }, [giftsKey, seenKey, shown]);
-  const [plan, setPlan] = useState<Plan>({ ...UNDECIDED, pending: changed.pending });
+  const [plan, setPlan] = useState<Plan>({ ...UNDECIDED, pending: changed.pending, from: changed.from });
+  /** The shapes this screen last drew, for the play that follows a change: it is decided after the screen is drawn. */
+  const drew = useRef<Record<string, readonly CharacterState[]>>({});
 
   useEffect(() => {
     const list = JSON.parse(giftsKey) as ArrivalGift[];
@@ -372,19 +442,25 @@ export function Arrival({ storageKey, gifts, amount = false, children }: Readonl
     let round = 0;
     const play = (fromExample: boolean) => {
       round += 1;
-      const { earned, returned, woken, pending, settledNow, openNow } = changesOf(list, fromExample ? list.map((gift) => gift.lastSeen) : lastSeen, fromExample ? list.map(() => undefined) : lastOpen);
+      const { earned, returned, woken, pending, from, settledNow, openNow } = changesOf(
+        list,
+        fromExample ? list.map((gift) => gift.lastSeen) : lastSeen,
+        fromExample ? list.map(() => undefined) : lastOpen,
+        fromExample ? [] : list.map((gift) => drew.current[gift.id]),
+      );
       if (!fromExample) {
         list.forEach((gift, index) => {
           writeSeen(`${storageKey}.${gift.id}`, settledNow[index]);
           // A gift whose days are not drawn yet says nothing of which is open: nothing is written of it.
           if (gift.days.length > 0) writeSeen(`${storageKey}.open.${gift.id}`, openNow[index]);
         });
-        setShown(Object.fromEntries(list.filter((gift) => gift.days.length > 0).map((gift) => [gift.id, { settled: settledNow[list.indexOf(gift)], open: openNow[list.indexOf(gift)] }])));
+        setShown(Object.fromEntries(list.filter((gift) => gift.days.length > 0).map((gift) => [gift.id, { settled: settledNow[list.indexOf(gift)], open: openNow[list.indexOf(gift)], days: gift.days }])));
+        drew.current = Object.fromEntries(list.filter((gift) => gift.days.length > 0).map((gift) => [gift.id, gift.days]));
       }
       // Nothing changed at all: nothing to replay. An amount that changed on its own still counts, last and alone.
       // Said out loud rather than by staying silent, because whoever waits for the count waits on this answer.
       if (reduced() || (earned.length + returned.length + woken.length === 0 && !amount)) {
-        setPlan({ round, days: new Map(), amountAt: null, decided: true, pending: new Set(), about: giftsKey });
+        setPlan({ round, days: new Map(), amountAt: null, decided: true, pending: new Set(), from: NO_TRIANGLE, about: giftsKey });
         return;
       }
       const schedule: ArrivalSchedule = arrivalSchedule(earned.length, returned.length, amount, ARRIVAL_TIMINGS);
@@ -394,7 +470,7 @@ export function Arrival({ storageKey, gifts, amount = false, children }: Readonl
       // The day that opened wakes after the jumps of the days earned: when the last of them has landed.
       const wokenAt = earned.length > 0 ? schedule.earnedAt[earned.length - 1] + ARRIVAL_TIMINGS.earnedAirborneMs : 0;
       woken.forEach((id) => days.set(id, { moment: "woken", delay: wokenAt }));
-      setPlan({ round, days, amountAt: schedule.amountAt, decided: true, pending, about: giftsKey });
+      setPlan({ round, days, amountAt: schedule.amountAt, decided: true, pending, from, about: giftsKey });
     };
     const frame = requestAnimationFrame(() => play(false));
     const replay = () => play(true);
@@ -412,19 +488,21 @@ export function Arrival({ storageKey, gifts, amount = false, children }: Readonl
   // Until the arrival has decided for these gifts, what is pending is what changed, known from the gifts as soon as
   // they are: a row the page draws a moment later, or a gift that changes while the screen stands, starts with its new
   // days in their starting state, and never shows them first.
-  const value = useMemo(() => (plan.decided && plan.about === giftsKey ? plan : { ...plan, decided: false, pending: changed.pending }), [plan, changed, giftsKey]);
+  const value = useMemo(() => (plan.decided && plan.about === giftsKey ? plan : { ...plan, decided: false, pending: changed.pending, from: changed.from }), [plan, changed, giftsKey]);
   return <ArrivalContext.Provider value={value}>{children}</ArrivalContext.Provider>;
 }
 
 /**
  * The days that changed since a visit that saw `seen` settled days of each gift (the gift's own count when unknown) and
  * `seenOpen` as its open day. A day wakes when it is open now and a later day than the one the last visit saw open;
- * a visit that kept nothing of it wakes nothing, and neither does a gift seen for the first time.
+ * a visit that kept nothing of it wakes nothing, and neither does a gift seen for the first time. `drawn` is each
+ * gift's days as this screen drew them before, when it did: a day earned that it drew as a triangle becomes from it.
  */
-function changesOf(list: readonly ArrivalGift[], seen: readonly (number | null | undefined)[], seenOpen: readonly (number | null | undefined)[]) {
+function changesOf(list: readonly ArrivalGift[], seen: readonly (number | null | undefined)[], seenOpen: readonly (number | null | undefined)[], drawn: readonly (readonly CharacterState[] | undefined)[] = []) {
   const earned: string[] = [];
   const returned: string[] = [];
   const woken: string[] = [];
+  const from = new Map<string, Triangle>();
   const settledNow: number[] = [];
   const openNow: number[] = [];
   list.forEach((gift, giftIndex) => {
@@ -432,7 +510,11 @@ function changesOf(list: readonly ArrivalGift[], seen: readonly (number | null |
     let settled = 0;
     gift.days.forEach((day, index) => {
       if (!isSettled(day)) return;
-      if (settled >= saw) (day === "earned" ? earned : returned).push(`${gift.id}:${index}`);
+      if (settled >= saw) {
+        (day === "earned" ? earned : returned).push(`${gift.id}:${index}`);
+        const was = drawn[giftIndex]?.[index];
+        if (day === "earned" && (was === "today" || was === "catchable")) from.set(`${gift.id}:${index}`, was);
+      }
       settled += 1;
     });
     settledNow.push(settled);
@@ -442,15 +524,20 @@ function changesOf(list: readonly ArrivalGift[], seen: readonly (number | null |
     if (open >= 0 && typeof sawOpen === "number" && open > sawOpen) woken.push(`${gift.id}:${open}`);
     openNow.push(open);
   });
-  return { earned, returned, woken, settledNow, openNow, pending: new Set([...earned, ...returned, ...woken]) as ReadonlySet<string> };
+  return { earned, returned, woken, settledNow, openNow, from: from as ReadonlyMap<string, Triangle>, pending: new Set([...earned, ...returned, ...woken]) as ReadonlySet<string> };
 }
 
-/** One day of a gift inside an arrival: it plays its moment if it changed since the last visit, and stands still otherwise. */
-export function ArrivalDay({ gift, index, children }: Readonly<{ gift: string; index: number; children: ReactNode }>) {
+/**
+ * One day of a gift inside an arrival: it plays its moment if it changed since the last visit, and stands still
+ * otherwise. Given as a function, the day is told the triangle it was when this screen drew it so before it was earned,
+ * to carry it into its jump (`Character`'s `from`).
+ */
+export function ArrivalDay({ gift, index, children }: Readonly<{ gift: string; index: number; children: ReactNode | ((from: Triangle | undefined) => ReactNode) }>) {
   const plan = useContext(ArrivalContext);
   const root = useRef<HTMLSpanElement>(null);
   const id = `${gift}:${index}`;
   const step = plan.days.get(id);
+  const from = plan.from.get(id);
   // A day that changed since the last visit is drawn not yet there, from the server's first image on (the fix to #154):
   // `arrival-pending` hides it, and reduced motion shows it where it is (app/globals.css).
   const pending = plan.pending.has(id);
@@ -463,7 +550,7 @@ export function ArrivalDay({ gift, index, children }: Readonly<{ gift: string; i
     const drawing = element.querySelector("svg");
     const held = drawing && step.moment === "returned" ? [drawing.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1, delay: step.delay, fill: "backwards" })] : [];
     element.classList.remove("arrival-pending");
-    const running = [...held, ...(step.moment === "earned" ? playEarned(element, step.delay, true) : step.moment === "woken" ? playWoken(element, step.delay) : playReturned(element, step.delay))];
+    const running = [...held, ...(step.moment === "earned" ? playEarned(element, step.delay, from ? "becomes" : true) : step.moment === "woken" ? playWoken(element, step.delay) : playReturned(element, step.delay))];
     // A day that wakes is the row's own affair: the head of the screen answers a day earned and a day gone back.
     if (step.moment === "woken") return () => running.forEach((animation) => animation.cancel());
     // The character at the head of the screen answers each day as it happens on screen: the moment is the day's own
@@ -475,14 +562,14 @@ export function ArrivalDay({ gift, index, children }: Readonly<{ gift: string; i
     void cue.finished.then(() => feel(step.moment === "earned" ? "open" : "down", element, true)).catch(() => undefined);
     running.push(cue);
     return () => running.forEach((animation) => animation.cancel());
-  }, [plan.round, step]);
+  }, [plan.round, step, from]);
   // Decided with nothing to play (reduced motion, or a replay): whatever was pending is simply there.
   useEffect(() => {
     if (plan.decided && !step) root.current?.classList.remove("arrival-pending");
   }, [plan.decided, step]);
   return (
     <span ref={root} className={pending ? "contents arrival-pending" : "contents"}>
-      {children}
+      {typeof children === "function" ? children(from) : children}
     </span>
   );
 }

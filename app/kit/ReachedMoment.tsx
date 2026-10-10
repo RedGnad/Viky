@@ -114,8 +114,11 @@ export type OnItsPage = boolean;
 /**
  * On the gift's own page: the moment, when this account arrives here before it has had it (from a notification, a
  * link), and "See it again", which replays it whenever asked and writes nothing.
+ *
+ * `held` is a gift reached while this page stood (the founder, 10 Oct 2026): its character lands first and the card
+ * says it, and the moment opens once the page lets it, unchanged.
  */
-export function ReachedOnItsPage({ gift }: Readonly<{ gift: ReachedGift }>) {
+export function ReachedOnItsPage({ gift, held = false }: Readonly<{ gift: ReachedGift; held?: boolean }>) {
   const [owed, setOwed] = useState(false);
   const [again, setAgain] = useState(false);
   useEffect(() => {
@@ -131,7 +134,7 @@ export function ReachedOnItsPage({ gift }: Readonly<{ gift: ReachedGift }>) {
   }, [gift.giftId]);
   return (
     <>
-      <ReachedMoments gifts={owed ? [gift] : []} here />
+      <ReachedMoments gifts={owed && !held ? [gift] : []} here />
       <button type="button" onClick={() => setAgain(true)} className={`${SMALL_BUTTON} self-start`}>
         {W.seeItAgain}
       </button>

@@ -367,6 +367,7 @@ export function Character({
   limbs = false,
   pose,
   wakes = false,
+  from,
   className,
 }: Readonly<{
   state: CharacterState;
@@ -397,6 +398,13 @@ export function Character({
    * is not seen outside that movement (app/globals.css).
    */
   wakes?: boolean;
+  /**
+   * The shape a day earned had a moment ago, on a screen that stood while it was earned (the founder, 10 Oct 2026: a
+   * character never changes shape without its movement). Written into the page, the day carries that triangle inside
+   * the group that turns, and its highlight outside it: it jumps as the triangle and is the circle when it comes down
+   * (app/kit/Motion.tsx). Neither is seen outside that movement (app/globals.css).
+   */
+  from?: "today" | "catchable";
   className?: string;
 }>) {
   const large = size === "large";
@@ -415,6 +423,7 @@ export function Character({
   const parts = drawing(state, true, variant, TONES[drawn]);
   const leaving = state === "returned";
   const was = wakes && state === "today" ? drawing("toCome", true, variant, TONES[drawn]) : null;
+  const before = from && state === "earned" ? drawing(from, true, variant, TONES[drawn]) : null;
   return (
     <svg
       aria-hidden
@@ -425,6 +434,7 @@ export function Character({
       viewBox={viewBox}
       data-character={state}
       data-size={size}
+      data-from={before ? from : undefined}
       className={className}
       style={{ overflow: "visible" }}
     >
@@ -452,6 +462,12 @@ export function Character({
             turns from its middle too, once, as it jumps awake (the founder, 4 Oct 2026). */}
         <g transform={parts.lean} {...(withLimbs || state === "earned" ? { "data-part": "whirl", style: FROM_MIDDLE } : {})}>
           {withLimbs ? <Limbs pose={pose} /> : null}
+          {before ? (
+            <g data-part="was" transform={before.lean}>
+              {before.body}
+              {before.face}
+            </g>
+          ) : null}
           <g data-part="body">{parts.body}</g>
           {/* The highlight sits on the body, and the face stays on top of it (D132). */}
           {state === "earned" ? null : parts.gloss}
@@ -466,6 +482,7 @@ export function Character({
         {/* A day earned is the one shape that turns on itself, and a highlight is where the light is, not where the
             body has turned to: it is drawn outside the group that turns, so it follows the day and never the turn
             (the founder, 9 Oct 2026). */}
+        {before ? <g data-part="was-gloss">{before.gloss}</g> : null}
         {state === "earned" ? parts.gloss : null}
       </g>
     </svg>
