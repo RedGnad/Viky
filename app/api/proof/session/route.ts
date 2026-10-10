@@ -12,8 +12,9 @@ import { loadLatestEvidence, loadOpenShownSession, PROOF_SESSION_TTL_SECONDS, pr
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { channelFor, reclaimChannelInitOptions, reclaimChannelLaunchOptions } from "@/src/reclaim-channel";
 import { loadGift } from "@/src/gift-store";
+import { isMilestoneGiftId } from "@/src/milestone-protocol";
 import { loadMilestoneGift } from "@/src/milestone-store";
-import { shownConditionById, type ShownProvider } from "@/src/shown-conditions";
+import { shownConditionOfGift, type ShownProvider } from "@/src/shown-conditions";
 import { shownContextMessage } from "@/src/shown-proof";
 import { ruleAsked } from "@/src/witness-portal";
 
@@ -73,22 +74,32 @@ export async function POST(request: Request) {
 
     const giftId = String(body.giftId ?? "").trim();
     if (!/^\d{1,78}$/.test(giftId)) throw new Error("Unknown gift");
-    const entry = shownConditionById(String(body.conditionId ?? "duolingo-daily").trim());
+    // What the request itself gets wrong is refused before anything is looked up: a day that is none, and a daily
+    // gift's proof with no account named.
+    const asked = String(body.phase ?? "");
+    const askedDay = asked === "check-in" ? Number(body.dayIndex) : 0;
+    if (asked === "check-in" && (!Number.isInteger(askedDay) || askedDay < 0 || askedDay > DUOLINGO_MAX_DAY_INDEX)) {
+      throw new Error("A check-in needs a valid day");
+    }
+    const username = String(body.username ?? "").trim();
+    if (!isMilestoneGiftId(giftId) && !username) throw new Error("Enter your Duolingo username");
+
+    // The condition is the gift's own, read off its record, never the one the browser names (the audit of 8 Oct 2026):
+    // a session opened on another condition spent one of the month's proofs on a proof the contract refuses.
+    const gift = await loadGift(giftId);
+    if (!gift) throw new Error("Unknown gift");
+    const record = isMilestoneGiftId(giftId) ? await loadMilestoneGift(giftId) : null;
+    const entry = shownConditionOfGift(gift, record);
     if (!entry) throw new Error("Unknown condition");
     source = conditionById(entry.condition.conditionId)?.source ?? source;
 
-    const asked = String(body.phase ?? "");
     const phase: ProofSessionPhase = entry.kind === "milestone" ? "reach" : asked === "check-in" ? "check-in" : "baseline";
-    const dayIndex = phase === "check-in" ? Number(body.dayIndex) : 0;
-    if (phase === "check-in" && (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > DUOLINGO_MAX_DAY_INDEX)) {
-      throw new Error("A check-in needs a valid day");
-    }
+    const dayIndex = phase === "check-in" ? askedDay : 0;
 
     // A daily condition binds a named account, and a check-in must be on the account the baseline bound: the profile
     // is read back from the stored evidence, never from the request.
     let bound: { username: string; profileId: string } | undefined;
     if (entry.kind === "daily") {
-      const username = String(body.username ?? "").trim();
       if (!username) throw new Error("Enter your Duolingo username");
       const previous = phase === "check-in" ? await loadLatestEvidence(giftId, account) : null;
       if (phase === "check-in" && !previous) throw new Error("Connect your Duolingo account before checking in");
@@ -99,8 +110,6 @@ export async function POST(request: Request) {
 
     // Only the person the gift is for opens a proof for it (the review of 23 Sep 2026, finding 5): a session is a
     // Reclaim verification, counted against the account's quota, and a proof is only ever theirs to show.
-    const gift = await loadGift(giftId);
-    if (!gift) throw new Error("Unknown gift");
     if (gift.recipient?.toLowerCase() !== account.toLowerCase()) throw new Error("This gift is not yours to prove");
     const appId = process.env.RECLAIM_APP_ID?.trim();
     const appSecret = process.env.RECLAIM_APP_SECRET?.trim();
@@ -108,7 +117,6 @@ export async function POST(request: Request) {
 
     // The provider this gift's proof comes from: the condition's own, or read off the gift (a university gift's
     // portal, D165).
-    const record = entry.providerOf ? await loadMilestoneGift(giftId) : null;
     const provider: ShownProvider | null = entry.providerOf && record ? await entry.providerOf(record) : null;
     const providerId = provider?.providerId ?? entry.condition.providerId;
     const providerVersion = provider?.providerVersion ?? entry.condition.providerVersion;

@@ -2,6 +2,8 @@ import { DUOLINGO_OWNERSHIP_REQUEST_HASH, DUOLINGO_PROVIDER_ID, DUOLINGO_PROVIDE
 import { DUOLINGO_SESSION_PROVIDER_ID } from "./gift-terms";
 import { refuseShown, type ShownCondition, type ShownReading } from "./shown-proof";
 import type { Hex } from "viem";
+import { conditionOfGoal } from "./conditions";
+import { isMilestoneGiftId } from "./milestone-protocol";
 import type { MilestoneRecord } from "./milestone-store";
 import { loadPortal, resultsExtractOf, type Portal, type PortalSense } from "./portal-store";
 import type { WitnessPin } from "./witness-portal";
@@ -386,4 +388,15 @@ export const SHOWN_CONDITIONS: readonly ShownEntry[] = [
 
 export function shownConditionById(conditionId: string): ShownEntry | undefined {
   return SHOWN_CONDITIONS.find((entry) => entry.condition.conditionId === conditionId);
+}
+
+/**
+ * The condition a gift's proof is shown for, read off the gift's own record (the audit of 8 Oct 2026): a milestone
+ * gift's from its milestone row, a daily gift's from its goal. Never the browser's word. A session opened on another
+ * condition than the gift's is one of the month's proofs spent on a proof the contract refuses, since the subject
+ * the funder signed is the gift's condition's. Nothing for a gift whose condition is not shown from an account.
+ */
+export function shownConditionOfGift(gift: Readonly<{ giftId: string; goalType: number }>, milestone: Pick<MilestoneRecord, "conditionId"> | null): ShownEntry | undefined {
+  const conditionId = isMilestoneGiftId(gift.giftId) ? milestone?.conditionId : conditionOfGoal(gift.goalType)?.id;
+  return conditionId ? shownConditionById(conditionId) : undefined;
 }
