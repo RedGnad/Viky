@@ -97,6 +97,13 @@ export function exchangeUse(read: Readonly<{ count: number; first: SentExchange 
   return { words, transactions: [...transactions, { label: "the USDC sent to Ramp", hash: followed.sent.txHash }] };
 }
 
+/**
+ * A way in that leaves nothing in a journal of Viky's (the final audit of 9 Oct 2026): what Ramp or Mercuryo delivers
+ * arrives in the funder's own account from the service, by a transfer Viky neither sends nor writes down. The two had
+ * no line of state where every other way has one. Theirs says that no first use is recorded, never a count nobody made.
+ */
+export const WAY_IN_WITH_NO_JOURNAL: FirstUse = { words: "Open. No first use is recorded for it.", transactions: [] };
+
 /** Rampnow's way in: the first USDC the converter changed into what a gift holds, and the least it was to give. */
 export function conversionUse(on: boolean, read: Readonly<{ count: number; first: SentConversion | null }> | null): FirstUse {
   if (!on) return { words: "Switched off on this deployment.", transactions: [] };

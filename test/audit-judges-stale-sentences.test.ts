@@ -315,3 +315,11 @@ test("the final audit of 9 Oct 2026: a link to a section opens it, and six sente
   // In the index, the date of a gift is the day it was made, said so beside its state.
   assert.ok(read("app/judges/JudgesIndex.tsx").includes("{gift.status}, made {dayOf(gift.createdAt)}"));
 });
+
+test("the two ways in that leave no journal say so in a line of state, as every other way has one (the final audit of 9 Oct 2026)", () => {
+  const uses = read("src/judges-first-use.ts");
+  assert.ok(uses.includes('export const WAY_IN_WITH_NO_JOURNAL: FirstUse = { words: "Open. No first use is recorded for it.", transactions: [] };'));
+  assert.ok(page.includes('<UseLine use={WAY_IN_WITH_NO_JOURNAL} name="ramp-in" />') && page.includes('<UseLine use={WAY_IN_WITH_NO_JOURNAL} name="mercuryo-in" />'));
+  // Ramp's line comes before the sentence that names Mercuryo, and Mercuryo's after it.
+  assert.ok(page.indexOf('name="ramp-in"') < page.indexOf("way is Mercuryo, which delivers MON") && page.indexOf("way is Mercuryo, which delivers MON") < page.indexOf('name="mercuryo-in"'));
+});

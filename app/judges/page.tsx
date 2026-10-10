@@ -12,7 +12,7 @@ import { usdcRouterAddress } from "@/src/usdc-router";
 import { USDC_ROUTER } from "@/src/viky-contracts";
 import { conversionsSent, exchangesSentInto } from "@/src/exit-store";
 import { payoutsArrived } from "@/src/mobile-money-store";
-import { conversionUse, exchangeUse, FIRST_BANK_PAYOUT, mobileMoneyUse, type FirstUse } from "@/src/judges-first-use";
+import { conversionUse, exchangeUse, FIRST_BANK_PAYOUT, mobileMoneyUse, WAY_IN_WITH_NO_JOURNAL, type FirstUse } from "@/src/judges-first-use";
 import type { Metadata } from "next";
 import { MarkNotice } from "../kit/MarkNotice";
 import { Shell } from "../kit/Shell";
@@ -160,8 +160,10 @@ export default async function JudgesPage() {
         authorised crypto-asset service provider under MiCA, regulated by the Central Bank of Ireland (
         <a className="underline" href="https://rampnetwork.com/licenses-and-registrations">Ramp&apos;s licences and registrations</a>
         , read 27 Sep 2026). What arrives in the funder&apos;s account is AUSD on Monad, <code>MONAD_AUSD</code> in Ramp&apos;s
-        own asset list, the asset the gift contract holds, so nothing is swapped after it. Where Ramp does not serve, the
-        {rampnowOn ? " last" : " second"} way is Mercuryo, which delivers MON that the account then swaps to AUSD.
+        own asset list, the asset the gift contract holds, so nothing is swapped after it.{" "}
+        <UseLine use={WAY_IN_WITH_NO_JOURNAL} name="ramp-in" /> Where Ramp does not serve, the
+        {rampnowOn ? " last" : " second"} way is Mercuryo, which delivers MON that the account then swaps to AUSD.{" "}
+        <UseLine use={WAY_IN_WITH_NO_JOURNAL} name="mercuryo-in" />
       </p>
       <p className={HELP}>
         The next step is Ramp embedded with a partner key. Without one, Ramp&apos;s page answers any pre-filled
