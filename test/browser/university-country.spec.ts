@@ -81,7 +81,7 @@ test("one list opens on every country, the field says how many it searches, and 
   const chosen = sheet(page).locator("[data-university-chosen]");
   await expect(chosen.getByText("University of Lagos")).toBeVisible();
   await expect(chosen.getByText("Nigeria")).toBeVisible();
-  await expect(chosen.locator("[data-university-when]")).toHaveText("Its page is set up within two days of your gift. The money waits in their name meanwhile.");
+  await expect(chosen.locator("[data-university-when]")).toHaveText("They can show their page two days after you pay, at the latest. The money waits in their name meanwhile.");
   await expect(sheet(page).getByLabel(SEARCH)).toHaveCount(0);
   // What they will show changes, and the university stays.
   await modes.getByText("The year passed", { exact: true }).click();

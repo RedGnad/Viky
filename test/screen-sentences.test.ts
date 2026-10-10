@@ -59,6 +59,7 @@ const FOLDED: Readonly<Record<string, string>> = {
   "PHONE_OUT.onItsWay": FIRST("a top-up on its way"),
   "GIFT_CARD_OUT.onItsWay": FIRST("a gift card on its way"),
   "GIFT_CARD_OUT.chooseHelp": 'the sheet "Choose a card"',
+  "UNIVERSITY_CHOICE.setUpInTwoDays": 'the sheet "Which university", under the university chosen',
   "ME.codeUse": 'the fold "Need your code for a payout service?" on Me',
 
   // The pay sheet and the wait.
