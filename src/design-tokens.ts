@@ -577,31 +577,32 @@ export const MOTION = {
     giveUpMs: 5000,
   },
   /**
-   * The one who reads its book reads it (the founder's mockup of 10 Oct 2026; every figure is his). It plays by
-   * itself while the drawing is on the screen, and reads the book as it is drawn: the three lines of the left page,
-   * then the two of the right. Lengths are the drawing's own units, on the group that holds the two eyes: where a
-   * line starts and ends on each page, how far down the first line is and how much further each next one. The eyes go
-   * down to the book, along a line, back to the start of the next, across to the other page, then up to the reader of
-   * the page, and stay there. The third line of the left page is shorter, as its stroke is: the eyes go `reach` of the
-   * way in `time` of a line's time. The mouth follows the eyes by `mouth` of their way. The line being read darkens
-   * along its length as the eyes pass; the five go back to their grey in the last `fadeMs` of the time the eyes are up.
+   * The one who reads its book reads it, calmly (the founder, 10 Oct 2026: on the page itself, then on a mockup of
+   * three amplitudes, of which this is the second; the figures are his). The first turn, from an earlier mockup, read
+   * the left page then the right, each line in under a second, the eyes 3.6 units to either side, and darkened each
+   * line of the book as they passed: too fast, too wide, the lines cheap, and reading one page then the other odd. So
+   * the book is left as it is drawn, and the eyes read slowly. They go down to the book, drift from `across[0]` to
+   * `across[1]` along `lines` lines, each `perLine` lower than the one before, then go up to the reader of the page
+   * and stay there. Lengths are the drawing's own units, on the group that holds the two eyes. To either side they go
+   * further than the icon's glance (`MOTION.icon.glance.by`, 1.1), so that they are seen on a phone, where one unit
+   * was 1.7 pixels; and less far than the gaze of a hover (`MOTION.hover.gaze`, 2.5). A line is read on a curve slow
+   * at both ends (`easing`). The way back to the start of the next line is short, on the standard curve: a glide,
+   * where 0.6 s on the line's own curve made the eyes sway rather than read. The mouth follows the eyes by `mouth`
+   * of their way.
    */
   reading: {
-    left: [-3.6, -0.6],
-    right: [0.6, 3.6],
-    down: 1.5,
-    perLine: 0.45,
-    mouth: 0.35,
-    downMs: 260,
-    lineMs: 880,
-    backMs: 150,
-    pageMs: 200,
-    upMs: 320,
-    heldMs: 1700,
-    fadeMs: 300,
-    shortLine: { reach: 0.82, time: 0.86 },
-    lineEasing: "cubic-bezier(0.3, 0, 0.7, 1)",
-    mark: { opacity: 0.78, width: 0.8 },
+    across: [-1.8, 1.8],
+    down: 1.25,
+    perLine: 0.3,
+    lines: 3,
+    mouth: 0.3,
+    downMs: 600,
+    lineMs: 1900,
+    backMs: 320,
+    backEasing: EASING.standard,
+    upMs: 700,
+    heldMs: 2600,
+    easing: "cubic-bezier(0.3, 0, 0.7, 1)",
   },
   /**
    * The app's icon on the landing, arriving once as its card enters the screen (the founder's mockup of 10 Oct 2026;
