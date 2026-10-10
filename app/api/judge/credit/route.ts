@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { assertSameOrigin } from "@/src/api-guard";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { giveJudgeCredit, isJudgeCredited, judgeCreditOpen } from "@/src/judge-credit";
@@ -16,6 +17,7 @@ export const maxDuration = 60;
  */
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     const auth = readAccountAuthSession(request);
     const rate = checkRateLimit("verify", request, auth.account);
     if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
