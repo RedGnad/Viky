@@ -5,6 +5,7 @@ import { useReaderZone } from "@/src/client/reader-zone";
 import { Nature } from "./Nature";
 import { conditionById, conditionOfGoal } from "@/src/conditions";
 import type { GiftSummary } from "@/src/client/gift";
+import { eyebrowOf } from "@/src/gift-live";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { dateInWords } from "@/src/moments";
 import { END_GIFT as E, GIFT_CARD as W, MILESTONE_PAGE as M } from "@/src/sentences";
@@ -53,7 +54,7 @@ export function GiftCard({
           </span>
         ) : null
       }
-      label={W.fromFunderOrYours(gift.role === "funder" ? null : gift.funderName)}
+      label={eyebrowOf(gift.role, gift.funderName)}
       title={whoInWords(gift)}
       under={condition?.name ?? ""}
       nature={condition ? <Nature nature={condition.nature} /> : null}
