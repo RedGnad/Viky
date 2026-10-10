@@ -10,7 +10,7 @@ import { CONDITIONS } from "../src/conditions";
 import { liveOf, type LiveInput } from "../src/gift-live";
 import { askedInWords, certificateById } from "../src/milestone-conditions";
 import { marathonTargetUnderHours } from "../src/marathon";
-import { GIFT_CARD, GIFT_PAGE, MILESTONE_PAGE } from "../src/sentences";
+import { GIFT_CARD, GIFT_PAGE, MILESTONE_PAGE, SHOW_PROOF } from "../src/sentences";
 
 test("what it asks is said in the register's words, from the contract's own target", () => {
   const asked = (id: string, units: number) => askedInWords(certificateById(id)!, units);
@@ -99,8 +99,12 @@ test("the title says where the proof stands, to each of the two people", () => {
   assert.equal(title({ proof: "refused" }), "It was checked and did not show what the gift asks.");
   assert.equal(title({ proof: "refused", voice: "funder" }), "It was checked and did not show what the gift asks.");
   // The university's page still being built.
-  assert.equal(title({ proof: "building" }), "Your university's page is being set up. Then you show it here.");
-  assert.equal(title({ proof: "building", voice: "funder" }), "Boo's university page is being set up.");
+  // Said by what the person will be able to do and when (the founder, 10 Oct 2026).
+  assert.equal(title({ proof: "building", builtByInWords: "12 Oct" }), "Your university is being set up. You can show your page here from 12 Oct at the latest.");
+  assert.equal(title({ proof: "building", builtByInWords: "12 Oct", voice: "funder" }), "Their university is being set up. They can show their page from 12 Oct at the latest.");
+  // The card says it once: the block under it draws nothing while the university is being set up.
+  assert.match(readFileSync("app/kit/ShowProof.tsx", "utf8"), /if \(review === "building" && state\.at !== "held"\) return null;/);
+  assert.equal("building" in SHOW_PROOF, false);
   // Past the last day, where the source dates what it grants: what was had in time can still be proved.
   // The state is the title and what follows from it is the line under it (1 Oct 2026): one title said both before.
   const under = (over: Partial<LiveInput>) => liveOf({ ...WAITING, ...over }).next;

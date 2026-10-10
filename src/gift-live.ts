@@ -44,6 +44,8 @@ export type LiveInput = Readonly<{
    * so what was had in time can still be proved, and "ended" where the showing itself is what is dated.
    */
   proof?: "pending" | "refused" | "building" | "late" | "ended" | "unread" | null;
+  /** The day the university's page is read by at the latest, in words: the gift's making plus two days, in the reader's clock. */
+  builtByInWords?: string | null;
   /** The last day of the late window, in the reader's clock: fourteen days after the gift's last day. */
   lateUntilInWords?: string | null;
   /** Which of the three drawings the gift has, which says what its promise is: day by day, at a target, with a proof. */
@@ -150,7 +152,7 @@ export function titleOf(voice: Voice, name: string | null): string {
 }
 
 /** Where a proof stands, to each of the three readers. A reader who is neither of the two reads the third person. */
-function proofHeadline(proof: NonNullable<LiveInput["proof"]>, voice: Voice, recipientName: string | null): string {
+function proofHeadline(proof: NonNullable<LiveInput["proof"]>, voice: Voice, recipientName: string | null, builtBy: string | null): string {
   const yours = voice === "recipient";
   switch (proof) {
     case "pending":
@@ -158,7 +160,8 @@ function proofHeadline(proof: NonNullable<LiveInput["proof"]>, voice: Voice, rec
     case "refused":
       return L.awaitingProof.refused;
     case "building":
-      return yours ? L.awaitingProof.buildingYours : L.awaitingProof.buildingTheirs(recipientName);
+      // Said by what the person will be able to do and when (10 Oct 2026); the page always knows the day.
+      return yours ? L.awaitingProof.buildingYours(builtBy ?? "") : L.awaitingProof.buildingTheirs(builtBy ?? "");
     case "late":
       return L.awaitingProof.late;
     case "ended":
@@ -282,7 +285,7 @@ export function liveOf(input: LiveInput): Live {
         // there is a proof, or once the last day has passed, the headline says where it stands instead. A gift on a
         // year's results says the wait first, until the person says the results are out (10 Oct 2026).
         headline: input.proof
-          ? proofHeadline(input.proof, voice, recipientName)
+          ? proofHeadline(input.proof, voice, recipientName, input.builtByInWords ?? null)
           : input.waitsForResults
             ? yours
               ? L.awaitingProof.resultsYours
@@ -340,7 +343,7 @@ export function liveOf(input: LiveInput): Live {
     case "over":
       return {
         // A proof shown and never reviewed is not the person's lateness: the headline says whose it was.
-        headline: input.proof === "unread" ? proofHeadline("unread", voice, recipientName) : voice === "funder" ? L.over.theirs(recipientName) : L.over.yours,
+        headline: input.proof === "unread" ? proofHeadline("unread", voice, recipientName, null) : voice === "funder" ? L.over.theirs(recipientName) : L.over.yours,
         // Everything goes back when nothing was earned: the whole amount, whether or not it has been sent yet.
         figure: { label: voice === "funder" ? L.over.label.theirs : L.over.label.yours(funderName), value: input.amountDisplay },
         next:

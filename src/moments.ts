@@ -89,6 +89,11 @@ export function isZone(value: unknown): value is string {
  * Every screen the server draws passes the zone, so the server and the browser say the same day. Nothing else does,
  * and for them this is what it always was.
  */
+/** The same day without its year, for a day close enough that the year is noise: "12 Oct" (the founder, 10 Oct 2026). */
+export function dayInWords(atMs: number, zone?: string): string {
+  return dateInWords(atMs, zone).replace(/ \d{4}$/, "");
+}
+
 export function dateInWords(atMs: number, zone?: string): string {
   const at = new Date(atMs);
   if (!zone) return `${at.getDate()} ${MONTHS[at.getMonth()]} ${at.getFullYear()}`;

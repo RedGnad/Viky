@@ -87,9 +87,13 @@ test.describe("a gift had or not, as its two people read it", () => {
       await shot(page, size.name, "3c-yours-refused");
 
       // The university's page still being built.
-      state = { review: { status: "building" } };
+      // Said by what the person will be able to do, with the day: two days after the gift was made, here today.
+      state = { review: { status: "building" }, createdAtChain: now() };
       await page.goto(`/g/${GIFT}`);
-      await expect(page.getByText("Your university's page is being set up. Then you show it here.")).toBeVisible();
+      await expect(page.getByText(/^Your university is being set up\. You can show your page here from \d{1,2} [A-Z][a-z]{2} at the latest\.$/)).toBeVisible();
+      // The card says it once: the block under it, which said "within two days", draws nothing.
+      await expect(page.getByText(/within two days/)).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Show it", exact: true })).toHaveCount(0);
       await shot(page, size.name, "3d-yours-being-built");
 
       // The last day has passed. An enrolment is dated the day it is shown, so nothing shown now can pay: no gesture
@@ -143,6 +147,12 @@ test.describe("a gift had or not, as its two people read it", () => {
       await expect(agreed.nth(2)).toHaveText("If notback to you, two weeks later");
       await expect(page.getByText(/Reach 1 on|reach 1,|Target 1/)).toHaveCount(0);
       await shot(page, size.name, "3g-theirs-what-was-agreed");
+
+      // The university's page still being set up, said by what the person will be able to do, with the day.
+      state = { review: { status: "building" }, createdAtChain: now() };
+      await page.goto(`/g/${GIFT}`);
+      await expect(page.getByText(/^Their university is being set up\. They can show their page from \d{1,2} [A-Z][a-z]{2} at the latest\.$/)).toBeVisible();
+      await shot(page, size.name, "3g2-theirs-being-built");
 
       state = { review: { status: "pending" } };
       await page.goto(`/g/${GIFT}`);
