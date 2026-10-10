@@ -9,6 +9,11 @@ import type { IndexedGift } from "./envio-index";
  * of gifts that did not tell them apart would read as people using Viky when it was one person testing it. Any
  * account that is not in this list, nor an operator account of this deployment, is somebody else's, and nothing more
  * is said of whose.
+ *
+ * A gift paid by an account the judge code credited is counted apart (the final audit of 9 Oct 2026): its money is
+ * the treasury's, and it is a try of the path the judges page gives. Counted with the rest, every judge who followed
+ * that path read as an outside person funding a gift, and the one credit given so far, a rehearsal of the founder's,
+ * already did. The pilot report groups a gift the same way, and first (`groupOf`, src/pilot-report.ts).
  */
 export const FOUNDER_TEST_ACCOUNTS: readonly string[] = [
   "0xb12e0c72209bd4becfdafa96a8f3e7ebc93b8376",
@@ -25,6 +30,14 @@ export function founderAccounts(operators: Iterable<string> = []): ReadonlySet<s
   return all;
 }
 
+/** The length of the list in a word, as the page says it: "the five listed". A figure past the words. */
+const IN_WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"] as const;
+export function countOfFounderAccounts(): string {
+  return IN_WORDS[FOUNDER_TEST_ACCOUNTS.length] ?? String(FOUNDER_TEST_ACCOUNTS.length);
+}
+
+const NOBODY: ReadonlySet<string> = new Set();
+
 /** An account as the page prints it: checksummed, its head and its tail. */
 export function shortOf(account: string): string {
   const whole = isAddress(account) ? getAddress(account) : account;
@@ -36,9 +49,12 @@ export function shortOf(account: string): string {
  * 9 Oct 2026): judged by its funder alone, one funded by somebody who is not the founder was counted "between two
  * people", which takes two, and the judges page said three such gifts where two had been opened.
  */
-export type GiftBetween = "two others" | "founder to another" | "another to founder" | "the founder's own try" | "not opened yet";
+export type GiftBetween = "paid from a judge credit" | "two others" | "founder to another" | "another to founder" | "the founder's own try" | "not opened yet";
 
-export function between(gift: Pick<IndexedGift, "funder" | "recipient">, founders: ReadonlySet<string>): GiftBetween {
+/** `credited` holds the accounts the judge code credited, in lower case: nobody where no credit was ever given. */
+export function between(gift: Pick<IndexedGift, "funder" | "recipient">, founders: ReadonlySet<string>, credited: ReadonlySet<string> = NOBODY): GiftBetween {
+  // First, whoever opened it and whether anybody did: what paid for it was a judge credit.
+  if (credited.has(gift.funder.toLowerCase())) return "paid from a judge credit";
   if (gift.recipient === null) return "not opened yet";
   const funderIsFounder = founders.has(gift.funder.toLowerCase());
   const recipientIsFounder = founders.has(gift.recipient.toLowerCase());
@@ -55,6 +71,9 @@ export type Usage = Readonly<{
   funded: bigint;
   earned: bigint;
   sentBack: bigint;
+  /** How many of the gifts an account the judge code credited paid for: counted apart from everything below. */
+  fromJudgeCredit: number;
+  /** Who funded and who opened the other gifts, the ones no judge credit paid for. */
   funders: Readonly<{ all: number; founders: number }>;
   recipients: Readonly<{ all: number; founders: number }>;
   between: Readonly<Record<GiftBetween, number>>;
@@ -64,11 +83,13 @@ export type Usage = Readonly<{
 }>;
 
 /** Who has used Viky, counted from the index's gifts: nothing here is typed in, and the founder's accounts are told apart. */
-export function usageOf(gifts: readonly IndexedGift[], founders: ReadonlySet<string>): Usage {
-  const funders = new Set(gifts.map((gift) => gift.funder.toLowerCase()));
-  const recipients = new Set(gifts.flatMap((gift) => (gift.recipient ? [gift.recipient.toLowerCase()] : [])));
-  const counted: Record<GiftBetween, number> = { "two others": 0, "founder to another": 0, "another to founder": 0, "the founder's own try": 0, "not opened yet": 0 };
-  for (const gift of gifts) counted[between(gift, founders)] += 1;
+export function usageOf(gifts: readonly IndexedGift[], founders: ReadonlySet<string>, credited: ReadonlySet<string> = NOBODY): Usage {
+  // The accounts are those of the gifts no judge credit paid for: a judge's two accounts are not two people using Viky.
+  const others = gifts.filter((gift) => !credited.has(gift.funder.toLowerCase()));
+  const funders = new Set(others.map((gift) => gift.funder.toLowerCase()));
+  const recipients = new Set(others.flatMap((gift) => (gift.recipient ? [gift.recipient.toLowerCase()] : [])));
+  const counted: Record<GiftBetween, number> = { "paid from a judge credit": 0, "two others": 0, "founder to another": 0, "another to founder": 0, "the founder's own try": 0, "not opened yet": 0 };
+  for (const gift of gifts) counted[between(gift, founders, credited)] += 1;
   const sum = (pick: (gift: IndexedGift) => bigint) => gifts.reduce((total, gift) => total + pick(gift), 0n);
   return {
     gifts: gifts.length,
@@ -76,6 +97,7 @@ export function usageOf(gifts: readonly IndexedGift[], founders: ReadonlySet<str
     funded: sum((gift) => gift.fundedAmount),
     earned: sum((gift) => gift.amountEarned),
     sentBack: sum((gift) => gift.amountRefunded),
+    fromJudgeCredit: gifts.length - others.length,
     funders: { all: funders.size, founders: [...funders].filter((account) => founders.has(account)).length },
     recipients: { all: recipients.size, founders: [...recipients].filter((account) => founders.has(account)).length },
     between: counted,
