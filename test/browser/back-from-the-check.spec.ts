@@ -39,6 +39,8 @@ const moment = (page: Page) => page.locator("dialog.reached-moment");
 /** Where the amount is laid out on the card, which no swell changes. An expression: a function sent to the page loses its name on the way. */
 const amountTop = (page: Page) => page.evaluate(`document.querySelector('section.gift-card-placed [data-turns="amount"]').offsetTop`) as Promise<number>;
 const cardHeight = (page: Page) => page.evaluate(`document.querySelector('section.gift-card-placed').offsetHeight`) as Promise<number>;
+/** Where the card itself stands on the page: what stands above it must not push it either. */
+const cardTop = (page: Page) => page.evaluate(`Math.round(document.querySelector('section.gift-card-placed').getBoundingClientRect().top + window.scrollY)`) as Promise<number>;
 
 /** The animations that time the landing, and the confetti of the moment: the two clocks a frame is held on. */
 const LANDING = "document.documentElement.getAnimations()";
@@ -107,6 +109,7 @@ test.describe("back from the verification, on the gift's page", () => {
       await expect(card(page).locator('.had-or-not svg[data-character="today"]')).toBeVisible();
       const top = await amountTop(page);
       const height = await cardHeight(page);
+      const stands = await cardTop(page);
       await shot(page, size.name, "1-back-checking");
 
       // The chain pays. The character is told at once and jumps as the triangle it was; the card still says what it said.
@@ -141,6 +144,7 @@ test.describe("back from the verification, on the gift's page", () => {
       await expect(card(page).locator(".gift-meta").first()).toHaveText("Yours");
       expect(await amountTop(page), "the amount is where it was: nothing pushed it").toBe(top);
       expect(await cardHeight(page), "and the card is as tall as it was").toBe(height);
+      expect(await cardTop(page), "and stands where it stood").toBe(stands);
       // The circle alone is drawn now, the triangle it carried out of sight.
       expect(await page.evaluate(`getComputedStyle(document.querySelector('.had-or-not [data-part="body"]')).opacity`)).toBe("1");
       if (SHOTS) {
