@@ -38,11 +38,13 @@ const read = (file: string) => readFileSync(new URL(`../${file}`, import.meta.ur
 test("the judge's path leads to the recipient's side, and promises nothing a single judge alone could use", () => {
   assert.doesNotMatch(page, /shown in the video/);
   assert.doesNotMatch(page, /open the gift the founder made for you from the operator account/);
-  // One press since the UI pass of 8 Oct 2026: "Open my gift" makes the account and opens the gift.
-  assert.ok(page.includes("To see the other side on this device: copy the link, press Me, then Other account, open the link and press Open my gift, which creates a second account. Then connect the source."));
+  // The second account is made in the door "Other account" lays over Me, which closes nothing (9 Oct 2026); the
+  // link then opens for it by one press, "Open my gift" (the UI pass of 8 Oct 2026).
+  // The screen that shows the link has no bar of destinations: the way to Me is the back arrow first (the final audit of 9 Oct 2026).
+  assert.ok(page.includes("To see the other side on this device: copy the link, press the back arrow, then Me, then Other account, then Create a new account. This browser is then signed in to a second account: paste the link in the address bar and press Open my gift. Then connect the source."));
   // The words are the screens' own.
   const sentences = read("src/sentences.ts");
-  for (const label of ['me: "Me"', 'anotherAccount: "Use another account"', 'openMyGift: "Open my gift"']) assert.ok(sentences.includes(label), label);
+  for (const label of ['me: "Me"', 'otherAccount: "Other account"', 'newAccount: "Create a new account"', 'openMyGift: "Open my gift"']) assert.ok(sentences.includes(label), label);
   // When a day counts and when a missed one comes back: the schedules' own hours.
   assert.ok(page.includes('"The day counts the morning after it ends (the readings pass of 00:30 UTC). A "'), "when a day counts, on the first two versions");
   assert.ok(page.includes("day without a lesson costs no reading, a plain look sees it first, and it comes back to the funder 31 hours after it ends (the settling pass of 07:00 UTC, two mornings later)."));
@@ -230,7 +232,9 @@ test("the card services are said in the order the pay sheet tries them", () => {
 });
 
 test("the judges' path names the button as Me draws it, and says what each path asks of them", () => {
-  assert.ok(page.includes("press Me, then Other account, open the link and press Open my gift, which creates a second account"));
+  assert.ok(page.includes("press the back arrow, then Me, then Other account, then Create a new account. This browser is then signed in to a second account: paste the link in the address bar and press Open my gift."));
+  // The second button is the sheet's own, by the name it draws it under.
+  assert.ok(read("app/kit/OtherAccount.tsx").includes("{ACCOUNT_DOOR.newAccount}"));
   assert.doesNotMatch(page, /then Use another account/);
   assert.equal(ME.otherAccount, "Other account");
   assert.ok(read("app/kit/Me.tsx").includes("name={W.otherAccount}"));

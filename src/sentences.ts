@@ -1959,6 +1959,20 @@ export const MONEY = {
   noRate: "The exchange rate could not be read today, so these are shown in dollars.",
 } as const;
 
+/**
+ * "Other account", the sheet that comes up over Me (the founder, 9 Oct 2026): another account is chosen or made
+ * there, and this one's session stands until the other opens. Its title is the round button's two words, and making
+ * an account is said as the gift's link says it of a device that already has one (`ACCOUNT_DOOR.newAccount`).
+ */
+export const OTHER_ACCOUNT = {
+  /** True of the code: nothing is closed by opening the sheet, and the server names the other account only once its passkey answered. */
+  stays: "This account stays signed in until the other one opens.",
+  /** The press asks the device for a passkey with none named: it offers every account it holds for Viky. */
+  choose: "Sign in to another account",
+  /** The passkey chosen is the one of the account already here: nothing was changed. */
+  same: "That is the account you are signed in to.",
+} as const;
+
 /** Me: the account, in the order the structure gives it. */
 export const ME = {
   title: "You",

@@ -7,11 +7,11 @@ import {
 } from "@category-labs/mera";
 import { toViemAccount } from "@category-labs/mera/viem";
 import type { Address, LocalAccount } from "viem";
-import { ceremonyClient, endConsentKey, takeKeyKept } from "../client/consent-key";
+import { ceremonyClient, consentKey, endConsentKey, takeKeyKept } from "../client/consent-key";
 import { deriveEvmPrivateKey } from "./derive";
 import { defaultPasskeyLabel } from "./passkey-label";
 import { accountError, passkeyEnvironmentProblem, toAccountError } from "./errors";
-import { readRecord, recordOf, type KeptRecord } from "./key-kept";
+import { readRecord, recordOf, type KeptRecord, type KeyKept } from "./key-kept";
 import { accountsAreMadeOn } from "./passkey-support";
 
 /**
@@ -115,7 +115,7 @@ export function storedCredential(): PasskeyCredentialMetadata | undefined {
   }
 }
 
-function rememberCredential(credential: PasskeyCredentialMetadata): void {
+function rememberCredential(credential: PasskeyCredentialMetadata, { quiet = false }: { quiet?: boolean } = {}): void {
   remembered = credential;
   try {
     window.localStorage.setItem(CREDENTIAL_STORAGE_KEY, JSON.stringify(credential));
@@ -123,7 +123,7 @@ function rememberCredential(credential: PasskeyCredentialMetadata): void {
     // Storage can be unavailable (private mode). The passkey still exists; sign-in then uses the
     // discoverable flow and the platform picker.
   }
-  notify();
+  if (!quiet) notify();
 }
 
 export function hasStoredCredential(): boolean {
@@ -147,8 +147,8 @@ export function keyKept(): KeptRecord | null {
 }
 
 /** What the ceremony just finished said of the passkey now remembered. A sign-in keeps the store's name creation gave. */
-function rememberKeyKept(credentialId: string): void {
-  const next = recordOf(credentialId, takeKeyKept(), keyKept());
+function rememberKeyKept(credentialId: string, { quiet = false, said = takeKeyKept() }: { quiet?: boolean; said?: KeyKept | null } = {}): void {
+  const next = recordOf(credentialId, said, keyKept());
   if (!next) return;
   kept = next;
   try {
@@ -156,7 +156,7 @@ function rememberKeyKept(credentialId: string): void {
   } catch {
     // A browser that keeps nothing still says it until the page goes.
   }
-  notify();
+  if (!quiet) notify();
 }
 
 function armIdleTimer(): void {
@@ -180,6 +180,17 @@ export function sessionExpiresAtMs(): number | undefined {
  * with it, so no screen ever shows one account while a key signs for another.
  */
 function openSession(prfOutput: Uint8Array, only?: Address): Address {
+  const { opened, candidate } = sessionFrom(prfOutput);
+  if (only && candidate.address.toLowerCase() !== only.toLowerCase()) {
+    opened.end();
+    endConsentKey();
+    throw accountError("OTHER_ACCOUNT");
+  }
+  return takeSession(opened, candidate);
+}
+
+/** The key a passkey's output derives, in a signing session that is nobody's yet. The output and the key are zeroed here. */
+function sessionFrom(prfOutput: Uint8Array): { opened: Secp256k1SigningSession; candidate: LocalAccount } {
   const privateKey = deriveEvmPrivateKey(prfOutput);
   prfOutput.fill(0);
   let opened: Secp256k1SigningSession;
@@ -188,19 +199,36 @@ function openSession(prfOutput: Uint8Array, only?: Address): Address {
   } finally {
     privateKey.fill(0);
   }
-  const candidate = toViemAccount(opened);
-  if (only && candidate.address.toLowerCase() !== only.toLowerCase()) {
-    opened.end();
-    endConsentKey();
-    throw accountError("OTHER_ACCOUNT");
-  }
+  return { opened, candidate: toViemAccount(opened) };
+}
+
+/** That session becomes this page's, in place of the one that was open. */
+function takeSession(opened: Secp256k1SigningSession, candidate: LocalAccount): Address {
   // The account's own key only: the consent key was just kept by the same ceremony and stays (src/client/consent-key.ts).
   closeAccountSession();
   session = opened;
   account = candidate;
   armIdleTimer();
   notify();
-  return account.address;
+  return candidate.address;
+}
+
+/** The two ceremonies, each written once: every way into an account runs through one of them. */
+function makePasskey(displayName: string) {
+  // The label only lives in the passkey provider (iCloud Keychain, Google Password Manager); it is
+  // never sent to Viky's server, never stored by the app and never written on chain.
+  const name = displayName.trim() || defaultPasskeyLabel();
+  return createPasskeyWithPrfOutput({
+    rp: { id: relyingPartyId(), name: RELYING_PARTY_NAME },
+    user: { name, displayName: name },
+    // The consent key is asked in the same ceremony, as a second salt: no prompt is added.
+    webAuthnClient: ceremonyClient(),
+  });
+}
+
+/** With no passkey named, the device offers every one it holds for Viky. */
+function askPasskey(credential: PasskeyCredentialMetadata | undefined) {
+  return getPasskeyPrfOutput({ rpId: relyingPartyId(), credential, webAuthnClient: ceremonyClient() });
 }
 
 /** Label shown by the passkey provider when no name is given: said with when it was made (src/account/passkey-label.ts). */
@@ -211,16 +239,8 @@ export async function createAccount(displayName: string): Promise<Address> {
   requirePasskeyCapableBrowser();
   // Whatever screen asks: no passkey is made on an address that is not Viky's own (src/account/passkey-support.ts).
   if (!accountsAreMadeOn(window.location.hostname)) throw accountError("MADE_ELSEWHERE");
-  // The label only lives in the passkey provider (iCloud Keychain, Google Password Manager); it is
-  // never sent to Viky's server, never stored by the app and never written on chain.
-  const name = displayName.trim() || defaultPasskeyLabel();
   try {
-    const created = await createPasskeyWithPrfOutput({
-      rp: { id: relyingPartyId(), name: RELYING_PARTY_NAME },
-      user: { name, displayName: name },
-      // The consent key is asked in the same ceremony, as a second salt: no prompt is added.
-      webAuthnClient: ceremonyClient(),
-    });
+    const created = await makePasskey(displayName);
     rememberCredential({ credentialId: created.credentialId, transports: created.transports });
     rememberKeyKept(created.credentialId);
     return openSession(created.prfOutput);
@@ -241,7 +261,7 @@ export async function signIn(options: { as?: Promise<Address | null> } = {}): Pr
   requirePasskeyCapableBrowser();
   const known = storedCredential();
   try {
-    const result = await getPasskeyPrfOutput({ rpId: relyingPartyId(), credential: known, webAuthnClient: ceremonyClient() });
+    const result = await askPasskey(known);
     let only: Address | undefined;
     if (options.as) {
       const named = await options.as.catch(() => null);
@@ -267,6 +287,80 @@ export async function signIn(options: { as?: Promise<Address | null> } = {}): Pr
     if (!known && !options.as && failure.code === "PASSKEY_CANCELLED") throw accountError("NO_CREDENTIAL");
     throw failure;
   }
+}
+
+/**
+ * Another account, opened beside the one this page is signed in to (the founder, 9 Oct 2026). "Other account" used to
+ * close the session and let go of this device's passkey before anybody had chosen anything, so a prompt that was
+ * closed left the person signed out. Here the passkey is asked with none named, so the device offers every account it
+ * holds for Viky, or a new one is made; and what answers is not this page's account yet.
+ *
+ * Nothing of this page is changed until one of the two ways it is kept: the open session, the passkey this device
+ * remembers and where that one is kept all stand as they were. So a prompt that is closed, or a server that could not
+ * be told, leaves the person exactly where they stood.
+ */
+export type AccountBeside = Readonly<{
+  /** The other account, able to sign: it tells the server who it is before anything here changes. */
+  account: LocalAccount;
+  /** It becomes this page's account, as a sign-in makes it: for the passkey of the account already here. */
+  take: () => Address;
+  /**
+   * Its passkey becomes the one this device remembers, and its key is zeroed, with no screen told: the page is about
+   * to be loaded again as that account's, and a page that is leaving is not redrawn on the way (D258).
+   */
+  remember: () => void;
+  /** It is let go of, key zeroed, and this page's account stays. */
+  drop: () => void;
+}>;
+
+export async function openBeside({ make = false }: { make?: boolean } = {}): Promise<AccountBeside> {
+  requirePasskeyCapableBrowser();
+  if (make && !accountsAreMadeOn(window.location.hostname)) throw accountError("MADE_ELSEWHERE");
+  const consentBefore = consentKey();
+  let answered: { credential: PasskeyCredentialMetadata; prfOutput: Uint8Array };
+  try {
+    if (make) {
+      const created = await makePasskey("");
+      answered = { credential: { credentialId: created.credentialId, transports: created.transports }, prfOutput: created.prfOutput };
+    } else {
+      const result = await askPasskey(undefined);
+      answered = { credential: { credentialId: result.credentialId }, prfOutput: result.prfOutput };
+    }
+  } catch (error) {
+    takeKeyKept();
+    throw toAccountError(error);
+  }
+  const { opened, candidate } = sessionFrom(answered.prfOutput);
+  // What the ceremony said of where its key is kept, taken now: it is theirs, whatever is asked of the device next.
+  const said = takeKeyKept();
+  // The ceremony kept the consent key of the passkey that answered, when the device gave one (src/client/consent-key.ts).
+  const consentIsTheirs = consentKey() !== consentBefore;
+  const rememberTheirs = (quiet: boolean) => {
+    const known = storedCredential();
+    // A passkey this device already remembers keeps what it knew of it: a sign-in names no transports.
+    if (!known || known.credentialId !== answered.credential.credentialId) rememberCredential(answered.credential, { quiet });
+    rememberKeyKept(answered.credential.credentialId, { quiet, said });
+  };
+  return {
+    account: candidate,
+    take: () => {
+      // The consent key that stands must be theirs: the one held before is, when the account open here is the one
+      // that answered; any other goes, and theirs is asked at their first agreement.
+      if (!consentIsTheirs && account?.address !== candidate.address) endConsentKey();
+      const address = takeSession(opened, candidate);
+      rememberTheirs(false);
+      return address;
+    },
+    remember: () => {
+      rememberTheirs(true);
+      opened.end();
+    },
+    drop: () => {
+      opened.end();
+      // Their consent key took the place of this account's: neither stands, and this account's is asked again at its next agreement.
+      if (consentIsTheirs) endConsentKey();
+    },
+  };
 }
 
 /**
