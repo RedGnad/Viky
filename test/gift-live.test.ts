@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
-import { eyebrowOf, liveOf, titleOf, type LiveInput } from "../src/gift-live.js";
+import { readFileSync } from "node:fs";
+import { eyebrowOf, liveOf, natureOf, titleOf, type LiveInput } from "../src/gift-live.js";
 import type { Moment } from "../src/gift-moment.js";
 import type { Voice } from "../src/gift-voice.js";
 
@@ -135,6 +136,23 @@ test("what came back is said beside what is theirs, never as a zero, and never w
   // And on the two moments that are themselves about what came back, the figure is the headline's own.
   assert.equal(liveOf(input({ moment: "over" })).back, null);
   assert.equal(liveOf(input({ moment: "cameBack" })).back, null);
+});
+
+test("the label under the condition speaks to whoever reads the card: 'by you' to the person it is for, 'by them' to the others", () => {
+  assert.deepEqual([natureOf("recipient", "shown"), natureOf("recipient", "connected")], ["SHOWN BY YOU", "CONNECTED BY YOU"]);
+  for (const voice of ["funder", "reader", undefined] as const) {
+    assert.deepEqual([natureOf(voice, "shown"), natureOf(voice, "connected")], ["SHOWN BY THEM", "CONNECTED BY THEM"], `${voice ?? "nobody named"} keeps the third person`);
+  }
+  // Read for whoever reads: the same words to the three of them.
+  for (const voice of ["recipient", "funder", "reader", undefined] as const) assert.equal(natureOf(voice, "read"), "READ FOR YOU");
+  // The cards name their reader; the chooser and the catalogue, read by the one who gives, name none.
+  const source = (file: string) => readFileSync(file, "utf8");
+  assert.match(source("app/kit/GiftCard.tsx"), /<Nature nature=\{condition\.nature\} to=\{gift\.role\} \/>/);
+  assert.match(source("app/components/GiftPage.tsx"), /<Nature nature=\{condition\.nature\} to=\{voice\} \/>/);
+  for (const file of ["app/kit/offer/WillSheet.tsx", "app/what-viky-can-check/page.tsx"]) {
+    assert.match(source(file), /<Nature nature=\{(option|condition)\.nature\} \/>/, `${file} names no reader`);
+    assert.doesNotMatch(source(file), /<Nature [^>]*\bto=/, `${file} names no reader`);
+  }
 });
 
 test("the line above the name never says 'your' to somebody the gift is not theirs to read as theirs", () => {
