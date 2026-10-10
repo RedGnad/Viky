@@ -32,7 +32,7 @@ export type WatchDeps = Readonly<{
   evidenceKeys: () => Promise<EvidenceKeys>;
   lastCountingPass: () => Promise<Date | null>;
   /** The health reading (src/health.ts), for what no pass and no other watch looks at: the database and the reading service. */
-  health: () => Promise<Pick<Health, "database" | "worker">>;
+  health: () => Promise<Pick<Health, "database" | "worker"> & Partial<Pick<Health, "relayer" | "passes">>>;
   /** The alerts about Reclaim's allowance that have just become due, each of them once in its cycle. */
   allowanceDue: (nowMs: number) => Promise<readonly Alert[]>;
   alert: (alert: Alert) => Promise<AlertOutcome>;
@@ -142,8 +142,18 @@ export function absentPassAlert(last: Date | null, nowMs: number): Alert | null 
  * monitor's page said it to whoever looked, and nobody was told. One email for both; nothing when both hold. The reason
  * is in the logs of that minute, where the health reading writes it, and never in the email.
  */
-export function healthAlert(health: Pick<Health, "database" | "worker">): Alert | null {
-  const down = [...(health.database.ok ? [] : [`the database (${health.database.fault ?? "unreachable"})`]), ...(health.worker.ok ? [] : [`the reading service (${health.worker.fault ?? "unreachable"})`])];
+export function healthAlert(health: Pick<Health, "database" | "worker"> & Partial<Pick<Health, "relayer" | "passes">>): Alert | null {
+  // The relayer under its alert and the five-minute call (the final audit of 9 Oct 2026). The relayer was told at the
+  // start of a pass alone, so between two passes a balance that fell said nothing; and nothing named the call every
+  // frequent reading and the morning summary ride on, which two hours of an outage are enough to switch off.
+  const relayer = health.relayer;
+  const frequent = health.passes?.milestones;
+  const down = [
+    ...(health.database.ok ? [] : [`the database (${health.database.fault ?? "unreachable"})`]),
+    ...(health.worker.ok ? [] : [`the reading service (${health.worker.fault ?? "unreachable"})`]),
+    ...(!relayer || (relayer.ok && !relayer.underAlert) ? [] : [relayer.mon === undefined ? `the relayer (${relayer.fault ?? "unreachable"})` : `the relayer (${relayer.mon} MON, under ${mon(RELAYER_ALERT_BELOW)})`]),
+    ...(!frequent || frequent.ok ? [] : [`the five-minute call (${frequent.fault === "never ran" || frequent.last === null ? "never ran" : `late, last at ${frequent.last}`})`]),
+  ];
   if (down.length === 0) return null;
   return {
     subject: `Not holding at the nightly watch: ${down.join(", ")}`,

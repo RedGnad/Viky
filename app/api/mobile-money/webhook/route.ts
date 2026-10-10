@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { payoutNotPaidAlert } from "@/src/mobile-money";
 import { notePayoutState } from "@/src/mobile-money-store";
+import { sendAlert } from "@/src/provider-alert";
 import { payoutStateOf, signedBySwitch } from "@/src/switch";
 
 export const runtime = "nodejs";
@@ -19,7 +21,13 @@ export async function POST(request: Request) {
   try {
     const body = JSON.parse(raw) as { data?: { reference?: unknown } };
     const reference = typeof body.data?.reference === "string" ? body.data.reference : "";
-    if (/^[0-9a-f-]{36}$/i.test(reference)) await notePayoutState(reference, payoutStateOf(body.data));
+    if (/^[0-9a-f-]{36}$/i.test(reference)) {
+      const state = payoutStateOf(body.data);
+      // Only a payout of ours is told of: the note answers whether the reference named one.
+      const ours = await notePayoutState(reference, state);
+      const notPaid = ours ? payoutNotPaidAlert(reference, state.status) : null;
+      if (notPaid) await sendAlert(notPaid);
+    }
   } catch (error) {
     // A signed body that could not be read: said in the logs, and acknowledged, since asking again would bring the same.
     console.error(`mobile money webhook not read: ${error instanceof Error ? error.message : String(error)}`);

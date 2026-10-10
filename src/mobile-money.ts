@@ -172,3 +172,33 @@ export function phaseOf(status: string, input: { depositSent: boolean; expired: 
 export function settled(phase: PayoutPhase): boolean {
   return phase !== "waiting";
 }
+
+/** The states of a payout that Switch gives when it did not reach the number, or will not. */
+export const PAYOUT_NOT_PAID: readonly string[] = ["FAILED", "REVERSED", "BLOCKED"];
+
+/**
+ * Switch's word that a payout did not go through, told to the operator the moment its message arrives (the final
+ * audit of 9 Oct 2026). The person reads "It did not reach the number. The money comes back to your account.": that
+ * return is Switch's to make, and it has never been observed.
+ */
+export function payoutNotPaidAlert(reference: string, status: string): Readonly<{ subject: string; text: string }> | null {
+  if (!PAYOUT_NOT_PAID.includes(status)) return null;
+  return {
+    subject: `Mobile money: a payout is ${status}`,
+    text: `Switch says payout ${reference} is ${status}. The person reads that it did not reach the number and that the money comes back to their account. That return is Switch's to make and has never been observed: read the payout at Switch, and the account's balance.`,
+  };
+}
+
+/** The payouts the morning's pass finds unfinished an hour after their dollars left, as one email, or nothing. */
+export function payoutsNotFinishedAlert(payouts: readonly Readonly<{ reference: string; status: string; country: string; network: string; units: bigint; depositSentAt: Date }>[], nowMs: number): Readonly<{ subject: string; text: string }> | null {
+  if (payouts.length === 0) return null;
+  const hours = (since: Date) => Math.floor((nowMs - since.getTime()) / 3_600_000);
+  return {
+    subject: `${payouts.length} mobile money ${payouts.length === 1 ? "payout has" : "payouts have"} not arrived`,
+    text: [
+      "Their dollars left for Switch more than an hour ago, and Switch has not said they arrived:",
+      ...payouts.map((payout) => `- payout ${payout.reference}, ${payout.country.toUpperCase()} ${payout.network}: ${payout.status}, $${(Number(payout.units) / 1_000_000).toFixed(2)} sent ${hours(payout.depositSentAt)} h ago`),
+      "Each is said again every morning until Switch says COMPLETED. One that is FAILED, REVERSED or BLOCKED owes its money back, which is Switch's to return.",
+    ].join("\n"),
+  };
+}
