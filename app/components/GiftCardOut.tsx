@@ -1,44 +1,35 @@
 "use client";
 import { useEffect, useState } from "react";
-import { surelyOutOfReach } from "@/src/out-of-reach";
 import type { Rates } from "@/src/rates";
+import type { SpendMoney } from "@/src/display-currency";
 import type { Hex, LocalAccount } from "viem";
 import { ApiError } from "@/src/client/api";
 import { giftCardCodes, listGiftCards, priceGiftCard, type GiftCardCode, type GiftCardKept, type GiftCardListed } from "@/src/client/giftcards";
 import { followPhone, payPhone, type PhonePrice, type PhoneStatus } from "@/src/client/phone";
-import { AUSD } from "@/src/coins";
-import { amountByItsLetters, figureIn, lettersOf } from "@/src/currencies";
-import { twoDecimalsDown } from "@/src/exit-steps";
-import { GIFT_CARD_OUT as W } from "@/src/sentences";
+import { faceValue, namedInPlural } from "@/src/currencies";
+import { GIFT_CARD_OUT as W, WAITS } from "@/src/sentences";
 import { ChoiceList } from "../kit/ChoiceList";
 import { CopyLine } from "../kit/CopyLine";
 import { Sheet } from "../kit/Sheet";
-import { BODY, CARD, CARD_AMOUNT, CARD_LABEL, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
+import { BODY, CARD, CARD_LABEL, HELP, PRIMARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
 import { Said } from "../kit/Said";
+import { SpendChoice } from "../kit/SpendChoice";
 import { WaitLine } from "../kit/Waiting";
-import { WAITS } from "@/src/sentences";
-import { Button } from "../kit/Button";
 
 /**
  * A gift card, the Bitrefill way's second use (D271): the card chosen in a sheet, as "Which university?" is, from the
  * cards Bitrefill lists for the number's country, each with Bitrefill's own line on where it works; an amount; done.
  * The person's money moves once, on "Buy the card", after Bitrefill has priced it; the code is shown here and in the
  * history under it, and nowhere else.
+ *
+ * The amount, its price and the one button are the spending screens' own (app/kit/SpendChoice.tsx, 10 Oct 2026): the
+ * account's money in the currency the person reads in, the card's face value in the card's.
  */
 
-function dollars(units: bigint): string {
-  return `$${twoDecimalsDown(units, AUSD.decimals)}`;
-}
-
-/** A bound of an amount, as a figure alone, its currency being named once after the two: a franc figure with its thousands a space apart. */
-function bound(amount: number, currency: string): string {
-  return lettersOf(currency) === currency ? String(amount) : figureIn(amount, currency);
-}
-
-/** An amount Bitrefill names in its own currency, by that currency's letters: "20 EUR", and "5 000 FCFA" for francs. */
-function local(amount: string, currency: string): string {
+/** A face value Bitrefill names, in its own currency: "€20", "5 000 FCFA"; as it came when it is no number. */
+function face(amount: string, currency: string): string {
   const figure = Number(amount);
-  return Number.isFinite(figure) ? amountByItsLetters(figure, currency) : `${amount} ${lettersOf(currency)}`;
+  return Number.isFinite(figure) ? faceValue(figure, currency) : `${amount} ${currency}`;
 }
 
 function randomNonce(): Hex {
@@ -64,16 +55,14 @@ export function GiftCardCodeLines({ code }: Readonly<{ code: GiftCardCode }>) {
   );
 }
 
-export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | null; countryName: string | null; ausd: bigint; ensureSigner: () => Promise<LocalAccount>; onSessionClosed: () => void; onChanged: () => Promise<unknown>; onBack: () => void }>) {
+export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | null; countryName: string | null; ausd: bigint; money: SpendMoney; ensureSigner: () => Promise<LocalAccount>; onSessionClosed: () => void; onChanged: () => Promise<unknown>; onBack: () => void }>) {
   const [cards, setCards] = useState<readonly GiftCardListed[] | null | "unreadable">(null);
   const [sheetOpen, setSheetOpen] = useState(true);
   const [card, setCard] = useState<GiftCardListed | null>(null);
-  const [packageId, setPackageId] = useState<string | null>(null);
-  const [amount, setAmount] = useState("");
-  const [price, setPrice] = useState<PhonePrice | null>(null);
+  /** The card that was bought, as it is named once the choice has left the screen. */
+  const [bought, setBought] = useState<string | null>(null);
   const [status, setStatus] = useState<PhoneStatus | null>(null);
   const [kept, setKept] = useState<readonly GiftCardKept[]>([]);
-  const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
   useEffect(() => {
@@ -99,12 +88,13 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
     };
   }, [props.country]);
 
-  const refusal = (error: unknown) => {
+  /** The sentence for a refusal, or nothing when it closed the session and the screen is leaving. */
+  const refused = (error: unknown): string | null => {
     if (error instanceof ApiError && error.code === "SIGN_IN_REQUIRED") {
       props.onSessionClosed();
-      return;
+      return null;
     }
-    setProblem(error instanceof ApiError ? error.message : W.failed);
+    return error instanceof ApiError ? error.message : W.failed;
   };
 
   // A card on its way is asked again every few seconds for a minute, then left to the person's "Check again".
@@ -129,28 +119,8 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
     return () => clearInterval(timer);
   }, [waiting, status, props]);
 
-  const typed = Number(amount.replace(/[\s,]/g, ""));
-  const range = card?.range ?? null;
-  const typedFits = range !== null && Number.isFinite(typed) && typed >= range.min && typed <= range.max;
-  const typedFar = typedFits && card !== null && surelyOutOfReach(typed, card.currency, props.ausd, props.rates);
-  const chosenPackage = card?.packages.find((one) => one.id === packageId) ?? null;
-
-  const askPrice = async () => {
-    if (!card) return;
-    setBusy(true);
-    setProblem(null);
-    setPrice(null);
-    try {
-      setPrice(await priceGiftCard({ productId: card.id, ...(chosenPackage ? { packageId: chosenPackage.id } : { value: typed }) }));
-    } catch (error) {
-      refusal(error);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const buy = async () => {
-    if (!price) return;
+  /** The person's one signature and the payment: it returns once the screen has moved on, and throws a refusal. */
+  const buy = async (chosen: GiftCardListed, price: PhonePrice) => {
     let account: LocalAccount;
     try {
       account = await props.ensureSigner();
@@ -158,25 +128,12 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
       props.onSessionClosed();
       return;
     }
-    setBusy(true);
-    setProblem(null);
-    try {
-      const next = await payPhone({ account, price, nonce: randomNonce() });
-      setStatus(next);
-      await props.onChanged();
-      if (next.state === "delivered") void giftCardCodes().then(setKept, () => undefined);
-    } catch (error) {
-      refusal(error);
-    } finally {
-      setBusy(false);
-    }
+    const next = await payPhone({ account, price, nonce: randomNonce() });
+    setBought(W.card(face(price.localAmount, price.localCurrency), chosen.name));
+    setStatus(next);
+    await props.onChanged();
+    if (next.state === "delivered") void giftCardCodes().then(setKept, () => undefined);
   };
-
-  const alert = problem ? (
-    <p role="alert" className={`${HELP} font-medium`}>
-      {problem}
-    </p>
-  ) : null;
 
   const history =
     kept.length > 0 ? (
@@ -184,7 +141,7 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
         <h2 className={TITLE}>{W.history}</h2>
         {kept.map((one) => (
           <div key={one.orderId} className="flex flex-col gap-[var(--space-xs)] border-t border-[var(--divider)] pt-[var(--space-sm)]">
-            <p className={BODY}>{W.historyLine(one.name, local(one.localAmount, one.localCurrency), new Date(one.at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }))}</p>
+            <p className={BODY}>{W.historyLine(one.name, face(one.localAmount, one.localCurrency), new Date(one.at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }))}</p>
             {one.code ? <GiftCardCodeLines code={one.code} /> : <Said className={HELP} text={W.onItsWay} />}
           </div>
         ))}
@@ -193,17 +150,26 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
 
   if (status) {
     const title = status.state === "delivered" ? W.doneTitle : status.state === "on_its_way" ? W.onItsWayTitle : W.refundedTitle;
+    // What the order took, in the currency the person reads in; in dollars, as the server says it, where it gave no figure.
+    const took = status.units ? props.money.say(BigInt(status.units)) : status.amount;
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
         <section className={CARD}>
           <h2 className={TITLE}>{title}</h2>
+          {bought && status.state !== "refunded" && status.state !== "refund_pending" ? <p className={HELP}>{bought}.</p> : null}
           {status.state === "delivered" && status.code ? <GiftCardCodeLines code={status.code} /> : null}
+          {status.state === "delivered" && status.code ? <p className={HELP}>{W.stays}</p> : null}
           {status.state === "on_its_way" ? <Said text={W.onItsWay} /> : null}
-          {status.state === "refunded" ? <p className={BODY}>{W.refunded(status.amount)}</p> : null}
-          {status.state === "refund_pending" ? <p className={BODY}>{W.refundPending(status.amount)}</p> : null}
+          {status.state === "refunded" ? <p className={BODY}>{W.refunded(took)}</p> : null}
+          {status.state === "refund_pending" ? <p className={BODY}>{W.refundPending(took)}</p> : null}
+          {problem ? (
+            <p role="alert" className={`${HELP} font-medium`}>
+              {problem}
+            </p>
+          ) : null}
           <div className="flex flex-wrap gap-[var(--tap-gap)]">
             {waiting ? (
-              <button type="button" onClick={() => void followPhone(status.orderId).then(setStatus, (error) => refusal(error))} className={SMALL_BUTTON}>
+              <button type="button" onClick={() => void followPhone(status.orderId).then(setStatus, (error) => setProblem(refused(error)))} className={SMALL_BUTTON}>
                 {W.checkAgain}
               </button>
             ) : null}
@@ -219,66 +185,45 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
 
   const countryName = props.countryName ?? props.country ?? "";
   const listed = Array.isArray(cards) ? cards : [];
+  const small = (paying: boolean) => (
+    <>
+      {props.country ? (
+        <button type="button" onClick={() => setSheetOpen(true)} disabled={paying} className={card ? SMALL_BUTTON : PRIMARY_BUTTON}>
+          {card ? W.change : W.choose}
+        </button>
+      ) : null}
+      <button type="button" onClick={props.onBack} disabled={paying} className={SMALL_BUTTON}>
+        {W.back}
+      </button>
+    </>
+  );
   return (
     <div className="flex flex-col gap-[var(--space-xl)]">
       <section className={CARD}>
         <h2 className={TITLE}>{card ? card.name : W.title}</h2>
         {card ? <p className={CARD_LABEL}>{card.worksIn}</p> : null}
         {!props.country ? <p className={BODY}>{W.noCountry}</p> : null}
-        {card && card.packages.length > 0 ? (
-          <div className="flex flex-col gap-[var(--tap-gap)]">
-            {card.packages.map((one) => {
-              // Its face value alone is more than they hold: shown, never hidden, and said why it cannot be chosen.
-              const far = surelyOutOfReach(Number(one.value), card.currency, props.ausd, props.rates);
-              return (
-                <button key={one.id} type="button" aria-pressed={one.id === packageId} onClick={() => { setPackageId(one.id); setAmount(""); setPrice(null); setProblem(null); }} disabled={busy || far} className={one.id === packageId ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
-                  {local(one.value, card.currency)}
-                  {far ? <span className="block text-[length:var(--type-help)]">{W.outOfReach}</span> : null}
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
-        {card && range ? (
-          <label className="flex flex-col gap-[var(--space-xs)]">
-            <span className={BODY}>{W.howMuch(lettersOf(card.currency))}</span>
-            <input value={amount} onChange={(event) => { setAmount(event.target.value); setPackageId(null); setPrice(null); setProblem(null); }} inputMode="decimal" className={FIELD} disabled={busy} />
-            <span className={HELP}>{W.range(bound(range.min, card.currency), bound(range.max, card.currency), lettersOf(card.currency))}</span>
-            {typedFar ? <span className={HELP}>{W.outOfReach}</span> : null}
-          </label>
-        ) : null}
-        {price && card ? (
-          <div>
-            {/* A sentence, so it is said in the help voice and not in small capitals (the founder's rule 5 of 1 Oct 2026). */}
-            <p className={HELP}>{W.priced(local(price.localAmount, price.localCurrency), card.name)}</p>
-            <p className={CARD_AMOUNT}>{dollars(price.ausdUnits)}</p>
-            <p className={HELP}>{W.costs(dollars(price.ausdUnits), dollars(props.ausd > price.ausdUnits ? props.ausd - price.ausdUnits : 0n), price.feeUnits > 0n ? dollars(price.feeUnits) : undefined)}</p>
-          </div>
-        ) : null}
-        {alert}
-        <div className="flex flex-wrap gap-[var(--tap-gap)]">
-          {card ? (
-            price ? (
-              <Button doing={busy ? W.confirming : null} onPress={() => void buy()}>
-                {W.confirm}
-              </Button>
-            ) : (
-              <>
-                <Button doing={busy ? W.pricing : null} step={WAITS.price("Bitrefill")} waiting={!chosenPackage && (!typedFits || typedFar)} onPress={() => void askPrice()}>
-                  {W.getPrice}
-                </Button>
-              </>
-            )
-          ) : null}
-          {props.country ? (
-            <button type="button" onClick={() => setSheetOpen(true)} disabled={busy} className={card ? SMALL_BUTTON : PRIMARY_BUTTON}>
-              {card ? W.change : W.choose}
-            </button>
-          ) : null}
-          <button type="button" onClick={props.onBack} disabled={busy} className={SMALL_BUTTON}>
-            {W.back}
-          </button>
-        </div>
+        {card ? (
+          // Another card is another choice from nothing: its amounts, no price, no refusal left from the one before.
+          <SpendChoice
+            key={card.id}
+            packages={card.packages}
+            range={card.range}
+            currency={card.currency}
+            held={props.ausd}
+            rates={props.rates}
+            money={props.money}
+            ask={(chosen) => priceGiftCard({ productId: card.id, ...chosen })}
+            total={(price, stays, fees) => W.total(face(price.localAmount, price.localCurrency), card.name, stays, fees)}
+            pay={(price) => buy(card, price)}
+            refused={refused}
+            words={{ another: W.another, howMuch: W.howMuch(namedInPlural(card.currency)), range: W.range, outOfReach: W.outOfReach, asking: W.pricing, askingStep: WAITS.price("Bitrefill"), confirm: W.confirm, confirming: W.confirming }}
+          >
+            {small}
+          </SpendChoice>
+        ) : (
+          <div className="flex flex-wrap gap-[var(--tap-gap)]">{small(false)}</div>
+        )}
       </section>
       {history}
       {props.country ? (
@@ -294,12 +239,7 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
               shape="lines"
               value={card?.id ?? null}
               onChange={(value) => {
-                const one = listed.find((candidate) => candidate.id === value) ?? null;
-                setCard(one);
-                setPackageId(null);
-                setAmount("");
-                setPrice(null);
-                setProblem(null);
+                setCard(listed.find((candidate) => candidate.id === value) ?? null);
                 setSheetOpen(false);
               }}
               // On every line, chosen or not: where each card works is what the person weighs them by (Bitrefill's own words).

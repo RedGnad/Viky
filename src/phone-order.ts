@@ -242,6 +242,8 @@ export type PhoneOrderStatus = Readonly<{
   orderId: string;
   state: "on_its_way" | "delivered" | "refunded" | "refund_pending";
   amount: string;
+  /** The same amount in the dollar's own units, for a screen that says it in the currency its reader reads in. */
+  units: string;
   operatorName: string;
   kind: "phone" | "gift_card";
   /** A delivered gift card's code, opened for the account that owns the order and nobody else. */
@@ -262,7 +264,7 @@ function statusOf(order: PhoneOrder, open?: (sealed: string) => string): PhoneOr
   // A gift card is delivered to the person when its code is there to show; until then it is on its way.
   const code = order.kind === "gift_card" && delivered ? openedCode(order, open) : undefined;
   const state = delivered && (order.kind !== "gift_card" || code) ? "delivered" : order.state === "refunded" ? "refunded" : order.state === "failed" ? "refund_pending" : "on_its_way";
-  return { orderId: order.id, state, amount: dollars(order.ausdUnits), operatorName: order.operatorName, kind: order.kind === "gift_card" ? "gift_card" : "phone", ...(code ? { code } : {}) };
+  return { orderId: order.id, state, amount: dollars(order.ausdUnits), units: order.ausdUnits.toString(), operatorName: order.operatorName, kind: order.kind === "gift_card" ? "gift_card" : "phone", ...(code ? { code } : {}) };
 }
 
 /**

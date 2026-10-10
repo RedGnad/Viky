@@ -2389,14 +2389,20 @@ export const MOBILE_OUT = {
   /** In place of the form when the balance is under the country's smallest payout: the minimum, and what the person has. */
   underMinimum: (least: string, have: string) => `Mobile money pays from ${least} at a time here, and you have ${have}.`,
   about: (figure: string) => `about ${figure}`,
-  /** The dollars second (the founder, 3 Oct 2026): what leaves the balance for it, and when it was priced. */
-  fromBalance: (dollars: string, when: string) => `${dollars} from your balance, at the rate of ${when}.`,
+  /**
+   * Under the figure that arrives, for somebody who reads in another currency than the payout's: what leaves the
+   * balance for it, then what stays, both in the currency they read in (the spending screens' rule, 10 Oct 2026).
+   * The hour of the rate stood here since 3 Oct 2026; the founder took it off the same 10 Oct.
+   */
+  fromBalance: (amount: string, stays: string) => `${amount} from your balance. ${stays} stays with you.`,
+  /** Read in the payout's own currency, the figure that arrives is the one amount the screen says: what stays follows it, alone. */
+  staysWithYou: (stays: string) => `${stays} stays with you.`,
   /**
    * In place of the amount when dollars were already changed and have not been sent on, as after a payout cut before
    * they left (the founder, 5 Oct 2026): the card sends those, and says that it changes nothing more. It does not say
    * what they were changed for: a withdrawal to a bank left half way leaves the same dollars.
    */
-  fromChanged: (dollars: string) => `From ${dollars} already changed. Nothing more is changed.`,
+  fromChanged: (amount: string) => `From ${amount} already changed. Nothing more is changed.`,
   pricing: "Pricing it",
   send: (operator: string) => `Send to my ${operator}`,
   steps: { changing: "Changing it", placing: "Placing it", sending: "Sending it" },
@@ -2415,6 +2421,16 @@ export const MOBILE_OUT = {
   failedSend: "That did not go through. Nothing was taken.",
 } as const;
 
+/**
+ * "A" or "An" before a face value, by the way its number is said: an €8 card, an €11 card, an €18 card, an €80 card,
+ * an 11 000 FCFA card; a €10 card, a €100 card, a €1,100 card. Eight, eleven and eighteen are the numbers that
+ * start on a vowel, and whatever they lead (eighty, eight hundred, eleven thousand).
+ */
+export function articleFor(faceValue: string): "A" | "An" {
+  const whole = (/\d[\d\s\u00a0,]*/.exec(faceValue)?.[0] ?? "").replace(/[\s\u00a0,]/g, "");
+  return /^8/.test(whole) || /^1[18](\d{3})*$/.test(whole) ? "An" : "A";
+}
+
 export const PHONE_OUT = {
   /** Beside an amount whose face value alone is more than the person holds (src/out-of-reach.ts). */
   outOfReach: "More than you have",
@@ -2431,14 +2447,19 @@ export const PHONE_OUT = {
   find: "Find the phone company",
   finding: "Looking",
   whichCompany: "Which phone company?",
-  howMuchTitle: "How much?",
-  howMuch: (currency: string) => `How much, in ${currency}`,
-  aboutDollars: (dollars: string) => `About ${dollars} from your balance.`,
-  range: (min: string, max: string, currency: string) => `Between ${min} and ${max} ${currency}.`,
-  getPrice: "See the price",
+  /** Who the top-up is for, under the card's title: the number, its middle left out, and its company. */
+  forWhom: (number: string, operator: string) => `${number} · ${operator}`,
+  another: "Another amount",
+  howMuch: (currencies: string) => `How much, in ${currencies}`,
+  range: (min: string, max: string) => `Between ${min} and ${max}.`,
   pricing: "Asking the price",
-  priced: (local: string, operator: string) => `${local} to the phone, through ${operator}.`,
-  costs: (dollars: string, left: string, fee?: string) => (fee ? `It takes ${dollars}, including ${fee} in fees, and ${left} stays with you.` : `It takes ${dollars}, and ${left} stays with you.`),
+  /**
+   * Under the total, which is what leaves the account in the currency the person reads in (the founder, 10 Oct 2026):
+   * what it buys, at its face value, its fees said once, and what stays.
+   */
+  total: (face: string, kind: string, operator: string, stays: string, fees?: string) => `${face} of ${kind} on the phone, through ${operator}${fees ? `, and ${fees} of fees` : ""}. ${stays} stays with you.`,
+  /** The two things a phone is topped up with, as that sentence names them. */
+  kindsInASentence: { credit: "credit", data: "mobile data" } as const,
   confirm: "Top it up",
   confirming: "Topping it up",
   doneTitle: "Done",
@@ -2446,8 +2467,8 @@ export const PHONE_OUT = {
   onItsWayTitle: "On its way",
   onItsWay: "The phone company usually takes a minute. You can leave this page: it will arrive, or your money comes back.",
   refundedTitle: "It did not go through",
-  refunded: (dollars: string) => `The phone company did not take it, so your ${dollars} came back to you.`,
-  refundPending: (dollars: string) => `The phone company did not take it. Your ${dollars} is on its way back to you.`,
+  refunded: (amount: string) => `The phone company did not take it, so your ${amount} came back to you.`,
+  refundPending: (amount: string) => `The phone company did not take it. Your ${amount} is on its way back to you.`,
   again: "Top up another phone",
   back: "Back",
   checkAgain: "Check again",
@@ -2518,26 +2539,32 @@ export const GIFT_CARD_OUT = {
   reading: "Reading the cards",
   none: (country: string) => `Bitrefill lists no card for ${country} yet.`,
   noCountry: "Say where your number is from first: the cards depend on the country.",
-  howMuch: (currency: string) => `How much, in ${currency}`,
-  range: (min: string, max: string, currency: string) => `Between ${min} and ${max} ${currency}.`,
-  aboutDollars: (dollars: string) => `About ${dollars} from your balance.`,
-  getPrice: "See the price",
+  another: "Another amount",
+  howMuch: (currencies: string) => `How much, in ${currencies}`,
+  range: (min: string, max: string) => `Between ${min} and ${max}.`,
   pricing: "Asking the price",
-  priced: (local: string, name: string) => `${local} on a ${name} card.`,
-  costs: (dollars: string, left: string, fee?: string) => (fee ? `It takes ${dollars}, including ${fee} in fees, and ${left} stays with you.` : `It takes ${dollars}, and ${left} stays with you.`),
+  /** The card as it is named everywhere: its face value in its own currency, then its name. "A €10 Amazon.fr card". */
+  card: (face: string, name: string) => `${articleFor(face)} ${face} ${name} card`,
+  /**
+   * Under the total, which is what leaves the account in the currency the person reads in (the founder, 10 Oct 2026):
+   * the card, its fees said once, and what stays.
+   */
+  total: (face: string, name: string, stays: string, fees?: string) => `${articleFor(face)} ${face} ${name} card${fees ? ` and ${fees} of fees` : ""}. ${stays} stays with you.`,
   confirm: "Buy the card",
   confirming: "Buying the card",
   doneTitle: "Your card",
   onItsWayTitle: "On its way",
   onItsWay: "The code usually comes within a minute. It will be here and in your gift cards below, or your money comes back.",
   refundedTitle: "It did not go through",
-  refunded: (dollars: string) => `Bitrefill did not deliver it, so your ${dollars} came back to you.`,
-  refundPending: (dollars: string) => `Bitrefill did not deliver it. Your ${dollars} is on its way back to you.`,
+  refunded: (amount: string) => `Bitrefill did not deliver it, so your ${amount} came back to you.`,
+  refundPending: (amount: string) => `Bitrefill did not deliver it. Your ${amount} is on its way back to you.`,
   code: "Code",
   pin: "PIN",
   link: "Where to use it",
   instructions: "How to use it",
   expires: (date: string) => `Use it before ${date}.`,
+  /** Under a card just bought: where its code stays. */
+  stays: 'It stays in "Your gift cards" below.',
   history: "Your gift cards",
   historyLine: (name: string, local: string, when: string) => `${name}, ${local}, ${when}`,
   checkAgain: "Check again",
