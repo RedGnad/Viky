@@ -475,6 +475,18 @@ const SHINE = "rgba(255, 255, 255, 0.55)";
  * book is held open in front (the "read" pose's hands close on it), the cap sits on the head, the rook stands at the
  * hand of the "hold" pose, and the speed lines trail a runner.
  */
+/**
+ * The book's five lines, as it is drawn: three on the left page, the third shorter, and two on the right. Said one by
+ * one because the one who reads the book on the landing reads them one by one (app/kit/LandingStory.tsx).
+ */
+export const BOOK_LINES: ReadonlyArray<Readonly<{ d: string; page: "left" | "right"; short?: true }>> = [
+  { d: "M14 33.1 Q21 30.9 28.5 33.1", page: "left" },
+  { d: "M14 35.8 Q21 33.6 28.5 35.8", page: "left" },
+  { d: "M14 38.5 Q21 36.3 26 37.9", page: "left", short: true },
+  { d: "M35.5 33.1 Q43 30.9 50 33.1", page: "right" },
+  { d: "M35.5 35.8 Q43 33.6 50 35.8", page: "right" },
+];
+
 function Book() {
   return (
     <g data-prop="book" style={FROM_MIDDLE}>
@@ -482,7 +494,7 @@ function Book() {
       <path d="M9 40 Q20.5 36.5 32 41 Q43.5 36.5 55 40 V42.5 Q43.5 39 32 43.5 Q20.5 39 9 42.5 Z" style={{ fill: INK, fillOpacity: 0.18 }} />
       <path d="M11 30.5 Q21 26.9 32 30.9 V41.7 Q21 37.9 11 41.1 Z" style={{ fill: "rgba(255, 255, 255, 0.96)" }} />
       <path d="M53 30.5 Q43 26.9 32 30.9 V41.7 Q43 37.9 53 41.1 Z" style={{ fill: "rgba(255, 255, 255, 0.84)" }} />
-      <path d="M14 33.1 Q21 30.9 28.5 33.1 M14 35.8 Q21 33.6 28.5 35.8 M14 38.5 Q21 36.3 26 37.9 M35.5 33.1 Q43 30.9 50 33.1 M35.5 35.8 Q43 33.6 50 35.8" style={{ fill: "none", stroke: INK, strokeOpacity: 0.22, strokeWidth: 0.7, strokeLinecap: "round" }} />
+      <path d={BOOK_LINES.map((line) => line.d).join(" ")} style={{ fill: "none", stroke: INK, strokeOpacity: 0.22, strokeWidth: 0.7, strokeLinecap: "round" }} />
       <path d="M32 30.9 V41.7" style={{ stroke: INK, strokeOpacity: 0.35, strokeWidth: 0.8 }} />
       <path d="M12 30.5 Q21 27.3 31 30.8" style={{ fill: "none", stroke: SHINE, strokeWidth: 0.7, strokeLinecap: "round" }} />
     </g>

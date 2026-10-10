@@ -9,9 +9,8 @@ import { profile, shot as capture, sizesFor } from "./gift-kit";
  *
  * The app's icon arrives once, when its card enters the screen: under the screen it waits at its starting state, it
  * lands, its face settles, it blinks, it glances at its button wherever the button stands, and it never arrives a
- * second time. The one who reads its book blinks now and then, by the rule every drawing blinks by, and a drawing off
- * the screen does not. And its eyes go along the lines of its book as the page is scrolled. With less motion asked
- * for, the icon is simply there and nothing reads.
+ * second time. With less motion asked for, the icon is simply there and nothing reads. The one who reads its book,
+ * and the icon after dark, are in ./landing-reader.spec.ts.
  *
  * Every animation the icon's page starts is slowed, so the test has the time to look, and each instant of the mockup is
  * set: every animation of the arrival paused and put at that time, as the mockup takes its own stills.
@@ -28,7 +27,6 @@ const SLOWED = `(() => { const animate = Element.prototype.animate; Element.prot
 const STORY = "[data-landing-story]";
 const ICON = `document.querySelector('${STORY} svg[data-character="icon"]')`;
 const READER = `document.querySelector('${STORY} [data-blinks]')`;
-const HERO_LIDS = `[...document.querySelectorAll('.hero-stage [data-part="lid"]')]`;
 /**
  * Puts the icon's arrival at one instant, as the founder's mockup takes its stills: every animation of the icon, the
  * ones inside it too, paused and set to that time. They are started together and each counts its own wait, so one
@@ -46,8 +44,6 @@ const lidAt = async (page: Page, ms: number) => {
   await setIconAt(page, ms);
   return figuresOf((await page.evaluate(`getComputedStyle(${ICON}.querySelector('[data-part="lid"]')).transform`)) as string)[3];
 };
-/** Lets every animation that was paused go on from where it is. */
-const letGo = (page: Page) => page.evaluate(`document.getAnimations().forEach((one) => { if (one.playState === "paused") one.play(); })`);
 /** Where a part of a drawing has been moved to, in the drawing's own units, however it was moved. */
 const MOVED = (part: string) =>
   `(() => { const one = ${part}; const said = one.getAttribute("transform") || ""; const matrix = /matrix\\(([^)]+)\\)/.exec(said); if (matrix) { const n = matrix[1].split(/[ ,]+/).map(Number); return { x: n[4], y: n[5] }; } const moved = /translate\\(([^)]+)\\)/.exec(said); if (moved) { const n = moved[1].split(/[ ,]+/).map(Number); return { x: n[0] || 0, y: n[1] || 0 }; } const style = getComputedStyle(one).transform; if (!style || style === "none") return { x: 0, y: 0 }; const m = new DOMMatrix(style); return { x: m.e, y: m.f }; })()`;
@@ -126,40 +122,6 @@ test.describe("the landing's drawings, outside the posters' own movement", () =>
       await page.waitForTimeout(600);
       expect(await page.evaluate(`${ICON}.getAnimations().length`), "no second arrival").toBe(0);
       await expect(icon).not.toHaveAttribute("data-arrives", /.*/);
-      await device.context.close();
-    });
-
-    test(`the one who reads its book blinks now and then, and reads as the page is scrolled (${size.name})`, async ({ browser, baseURL }) => {
-      test.setTimeout(120_000);
-      const device = await profile(browser, baseURL, size.viewport, { passkey: false });
-      const { page } = device;
-      await landing(page);
-      await page.evaluate(`${READER}.scrollIntoView({ block: "center", behavior: "instant" })`);
-      expect((await page.evaluate(`${READER}.querySelectorAll('[data-part="lid"]').length`)) as number).toBe(2);
-      // Within the longest gap between two blinks, and a little: it blinks. Held where its lids are closed.
-      const blink = (await page.evaluate(
-        `new Promise((done) => { const from = performance.now(); const tick = () => { const moving = [...${READER}.querySelectorAll('[data-part="lid"]')].flatMap((lid) => lid.getAnimations()); if (moving.length) { const others = ${HERO_LIDS}.flatMap((lid) => lid.getAnimations()).length; const hero = document.querySelector(".hero-stage"); const heroSeen = hero ? hero.getBoundingClientRect().bottom > 0 : false; moving.forEach((one) => { one.pause(); one.currentTime = 30; }); done({ after: performance.now() - from, hero: others, heroSeen }); } else if (performance.now() - from > 12000) done(null); else requestAnimationFrame(tick); }; tick(); })`,
-      )) as { after: number; hero: number; heroSeen: boolean } | null;
-      expect(blink, "it blinked within twelve seconds").not.toBeNull();
-      // The drawings in view blink together, and one that is off the screen does not blink at all.
-      expect(blink!.hero > 0, "the hero blinks with it only when it can be seen").toBe(blink!.heroSeen);
-      await shot(page, size.name, "reader-1-it-blinks");
-      await letGo(page);
-
-      // It reads: its two eyes go along a line, and each line is a little lower than the one before.
-      const title = `${READER}`;
-      const seen: Array<{ x: number; y: number }> = [];
-      for (const at of [0.95, 0.8, 0.65, 0.5, 0.35, 0.2, 0.05]) {
-        await page.evaluate(`window.scrollBy({ top: ${title}.getBoundingClientRect().top - window.innerHeight * ${at}, behavior: "instant" })`);
-        await page.waitForTimeout(900);
-        seen.push((await page.evaluate(MOVED(`${READER}.querySelector('[data-part="gaze"]')`))) as { x: number; y: number });
-        if (at === 0.65) await shot(page, size.name, "reader-2-it-reads-a-line");
-        if (at === 0.2) await shot(page, size.name, "reader-3-it-reads-a-line-further-down");
-      }
-      expect(new Set(seen.map((eyes) => eyes.x.toFixed(2))).size, "its eyes move along the lines").toBeGreaterThan(2);
-      for (const eyes of seen) expect(Math.abs(eyes.x)).toBeLessThanOrEqual(0.91);
-      for (let at = 1; at < seen.length; at += 1) expect(seen[at].y, "never back up a line as the page goes down").toBeGreaterThanOrEqual(seen[at - 1].y - 0.001);
-      expect(seen[seen.length - 1].y).toBeGreaterThan(seen[0].y);
       await device.context.close();
     });
   }

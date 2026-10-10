@@ -572,15 +572,36 @@ export const MOTION = {
       back: { from: "4.4em", fromTurn: 50, startAt: 0.96, homeAt: 0.48, ease: "power2.out", origin: "50% 60%" },
       /** The sunglasses come down onto the face as the title reaches mid screen, and the head tilts as it goes by. */
       shades: { drop: -15, fromTurn: -22, startAt: 0.72, onAt: 0.46, ease: "back.out(2.4)", origin: "50% 50%", tilt: 12, tiltOrigin: "50% 60%" },
-      /**
-       * The one who reads its book reads it (the founder, 10 Oct 2026): its eyes go along a line, come back to the
-       * start of the next a little lower, line after line, as the page is scrolled. Lengths are the drawing's own
-       * units, on the group that holds the two eyes; the way back is a fifth of the time a line takes.
-       */
-      read: { lines: 4, sweep: 0.9, down: 0.22, lineS: 1, backS: 0.2, backEase: "power1.inOut" },
     },
     /** How long the posters wait for their script before they are simply shown, still. */
     giveUpMs: 5000,
+  },
+  /**
+   * The one who reads its book reads it (the founder's mockup of 10 Oct 2026; every figure is his). It plays by
+   * itself while the drawing is on the screen, and reads the book as it is drawn: the three lines of the left page,
+   * then the two of the right. Lengths are the drawing's own units, on the group that holds the two eyes: where a
+   * line starts and ends on each page, how far down the first line is and how much further each next one. The eyes go
+   * down to the book, along a line, back to the start of the next, across to the other page, then up to the reader of
+   * the page, and stay there. The third line of the left page is shorter, as its stroke is: the eyes go `reach` of the
+   * way in `time` of a line's time. The mouth follows the eyes by `mouth` of their way. The line being read darkens
+   * along its length as the eyes pass; the five go back to their grey in the last `fadeMs` of the time the eyes are up.
+   */
+  reading: {
+    left: [-3.6, -0.6],
+    right: [0.6, 3.6],
+    down: 1.5,
+    perLine: 0.45,
+    mouth: 0.35,
+    downMs: 260,
+    lineMs: 880,
+    backMs: 150,
+    pageMs: 200,
+    upMs: 320,
+    heldMs: 1700,
+    fadeMs: 300,
+    shortLine: { reach: 0.82, time: 0.86 },
+    lineEasing: "cubic-bezier(0.3, 0, 0.7, 1)",
+    mark: { opacity: 0.78, width: 0.8 },
   },
   /**
    * The app's icon on the landing, arriving once as its card enters the screen (the founder's mockup of 10 Oct 2026;
