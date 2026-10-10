@@ -40,7 +40,8 @@ test("the judge's path leads to the recipient's side, and promises nothing a sin
   assert.doesNotMatch(page, /open the gift the founder made for you from the operator account/);
   // The second account is made in the door "Other account" lays over Me, which closes nothing (9 Oct 2026); the
   // link then opens for it by one press, "Open my gift" (the UI pass of 8 Oct 2026).
-  assert.ok(page.includes("To see the other side on this device: copy the link, press Me, then Other account, then Create a new account. This browser is then signed in to a second account: open the link and press Open my gift. Then connect the source."));
+  // The screen that shows the link has no bar of destinations: the way to Me is the back arrow first (the final audit of 9 Oct 2026).
+  assert.ok(page.includes("To see the other side on this device: copy the link, press the back arrow, then Me, then Other account, then Create a new account. This browser is then signed in to a second account: paste the link in the address bar and press Open my gift. Then connect the source."));
   // The words are the screens' own.
   const sentences = read("src/sentences.ts");
   for (const label of ['me: "Me"', 'otherAccount: "Other account"', 'newAccount: "Create a new account"', 'openMyGift: "Open my gift"']) assert.ok(sentences.includes(label), label);
@@ -231,7 +232,7 @@ test("the card services are said in the order the pay sheet tries them", () => {
 });
 
 test("the judges' path names the button as Me draws it, and says what each path asks of them", () => {
-  assert.ok(page.includes("press Me, then Other account, then Create a new account. This browser is then signed in to a second account: open the link and press Open my gift."));
+  assert.ok(page.includes("press the back arrow, then Me, then Other account, then Create a new account. This browser is then signed in to a second account: paste the link in the address bar and press Open my gift."));
   // The second button is the sheet's own, by the name it draws it under.
   assert.ok(read("app/kit/OtherAccount.tsx").includes("{ACCOUNT_DOOR.newAccount}"));
   assert.doesNotMatch(page, /then Use another account/);
