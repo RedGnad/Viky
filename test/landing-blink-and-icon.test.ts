@@ -5,7 +5,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { FAMILY_FIGURES } from "../app/kit/FamilyArt";
 import { Figure } from "../app/kit/Figure";
-import { MOTION, SPRING } from "../src/design-tokens";
+import { EASING, MOTION, SPRING } from "../src/design-tokens";
 
 /**
  * Two retouches of the landing, validated by the founder on an animated mockup (10 Oct 2026), and one he asked for in
@@ -60,17 +60,23 @@ test("the icon arrives once as its card enters the screen, by the mockup's own f
 
 test("the one who reads its book reads it calmly: its eyes go down, drift along three lines, and come up, and the book is not touched", () => {
   // The founder, 10 Oct 2026, on the page itself: the first turn was too fast and too wide, reading the left page then
-  // the right was odd, and the lines darkening looked cheap. The figures are set to his word.
+  // the right was odd, and the lines darkening looked cheap. Then on a mockup of three amplitudes: the second, whose
+  // figures these are.
   const R = MOTION.reading;
-  assert.deepEqual(R, { across: [-1, 1], down: 1.1, perLine: 0.25, lines: 3, mouth: 0.25, downMs: 600, lineMs: 1900, backMs: 600, upMs: 700, heldMs: 2600, easing: "cubic-bezier(0.3, 0, 0.7, 1)" });
-  // Small: to either side the eyes go no further than the icon's glance, and as far to the left as to the right, so
-  // no page is read before the other. The first turn went 3.6 units to either side.
-  assert.ok(Math.max(...R.across.map(Math.abs)) <= MOTION.icon.glance.by);
+  assert.deepEqual(R, { across: [-1.8, 1.8], down: 1.25, perLine: 0.3, lines: 3, mouth: 0.3, downMs: 600, lineMs: 1900, backMs: 320, backEasing: "cubic-bezier(0.2, 0, 0, 1)", upMs: 700, heldMs: 2600, easing: "cubic-bezier(0.3, 0, 0.7, 1)" });
+  // Seen, and still small: to either side the eyes go further than the icon's glance and less far than the gaze of a
+  // hover, and as far to the left as to the right, so no page is read before the other. The first turn went 3.6
+  // units to either side; one unit, tried in between, was 1.7 pixels on a phone and was not seen.
+  const widest = Math.max(...R.across.map(Math.abs));
+  assert.ok(MOTION.icon.glance.by < widest && widest < MOTION.hover.gaze);
   assert.equal(R.across[0], -R.across[1]);
-  // Slow: a line takes about two seconds where it took 880 ms, and the way back four times the 150 ms it took.
-  assert.ok(R.lineMs >= 2 * 880 && R.backMs >= 4 * 150);
+  // Slow where it reads: a line takes about two seconds where it took 880 ms. The way back is a short glide on the
+  // standard curve, quick then settling: at 0.6 s on the line's own curve the eyes swayed rather than read.
+  assert.ok(R.lineMs >= 2 * 880);
+  assert.equal(R.backEasing, EASING.standard);
+  assert.ok(R.backMs < R.lineMs / 5);
   const turn = R.downMs + R.lines * R.lineMs + (R.lines - 1) * R.backMs + R.upMs + R.heldMs;
-  assert.equal(turn, 10_800);
+  assert.equal(turn, 10_240);
   // The book is drawn as it was, in one stroke, and nothing of the reading is in the drawing's file.
   const figure = readFileSync("app/kit/Figure.tsx", "utf8");
   assert.doesNotMatch(figure, /BOOK_LINES|READ_INK/);
@@ -83,9 +89,9 @@ test("the one who reads its book reads it calmly: its eyes go down, drift along 
   assert.match(story, /for \(const drawing of story\.querySelectorAll\(`\[\$\{READS\}\]`\)\) stops\.push\(reads\(drawing\)\);/);
   // One turn written whole: down to a line, along it, back to the start of the next, then up, and held.
   const reading = story.slice(story.indexOf("function reads"), story.indexOf("function useLandingAlive"));
-  assert.match(reading, /steps\.push\(\{ ms: line === 0 \? R\.downMs : R\.backMs, to: \[left, down\] \}, \{ ms: R\.lineMs, to: \[right, down\] \}\);/);
-  assert.match(reading, /steps\.push\(\{ ms: R\.upMs, to: \[0, 0\] \}, \{ ms: R\.heldMs, to: \[0, 0\] \}\);/);
-  assert.match(reading, /following\.push\(\{ offset: time \/ turnMs, transform: at\(where\[0\] \* R\.mouth, where\[1\] \* R\.mouth\), easing: R\.easing \}\);/);
+  assert.match(reading, /steps\.push\(line === 0 \? \{ ms: R\.downMs, to: \[left, down\], easing: R\.easing \} : \{ ms: R\.backMs, to: \[left, down\], easing: R\.backEasing \}\);\n\s+steps\.push\(\{ ms: R\.lineMs, to: \[right, down\], easing: R\.easing \}\);/);
+  assert.match(reading, /steps\.push\(\{ ms: R\.upMs, to: \[0, 0\], easing: R\.easing \}, \{ ms: R\.heldMs, to: \[0, 0\], easing: "linear" \}\);/);
+  assert.match(reading, /following\.push\(\{ offset: time \/ turnMs, transform: at\(where\[0\] \* R\.mouth, where\[1\] \* R\.mouth\), easing: step\.easing \}\);/);
   // Two animations and no more: the eyes and the mouth. Nothing is added to the book, and nothing is drawn over it.
   assert.match(reading, /running = \[eyes\.animate\(looking, turning\), \.\.\.\(mouth \? \[mouth\.animate\(following, turning\)\] : \[\]\)\];/);
   assert.doesNotMatch(reading, /createElementNS|appendChild|strokeDash|data-prop="book"|data-part", "read"/);

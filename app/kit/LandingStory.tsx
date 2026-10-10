@@ -349,8 +349,8 @@ const twoPlaces = (value: number) => Math.round(value * 100) / 100;
 
 /**
  * The one who reads its book reads it, calmly (the founder, 10 Oct 2026, on the page itself; `MOTION.reading`). Its
- * eyes go down to the book, drift along a line, come back gently a little lower, a few lines so, then go up to whoever
- * reads the landing and stay there before they start again. The mouth follows a little. The book is not touched: its
+ * eyes go down to the book, drift along a line, glide back to the start of the next a little lower, a few lines so,
+ * then go up to whoever reads the landing and stay there before they start again. The mouth follows a little. The book is not touched: its
  * lines stay as they are drawn. The first turn read the left page then the right and darkened each line as the eyes
  * passed: too fast, too wide, and the lines looked cheap.
  *
@@ -364,13 +364,15 @@ function reads(held: Element): () => void {
   if (!eyes) return () => {};
   const R = MOTION.reading;
   const [left, right] = R.across;
-  // One turn: where the eyes go, and in how long. Down to the first line, along it, back to the start of the next.
-  const steps: Array<Readonly<{ ms: number; to: readonly [number, number] }>> = [];
+  // One turn: where the eyes go, in how long, and on which curve. Down to the first line, along it, and a short glide
+  // back to the start of the next.
+  const steps: Array<Readonly<{ ms: number; to: readonly [number, number]; easing: string }>> = [];
   for (let line = 0; line < R.lines; line += 1) {
     const down = R.down + line * R.perLine;
-    steps.push({ ms: line === 0 ? R.downMs : R.backMs, to: [left, down] }, { ms: R.lineMs, to: [right, down] });
+    steps.push(line === 0 ? { ms: R.downMs, to: [left, down], easing: R.easing } : { ms: R.backMs, to: [left, down], easing: R.backEasing });
+    steps.push({ ms: R.lineMs, to: [right, down], easing: R.easing });
   }
-  steps.push({ ms: R.upMs, to: [0, 0] }, { ms: R.heldMs, to: [0, 0] });
+  steps.push({ ms: R.upMs, to: [0, 0], easing: R.easing }, { ms: R.heldMs, to: [0, 0], easing: "linear" });
   const turnMs = steps.reduce((sum, step) => sum + step.ms, 0);
   const at = (x: number, y: number) => `translate(${twoPlaces(x)}px, ${twoPlaces(y)}px)`;
   const looking: Keyframe[] = [];
@@ -378,8 +380,8 @@ function reads(held: Element): () => void {
   let time = 0;
   let where: readonly [number, number] = [0, 0];
   for (const step of steps) {
-    looking.push({ offset: time / turnMs, transform: at(where[0], where[1]), easing: R.easing });
-    following.push({ offset: time / turnMs, transform: at(where[0] * R.mouth, where[1] * R.mouth), easing: R.easing });
+    looking.push({ offset: time / turnMs, transform: at(where[0], where[1]), easing: step.easing });
+    following.push({ offset: time / turnMs, transform: at(where[0] * R.mouth, where[1] * R.mouth), easing: step.easing });
     time += step.ms;
     where = step.to;
   }

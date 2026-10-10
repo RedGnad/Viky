@@ -7,9 +7,10 @@ import { profile, shot as capture, sizesFor } from "./gift-kit";
  * The one who reads its book on the landing, and the app's icon after dark (the founder, 10 Oct 2026).
  *
  * The reader reads by itself while it is on the screen, calmly (his word on the page itself, after a first turn that
- * read the left page then the right, fast and wide, and darkened each line): its eyes go down to the book, drift along
- * three lines, each a little lower, coming back gently between two, then go up to whoever reads the landing and stay
- * there. The mouth follows a quarter of the way. The book is not touched: nothing is drawn over its lines. It blinks
+ * read the left page then the right, fast and wide, and darkened each line; then on a mockup of three amplitudes, of
+ * which this is the second): its eyes go down to the book, drift along three lines, each a little lower, with a short
+ * glide back between two, then go up to whoever reads the landing and stay there. The mouth follows three tenths of
+ * the way. The book is not touched: nothing is drawn over its lines. It blinks
  * now and then with the drawings in view. Off the screen no animation of the turn is left on the page; with less
  * motion asked for, nothing reads.
  *
@@ -86,37 +87,44 @@ test.describe("the one who reads its book, and the icon after dark", () => {
         return { eyes: (await page.evaluate(MOVED("gaze"))) as Where, mouth: (await page.evaluate(MOVED("mouth"))) as Where };
       };
       const near = (got: number, wanted: number, what: string) => expect(Math.abs(got - wanted), `${what}: ${got} for ${wanted}`).toBeLessThanOrEqual(0.03);
-      // The ends of each stretch, to the hundredth: down to the first line, along it, back and a little lower, twice
-      // more, then up. The mouth is a quarter of the eyes' way, wherever they are.
-      const ends: ReadonlyArray<readonly [number, number, number]> = [[600, -1, 1.1], [2_500, 1, 1.1], [3_100, -1, 1.35], [5_000, 1, 1.35], [5_600, -1, 1.6], [7_500, 1, 1.6], [8_200, 0, 0], [10_000, 0, 0]];
+      // The ends of each stretch, to the hundredth: down to the first line, along it, a glide back and a little lower,
+      // twice more, then up. The mouth is three tenths of the eyes' way, wherever they are.
+      const lines: ReadonlyArray<readonly [number, number]> = [[600, 2_500], [2_820, 4_720], [5_040, 6_940]];
+      const ends: ReadonlyArray<readonly [number, number, number]> = [[600, -1.8, 1.25], [2_500, 1.8, 1.25], [2_820, -1.8, 1.55], [4_720, 1.8, 1.55], [5_040, -1.8, 1.85], [6_940, 1.8, 1.85], [7_640, 0, 0], [9_500, 0, 0]];
       for (const [ms, x, y] of ends) {
         const { eyes, mouth } = await at(ms);
         near(eyes.x, x, `eyes across at ${ms} ms`);
         near(eyes.y, y, `eyes down at ${ms} ms`);
-        near(mouth.x, x * 0.25, `mouth across at ${ms} ms`);
-        near(mouth.y, y * 0.25, `mouth down at ${ms} ms`);
+        near(mouth.x, x * 0.3, `mouth across at ${ms} ms`);
+        near(mouth.y, y * 0.3, `mouth down at ${ms} ms`);
       }
-      // Calm, measured over the whole turn, a tenth of a second at a time: the eyes never go further than one unit to
-      // either side nor lower than the last line, and never travel more than 0.7 units in a tenth of a second (the
-      // first turn went 3.6 units to a side, and crossed three units in 150 ms).
+      // Measured over the whole turn, a tenth of a second at a time. The eyes never go further than 1.8 units to
+      // either side nor lower than the last line (the first turn went 3.6 units to a side). And while they read a
+      // line they are calm: never more than 0.35 units in a tenth of a second, where the first turn crossed a page at
+      // more than that. The way back is another matter, and is meant to be short.
       let before: Where | null = null;
-      let fastest = 0;
+      let fastestOnALine = 0;
       let widest = 0;
       let lowest = 0;
-      for (let ms = 0; ms <= 10_800; ms += 100) {
+      for (let ms = 0; ms <= 10_240; ms += 100) {
         const { eyes } = await at(ms);
         widest = Math.max(widest, Math.abs(eyes.x));
         lowest = Math.max(lowest, eyes.y);
-        if (before) fastest = Math.max(fastest, Math.hypot(eyes.x - before.x, eyes.y - before.y));
+        const reading = lines.some(([from, to]) => ms - 100 >= from && ms <= to);
+        if (before && reading) fastestOnALine = Math.max(fastestOnALine, Math.hypot(eyes.x - before.x, eyes.y - before.y));
         before = eyes;
       }
-      expect(widest, "no further than one unit to either side").toBeLessThanOrEqual(1.03);
-      expect(lowest, "no lower than the last line").toBeLessThanOrEqual(1.63);
-      expect(fastest, `the most the eyes travel in a tenth of a second: ${fastest.toFixed(2)}`).toBeLessThanOrEqual(0.7);
+      expect(widest, "no further than 1.8 units to either side").toBeLessThanOrEqual(1.83);
+      expect(widest, "and as far as that, so that the eyes are seen").toBeGreaterThanOrEqual(1.77);
+      expect(lowest, "no lower than the last line").toBeLessThanOrEqual(1.88);
+      expect(fastestOnALine, `the most the eyes travel along a line in a tenth of a second: ${fastestOnALine.toFixed(2)}`).toBeLessThanOrEqual(0.35);
+      // The way back: from the end of a line to the start of the next in 320 ms, and most of the way in its first half.
+      const midBack = (await at(2_660)).eyes;
+      expect(midBack.x, `half way through the way back the eyes are most of the way there: ${midBack.x}`).toBeLessThan(-0.9);
       // The book is still as it was drawn, wherever the turn is.
       expect(await page.evaluate(BOOK)).toEqual(drawn);
       // Four instants of it, for whoever judges on the image.
-      for (const [name, ms] of [["1-down-on-the-first-line", 600], ["2-along-the-second-line", 4_050], ["3-the-end-of-the-third-line", 7_500], ["4-it-looks-up-at-you", 9_500]] as const) {
+      for (const [name, ms] of [["1-down-on-the-first-line", 600], ["2-along-the-second-line", 3_770], ["3-the-end-of-the-third-line", 6_940], ["4-it-looks-up-at-you", 9_000]] as const) {
         await at(ms);
         await closeUp(page, size.name, `reader-${name}`);
       }
