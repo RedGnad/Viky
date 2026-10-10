@@ -1,9 +1,9 @@
-import type { RecipientWords } from "./conditions";
+import type { ConditionNature, RecipientWords } from "./conditions";
 import { leftInWords, type DayNow } from "./day-now";
 import type { Voice } from "./gift-voice";
 import { contractDayInWords } from "./moments";
 import type { Moment } from "./gift-moment";
-import { END_GIFT as E, GIFT_CARD as W_CARD, GIFT_LIVE as L, GIFT_PAGE as W } from "./sentences";
+import { CONDITION_NATURE, CONDITION_NATURE_YOURS, END_GIFT as E, GIFT_CARD as W_CARD, GIFT_LIVE as L, GIFT_PAGE as W } from "./sentences";
 
 /**
  * What a gift's page leads with, at one moment, for one reader (document J, section 2).
@@ -151,6 +151,16 @@ export function titleOf(voice: Voice, name: string | null): string {
   if (voice === "recipient") return W_CARD.forYou;
   if (name && name.trim()) return W_CARD.forName(name);
   return voice === "funder" ? W_CARD.forWhoever : L.forSomebody;
+}
+
+/**
+ * The words under the condition, which say how it is read. A label speaks to whoever reads it (the founder, 11 Oct
+ * 2026): the person the gift is for reads "SHOWN BY YOU" and "CONNECTED BY YOU", where a card said "SHOWN BY THEM" to
+ * the very person who shows. The one who made the gift and a reader who is neither keep "BY THEM", and "READ FOR YOU"
+ * is true of every reader. With no reader named, on the chooser and on the catalogue, the words are the giver's.
+ */
+export function natureOf(voice: Voice | undefined, nature: ConditionNature): string {
+  return (voice === "recipient" ? CONDITION_NATURE_YOURS : CONDITION_NATURE)[nature];
 }
 
 /** Where a proof stands, to each of the three readers. A reader who is neither of the two reads the third person. */

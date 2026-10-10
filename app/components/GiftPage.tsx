@@ -1066,7 +1066,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
           who={titleOf(voice, recipientName ?? account.username)}
           what={condition?.name ?? ""}
           /* Not on a milestone's page (the founder, 29 Sep 2026): the line of reading says how it is read. */
-          nature={condition && !milestone ? <Nature nature={condition.nature} /> : null}
+          nature={condition && !milestone ? <Nature nature={condition.nature} to={voice} /> : null}
           shape={shape}
           live={live}
           figureNode={figureNode}

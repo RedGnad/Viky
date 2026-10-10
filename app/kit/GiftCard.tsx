@@ -57,7 +57,7 @@ export function GiftCard({
       label={eyebrowOf(gift.role, gift.funderName)}
       title={whoInWords(gift)}
       under={condition?.name ?? ""}
-      nature={condition ? <Nature nature={condition.nature} /> : null}
+      nature={condition ? <Nature nature={condition.nature} to={gift.role} /> : null}
       chevron={!example}
       /* A daily gift's card draws its days; a milestone has no days, so its character on its trail (D232: the same
          trail as the gift's own page, flat, where a bar had stayed on the card). On the gift's own page the card is
