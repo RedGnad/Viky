@@ -33,7 +33,9 @@ type Asked = { price: Array<Record<string, unknown>>; pay: number };
 /** Somebody signed in in France, reading in euros, with 17.36 dollars, and Bitrefill answered for. */
 async function person(device: Profile, asked: Asked, pays: Array<"lapsed" | "delivered">): Promise<void> {
   const { page, context } = device;
-  await answerTheChain(context, { ausd: 17_360_000n, mon: 0n, usdc: 0n });
+  // What the account holds is read again after a payment: it holds that much less once a thing is paid.
+  const holds = { ausd: 17_360_000n, mon: 0n, usdc: 0n };
+  await answerTheChain(context, holds);
   await page.route("**/api/gifts/earned", (route) => route.fulfill(json({ gifts: [] })));
   await page.route("**/api/exit/open", (route) => route.fulfill(json({ open: null })));
   await page.route("**/api/rates", (route) => route.fulfill(json({ rates: { ...RATES, readAtMs: Date.now() }, currencies: ["USD", "EUR", "XOF"] })));
@@ -67,6 +69,7 @@ async function person(device: Profile, asked: Asked, pays: Array<"lapsed" | "del
     asked.pay += 1;
     await new Promise((done) => setTimeout(done, 900));
     if (outcome === "lapsed") return route.fulfill(json({ code: "PRICE_EXPIRED", error: "That price has run out. Start again: nothing was taken." }, 409));
+    holds.ausd -= BigInt(taken(10).ausdUnits);
     kept = [{ orderId: "ph_test_000002", name: "Amazon.fr", localAmount: "10", localCurrency: "EUR", amount: "$11.70", at: new Date().toISOString(), code: { code: "AQ7K-M2XP-9TLD", link: "https://www.amazon.fr/gc/redeem", expires: "10 Oct 2036" } }];
     return route.fulfill(json({ orderId: "ph_test_000002", state: "delivered", amount: "$11.70", units: taken(10).ausdUnits, operatorName: "Amazon.fr", kind: "gift_card", code: { code: "AQ7K-M2XP-9TLD", link: "https://www.amazon.fr/gc/redeem", expires: "10 Oct 2036" } }));
   });
@@ -146,6 +149,9 @@ test.describe("spending from the balance", () => {
       await expect(main(page)).toContainText("AQ7K-M2XP-9TLD");
       await expect(main(page)).toContainText('It stays in "Your gift cards" below.');
       expect(asked.pay).toBe(2);
+      // What the sentence under the total promised is what the balance now says: the same figure, read again.
+      await expect(main(page)).toContainText("€4.98");
+      await expect(main(page)).not.toContainText("€15.29");
       await noDollars(page, "the code");
       await shot(page, size.name, "6-the-code-in-its-place");
       await device.context.close();
