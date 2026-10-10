@@ -34,6 +34,8 @@ test("asking for another account leads straight to the account's door; signing o
   // "You, not signed in on this device" showed for a moment at a sign-out, and "Other account" left the person on it,
   // one more press from anywhere (the founder, 4 Oct 2026). Both then opened the door, and did the same thing on the
   // screen: since 9 Oct 2026 signing out closes the session and arrives on the landing, and the door is the other's.
+  // That other is the panel's "Use another account" alone now: Me's "Other account" closes nothing, and lays its
+  // door over the page (test/other-account.test.ts).
   const way = (name: string) => provider.slice(provider.indexOf(name), provider.indexOf("},", provider.indexOf(name)) + 2);
   assert.match(way("useAnotherAccount: async () => {"), /askForTheDoor\(\);[\s\S]*window\.location\.assign\("\/"\);/, "another account asks for the door, then loads the landing");
   const out = way("leave: async () => {");

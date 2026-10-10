@@ -18,6 +18,7 @@ import { HeadCharacter } from "./HeadCharacter";
 import { FoldChevron } from "./GiftLive";
 import { InstallAct } from "./Install";
 import { MoneyKey } from "./MoneyKey";
+import { OtherAccountSheet } from "./OtherAccount";
 import { Act, RoundControls } from "./RoundControls";
 import { useHoldings, useMoneyHeld, useSomethingToTake } from "./money";
 import { useFigureWhileRead } from "./MoneyHero";
@@ -44,18 +45,15 @@ import { WhereYouLive } from "./WhereYouLive";
  * carries the same one door as the page without an account, and nothing else to do.
  */
 export function Me() {
-  // Named without "use" here: it is called from a press, and a name that starts so is read as a hook.
-  const { address: signedIn, reach, leave, useAnotherAccount: toAnotherAccount } = useAccount();
-  /**
-   * Set while the session closes, by "Sign out" or by "Other account": the page stays as it is, and the key says what
-   * is happening (D258). Which of the two was pressed, so that key alone shows the wheel.
-   */
-  const [leaving, setLeaving] = useState<"out" | "other" | null>(null);
+  const { address: signedIn, reach, leave } = useAccount();
+  /** Set while the session closes, by "Sign out": the page stays as it is, and the key says what is happening (D258). */
+  const [leaving, setLeaving] = useState<"out" | null>(null);
+  /** "Other account" opens the account's door over this page, and closes nothing (app/kit/OtherAccount.tsx). */
+  const [choosing, setChoosing] = useState(false);
   /**
    * The account this page was drawn for, kept while the session closes: the page for nobody ("You, not signed in on
-   * this device") showed for a moment between the press and the landing, and "Other account" left the person on it
-   * (the founder, 4 Oct 2026). Both lead straight to the account's door, and this page is never drawn for nobody on
-   * the way.
+   * this device") showed for a moment between the press and the landing (the founder, 4 Oct 2026). This page is never
+   * drawn for nobody on the way.
    */
   const [drawnFor, setDrawnFor] = useState(signedIn);
   if (signedIn && signedIn !== drawnFor) setDrawnFor(signedIn);
@@ -233,25 +231,17 @@ export function Me() {
             <path d="M18 12H10" />
           </svg>
         </Act>
-        {/* The same way out, and then the door: this account's session closes, the passkey this device remembered is
-            let go of, and the landing opens the door, where another account is signed in to or made. */}
-        <Act
-          name={W.otherAccount}
-          disabled={leaving !== null}
-          onPress={() => {
-            setLeaving("other");
-            void toAnotherAccount();
-          }}
-          data-decide="other-account"
-        >
-          {leaving === "other" ? <span className="working-ring working-ring-inline text-[26px]" aria-hidden="true" /> : null}
-          <svg aria-hidden focusable="false" className={leaving === "other" ? "hidden" : undefined} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {/* The account's door, over this page (the founder, 9 Oct 2026): another account is chosen or made there, and
+            this one's session stands until the other opens. The press closes nothing. */}
+        <Act name={W.otherAccount} disabled={leaving !== null} onPress={() => setChoosing(true)} data-decide="other-account">
+          <svg aria-hidden focusable="false" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="9" r="3.5" />
             <path d="M5 20a7 7 0 0 1 14 0" />
           </svg>
         </Act>
         <InstallAct />
       </RoundControls>
+      <OtherAccountSheet open={choosing} onClose={() => setChoosing(false)} />
 
       <Links signedIn />
     </Shell>

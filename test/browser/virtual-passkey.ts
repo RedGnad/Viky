@@ -49,12 +49,23 @@ export function passkeySite(served: string | undefined): string {
   return address.origin;
 }
 
+/**
+ * The device's store of passkeys, for a test that is about which ones it holds: what it holds now, one taken out of
+ * it, and whether it answers at all (a prompt nobody confirms is one that does not).
+ */
+export type PasskeyStore = Readonly<{ held: () => Promise<string[]>; forget: (credentialId: string) => Promise<void>; answers: (does: boolean) => Promise<void> }>;
+
 /** Gives the context's page a virtual authenticator, with the PRF answered in the page. */
-export async function holdAPasskey(context: BrowserContext, page: Page, seed: string, options: typeof AUTHENTICATOR | typeof KEPT_HERE_ALONE = AUTHENTICATOR): Promise<void> {
+export async function holdAPasskey(context: BrowserContext, page: Page, seed: string, options: typeof AUTHENTICATOR | typeof KEPT_HERE_ALONE = AUTHENTICATOR): Promise<PasskeyStore> {
   await context.addInitScript(prfStandIn(seed));
   const cdp = await context.newCDPSession(page);
   await cdp.send("WebAuthn.enable");
-  await cdp.send("WebAuthn.addVirtualAuthenticator", { options });
+  const { authenticatorId } = await cdp.send("WebAuthn.addVirtualAuthenticator", { options });
+  return {
+    held: async () => (await cdp.send("WebAuthn.getCredentials", { authenticatorId })).credentials.map((credential) => credential.credentialId),
+    forget: async (credentialId) => void (await cdp.send("WebAuthn.removeCredential", { authenticatorId, credentialId })),
+    answers: async (does) => void (await cdp.send("WebAuthn.setUserVerified", { authenticatorId, isUserVerified: does })),
+  };
 }
 
 /** Whether the server's session cookie is held. */

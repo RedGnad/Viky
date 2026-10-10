@@ -1,6 +1,6 @@
 "use client";
 import { askForTheDoor } from "./door-asked";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Address, LocalAccount } from "viem";
 import { ACCOUNT_CHANNEL, currentServerSession, serverStillKnows, signInToServer, signOutOfServer, tellOtherTabsSignedOut } from "../client/server-session";
 import { heroCookieCleared } from "../hero-cookie";
@@ -77,6 +77,14 @@ export type AccountContextValue = {
    * always reused the remembered passkey and nothing on screen said which account that was.
    */
   useAnotherAccount: () => Promise<void>;
+  /**
+   * Another account opened over this one, from Me (the founder, 9 Oct 2026): its passkey is asked with none named, or
+   * a new one is made, while this account's session stands. The browser becomes the other account's only once that
+   * passkey has answered and the server has taken it, and Home is then loaded as theirs. A prompt that is closed, or
+   * a server that could not be told, changes nothing here: the typed error is thrown for the sheet that asked, and
+   * nothing is said on any other screen. "same" when the passkey chosen is the account already here.
+   */
+  openAnotherAccount: (options?: { make?: boolean }) => Promise<"same" | "other">;
   clearError: () => void;
 };
 
@@ -124,7 +132,14 @@ export function AccountProvider({ initialAccount, children }: { initialAccount?:
    * Told by another tab of this browser the moment it signs out, and asked again of the server whenever this tab comes
    * back to the front; only the server's own "sign in first" counts, never a network that failed to answer.
    */
+  /**
+   * Set once the server names another account and this page is being loaded again as theirs (`openAnotherAccount`).
+   * The other tabs are told this account is gone, and a page hears what it tells them: this one is leaving, and is
+   * not redrawn for nobody on the way (D258).
+   */
+  const movingOver = useRef(false);
   const serverForgot = useCallback(() => {
+    if (movingOver.current) return;
     mera.signOut({ quiet: true });
     setServerSessionFor(undefined);
   }, []);
@@ -307,6 +322,45 @@ export function AccountProvider({ initialAccount, children }: { initialAccount?:
         // eslint-disable-next-line @next/next/no-location-assign-relative-destination
         window.location.assign("/");
       },
+      openAnotherAccount: async ({ make = false } = {}) => {
+        setStatus("busy");
+        const asked = mera.openBeside({ make });
+        let beside: mera.AccountBeside | undefined;
+        let serverAsked = false;
+        // The other account is the browser's: the tabs that showed this one are told it is gone, the device remembers
+        // the other's passkey, and Home is loaded as a new document, painted over this page only when it is ready.
+        const moveOver = (theirs: mera.AccountBeside) => {
+          movingOver.current = true;
+          tellOtherTabsSignedOut();
+          theirs.remember();
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+          window.location.assign("/");
+          return "other" as const;
+        };
+        try {
+          beside = await withTimeout(asked, CEREMONY_TIMEOUT_MS);
+          if (beside.account.address.toLowerCase() === address?.toLowerCase()) {
+            beside.take();
+            setStatus("idle");
+            return "same";
+          }
+          serverAsked = true;
+          await withTimeout(signInToServer(beside.account), SERVER_TIMEOUT_MS);
+          // The wait is not ended: the page says it is working until the next one is painted.
+          return moveOver(beside);
+        } catch (caught) {
+          if (beside && serverAsked) {
+            // An answer that was lost on the way back is not a refusal: the server says who this browser is now.
+            const now = await currentServerSession();
+            if (now && now.account.toLowerCase() === beside.account.address.toLowerCase()) return moveOver(beside);
+          }
+          // Nothing was changed, and the key that answered is let go of, one that answers after the wait included.
+          if (beside) beside.drop();
+          else void asked.then((late) => late.drop(), () => undefined);
+          setStatus("idle");
+          throw toAccountError(caught);
+        }
+      },
       clearError: () => setError(undefined),
     }),
     [address, hasCredential, reach, ensureSigner, ensureAccount, confirmWithPasskey, status, error, run, serverForgot],
@@ -343,6 +397,7 @@ export function ExampleAccountProvider({ children }: { children: ReactNode }) {
       serverForgot: () => undefined,
       leave: async () => undefined,
       useAnotherAccount: async () => undefined,
+      openAnotherAccount: () => Promise.reject(accountError("NOT_IN_BROWSER")),
       clearError: () => undefined,
     }),
     [],
