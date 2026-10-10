@@ -134,14 +134,13 @@ export type Live = Readonly<{
 }>;
 
 /**
- * The small line above the name, which names the other person of the two: "A gift from Mom" to the person it is
- * for and to anybody reading their link, "Your gift" to the funder, and "A gift" to a reader nobody gave the names
- * to. It said "Your gift" to that reader until V4, which is false of them.
+ * The small line above the name, on every card a gift is drawn on, its own page's and a list's. "Your gift" is said
+ * to the one who made the gift and to nobody else (the founder, 10 Oct 2026). Everybody else reads whose gift it is,
+ * "A gift from Mom", and "A gift" when the funder gave no name: the person it is for then reads "A gift" above "For
+ * you", where "Your gift" said the same thing twice. It said "Your gift" to a reader until V4, which is false of them.
  */
 export function eyebrowOf(voice: Voice, funderName: string | null): string {
-  if (voice === "funder") return W_CARD.fromFunderOrYours(null);
-  if (funderName) return W_CARD.fromFunderOrYours(funderName);
-  return voice === "reader" ? L.aGift : W_CARD.fromFunderOrYours(null);
+  return voice === "funder" ? W_CARD.yourGift : W_CARD.aGiftFrom(funderName);
 }
 
 /**

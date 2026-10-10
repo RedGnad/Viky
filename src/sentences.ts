@@ -692,10 +692,13 @@ export const GIFT_CARD = {
   forName: (name: string) => `For ${name}`,
   fromName: (name: string) => `From ${name}`,
   /**
-   * The label at the head of a card, in the third voice: whose gift it is, for a reader who did not make it, and
-   * "Your gift" for the one who did (the rendered mockups of 19 Sep 2026).
+   * The label at the head of a card. "Your gift" is said to the one who made the gift and to nobody else (the
+   * founder, 10 Oct 2026): until then a card also said it to the person the gift is for when the funder gave no name,
+   * right above "For you", the same thing twice and in the words of the funder's own card.
    */
-  fromFunderOrYours: (funder: string | null) => (funder ? `A gift from ${funder}` : "Your gift"),
+  yourGift: "Your gift",
+  /** To everybody else: whose gift it is, and "A gift" when the funder gave no name. Neither "your" nor anybody's. */
+  aGiftFrom: (funder: string | null) => (funder?.trim() ? `A gift from ${funder}` : "A gift"),
   /** Read by neither of the gift's two people: both sides named, and nothing addressed to the reader. */
   fromFor: (funder: string | null, recipient: string | null) => {
     if (funder && recipient) return `From ${funder}, for ${recipient}`;
@@ -1400,8 +1403,6 @@ export const GIFT_LIVE = {
     /** Past the last day, every day settled, in the hours before the gift is closed. */
     over: "Its days are over.",
   },
-  /** The line above the name, to a reader nobody gave the names to: neither "your" nor anybody's. */
-  aGift: "A gift",
   /** The card's title, to a reader given no name for the person it is for. */
   forSomebody: "For somebody",
   /** The two folds, each under its own name, and each already read by the time it is folded. */

@@ -4,7 +4,8 @@ import { readFileSync } from "node:fs";
 import { notTheirs, voiceOf, type Voice } from "../src/gift-voice.js";
 import { readAs } from "../src/gift-moment.js";
 import { whoInWords, amountsInWords } from "../app/kit/GiftCard.js";
-import { GIFT_PAGE, GIFT_CARD } from "../src/sentences.js";
+import { GIFT_PAGE, GIFT_CARD, REACHED_MOMENT } from "../src/sentences.js";
+import { eyebrowOf } from "../src/gift-live.js";
 import { CONDITIONS } from "../src/conditions.js";
 import type { GiftSummary } from "../src/client/gift.js";
 
@@ -125,6 +126,19 @@ test("the card at the head of the page names both sides when neither of them is 
   assert.doesNotMatch(reader, /\byours?\b/i);
   // The funder's line says where the money came back to, which is only true of them.
   assert.match(amountsInWords(summary("funder"), true), /back to you/);
+});
+
+test("a list's card says 'Your gift' to the one who made it and to nobody else, by the rule of the gift's own page", () => {
+  const card = readFileSync("app/kit/GiftCard.tsx", "utf8");
+  assert.match(card, /label=\{eyebrowOf\(gift\.role, gift\.funderName\)\}/, "one rule for every card a gift is drawn on");
+  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /from=\{eyebrowOf\(voice, funderName\)\}/);
+  // What the person a gift is for reads on their list when the funder gave no name: "A gift" above "For you".
+  const unnamed = { ...summary("recipient"), funderName: null };
+  assert.deepEqual([eyebrowOf(unnamed.role, unnamed.funderName), whoInWords(unnamed)], ["A gift", "For you"]);
+  assert.deepEqual([eyebrowOf("recipient", "Mom"), whoInWords(summary("recipient"))], ["A gift from Mom", "From Mom"]);
+  assert.equal(eyebrowOf(summary("funder").role, null), "Your gift");
+  // The moment a gift is reached keeps its own words, which are a whole sentence and stand alone.
+  assert.equal(REACHED_MOMENT.fromFunder(null), "A gift for you");
 });
 
 test("the page decides who may do what in one place, and not in ten conditions of its own", () => {

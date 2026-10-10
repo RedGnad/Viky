@@ -142,7 +142,11 @@ test("the line above the name never says 'your' to somebody the gift is not thei
   assert.equal(eyebrowOf("recipient", "Mom"), "A gift from Mom");
   assert.equal(eyebrowOf("reader", "Mom"), "A gift from Mom", "a reader holding the link is given the names");
   assert.equal(eyebrowOf("reader", null), "A gift", "a reader given no names reads no possessive");
-  assert.equal(eyebrowOf("recipient", null), "Your gift", "a gift made before the names, to the person it is for");
+  // "Your gift" is the funder's alone (the founder, 10 Oct 2026): it stood over "For you", the same thing twice.
+  assert.equal(eyebrowOf("recipient", null), "A gift", "no name given by the funder, to the person it is for");
+  assert.equal(eyebrowOf("recipient", "  "), "A gift", "a name of spaces is no name");
+  assert.equal(eyebrowOf("funder", null), "Your gift");
+  for (const voice of ["recipient", "reader"] as const) for (const funder of ["Mom", null, ""]) assert.doesNotMatch(eyebrowOf(voice, funder), /your/i);
   assert.equal(titleOf("recipient", "Léa"), "For you");
   assert.equal(titleOf("funder", "Léa"), "For Léa");
   assert.equal(titleOf("funder", null), "For whoever opens the link");
