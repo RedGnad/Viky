@@ -11,7 +11,7 @@ import { blinkOnce, blinksNowAndThen, noteBlink } from "./blink-clock";
 import { Character, type CharacterState } from "./Character";
 import { ConditionIcon } from "./ConditionIcon";
 import { FAMILY_FIGURES } from "./FamilyArt";
-import { BOOK_LINES, FaceIcon, Figure, READ_INK, Scene } from "./Figure";
+import { FaceIcon, Figure, Scene } from "./Figure";
 import { Install, isStandalone } from "./Install";
 import { MarkNotice } from "./MarkNotice";
 import { reduced } from "./Motion";
@@ -345,52 +345,41 @@ function iconArrives(icon: SVGSVGElement): Animation[] {
   return running;
 }
 
-const SVG = "http://www.w3.org/2000/svg";
 const twoPlaces = (value: number) => Math.round(value * 100) / 100;
 
 /**
- * The one who reads its book reads it (the founder's mockup of 10 Oct 2026; `MOTION.reading`). Its eyes go down to
- * the book, along each of the three lines of the left page, across to the right page and along its two, then up to
- * whoever reads the landing, and stay there before they start again. The mouth follows a little. Each line of the
- * book is drawn a second time over itself, dark, and shown along its length as the eyes pass over it; the five go
- * back to their grey just before the eyes go down again.
+ * The one who reads its book reads it, calmly (the founder, 10 Oct 2026, on the page itself; `MOTION.reading`). Its
+ * eyes go down to the book, drift along a line, come back gently a little lower, a few lines so, then go up to whoever
+ * reads the landing and stay there before they start again. The mouth follows a little. The book is not touched: its
+ * lines stay as they are drawn. The first turn read the left page then the right and darkened each line as the eyes
+ * passed: too fast, too wide, and the lines looked cheap.
  *
- * One turn of it is written whole, as the keyframes of a few animations that repeat, each line darkening at the very
- * moments the eyes are on it: nothing here waits on a clock, and nothing can fall out of step. It plays only while
- * the drawing is on the screen and the tab in front, as the blink does.
+ * One turn of it is written whole, as the keyframes of two animations that repeat: nothing here waits on a clock. It
+ * plays only while the drawing is on the screen and the tab in front, as the blink does.
  */
 function reads(held: Element): () => void {
   const drawn = held.querySelector("svg");
   const eyes = drawn?.querySelector('[data-part="gaze"]');
   const mouth = drawn?.querySelector('[data-part="mouth"]');
-  const book = drawn?.querySelector('[data-prop="book"]');
-  if (!eyes || !book) return () => {};
+  if (!eyes) return () => {};
   const R = MOTION.reading;
-  // One turn: where the eyes go, in how long, on which curve, and which line they are on meanwhile.
-  const steps: Array<Readonly<{ ms: number; to: readonly [number, number]; easing: string; line?: number }>> = [];
-  let page: "left" | "right" | null = null;
-  let row = 0;
-  BOOK_LINES.forEach((line, index) => {
-    const [start, end] = R[line.page];
-    if (line.page !== page) row = 0;
-    const down = R.down + row * R.perLine;
-    steps.push({ ms: page === null ? R.downMs : line.page === page ? R.backMs : R.pageMs, to: [start, down], easing: page === null ? EASING.emphasizedDecelerate : EASING.standard });
-    steps.push({ ms: line.short ? R.lineMs * R.shortLine.time : R.lineMs, to: [line.short ? start + (end - start) * R.shortLine.reach : end, down], easing: R.lineEasing, line: index });
-    page = line.page;
-    row += 1;
-  });
-  steps.push({ ms: R.upMs, to: [0, 0], easing: EASING.emphasizedDecelerate }, { ms: R.heldMs, to: [0, 0], easing: "linear" });
+  const [left, right] = R.across;
+  // One turn: where the eyes go, and in how long. Down to the first line, along it, back to the start of the next.
+  const steps: Array<Readonly<{ ms: number; to: readonly [number, number] }>> = [];
+  for (let line = 0; line < R.lines; line += 1) {
+    const down = R.down + line * R.perLine;
+    steps.push({ ms: line === 0 ? R.downMs : R.backMs, to: [left, down] }, { ms: R.lineMs, to: [right, down] });
+  }
+  steps.push({ ms: R.upMs, to: [0, 0] }, { ms: R.heldMs, to: [0, 0] });
   const turnMs = steps.reduce((sum, step) => sum + step.ms, 0);
   const at = (x: number, y: number) => `translate(${twoPlaces(x)}px, ${twoPlaces(y)}px)`;
   const looking: Keyframe[] = [];
   const following: Keyframe[] = [];
-  const read: Array<Readonly<{ from: number; to: number }>> = [];
   let time = 0;
   let where: readonly [number, number] = [0, 0];
   for (const step of steps) {
-    looking.push({ offset: time / turnMs, transform: at(where[0], where[1]), easing: step.easing });
-    following.push({ offset: time / turnMs, transform: at(where[0] * R.mouth, where[1] * R.mouth), easing: step.easing });
-    if (step.line !== undefined) read[step.line] = { from: time / turnMs, to: (time + step.ms) / turnMs };
+    looking.push({ offset: time / turnMs, transform: at(where[0], where[1]), easing: R.easing });
+    following.push({ offset: time / turnMs, transform: at(where[0] * R.mouth, where[1] * R.mouth), easing: R.easing });
     time += step.ms;
     where = step.to;
   }
@@ -398,44 +387,17 @@ function reads(held: Element): () => void {
   following.push({ offset: 1, transform: at(0, 0) });
   const turning = { duration: turnMs, iterations: Number.POSITIVE_INFINITY };
 
-  // The turn exists only in front of somebody. Off the screen there is nothing of it on the page, no dark line and no
-  // animation: a page that waits for every movement to end must find none here. It starts again from the eyes going
-  // down when the drawing comes back, and is held where it is while the tab is behind another.
-  let marks: SVGPathElement[] = [];
+  // The turn exists only in front of somebody. Off the screen there is no animation of it on the page: a page that
+  // waits for every movement to end must find none here. It starts again from the eyes going down when the drawing
+  // comes back, and is held where it is while the tab is behind another.
   let running: Animation[] = [];
   const begin = () => {
     if (running.length > 0) return;
-    marks = BOOK_LINES.map((line) => {
-      const mark = document.createElementNS(SVG, "path");
-      mark.setAttribute("d", line.d);
-      mark.setAttribute("pathLength", "1");
-      mark.setAttribute("data-part", "read");
-      Object.assign(mark.style, { fill: "none", stroke: READ_INK, strokeOpacity: String(R.mark.opacity), strokeWidth: String(R.mark.width), strokeLinecap: "round", strokeDasharray: "1 2", strokeDashoffset: "1" });
-      book.appendChild(mark);
-      return mark;
-    });
-    running = [
-      eyes.animate(looking, turning),
-      ...(mouth ? [mouth.animate(following, turning)] : []),
-      ...marks.map((mark, index) =>
-        mark.animate(
-          [
-            { offset: 0, strokeDashoffset: 1, opacity: 1 },
-            { offset: read[index].from, strokeDashoffset: 1, opacity: 1, easing: R.lineEasing },
-            { offset: read[index].to, strokeDashoffset: 0, opacity: 1 },
-            { offset: (turnMs - R.fadeMs) / turnMs, strokeDashoffset: 0, opacity: 1, easing: "ease-out" },
-            { offset: 1, strokeDashoffset: 0, opacity: 0 },
-          ],
-          turning,
-        ),
-      ),
-    ];
+    running = [eyes.animate(looking, turning), ...(mouth ? [mouth.animate(following, turning)] : [])];
   };
   const end = () => {
     running.forEach((one) => one.cancel());
     running = [];
-    marks.forEach((mark) => mark.remove());
-    marks = [];
   };
   let seen = false;
   const follow = () => {

@@ -4,13 +4,14 @@ import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { FAMILY_FIGURES } from "../app/kit/FamilyArt";
-import { BOOK_LINES, Figure } from "../app/kit/Figure";
+import { Figure } from "../app/kit/Figure";
 import { MOTION, SPRING } from "../src/design-tokens";
 
 /**
  * Two retouches of the landing, validated by the founder on an animated mockup (10 Oct 2026), and one he asked for in
  * his own words. The one who reads its book blinks as the hero does, by one rule in one place. The app's icon arrives
- * once, as its card enters the screen. And the reader reads its book, by itself, line by line.
+ * once, as its card enters the screen. And the reader reads its book, by itself, calmly: his word on the page, later
+ * that day, after a first turn that was too fast and too wide.
  */
 const clock = readFileSync("app/kit/blink-clock.ts", "utf8");
 const story = readFileSync("app/kit/LandingStory.tsx", "utf8");
@@ -57,37 +58,43 @@ test("the icon arrives once as its card enters the screen, by the mockup's own f
   assert.doesNotMatch(readFileSync("app/kit/Figure.tsx", "utf8"), /Nothing moves it/, "the drawing's own note says what moves it now");
 });
 
-test("the one who reads its book reads it by itself: the three lines of the left page, the two of the right, then it looks up", () => {
-  // The founder's mockup of 10 Oct 2026, figure for figure.
-  assert.deepEqual(MOTION.reading, { left: [-3.6, -0.6], right: [0.6, 3.6], down: 1.5, perLine: 0.45, mouth: 0.35, downMs: 260, lineMs: 880, backMs: 150, pageMs: 200, upMs: 320, heldMs: 1700, fadeMs: 300, shortLine: { reach: 0.82, time: 0.86 }, lineEasing: "cubic-bezier(0.3, 0, 0.7, 1)", mark: { opacity: 0.78, width: 0.8 } });
-  // It reads the book as it is drawn: the five lines are said once, and the drawing draws them from the same list.
-  assert.deepEqual(BOOK_LINES.map((line) => line.page + (line.short ? " short" : "")), ["left", "left", "left short", "right", "right"]);
+test("the one who reads its book reads it calmly: its eyes go down, drift along three lines, and come up, and the book is not touched", () => {
+  // The founder, 10 Oct 2026, on the page itself: the first turn was too fast and too wide, reading the left page then
+  // the right was odd, and the lines darkening looked cheap. The figures are set to his word.
+  const R = MOTION.reading;
+  assert.deepEqual(R, { across: [-1, 1], down: 1.1, perLine: 0.25, lines: 3, mouth: 0.25, downMs: 600, lineMs: 1900, backMs: 600, upMs: 700, heldMs: 2600, easing: "cubic-bezier(0.3, 0, 0.7, 1)" });
+  // Small: to either side the eyes go no further than the icon's glance, and as far to the left as to the right, so
+  // no page is read before the other. The first turn went 3.6 units to either side.
+  assert.ok(Math.max(...R.across.map(Math.abs)) <= MOTION.icon.glance.by);
+  assert.equal(R.across[0], -R.across[1]);
+  // Slow: a line takes about two seconds where it took 880 ms, and the way back four times the 150 ms it took.
+  assert.ok(R.lineMs >= 2 * 880 && R.backMs >= 4 * 150);
+  const turn = R.downMs + R.lines * R.lineMs + (R.lines - 1) * R.backMs + R.upMs + R.heldMs;
+  assert.equal(turn, 10_800);
+  // The book is drawn as it was, in one stroke, and nothing of the reading is in the drawing's file.
   const figure = readFileSync("app/kit/Figure.tsx", "utf8");
-  assert.match(figure, /<path d=\{BOOK_LINES\.map\(\(line\) => line\.d\)\.join\(" "\)\} style=/);
+  assert.doesNotMatch(figure, /BOOK_LINES|READ_INK/);
   const drawn = renderToStaticMarkup(createElement(Figure, { id: "story-book", halftone: true, ...FAMILY_FIGURES.learn }));
   assert.ok(drawn.includes('d="M14 33.1 Q21 30.9 28.5 33.1 M14 35.8 Q21 33.6 28.5 35.8 M14 38.5 Q21 36.3 26 37.9 M35.5 33.1 Q43 30.9 50 33.1 M35.5 35.8 Q43 33.6 50 35.8"'), "the book is drawn as it was");
-  // No act of the scroll any more: it plays by itself, with what lives on the landing outside the scroll.
+  // No act of the scroll: it plays by itself, with what lives on the landing outside the scroll.
   assert.equal("read" in MOTION.poster.acts, false);
   assert.match(story, /checked: \{ state: "book" \},/);
   assert.doesNotMatch(story.slice(story.indexOf("function usePosters"), story.indexOf("function iconArrives")), /act === "read"|data-part="gaze"/);
   assert.match(story, /for \(const drawing of story\.querySelectorAll\(`\[\$\{READS\}\]`\)\) stops\.push\(reads\(drawing\)\);/);
-  // One turn written whole: each line darkens at the very moments the eyes are on it, and the mouth follows.
-  assert.match(story, /steps\.push\(\{ ms: page === null \? R\.downMs : line\.page === page \? R\.backMs : R\.pageMs, to: \[start, down\], easing: page === null \? EASING\.emphasizedDecelerate : EASING\.standard \}\);/);
-  assert.match(story, /steps\.push\(\{ ms: line\.short \? R\.lineMs \* R\.shortLine\.time : R\.lineMs, to: \[line\.short \? start \+ \(end - start\) \* R\.shortLine\.reach : end, down\], easing: R\.lineEasing, line: index \}\);/);
-  assert.match(story, /steps\.push\(\{ ms: R\.upMs, to: \[0, 0\], easing: EASING\.emphasizedDecelerate \}, \{ ms: R\.heldMs, to: \[0, 0\], easing: "linear" \}\);/);
-  assert.match(story, /following\.push\(\{ offset: time \/ turnMs, transform: at\(where\[0\] \* R\.mouth, where\[1\] \* R\.mouth\), easing: step\.easing \}\);/);
-  assert.match(story, /\{ offset: read\[index\]\.from, strokeDashoffset: 1, opacity: 1, easing: R\.lineEasing \},\n\s+\{ offset: read\[index\]\.to, strokeDashoffset: 0, opacity: 1 \},\n\s+\{ offset: \(turnMs - R\.fadeMs\) \/ turnMs, strokeDashoffset: 0, opacity: 1, easing: "ease-out" \},\n\s+\{ offset: 1, strokeDashoffset: 0, opacity: 0 \},/);
-  // Only in front of somebody, as the blink: on the screen, in the tab in front; nothing under reduced motion.
-  // Off the screen nothing of it is left on the page, no animation and no dark line: a screen that waits for every
-  // movement to end (test/browser/arrival.spec.ts) must find none. Behind another tab it is held where it is.
-  assert.match(story, /const follow = \(\) => \{\n\s+if \(!seen\) return end\(\);\n\s+begin\(\);\n\s+running\.forEach\(\(one\) => \(document\.hidden \? one\.pause\(\) : one\.play\(\)\)\);/);
-  assert.match(story, /const end = \(\) => \{\n\s+running\.forEach\(\(one\) => one\.cancel\(\)\);\n\s+running = \[\];\n\s+marks\.forEach\(\(mark\) => mark\.remove\(\)\);/);
-  // The dark of a line is the face's ink, named by the drawing's own file: the story names no colour of a character.
+  // One turn written whole: down to a line, along it, back to the start of the next, then up, and held.
+  const reading = story.slice(story.indexOf("function reads"), story.indexOf("function useLandingAlive"));
+  assert.match(reading, /steps\.push\(\{ ms: line === 0 \? R\.downMs : R\.backMs, to: \[left, down\] \}, \{ ms: R\.lineMs, to: \[right, down\] \}\);/);
+  assert.match(reading, /steps\.push\(\{ ms: R\.upMs, to: \[0, 0\] \}, \{ ms: R\.heldMs, to: \[0, 0\] \}\);/);
+  assert.match(reading, /following\.push\(\{ offset: time \/ turnMs, transform: at\(where\[0\] \* R\.mouth, where\[1\] \* R\.mouth\), easing: R\.easing \}\);/);
+  // Two animations and no more: the eyes and the mouth. Nothing is added to the book, and nothing is drawn over it.
+  assert.match(reading, /running = \[eyes\.animate\(looking, turning\), \.\.\.\(mouth \? \[mouth\.animate\(following, turning\)\] : \[\]\)\];/);
+  assert.doesNotMatch(reading, /createElementNS|appendChild|strokeDash|data-prop="book"|data-part", "read"/);
+  // Only in front of somebody, as the blink: on the screen, in the tab in front; nothing under reduced motion. Off
+  // the screen no animation of it is left on the page: a screen that waits for every movement to end
+  // (test/browser/arrival.spec.ts) must find none. Behind another tab it is held where it is.
+  assert.match(reading, /const follow = \(\) => \{\n\s+if \(!seen\) return end\(\);\n\s+begin\(\);\n\s+running\.forEach\(\(one\) => \(document\.hidden \? one\.pause\(\) : one\.play\(\)\)\);/);
+  assert.match(reading, /const end = \(\) => \{\n\s+running\.forEach\(\(one\) => one\.cancel\(\)\);\n\s+running = \[\];\n\s+\};/);
   assert.doesNotMatch(story, /var\(--character-/);
-  assert.match(story, /stroke: READ_INK,/);
   assert.match(story, /const story = root\.current;\n\s+if \(!story \|\| reduced\(\)\) return;/);
-  assert.doesNotMatch(story.slice(story.indexOf("function reads"), story.indexOf("function useLandingAlive")), /setTimeout|setInterval/, "nothing here waits on a clock");
-  // The turn, as the mockup plays it: 7.2 s, of which 1.7 s with the eyes up.
-  const turn = MOTION.reading.downMs + 4 * MOTION.reading.lineMs + MOTION.reading.lineMs * MOTION.reading.shortLine.time + 3 * MOTION.reading.backMs + MOTION.reading.pageMs + MOTION.reading.upMs + MOTION.reading.heldMs;
-  assert.equal(Math.round(turn), 7207);
+  assert.doesNotMatch(reading, /setTimeout|setInterval/, "nothing here waits on a clock");
 });
