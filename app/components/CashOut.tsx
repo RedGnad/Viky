@@ -16,7 +16,7 @@ import { isVikyContract } from "@/src/viky-contracts";
 import { AUSD, coinAt, COINS, isNative, MON, USDC, type Coin } from "@/src/coins";
 import { rateDateInWords, spokenAmount, whenInWords, type LedAmount } from "@/src/display-currency";
 import { exitAmount, type ExitAmount } from "@/src/exit-amount";
-import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, heldForWithdrawal, netOfEverything, readyFor, toTheCent, twoDecimalsDown, type Ready } from "@/src/exit-steps";
+import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, heldForWithdrawal, netOfEverything, readyFor, smallestOnTheCard, toTheCent, twoDecimalsDown, type Ready } from "@/src/exit-steps";
 import { chainCoinToChange, USDC_ARRIVAL_FLOOR } from "@/src/funding-step";
 import { usdcRouterAddress } from "@/src/usdc-router";
 import { formatAusd } from "@/src/gift-reader";
@@ -315,6 +315,8 @@ export function CashOut() {
   /** How the bank service pays in this country, and the card service's smallest sale, as each publishes it today. */
   const bankPays = where?.out?.bank ?? null;
   const cardSmallest = where?.out?.cardSmallest ?? null;
+  // Said in the money of the figure above it on the card: euros where the bank is paid euros, dollars anywhere else.
+  const bankSmallest = where?.out?.bankSmallest ? (smallestOnTheCard(where.out.bankSmallest, (bankPays?.currency ?? "EUR") === "EUR" ? "EUR" : "USD", money.rates) ?? null) : null;
   /** What each way out would leave of everything that can be changed, at the rate read today (src/exit-steps.ts). */
   const netOf = (way: WayOut) => netOfEverything(changeable, way.fee, money.rates, way === WAY_OUT_EURO ? (bankPays?.currency ?? "EUR") : undefined);
   /** The way back to money already made ready for a service, from the first screen. */
@@ -866,6 +868,8 @@ export function CashOut() {
                 </details>
               ) : null}
               {use === "card" && cardSmallest ? <p className={HELP}>{U.cardFrom(figureIn(cardSmallest.amount, cardSmallest.currency))}</p> : null}
+              {/* The bank service says its smallest payout too, before anything is changed for it (the audit of 9 Oct 2026). */}
+              {use === "bank" && bankSmallest ? <p className={HELP} data-bank-from>{U.bankFrom(figureIn(bankSmallest.amount, bankSmallest.currency), bankSmallest.converted)}</p> : null}
               {/* Mobile money says its smallest payout too, in the country's money, before the form is opened. */}
               {use === "mobile" && mobileOffered ? <p className={HELP} data-mobile-from>{U.mobileFrom(localInWords(mobileOffered.leastLocal, mobileOffered.currency))}</p> : null}
               <button type="button" onClick={act} disabled={holdings === null || changeable === 0n} className={inTheSun(use, index, eurosHeld) ? PRIMARY_BUTTON : SECONDARY_BUTTON}>

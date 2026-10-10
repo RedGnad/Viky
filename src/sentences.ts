@@ -2106,6 +2106,8 @@ export const USE_MONEY = {
   },
   /** The card service's smallest payout, as it publishes it today, said on its card before anything is changed. */
   cardFrom: (figure: string) => `From ${figure} at a time.`,
+  /** The bank service's, in the money of the figure above it: "about" where it was converted (the founder, 10 Oct 2026). */
+  bankFrom: (figure: string, converted = false) => (converted ? `From about ${figure} at a time.` : `From ${figure} at a time.`),
   /** Mobile money's smallest payout in the country, in its own money, said on its card before the form is opened. */
   mobileFrom: (figure: string) => `From ${figure} at a time.`,
   /** No bank and no card reaches the person's country: said, rather than left to be found out (the audit of 1 Oct 2026). */
@@ -2307,7 +2309,7 @@ export const CASH_OUT = {
   own: {
     title: "Send to another Viky account of mine",
     code: "Paste that account's code",
-    help: 'You will find it on that account\'s page, under "Your code".',
+    help: 'You will find it on that account\'s Me page, under "Need your code for a payout service?".',
     howMuch: "How much to send",
     pasteFirst: "Paste that account's code to send it.",
     confirm: (amount: string) => `Send $${amount} to your other account. This cannot be undone.`,
