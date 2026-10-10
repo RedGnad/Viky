@@ -1816,6 +1816,11 @@ export const JUDGES = {
  */
 /** The nature of a condition, in two words exactly (the founder, 22 Sep 2026): the meta voice, capitals, nowhere but three places. */
 export const CONDITION_NATURE = { read: "READ FOR YOU", shown: "SHOWN BY THEM", connected: "CONNECTED BY THEM" } as const;
+/**
+ * The same label on a card read by the person the gift is for (the founder, 11 Oct 2026): a label speaks to whoever
+ * reads it, and a card said "SHOWN BY THEM" to the very person who shows. "READ FOR YOU" is true of every reader.
+ */
+export const CONDITION_NATURE_YOURS = { read: "READ FOR YOU", shown: "SHOWN BY YOU", connected: "CONNECTED BY YOU" } as const;
 
 /**
  * A proof the person shows from their own account (D162): one button, and what happens around it. The source's
