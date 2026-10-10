@@ -170,14 +170,18 @@ export function DayStrip({
         <span key={index} data-day={day} data-awake={wake && index === 0 ? "" : undefined} className={`flex ${WIDTHS[width]} flex-none ${each ? "flex-col items-center" : "items-end"}`}>
           <ArrivalDay gift={id} index={index}>
             {/* A day earned jumps and a day gone back leaves, in the arrival: those two are written into the page (D206),
-                and so is the first day of a card that can open its eyes. */}
-            <Character
-              state={characterOf(day)}
-              standing={false}
-              drawn={characterOf(day) === "earned" || characterOf(day) === "returned" || characterOf(day) === "today" || (wake !== undefined && index === 0) ? "inline" : "referenced"}
-              wakes={characterOf(day) === "today"}
-              className="h-auto w-full"
-            />
+                and so is the first day of a card that can open its eyes. A day earned while this screen stood carries
+                the triangle it was (the founder, 10 Oct 2026). */}
+            {(from) => (
+              <Character
+                state={characterOf(day)}
+                standing={false}
+                drawn={characterOf(day) === "earned" || characterOf(day) === "returned" || characterOf(day) === "today" || (wake !== undefined && index === 0) ? "inline" : "referenced"}
+                wakes={characterOf(day) === "today"}
+                from={characterOf(day) === "earned" ? from : undefined}
+                className="h-auto w-full"
+              />
+            )}
           </ArrivalDay>
           {each ? <span data-day-worth className="text-[length:var(--type-meta)] leading-[var(--type-meta-leading)] font-medium tabular-nums text-[var(--muted)]">{each}</span> : null}
         </span>

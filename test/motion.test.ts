@@ -236,7 +236,7 @@ test("the amount says when it has arrived, and every capture run waits for it", 
   // middle of the count ($1.15 of an account holding $2.00).
   assert.match(motion, /const settled = plan\.decided && \(plan\.amountAt === null \|\| from === to \|\| counted === count\)/);
   assert.match(motion, /const UNDECIDED: Plan = \{ \.\.\.NOTHING, decided: false \}/, "an arrival that has not read the device yet must say so");
-  assert.match(motion, /useState<Plan>\(\{ \.\.\.UNDECIDED, pending: changed\.pending \}\)/, "the arrival starts undecided, not settled, knowing what is pending (the fix to #154)");
+  assert.match(motion, /useState<Plan>\(\{ \.\.\.UNDECIDED, pending: changed\.pending, from: changed\.from \}\)/, "the arrival starts undecided, not settled, knowing what is pending (the fix to #154)");
   assert.match(motion, /setCounted\(count\)/, "the count that finished is what says it is over, by name");
   // Every path out of deciding answers, including the one where nothing plays: a silent return would leave whoever
   // waits for the count waiting until their timeout, on every screen that holds an amount.

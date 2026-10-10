@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import type { Live } from "@/src/gift-live";
 import { GIFT_LIVE as L, LIMIT } from "@/src/sentences";
 import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE } from "../components/ui";
@@ -23,6 +23,10 @@ import { Lines } from "./Lines";
  *
  * Nothing stands under the card but the round controls of the person it is for (app/kit/YouDecide.tsx, rule 6).
  *
+ * The state, the line under it and the label of the money are named `data-turns="words"`, and the money itself
+ * `data-turns="amount"`: when the gift's character lands on a gift just reached, those words change where they stand
+ * and the amount swells once (app/kit/Motion.tsx, `Lands`; the founder's mockup of 10 Oct 2026).
+ *
  * The values are the mockup's own, taken from its `shared.css` rather than read off the picture: the sizes, the
  * spacing, the radius and the shadow are all tokens now, and `test/design-tokens.test.ts` holds them equal to it.
  *
@@ -45,7 +49,10 @@ export function GiftLive({
   action,
   agreed,
   checked,
+  card,
 }: Readonly<{
+  /** The card itself, for the page that plays a landing on its lines (app/kit/Motion.tsx, `useLanding`). */
+  card?: Ref<HTMLElement>;
   /** "A gift from Mum": the small line above the name, which names the other person of the two. */
   from: string;
   /** "For Noah", or "For you" for the person it is for: the card's own title. */
@@ -91,7 +98,7 @@ export function GiftLive({
   return (
     <>
       {/* The card of Home, the same object and the same frame (V4): its edge, its width, its paper. */}
-      <section className={`gift-card-width gift-card-placed ${CARD} flex flex-col gap-0 space-y-0`}>
+      <section ref={card} className={`gift-card-width gift-card-placed ${CARD} flex flex-col gap-0 space-y-0`}>
         <p className={`${CARD_LABEL} gift-eyebrow`}>{from}</p>
         <h2 className={`${CARD_TITLE} gift-who`}>{who}</h2>
         <p className="gift-what">{what}</p>
@@ -100,7 +107,7 @@ export function GiftLive({
         {shape ? <div className="gift-shape">{shape}</div> : null}
 
         {live.when ? <p className={`${CARD_LABEL} gift-when`}>{live.when}</p> : null}
-        <p className="gift-state">
+        <p className="gift-state" data-turns="words">
           {live.headline}
           {looking && !waiting ? (
             <span className="gift-state-wheel-place">
@@ -120,19 +127,19 @@ export function GiftLive({
           </p>
         ) : null}
         {waiting ? (
-          <p className="gift-next inline-flex items-center gap-[var(--space-sm)]" role="status" data-waiting="">
+          <p className="gift-next inline-flex items-center gap-[var(--space-sm)]" role="status" data-waiting="" data-turns="words">
             <span className="working-ring working-ring-inline" aria-hidden="true" />
             <span>{waiting}</span>
           </p>
         ) : live.next ? (
-          <p className="gift-next">{live.next}</p>
+          <p className="gift-next" data-turns="words">{live.next}</p>
         ) : null}
 
         {live.figure ? (
           <div className="gift-figures">
             <div>
-              <p className={CARD_AMOUNT}>{figureNode ?? live.figure.value}</p>
-              <p className={`${CARD_LABEL} gift-meta`}>{live.figure.label}</p>
+              <p className={CARD_AMOUNT} data-turns="amount">{figureNode ?? live.figure.value}</p>
+              <p className={`${CARD_LABEL} gift-meta`} data-turns="words">{live.figure.label}</p>
               {reading ? <p className="gift-updated">{reading}</p> : null}
             </div>
             {second ? (

@@ -2,6 +2,7 @@
 // rejection paths: an unauthenticated caller, a caller whose signed cookie is for another origin, and
 // a malformed body. All fail at the guard, before any Neon access, which is why they can run here.
 
+import { shownReturnPath } from "../src/shown-return";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { privateKeyToAccount } from "viem/accounts";
@@ -154,11 +155,14 @@ test("a request given the two addresses carries both: where to go once the proof
 test("the verification page is told where to bring the person back, and the row keeps its address", () => {
   // Reclaim's own redirect was empty (7 Oct 2026): the person stayed on its page with a proof made.
   const source = readFileSync("app/api/proof/session/route.ts", "utf8");
-  assert.match(source, /proofRequest\.setRedirectUrl\(`\$\{accountAuthOriginFromRequest\(request\)\}\/g\/\$\{giftId\}`\)/, "this request's own site and the gift's number, nothing else");
+  // With a proof made the address carries the mark that says so (the founder, 10 Oct 2026, src/shown-return.ts), and
+  // nothing else: the page says "Shown." on that mark alone. The route writes it out, and it is the page's own.
+  assert.match(source, /proofRequest\.setRedirectUrl\(`\$\{accountAuthOriginFromRequest\(request\)\}\/g\/\$\{giftId\}\?shown=1`\);/, "this request's own site, the gift's number and the mark");
+  assert.equal(shownReturnPath("1000008"), "/g/1000008?shown=1");
   assert.ok(source.indexOf("setRedirectUrl(") < source.indexOf("getRequestUrl("), "set before the page's address is made, or the address does not carry it");
   // A session abandoned, by inactivity or an error, left the person on Reclaim's closing screen (9 Oct 2026): the
   // request carries the same address for that case, set before the page's address is made as well.
-  assert.match(source, /proofRequest\.setCancelRedirectUrl\(`\$\{accountAuthOriginFromRequest\(request\)\}\/g\/\$\{giftId\}`\);/, "the same address, the gift's page");
+  assert.match(source, /proofRequest\.setCancelRedirectUrl\(`\$\{accountAuthOriginFromRequest\(request\)\}\/g\/\$\{giftId\}`\);/, "the gift's page, without the mark: nothing was shown");
   assert.ok(source.indexOf("setRedirectUrl(") < source.indexOf("setCancelRedirectUrl("));
   assert.ok(source.indexOf("setCancelRedirectUrl(") < source.indexOf("getRequestUrl("));
   assert.match(source, /await saveProofSession\(\{[\s\S]*?requestUrl,\s*\}\)/);
