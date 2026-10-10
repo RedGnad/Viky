@@ -150,6 +150,13 @@ export function giftErrorResponse(error: unknown, forOperator = false): NextResp
   return NextResponse.json({ error: GENERIC_FAILURE, code: "FAILED" }, { status: 500, headers: NO_STORE });
 }
 
+/**
+ * Said for a connected source read on the first day of its gift (the audit of 9 Oct 2026). Its reading judges
+ * yesterday's page, which is not a day of the gift yet, so nothing is read; but the gift has started, and "Your gift
+ * starts counting tomorrow." was false of it. The code stays the contract's own, `NOT_STARTED`.
+ */
+export const DAY_ONE_IS_READ_TOMORROW = "Today is day one. It is read tomorrow morning.";
+
 export function contractRefusal(name: string | undefined): { code: string; message: string } | null {
   if (!name) return null;
   const known = CONTRACT_REFUSALS[name];

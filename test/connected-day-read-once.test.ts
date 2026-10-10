@@ -17,10 +17,13 @@ import { runConnectedCheckIn, verdictMetric, type ConnectedCheckInDeps } from ".
 import { configureConnectionStore, ensureConnectionSchema, saveConnection } from "../src/connection-store";
 import { NO_CONTACT_HASH } from "../src/contact-hash";
 import { noDayForYesterdaysPage, noDayToCredit } from "../src/daily-look";
-import { contractRefusal } from "../src/gift-api";
+import { FITBIT_DAILY, STRAVA_DAILY } from "../src/conditions";
+import { contractRefusal, DAY_ONE_IS_READ_TOMORROW } from "../src/gift-api";
 import type { GiftState } from "../src/gift-reader";
 import { configureGiftStore, ensureGiftSchema, markBound, markClaimed, recordRelayed, saveGift } from "../src/gift-store";
 import { GOAL_TYPE_STRAVA_DISTANCE } from "../src/gift-terms";
+import { GIFT_LIVE } from "../src/sentences";
+import { firstDayIsTheStart } from "../src/v2";
 import type { SqlExecutor } from "../src/proof-session-store";
 
 const ESCROW = "0x00000000000000000000000000000000000000D3" as Hex;
@@ -120,6 +123,8 @@ function reading(onChain: GiftState, now: number) {
 }
 
 const STARTS_TOMORROW = { kind: "refused", giftId: "9", code: "NOT_STARTED", message: "Your gift starts counting tomorrow.", looked: true };
+/** The same refusal on a day that is the gift's first: it has started, and what it waits for is tomorrow morning's reading. */
+const DAY_ONE = { kind: "refused", giftId: "9", code: "NOT_STARTED", message: "Today is day one. It is read tomorrow morning.", looked: true };
 const ALL_COUNTED = { kind: "refused", giftId: "9", code: "NOTHING_TO_CREDIT", message: "Everything up to yesterday is already counted. Come back tomorrow.", looked: true };
 const COUNTED_TODAY = { kind: "already", giftId: "9", reason: "counted_today" };
 
@@ -129,11 +134,63 @@ test("on the third contract, nothing is read the day of the connection: the day 
   assert.equal(noDayForYesterdaysPage(gift(3), EVENING), "OutsideWindow", "and the page that reading would judge is the day before the connection");
   // A press that evening, and nothing leaves for Strava or for Reclaim.
   const pressed = reading(gift(3), EVENING);
-  assert.deepEqual(await runConnectedCheckIn({ giftId: "9", purpose: "count", force: true }, pressed.deps), STARTS_TOMORROW);
+  assert.deepEqual(await runConnectedCheckIn({ giftId: "9", purpose: "count", force: true }, pressed.deps), DAY_ONE);
   assert.deepEqual(pressed.calls, []);
-  // The sentence is the one the screen already gives after the connection: counting starts tomorrow.
+});
+
+test("what is said of the first day is true of the contract the gift is on (the audit of 9 Oct 2026)", async () => {
+  // The third contract's first day is the day counting starts: "From tomorrow" was said of a day already running, and
+  // a person who did not move that day lost it without a word. The first two start the day after, and keep theirs.
+  assert.equal(firstDayIsTheStart(3), true);
+  assert.equal(firstDayIsTheStart(2), false);
+  assert.equal(firstDayIsTheStart(1), false);
+  assert.equal(firstDayIsTheStart(undefined), false);
+  for (const [condition, unit] of [[STRAVA_DAILY, "kilometres"], [FITBIT_DAILY, "minutes"]] as const) {
+    assert.equal(condition.link.kind, "connect");
+    if (condition.link.kind !== "connect") continue;
+    const { connected, connectedDayOne, notReached, start } = condition.link.consent;
+    // The card's title says the source is connected, so neither line says it again, and neither repeats the button.
+    assert.equal(connected, `From tomorrow, every day with your ${unit} is yours, counted each morning.`);
+    assert.equal(connectedDayOne, `Today is day one. Its ${unit} are read tomorrow morning.`);
+    assert.equal(start, "Start counting");
+    for (const line of [connected, connectedDayOne]) assert.doesNotMatch(line, /is connected|Start counting/);
+    assert.equal(notReached, `Yesterday's ${unit} did not reach your target. Nothing was counted.`);
+  }
+  // The screen takes the sentence of the gift's own contract, on the way back from the source and afterwards.
+  const screen = readFileSync("app/kit/ConnectTheAccount.tsx", "utf8");
+  assert.match(screen, /\{said \?\? \(dayOneIsTheStart \? words\.connectedDayOne : words\.connected\)\}/);
+  // On the way back from the source the address says it is connected, and the block is drawn so from its first image.
+  assert.match(screen, /get\("connect"\) === "done" \? \{ connected: true, since: null, bound: false, configured: true \} : null/);
+  // Connected, the block's own title, which asks to connect, is gone: the card's title says the source is connected.
+  assert.match(screen, /\{status\?\.connected \? null : <p className="font-medium">\{words\.title\}<\/p>\}/);
+  const page = readFileSync("app/components/GiftPage.tsx", "utf8");
+  assert.match(page, /<ConnectTheAccount giftId=\{giftId\} conditionId=\{condition\.id\} yours=\{mine\} dayOneIsTheStart=\{firstDayIsTheStart\(status\.version\)\} onConnection=\{setSourceConnected\} onChanged=\{reloadAll\} \/>/);
+  assert.equal(GIFT_LIVE.notConnected.connected("Strava"), "Strava is connected.");
+  // The day it goes back still stands under that title, and what is left to do by then is to start.
+  assert.equal(GIFT_LIVE.notConnected.startBy("20 Oct 2026", "Mom"), "Start by 20 Oct 2026, or it goes back to Mom.");
+  assert.equal(GIFT_LIVE.notConnected.connectBy("20 Oct 2026", "Mom"), "By 20 Oct 2026, or it goes back to Mom.");
+  const live = readFileSync("src/gift-live.ts", "utf8");
+  assert.match(live, /headline: yours \? \(input\.sourceConnected \? L\.notConnected\.connected\(source\) : L\.notConnected\.yours\(source\)\) : L\.notConnected\.theirs\(recipientName, source\),/);
+
+  // A press on "Count now": before the first day the gift starts tomorrow; on it, the gift has started.
   assert.equal(contractRefusal("OutsideWindow")?.message, "Your gift starts counting tomorrow.");
-  assert.match(readFileSync("src/conditions.ts", "utf8"), /Strava is connected\. From tomorrow, every day with your kilometres is yours, counted each morning\./);
+  assert.equal(DAY_ONE_IS_READ_TOMORROW, "Today is day one. It is read tomorrow morning.");
+  const second = reading(gift(2), EVENING);
+  assert.deepEqual(await runConnectedCheckIn({ giftId: "9", purpose: "count", force: true }, second.deps), STARTS_TOMORROW, "the second contract, the evening of the connection");
+  const secondDayOne = reading(gift(2), noon(CONNECTED + 1));
+  assert.deepEqual(await runConnectedCheckIn({ giftId: "9", purpose: "count", force: true }, secondDayOne.deps), DAY_ONE, "and on its own first day, the day after");
+  assert.deepEqual([...second.calls, ...secondDayOne.calls], [], "nothing is read either time");
+});
+
+test("a day that did not reach its target is said in the source's own unit, not as a lesson to take", () => {
+  // The contract's refusal is Duolingo's sentence, "One more lesson and it counts": yesterday's page of Strava or
+  // Fitbit is not something a lesson changes.
+  assert.equal(contractRefusal("InsufficientProgress")?.message, "Not enough yet for a full day. One more lesson and it counts.");
+  const reader = readFileSync("src/connected-checkin.ts", "utf8");
+  assert.match(reader, /const inItsWords = mapped\?\.code === "NOT_ENOUGH_PROGRESS" && link\?\.kind === "connect" \? link\.consent\.notReached : null;/);
+  assert.match(reader, /return refusal\(giftId, mapped\?\.code \?\? error\.contractError \?\? "REFUSED", inItsWords \?\? mapped\?\.message \?\? "The contract refused this reading\."\);/);
+  // The code is unchanged, so the page that reads by itself stays quiet on it (app/kit/DayReading.tsx).
+  assert.match(readFileSync("app/kit/DayReading.tsx", "utf8"), /NOTHING_NEW: ReadonlySet<string> = new Set\(\["NOT_ENOUGH_PROGRESS", "NOTHING_TO_CREDIT", "NOT_STARTED"/);
 });
 
 test("the next morning's reading goes, judges the day of the connection, and its verdict is one target: the first day", async () => {

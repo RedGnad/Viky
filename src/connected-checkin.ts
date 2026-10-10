@@ -4,13 +4,13 @@ import { getAddress, type Hex } from "viem";
 import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
 import { attestedRead, AttestedReadError, reclaimAttestedReadDeps, type AttestedReadDeps } from "./attested-read";
 import { attestedSource, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES } from "./attested-sources";
-import { conditionOfGoal } from "./conditions";
+import { conditionById, conditionOfGoal } from "./conditions";
 import { noDayForYesterdaysPage } from "./daily-look";
 import { openSecret, sealSecret, vaultConfigured } from "./connect-vault";
 import { eraseConnection, loadConnection, saveRefreshedTokens, type Connection } from "./connection-store";
 import type { PublicCheckInOutcome, PublicCheckInPurpose } from "./duolingo-public-checkin";
 import { activeMinutesOf, fitbitConfigured, fitbitDateOfUtcDay, fitbitDayMet, FITBIT_PROVIDER_LABEL, FitbitError, refreshFitbitTokens } from "./fitbit";
-import { contractRefusal } from "./gift-api";
+import { contractRefusal, DAY_ONE_IS_READ_TOMORROW } from "./gift-api";
 import { ATTESTATION_TTL_SECONDS, FITBIT_CONNECTED_PROVIDER_ID, identityPseudonym, serialiseMessage, signCheckIn, STRAVA_CONNECTED_PROVIDER_ID, type CheckInMessage } from "./gift-attestation";
 import { checkInDayIndex, readGift, utcDayOf, type GiftState } from "./gift-reader";
 import { assertReadingInProportion, ReadingOutOfProportion } from "./reading-proportion";
@@ -196,7 +196,8 @@ async function readConnected(input: { giftId: string; purpose: PublicCheckInPurp
   // settled yet, on every version (src/daily-look.ts). Nothing is read the day of the connection, nor once the last
   // day is settled.
   const noDay = purpose === "count" ? contractRefusal(noDayForYesterdaysPage(onChain, now) ?? undefined) : null;
-  if (noDay) return { kind: "refused", giftId, code: noDay.code, message: noDay.message, looked: true };
+  // A gift whose first day is today has started: what it waits for is tomorrow morning's reading, and it says so.
+  if (noDay) return { kind: "refused", giftId, code: noDay.code, message: noDay.code === "NOT_STARTED" && onChain.startDay !== 0 && utcDayOf(now) >= onChain.startDay ? DAY_ONE_IS_READ_TOMORROW : noDay.message, looked: true };
 
   let tokens: ConnectedTokens;
   try {
@@ -296,7 +297,11 @@ async function readConnected(input: { giftId: string; purpose: PublicCheckInPurp
     }
     if (error instanceof RelayerError && error.code === "REVERTED") {
       const mapped = contractRefusal(error.contractError);
-      return refusal(giftId, mapped?.code ?? error.contractError ?? "REFUSED", mapped?.message ?? "The contract refused this reading.");
+      // A day that did not reach its target is said in the source's own unit: the contract's sentence is Duolingo's,
+      // "One more lesson and it counts", and yesterday's page is not something a lesson changes.
+      const link = conditionById(line.conditionId)?.link;
+      const inItsWords = mapped?.code === "NOT_ENOUGH_PROGRESS" && link?.kind === "connect" ? link.consent.notReached : null;
+      return refusal(giftId, mapped?.code ?? error.contractError ?? "REFUSED", inItsWords ?? mapped?.message ?? "The contract refused this reading.");
     }
     throw error;
   }

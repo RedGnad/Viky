@@ -144,6 +144,15 @@ export function paysTheSameDay(version: ContractVersion | undefined): boolean {
   return version === 3;
 }
 
+/**
+ * Whether a daily gift's first day is the day its first reading is recorded, and not the day after: the third
+ * version's rule (contracts/GiftEscrowV3.sol, "the first day is the day this reading is recorded"). It holds for a
+ * connected source too, whose page of that day is read the next morning (src/daily-look.ts).
+ */
+export function firstDayIsTheStart(version: ContractVersion | undefined): boolean {
+  return version === 3;
+}
+
 export function milestoneVersionOf(contract: string | null | undefined): ContractVersion {
   return same(contract, milestoneGiftV2Address()) ? 2 : 1;
 }

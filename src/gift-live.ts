@@ -54,6 +54,8 @@ export type LiveInput = Readonly<{
   /** Whether this device holds the gift's link, for the person who offered it: then the state is "send it". */
   linkHere?: boolean;
   connectBy: string | null;
+  /** The person connected the source and has not started the counting yet: known in the browser, for their own page. */
+  sourceConnected?: boolean;
   nextReadingInWords: string | null;
   /** The hour of the next reading alone, in the reader's clock: "20:30". Drawn as a figure where nothing has gone back. */
   nextReadingAt?: string | null;
@@ -217,14 +219,16 @@ export function liveOf(input: LiveInput): Live {
 
     case "openedNotConnected":
       return {
-        headline: yours ? L.notConnected.yours(source) : L.notConnected.theirs(recipientName, source),
+        headline: yours ? (input.sourceConnected ? L.notConnected.connected(source) : L.notConnected.yours(source)) : L.notConnected.theirs(recipientName, source),
         figure: { label: yours ? L.notConnected.label.yours : L.notConnected.label.theirs, value: input.amountDisplay },
         // Opened and never started, it goes back fourteen days after it was opened (both contracts): the next moment.
         next:
           input.connectBy === null
             ? null
             : yours
-              ? L.notConnected.connectBy(input.connectBy, funderName)
+              ? input.sourceConnected
+                ? L.notConnected.startBy(input.connectBy, funderName)
+                : L.notConnected.connectBy(input.connectBy, funderName)
               : voice === "funder"
                 ? L.notConnected.connectByTheirs(input.connectBy)
                 : null,
