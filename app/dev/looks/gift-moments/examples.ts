@@ -200,5 +200,9 @@ function milestone(shape: Exclude<Shape, "days">, moment: ExampleMoment, reader:
     marathon: null,
     wca: null,
     review: moment === "building" ? { status: "building" } : moment === "held" ? { status: "pending" } : moment === "reviewRefused" ? { status: "refused" } : moment === "neverReviewed" ? { status: "unread" } : null,
+    // The lab's university gift is the first at its university: its path has the two stops that happen once.
+    ...(shape === "university"
+      ? { university: { provider: moment === "building" ? ("none" as const) : ("unpinned" as const), results: false, waitedOnSetUp: true, readByAPerson: moment === "held" || moment === "reviewRefused" || moment === "neverReviewed" } }
+      : {}),
   };
 }

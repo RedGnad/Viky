@@ -51,6 +51,14 @@ export type LiveInput = Readonly<{
   builtByInWords?: string | null;
   /** The last day of the late window, in the reader's clock: fourteen days after the gift's last day. */
   lateUntilInWords?: string | null;
+  /**
+   * A university gift whose path still has its check (src/university-path.ts): the first proof of its university is
+   * read by a person, so showing it is not yet "and it is yours".
+   */
+  firstAtItsUniversity?: boolean;
+  /** The gift's last day, short ("30 Nov"), and the day its money goes back if nothing is proved. */
+  lastDayInWords?: string | null;
+  backOnInWords?: string | null;
   /** Which of the three drawings the gift has, which says what its promise is: day by day, at a target, with a proof. */
   shape?: "days" | "climb" | "stamp";
   /** What the last day Viky judged did, when a record of it exists. Nothing when the gift predates the record. */
@@ -168,7 +176,7 @@ export function natureOf(voice: Voice | undefined, nature: ConditionNature): str
 }
 
 /** Where a proof stands, to each of the three readers. A reader who is neither of the two reads the third person. */
-function proofHeadline(proof: NonNullable<LiveInput["proof"]>, voice: Voice, recipientName: string | null, builtBy: string | null): string {
+function proofHeadline(proof: NonNullable<LiveInput["proof"]>, voice: Voice, recipientName: string | null): string {
   const yours = voice === "recipient";
   switch (proof) {
     case "pending":
@@ -176,10 +184,8 @@ function proofHeadline(proof: NonNullable<LiveInput["proof"]>, voice: Voice, rec
     case "refused":
       return L.awaitingProof.refused;
     case "building":
-      // Said by what the person will be able to do and when; once the day named has passed, the sentence stays and
-      // the day goes (the founder, 10 Oct 2026).
-      if (!builtBy) return yours ? L.awaitingProof.buildingLateYours : L.awaitingProof.buildingLateTheirs;
-      return yours ? L.awaitingProof.buildingYours(builtBy) : L.awaitingProof.buildingTheirs(builtBy);
+      // Whose turn it is (the founder's mockup of 11 Oct 2026): the path over it carries the day.
+      return yours ? L.awaitingProof.buildingYours : L.awaitingProof.buildingTheirs;
     case "late":
       return L.awaitingProof.late;
     case "ended":
@@ -303,20 +309,38 @@ export function liveOf(input: LiveInput): Live {
         // there is a proof, or once the last day has passed, the headline says where it stands instead. A gift on a
         // year's results says the wait first, until the person says the results are out (10 Oct 2026).
         headline: input.proof
-          ? proofHeadline(input.proof, voice, recipientName, input.builtByInWords ?? null)
+          ? proofHeadline(input.proof, voice, recipientName)
           : input.waitsForResults
             ? yours
               ? L.awaitingProof.resultsYours
               : L.awaitingProof.resultsTheirs
             : input.shown
           ? yours
-            ? L.awaitingProof.shownYours(source)
+            ? input.firstAtItsUniversity
+              ? L.awaitingProof.firstShownYours(source)
+              : L.awaitingProof.shownYours(source)
             : L.awaitingProof.shownTheirs(recipientName)
           : yours
             ? L.awaitingProof.yours
             : L.awaitingProof.theirs(recipientName),
         figure: { label: yours ? L.awaitingProof.label.yours : L.awaitingProof.label.theirs, value: input.amountDisplay },
-        next: input.proof ? proofNext(input.proof, voice, funderName, input.lateUntilInWords ?? null) : input.waitsForResults && yours ? L.awaitingProof.resultsNextYours : null,
+        next: input.proof
+          ? input.proof === "building"
+            ? yours
+              ? L.awaitingProof.buildingNextYours(input.lastDayInWords ?? null)
+              : voice === "funder"
+                ? L.awaitingProof.buildingNextTheirs(input.backOnInWords ?? null)
+                : null
+            : input.proof === "pending" && input.firstAtItsUniversity
+              ? yours
+                ? L.awaitingProof.readByAPersonYours
+                : L.awaitingProof.readByAPersonTheirs
+              : proofNext(input.proof, voice, funderName, input.lateUntilInWords ?? null)
+          : input.waitsForResults && yours
+            ? L.awaitingProof.resultsNextYours
+            : input.shown && yours && input.firstAtItsUniversity && input.lastDayInWords
+              ? L.awaitingProof.anyDayUntil(input.lastDayInWords)
+              : null,
         back,
       };
 
@@ -361,7 +385,7 @@ export function liveOf(input: LiveInput): Live {
     case "over":
       return {
         // A proof shown and never reviewed is not the person's lateness: the headline says whose it was.
-        headline: input.proof === "unread" ? proofHeadline("unread", voice, recipientName, null) : voice === "funder" ? L.over.theirs(recipientName) : L.over.yours,
+        headline: input.proof === "unread" ? proofHeadline("unread", voice, recipientName) : voice === "funder" ? L.over.theirs(recipientName) : L.over.yours,
         // Everything goes back when nothing was earned: the whole amount, whether or not it has been sent yet.
         figure: { label: voice === "funder" ? L.over.label.theirs : L.over.label.yours(funderName), value: input.amountDisplay },
         next:

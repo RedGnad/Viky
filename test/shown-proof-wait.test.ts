@@ -48,7 +48,7 @@ afterEach(() => {
 });
 
 const NOT_YET: Answer = { status: 409, body: { error: "Reclaim has not returned a proof yet", code: "NO_PROOF_YET" } };
-const HELD: Answer = { status: 200, body: { kind: "held", giftId: "1000006", message: "First proof from this university: checked within an hour." } };
+const HELD: Answer = { status: 200, body: { kind: "held", giftId: "1000006", message: "First proof from this university: checked within a day." } };
 /** Lets the awaits between two timers run. */
 const settle = async () => {
   for (let turn = 0; turn < 30; turn += 1) await Promise.resolve();

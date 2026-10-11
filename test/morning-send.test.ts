@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test, { after, before, beforeEach } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
-import { tellAboutDays, tellAboutMilestone, type GiftFacts, type PushRefusal, type PushSent, type TellingDeps } from "../src/morning-send";
+import { tellAboutDays, tellAboutMilestone, tellAboutSetUp, type GiftFacts, type PushRefusal, type PushSent, type TellingDeps } from "../src/morning-send";
 import type { SqlExecutor } from "../src/proof-session-store";
 import { claimTelling, configurePushStore, ensurePushSchema, forgetEndpoint, isSubscribed, rememberSubscription, subscriptionsForGift } from "../src/push-store";
 
@@ -166,6 +166,14 @@ test("a milestone reached and a milestone expired are told once each, with the w
   sent.length = 0;
   assert.equal(await tellAboutMilestone("12", "expired", deps(sent)), 2);
   assert.deepEqual(sent.map((entry) => entry.message).sort(), ["The time is up. $25.00 came back to you.", "The time is up. $25.00 went back to Mom."].sort());
+});
+
+test("a university set up is told once to the two people, each in their own words, whatever the command is run again", async () => {
+  await bothSides("14");
+  const sent: Sent[] = [];
+  assert.equal(await tellAboutSetUp("14", deps(sent)), 2);
+  assert.equal(await tellAboutSetUp("14", deps(sent)), 0);
+  assert.deepEqual(sent.map((entry) => entry.message).sort(), ["Léa's university is ready. They can show their page now.", "Your university is ready. Open your gift to show your page."].sort());
 });
 
 test("a gift this deployment cannot read tells nobody, rather than telling them something untrue", async () => {

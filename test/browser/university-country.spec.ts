@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 /**
  * "Which university?" (D313, the founder, 29 and 30 Sep 2026): one line "At university" whose questions ask what they
@@ -8,14 +8,15 @@ import { expect, test, type Page } from "@playwright/test";
  * handler. The list is answered here, so the screen is measured and not the table.
  *
  * One list since 10 Oct 2026 (the founder's mockup): the field says how many it searches, a university whose students
- * show their page today comes first with a mark on its line, the two days are said under the university chosen, and a
- * search that found nothing, alone, leads to the page a university is asked from.
+ * show their page today comes first with a mark on its line, and a search that found nothing, alone, leads to the page
+ * a university is asked from. Since 11 Oct 2026 every other line of an enrolment gift says "Ready in 2 days", a gift on
+ * results says no time on any line, and under the university chosen stands the gift's path, stop by stop.
  */
 const sheet = (page: Page) => page.locator("dialog.sheet[open]");
 
 const SENEGAL = [
   // Read for enrolment today, and for nothing else: its results page has no provider yet.
-  { pair: "ucad-sn", title: "Université Cheikh Anta Diop", issuer: "Senegal", country: "SN", ready: ["enrolment"], scale: null },
+  { pair: "ucad-sn", title: "Université Cheikh Anta Diop", issuer: "Senegal", country: "SN", ready: ["enrolment"], path: { enrolment: "seconds" }, scale: null },
   { pair: "ugb-sn", title: "Université Gaston Berger", issuer: "Senegal", country: "SN", ready: [], scale: null },
 ];
 const LAGOS = { pair: "unilag-ng", title: "University of Lagos", issuer: "Nigeria", country: "NG", ready: [], scale: null };
@@ -24,6 +25,17 @@ const list = (page: Page) => sheet(page).getByRole("group", { name: "Universitie
 const lines = (page: Page) => list(page).locator("label");
 /** The search field, whatever number it says it searches. */
 const SEARCH = /^Search (\d[\d,]* )?universit(y|ies)$/;
+/** The path under the university chosen: each stop's label, with what is written under it. */
+async function pathUnder(chosen: Locator): Promise<string[]> {
+  const stops = chosen.locator("ol.university-path li.university-stop");
+  const read: string[] = [];
+  for (let index = 0; index < (await stops.count()); index += 1) {
+    const label = ((await stops.nth(index).locator(".university-stop-label").textContent()) ?? "").trim();
+    const time = ((await stops.nth(index).locator(".university-stop-time").textContent()) ?? "").trim();
+    read.push(time ? `${label} (${time})` : label);
+  }
+  return read;
+}
 
 async function answerTheList(page: Page, list: readonly object[] = [...SENEGAL, LAGOS]) {
   await page.route(/\/api\/portals\?all=1$/, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ results: list }) }));
@@ -56,8 +68,9 @@ test("one list opens on every country, the field says how many it searches, and 
   // The count is in the field, and nothing counts or sorts the universities into ready and waiting.
   await expect(sheet(page).getByLabel("Search 3 universities")).toBeVisible();
   await expect(sheet(page).getByText(/added on request|more,|Yours isn't here|Add your university|Ask for it/)).toHaveCount(0);
-  // One list: the one whose students show their page today first, with its mark, then the others by name, with none.
-  await expect(lines(page)).toHaveText(["Université Cheikh Anta DiopSenegalReady today", "Université Gaston BergerSenegal", "University of LagosNigeria"]);
+  // One list: the one whose students show their page today first, with its mark, then the others by name, each
+  // saying when: no line of an enrolment gift reads as closed.
+  await expect(lines(page)).toHaveText(["Université Cheikh Anta DiopSenegalReady today", "Université Gaston BergerSenegalReady in 2 days", "University of LagosNigeriaReady in 2 days"]);
   await expect(list(page).locator("legend")).toHaveClass(/sr-only/);
   // The mark stands at the end of its line, beside the name and not under it.
   const name = (await lines(page).first().getByText("Université Cheikh Anta Diop").boundingBox())!;
@@ -68,7 +81,7 @@ test("one list opens on every country, the field says how many it searches, and 
   await search.fill("cheikh");
   await expect(lines(page)).toHaveText(["Université Cheikh Anta DiopSenegalReady today"]);
   await search.fill("lagos");
-  await expect(lines(page)).toHaveText(["University of LagosNigeria"]);
+  await expect(lines(page)).toHaveText(["University of LagosNigeriaReady in 2 days"]);
   // A search that finds nothing says so, and there alone leads to the page a university is asked from.
   await search.fill("sorbonne");
   await expect(sheet(page).getByText("No university by that name in the list yet.")).toBeVisible();
@@ -76,27 +89,34 @@ test("one list opens on every country, the field says how many it searches, and 
   await expect(list(page)).toHaveCount(0);
   await search.fill("lagos");
   await expect(sheet(page).getByRole("link", { name: "Ask for it" })).toHaveCount(0);
-  // Choosing folds the list into the one chosen, with the one line that says the two days, and Change opens it again.
+  // Choosing folds the list into the one chosen, with the gift's path under it, and Change opens it again.
   await list(page).getByText("University of Lagos").click();
   const chosen = sheet(page).locator("[data-university-chosen]");
   await expect(chosen.getByText("University of Lagos")).toBeVisible();
   await expect(chosen.getByText("Nigeria")).toBeVisible();
-  await expect(chosen.locator("[data-university-when]")).toHaveText("They can show their page two days after you pay, at the latest. The money waits in their name meanwhile.");
+  // A university nobody has given at yet: the four stops, the two small ones with their time, and what a first gift adds.
+  await expect.poll(() => pathUnder(chosen)).toEqual(["Set up (once, 2 days)", "Shown", "Checked (once, 1 day)", "Theirs"]);
+  await expect(chosen.locator("ol.university-path .university-path-seat")).toHaveCount(0);
+  await expect(chosen.locator("[data-university-when]")).toHaveText("First gift at this university: the next ones skip the two small stops. The money waits in their name meanwhile.");
   await expect(sheet(page).getByLabel(SEARCH)).toHaveCount(0);
   // What they will show changes, and the university stays.
   await modes.getByText("The year passed", { exact: true }).click();
   await expect(modes.getByRole("radio", { name: "The year passed" })).toBeChecked();
   await expect(chosen.getByText("University of Lagos")).toBeVisible();
+  // A gift on results starts at Results, and draws no setting up.
+  await expect.poll(() => pathUnder(chosen)).toEqual(["Results (end of year)", "Shown", "Checked (once, 1 day)", "Theirs"]);
+  await expect(chosen.locator("[data-university-when]")).toHaveText("The money waits in their name meanwhile.");
   await chosen.getByRole("button", { name: /Change/ }).click();
   await expect(sheet(page).getByRole("button", { name: /All countries/ })).toBeVisible();
   // Ready today is said of what the gift asks: for a year passed, the university read for enrolment carries no mark,
-  // and stands where its own name puts it.
+  // and stands where its own name puts it. No line of a gift on results says a time: it waits for the year's results.
   await expect(lines(page)).toHaveText(["Université Cheikh Anta DiopSenegal", "Université Gaston BergerSenegal", "University of LagosNigeria"]);
   await modes.getByText("Enrolled", { exact: true }).click();
   await expect(lines(page).first()).toHaveText("Université Cheikh Anta DiopSenegalReady today");
-  // And once chosen, one whose students show their page today says that, and nothing of two days.
+  // And once chosen, one whose students show their page today has the road alone, with nothing to add under it.
   await list(page).getByText("Université Cheikh Anta Diop").click();
-  await expect(chosen.locator("[data-university-when]")).toHaveText("Its students show their page today.");
+  await expect.poll(() => pathUnder(chosen)).toEqual(["Shown", "Theirs (in seconds)"]);
+  await expect(chosen.locator("[data-university-when]")).toHaveCount(0);
 });
 
 test("a country chosen in the chip's sheet narrows the list, closes that sheet only, and every country comes back first", async ({ page }) => {

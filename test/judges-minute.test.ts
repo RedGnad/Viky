@@ -83,10 +83,16 @@ test("the minute says what Viky is, for whom, who used it, where it runs, why Mo
 
 test("the universities are lines a judge reads in a minute, and Rome's is written once its row holds the right hash (the UI pass of 8 Oct 2026)", () => {
   const minute = read("app/judges/JudgesMinute.tsx");
-  // The day's fact first (the founder, 9 Oct 2026), the first pass under it, each with the transaction that paid.
+  // Two paths (the founder's mockup of 11 Oct 2026): the first gift at a university over the pass read by hand, then
+  // every gift after over the pass paid on the fixed rule, each with the transaction that paid.
+  assert.ok(minute.includes('<span className="block">A university is set up once, by its first gift.</span>'));
+  assert.ok(minute.includes('<span className="block">Its first proof is read by hand. Viky then fixes the rule that reads its page, and every later proof is paid on sign-in.</span>'));
+  assert.match(minute, /<p className=\{META\}>The first gift<\/p>\s+<UniversityPath provider="none" results=\{false\} yours=\{false\} label="[^"]+" \/>/);
+  assert.match(minute, /<p className=\{META\}>Every gift after<\/p>\s+<UniversityPath provider="seconds" results=\{false\} yours=\{false\} label="[^"]+" \/>/);
   assert.match(minute, /Toulouse, \{TOULOUSE_PASSES\.onTheFixedRule\.day\}: a student showed their enrolment, and\{" "\}\s+<a className="underline" href=\{`https:\/\/monadvision\.com\/tx\/\$\{TOULOUSE_PASSES\.onTheFixedRule\.paidTx\}`\}>\s+the gift paid\s+<\/a>\{" "\}\s+\{TOULOUSE_PASSES\.onTheFixedRule\.secondsFromSignIn\} seconds after they signed in to their university&apos;s portal, with no review\./);
-  assert.match(minute, /Toulouse, \{TOULOUSE_PASSES\.first\.day\}, the first pass: a real student showed their enrolment, and\{" "\}/);
-  assert.ok(minute.indexOf('data-toulouse="on-the-fixed-rule"') < minute.indexOf('data-toulouse="first"'), "the first pass stays under it");
+  assert.match(minute, /Toulouse, \{TOULOUSE_PASSES\.first\.day\}: a real student showed their enrolment, and\{" "\}\s+<a className="underline" href=\{`https:\/\/monadvision\.com\/tx\/\$\{TOULOUSE_PASSES\.first\.paidTx\}`\}>\s+the gift paid\s+<\/a>\{" "\}\s+once the proof had been read by hand\./);
+  assert.ok(minute.indexOf('data-toulouse="first"') < minute.indexOf('data-toulouse="on-the-fixed-rule"'), "the first time, then what stays");
+  assert.equal(TOULOUSE_PASSES.first.day, "7 Oct 2026");
   // Counted from the student's sign-in to their portal, not from the verification opening, which holds the time
   // they type (the founder, 10 Oct 2026). Twenty seconds is his measure on his recording of the pass, from the
   // press that sent the sign-in to the payment. It stands between what the two logged moments allow: the portal's
@@ -113,9 +119,9 @@ test("the universities are lines a judge reads in a minute, and Rome's is writte
   assert.ok(readme.indexOf("Toulouse, 9 Oct 2026") < readme.indexOf("The first pass, two days before"), "and the first pass stays under it");
   assert.match(readme, /Gift 1000008 on the second `MilestoneGift`, 5\.02 AUSD for staying enrolled/);
   assert.ok(minute.includes("more: each set up within two days of a first gift.</span>"));
-  // Both cases (the founder, 9 Oct 2026): a rule set ahead pays the proof that fits it at once, and review is for the rest.
-  assert.ok(minute.includes('<span className="block">A first proof that fits a rule set ahead for its university is paid at once.</span>'));
-  assert.ok(minute.includes('<span className="block">Any other first proof is reviewed by hand, within the hour.</span>'));
+  // The two cases of a first proof are no longer lines here: the paths say the common one, and the rule fixed ahead
+  // is said in full under "Providers read through a witness", which the next test holds.
+  assert.ok(!minute.includes("A first proof that fits a rule set ahead") && !minute.includes("Any other first proof is reviewed by hand"));
   assert.ok(!minute.includes("Every university&apos;s first proof is reviewed by hand"));
   // How many more is counted as the page is served, by the thousand, never typed in.
   assert.ok(minute.includes("{countInWords(moreUniversities)} more: each set up within two days of a first gift."));
@@ -128,8 +134,8 @@ test("the universities are lines a judge reads in a minute, and Rome's is writte
   // holds the hash Reclaim's own library derives from the provider's published configuration, which it did not on
   // 8 Oct 2026. Its name comes from the directory's entry, never typed into the page.
   assert.doesNotMatch(minute, /Rome/);
-  assert.match(minute, /\{readyOnReclaim\.map\(\(name\) => \(\s+<span className="block" key=\{name\} data-ready-on-reclaim="">\s+\{name\}: ready today, on a check approved by Reclaim\.\s+<\/span>\s+\)\)\}/);
-  assert.ok(minute.indexOf('data-toulouse="first"') < minute.indexOf("{readyOnReclaim.map("));
+  assert.match(minute, /\{readyOnReclaim\.map\(\(name\) => \(\s+<span key=\{name\} data-ready-on-reclaim="">\s+\{name\}: ready today, on a check approved by Reclaim\.\{" "\}\s+<\/span>\s+\)\)\}/);
+  assert.ok(minute.indexOf('data-toulouse="on-the-fixed-rule"') < minute.indexOf("{readyOnReclaim.map("));
   assert.ok(minute.indexOf("{readyOnReclaim.map(") < minute.indexOf("more: each set up within two days of a first gift."));
   assert.ok(page.includes("const readyOnReclaim = await readyOnReclaimsCheck(loadPortal);"));
   assert.ok(page.includes("readyOnReclaim={readyOnReclaim.map((one) => one.said)}"));

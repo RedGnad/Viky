@@ -131,6 +131,12 @@ export async function loadMilestoneGift(giftId: string): Promise<MilestoneRecord
   return rows[0] ? toRecord(rows[0]) : null;
 }
 
+/** The gifts made on one university, with the condition each reads: who a university just set up was awaited by. */
+export async function milestoneGiftsOn(portalId: string): Promise<readonly Readonly<{ giftId: string; conditionId: string }>[]> {
+  const rows = await sql()`SELECT gift_id, condition_id FROM viky_milestone_gifts WHERE portal = ${portalId} ORDER BY length(gift_id), gift_id`;
+  return rows.map((row) => ({ giftId: String(row.gift_id), conditionId: String(row.condition_id) }));
+}
+
 export async function loadMilestoneGifts(giftIds: readonly string[]): Promise<Map<string, MilestoneRecord>> {
   if (giftIds.length === 0) return new Map();
   const rows = await sql()`SELECT * FROM viky_milestone_gifts WHERE gift_id = ANY(${giftIds as string[]})`;

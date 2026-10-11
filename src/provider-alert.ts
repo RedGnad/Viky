@@ -57,9 +57,9 @@ export async function sendProviderAlert(
 export function reviewAlert(review: Pick<PortalReview, "sessionId" | "portalId" | "sense" | "giftId">, university: string | null): { subject: string; text: string } {
   const where = university ? `${university} (${review.portalId})` : review.portalId;
   return {
-    subject: `First proof to review within the hour: ${where}, ${review.sense}`,
+    subject: `First proof to review within a day: ${where}, ${review.sense}`,
     text: [
-      `A first proof from ${where} is held for review, for the ${review.sense} of gift ${review.giftId}. The person reads that it is checked within an hour.`,
+      `A first proof from ${where} is held for review, for the ${review.sense} of gift ${review.giftId}. The person reads that it is checked within a day.`,
       "",
       "See what it read: pnpm portal:pin",
       `Then pin it, or refuse it: pnpm portal:pin ${review.sessionId} ...`,
@@ -121,7 +121,7 @@ export function wholeDays(seconds: number): string {
 
 /**
  * The reminder of every first proof still held, sent each morning from the day after it was held (the audit of
- * 8 Oct 2026): the person read that it is checked within an hour, one email left when it was held, and nothing after.
+ * 8 Oct 2026): the person read that it is checked within a day, one email left when it was held, and nothing after.
  * Each line says how long the contract can still pay the proof, because past that moment no review can: the pass then
  * closes the review as never made and sends the gift back (src/milestone-pass.ts).
  */

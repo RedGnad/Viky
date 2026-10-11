@@ -5,9 +5,10 @@ import { listAllUniversities } from "@/src/client/certificate-gift";
 import type { GiftDraft } from "@/src/gift-draft";
 import { countryInWords } from "@/src/rail-country";
 import { UNIVERSITY_CHOICE as W } from "@/src/sentences";
-import { indexUniversities, readyFor, searchedCount, senseOfCondition, shownUniversities, type IndexedUniversity, type ListedUniversity } from "@/src/university-choice";
+import { indexUniversities, pathFor, readyFor, searchedCount, senseOfCondition, shownUniversities, type IndexedUniversity, type ListedUniversity } from "@/src/university-choice";
 import { CHOICE, HELP, META, SMALL_BUTTON } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
+import { UniversityPath } from "../UniversityPath";
 import { CountryPicker } from "../CountryPicker";
 import { Field } from "../Field";
 
@@ -41,6 +42,16 @@ function readWorld(): Promise<readonly IndexedUniversity[]> {
       throw error;
     });
   return world;
+}
+
+/**
+ * The one line under the path of a university chosen: what a first gift adds, where it adds something, and that the
+ * money waits in the recipient's name. Nothing under a university that is ready, whose path is the road alone.
+ */
+function underThePath(one: ListedUniversity, sense: ReturnType<typeof senseOfCondition>): string | null {
+  const provider = pathFor(one, sense);
+  if (sense === "results") return W.waitsMeanwhile;
+  return provider === "none" ? W.firstGift : provider === "unpinned" ? W.firstProof : null;
 }
 
 /** How many lines are drawn at first, and added each time the end of the list comes near. */
@@ -146,9 +157,15 @@ export function UniversityChooser({
           </button>
         </div>
         {one ? (
-          <p className={HELP} data-university-when="">
-            {readyFor(one, sense) ? W.showToday : W.setUpInTwoDays}
-          </p>
+          <>
+            {/* The gift's path, with no character: nothing has started (the founder's mockup of 11 Oct 2026). */}
+            <UniversityPath provider={pathFor(one, sense)} results={sense === "results"} yours={false} label={W.path} />
+            {underThePath(one, sense) ? (
+              <p className={HELP} data-university-when="">
+                {underThePath(one, sense)}
+              </p>
+            ) : null}
+          </>
         ) : null}
       </div>
     );
@@ -165,7 +182,10 @@ export function UniversityChooser({
     value: one.pair,
     label: one.title,
     tag: country ? undefined : <span className={META}>{countryInWords(one.country) ?? one.issuer}</span>,
-    mark: readyFor(one, sense) ? <span className={READY_MARK}>{W.ready}</span> : undefined,
+    // A gift on results says no time on any line. A gift on enrolment says one wherever it is true: "Ready today" in
+    // the sun, "Ready in 2 days" where nothing is set up yet. A university set up whose first proof nobody has read
+    // waits on no setting up and is not paid on sign-in either: its line says neither, and its path says the check.
+    mark: sense === "results" ? undefined : readyFor(one, sense) ? <span className={READY_MARK}>{W.ready}</span> : pathFor(one, sense) === "none" ? <span className={META}>{W.readyInTwoDays}</span> : undefined,
   });
 
   return (

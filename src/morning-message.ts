@@ -25,7 +25,9 @@ export type MorningNews =
    * A first proof's review, closed without reaching the gift: refused, read and not there yet, or never made before
    * the contract stopped taking the proof (`unread`, the audit of 8 Oct 2026), which sends the whole gift back.
    */
-  | Readonly<{ kind: "reviewed"; verdict: "refused" | "notYet" | "unread"; amount: string }>;
+  | Readonly<{ kind: "reviewed"; verdict: "refused" | "notYet" | "unread"; amount: string }>
+  /** The university a gift was waiting on is set up (the founder, 11 Oct 2026): the student can show their page. */
+  | Readonly<{ kind: "setUp"; amount: string }>;
 
 export type MorningWords = Readonly<{ yesterday?: string; today?: string }>;
 
@@ -41,6 +43,10 @@ export function morningSentence(side: MorningSide, news: MorningNews, names: Gif
     if (side === "recipient") return news.verdict === "refused" ? MORNING.recipient.reviewRefused : MORNING.recipient.reviewNotYet;
     if (news.verdict === "refused") return them ? MORNING.funder.reviewRefusedNamed(them) : MORNING.funder.reviewRefused;
     return them ? MORNING.funder.reviewNotYetNamed(them) : MORNING.funder.reviewNotYet;
+  }
+  if (news.kind === "setUp") {
+    if (side === "recipient") return MORNING.recipient.setUp;
+    return them ? MORNING.funder.setUpNamed(them) : MORNING.funder.setUp;
   }
   if (side === "recipient") {
     if (news.kind === "reached") return MORNING.recipient.reached(news.amount);

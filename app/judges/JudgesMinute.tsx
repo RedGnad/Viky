@@ -7,7 +7,8 @@ import { TOULOUSE_PASSES } from "@/src/judges-first-use";
 import { founderAccounts, usageOf } from "@/src/pilot-accounts";
 import { countInWords } from "@/src/university-choice";
 import { CopyLine } from "../kit/CopyLine";
-import { TITLE } from "../components/ui";
+import { UniversityPath } from "../kit/UniversityPath";
+import { META, TITLE } from "../components/ui";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
@@ -27,10 +28,11 @@ function Address({ address }: Readonly<{ address: string }>) {
  * for, who has used it in one line, where it runs, why Monad in three lines, and one command. Everything here is said
  * again, at length and with its source, in a section below; this block adds no claim of its own.
  *
- * The universities are lines: the one a student has shown from, its last pass first and its first pass under it, each
- * with the transaction that paid (src/judges-first-use.ts; the README gives the rest), how many more are listed,
- * counted from the list as the page is served, and what happens to a first proof. What a first proof meets exactly,
- * held and read or paid on a rule fixed ahead, is said under "Providers read through a witness".
+ * The universities are two paths (the founder's mockup of 11 Oct 2026): the first gift at a university, with the two
+ * stops that happen once, and every gift after it. Each stands over the real pass that ran it, with the transaction
+ * that paid (src/judges-first-use.ts; the README gives the rest); then what is ready on a check of Reclaim's alone and
+ * how many more are listed, counted from the list as the page is served. What a first proof meets exactly, held and
+ * read or paid on a rule fixed ahead, is said under "Providers read through a witness".
  *
  * The figures of use are counted from the index as the page is served, the same count as "Who has used Viky"; when
  * the index does not answer the line says so and gives no figure. The figures of "Why Monad" are the measured ones
@@ -100,34 +102,49 @@ export function JudgesMinute({
           </a>
           .
         </dd>
-        {/* The universities in lines (the UI pass of 8 Oct 2026): what has run, what is ready on a check of Reclaim's
-            alone, how many more, and what happens to a first proof. */}
+        {/* The universities (the founder's mockup of 11 Oct 2026): the path of a first gift and the path of every gift
+            after it, the drawing a gift's own card carries (app/kit/UniversityPath.tsx), each over the real pass that ran
+            it; then what is ready on a check of Reclaim's alone, and how many more. */}
         <dt className={MUTED}>Universities</dt>
         <dd className={HELP} data-minute="universities">
-          {/* The day's fact (the founder, 9 Oct 2026): the pass on the rule fixed ahead, then the first one under it. */}
-          <span className="block" data-toulouse="on-the-fixed-rule">
-            Toulouse, {TOULOUSE_PASSES.onTheFixedRule.day}: a student showed their enrolment, and{" "}
-            <a className="underline" href={`https://monadvision.com/tx/${TOULOUSE_PASSES.onTheFixedRule.paidTx}`}>
-              the gift paid
-            </a>{" "}
-            {TOULOUSE_PASSES.onTheFixedRule.secondsFromSignIn} seconds after they signed in to their university&apos;s portal, with no review.
-          </span>
-          <span className="block" data-toulouse="first">
-            Toulouse, {TOULOUSE_PASSES.first.day}, the first pass: a real student showed their enrolment, and{" "}
-            <a className="underline" href={`https://monadvision.com/tx/${TOULOUSE_PASSES.first.paidTx}`}>
-              the gift paid
-            </a>{" "}
-            once the proof had been read by hand.
-          </span>
-          {/* A university ready on Reclaim's own check, from its row as it stands (src/university-ready.ts). */}
-          {readyOnReclaim.map((name) => (
-            <span className="block" key={name} data-ready-on-reclaim="">
-              {name}: ready today, on a check approved by Reclaim.
-            </span>
-          ))}
-          {moreUniversities !== null && moreUniversities > 0 ? <span className="block">{countInWords(moreUniversities)} more: each set up within two days of a first gift.</span> : null}
-          <span className="block">A first proof that fits a rule set ahead for its university is paid at once.</span>
-          <span className="block">Any other first proof is reviewed by hand, within the hour.</span>
+          <span className="block">A university is set up once, by its first gift.</span>
+          <span className="block">Its first proof is read by hand. Viky then fixes the rule that reads its page, and every later proof is paid on sign-in.</span>
+          <div className="judges-paths">
+            <div data-toulouse="first">
+              <p className={META}>The first gift</p>
+              <UniversityPath provider="none" results={false} yours={false} label="The first gift at a university, stop by stop" />
+              <p>
+                Toulouse, {TOULOUSE_PASSES.first.day}: a real student showed their enrolment, and{" "}
+                <a className="underline" href={`https://monadvision.com/tx/${TOULOUSE_PASSES.first.paidTx}`}>
+                  the gift paid
+                </a>{" "}
+                once the proof had been read by hand.
+              </p>
+            </div>
+            <div data-toulouse="on-the-fixed-rule">
+              <p className={META}>Every gift after</p>
+              <UniversityPath provider="seconds" results={false} yours={false} label="Every gift after at that university, stop by stop" />
+              <p>
+                Toulouse, {TOULOUSE_PASSES.onTheFixedRule.day}: a student showed their enrolment, and{" "}
+                <a className="underline" href={`https://monadvision.com/tx/${TOULOUSE_PASSES.onTheFixedRule.paidTx}`}>
+                  the gift paid
+                </a>{" "}
+                {TOULOUSE_PASSES.onTheFixedRule.secondsFromSignIn} seconds after they signed in to their university&apos;s portal, with no review.
+              </p>
+            </div>
+          </div>
+          {/* Nothing where neither could be read: no empty line is left under the paths. */}
+          {readyOnReclaim.length > 0 || (moreUniversities !== null && moreUniversities > 0) ? (
+            <p>
+              {/* A university ready on Reclaim's own check, from its row as it stands (src/university-ready.ts). */}
+              {readyOnReclaim.map((name) => (
+                <span key={name} data-ready-on-reclaim="">
+                  {name}: ready today, on a check approved by Reclaim.{" "}
+                </span>
+              ))}
+              {moreUniversities !== null && moreUniversities > 0 ? <span>{countInWords(moreUniversities)} more: each set up within two days of a first gift.</span> : null}
+            </p>
+          ) : null}
         </dd>
         <dt className={MUTED}>Where it runs</dt>
         <dd className={HELP} data-minute="addresses">

@@ -148,7 +148,7 @@ export function useTold(giftId: string, yours: boolean) {
 }
 
 /** What a gift's messages are about: each morning for a habit, or one moment for a gift reached, had or checked. */
-export type ToldAbout = Readonly<{ kind: "morning" } | { kind: "reach"; target: string } | { kind: "hadOrNot" } | { kind: "review" }>;
+export type ToldAbout = Readonly<{ kind: "morning" } | { kind: "reach"; target: string } | { kind: "hadOrNot" } | { kind: "review" } | { kind: "setUp" }>;
 
 /**
  * "Notifications", in the sheet its round button opens (the founder's rule 6 of 1 Oct 2026, you-decide.html): where being
@@ -166,8 +166,8 @@ export function MessagesSheet({
   const { step, busy, refusal, start, stop } = told;
   const side = yours ? "yours" : "theirs";
   const morning = about.kind === "morning";
-  const ask = about.kind === "review" ? L.reviewAlert : about.kind === "hadOrNot" ? L.alertHadOrNot[side] : about.kind === "reach" ? L.alert[side](about.target) : W.stopped;
-  const on = about.kind === "review" ? L.reviewAlertOn : about.kind === "hadOrNot" ? L.alertHadOrNotOn[side] : about.kind === "reach" ? L.alertOn[side](about.target) : W.asked;
+  const ask = about.kind === "setUp" ? L.setUpAlert : about.kind === "review" ? L.reviewAlert : about.kind === "hadOrNot" ? L.alertHadOrNot[side] : about.kind === "reach" ? L.alert[side](about.target) : W.stopped;
+  const on = about.kind === "setUp" ? L.setUpAlertOn : about.kind === "review" ? L.reviewAlertOn : about.kind === "hadOrNot" ? L.alertHadOrNotOn[side] : about.kind === "reach" ? L.alertOn[side](about.target) : W.asked;
   const installFirst = morning ? W.installFirst : `${ask} ${L.alertInstall}`;
   return (
     <Sheet

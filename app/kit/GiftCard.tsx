@@ -8,11 +8,12 @@ import type { GiftSummary } from "@/src/client/gift";
 import { eyebrowOf, titleOf } from "@/src/gift-live";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { dateInWords } from "@/src/moments";
-import { END_GIFT as E, GIFT_CARD as W, MILESTONE_PAGE as M } from "@/src/sentences";
+import { END_GIFT as E, GIFT_CARD as W, MILESTONE_PAGE as M, UNIVERSITY_CHOICE } from "@/src/sentences";
 import { BODY, CARD, CARD_LABEL, CARD_TITLE, HELP } from "../components/ui";
 import { DayStrip } from "./DayStrip";
 import { Climb } from "./Climb";
 import { HadOrNot } from "./HadOrNot";
+import { UniversityPath } from "./UniversityPath";
 
 /** What a gift's card names as its condition, for a page that has to know which marks its list of cards names. */
 export function conditionNameOf(gift: GiftSummary): string | undefined {
@@ -66,7 +67,27 @@ export function GiftCard({
         milestone ? (
           // Something had or not has no trail and no flag: its character alone, as on its own page (1 Oct 2026).
           milestone.shape === "certificate" ? (
-            <HadOrNot state={milestone.reached ? "reached" : milestone.finished || milestone.cancelled ? "void" : "waiting"} asleep={!milestone.opened} />
+            // A university gift's path, as on its own page (the founder, 11 Oct 2026). A list says no day: it holds no
+            // clock to know whether the day the setting up is done by has passed.
+            milestone.university && !((milestone.finished || milestone.cancelled) && !milestone.reached) ? (
+              <UniversityPath
+                provider={milestone.university.provider}
+                results={milestone.university.results}
+                waitedOnSetUp={milestone.university.waitedOnSetUp}
+                readByAPerson={milestone.university.readByAPerson}
+                yours={gift.role === "recipient"}
+                label={UNIVERSITY_CHOICE.path}
+                standing={{
+                  opened: milestone.opened,
+                  reached: milestone.reached,
+                  over: false,
+                  wait: milestone.review?.status === "building" ? "building" : milestone.review?.status === "pending" ? "pending" : null,
+                  resultsToCome: milestone.university.results && !milestone.review && !milestone.reached,
+                }}
+              />
+            ) : (
+              <HadOrNot state={milestone.reached ? "reached" : milestone.finished || milestone.cancelled ? "void" : "waiting"} asleep={!milestone.opened} />
+            )
           ) : (
             <Climb giftId={gift.giftId} status={milestone} />
           )

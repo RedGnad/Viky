@@ -120,7 +120,7 @@ export async function POST(request: Request) {
         record: recordReading,
         milestoneRecordOf: loadMilestoneGift,
         leave: giftReadingLeave,
-        // A first proof held for review is checked within an hour (the founder, 29 Sep 2026): the operator is told at once.
+        // A first proof held for review is checked within a day (the founder, 29 Sep 2026, an hour until 11 Oct): the operator is told at once.
         holdForReview: async (review) => {
           const held = await holdForReview(review);
           if (held) await sendReviewAlert(review, (await loadPortal(review.portalId).catch(() => null))?.university ?? null);

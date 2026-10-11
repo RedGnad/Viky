@@ -72,6 +72,11 @@ export async function tellAboutReview(giftId: string, verdict: "refused" | "notY
   return await tell(giftId, { kind: "reviewed", verdict, amount: "" }, deps);
 }
 
+/** Tells everyone subscribed to a university gift that its university is set up: the student can show their page. */
+export async function tellAboutSetUp(giftId: string, deps: TellingDeps): Promise<number> {
+  return await tell(giftId, { kind: "setUp", amount: "" }, deps);
+}
+
 /** Tells everyone subscribed to a milestone gift that it was reached, or that its time ran out. */
 export async function tellAboutMilestone(giftId: string, kind: "reached" | "expired", deps: TellingDeps): Promise<number> {
   return await tell(giftId, { kind, amount: "" }, deps);

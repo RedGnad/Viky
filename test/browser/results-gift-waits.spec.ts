@@ -33,7 +33,7 @@ async function answer(page: Page, status: () => unknown) {
 }
 
 const WAIT_YOURS = "Waiting for your results.";
-const WAIT_LINE = "This gift is for the year under way. Your university publishes its results at the end of the year: show them here that day.";
+const WAIT_LINE = "This gift is for the year under way. Show them here the day your university publishes them.";
 const SHOW_HEADLINE = "Show it from your own university account, and it is yours.";
 
 test.describe("a gift on a year's results waits", () => {

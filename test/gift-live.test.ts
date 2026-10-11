@@ -116,7 +116,7 @@ test("a day counted is said in the morning message's own words, without its mone
   // A gift on a year's results, before anybody says they are out (the founder, 10 Oct 2026): the wait is the headline,
   // and the person it is for reads when to come back; the funder reads the same wait and nothing more.
   assert.equal(liveOf(input({ moment: "awaitingProof", shown: true, waitsForResults: true })).headline, "Waiting for your results.");
-  assert.equal(liveOf(input({ moment: "awaitingProof", shown: true, waitsForResults: true })).next, "This gift is for the year under way. Your university publishes its results at the end of the year: show them here that day.");
+  assert.equal(liveOf(input({ moment: "awaitingProof", shown: true, waitsForResults: true })).next, "This gift is for the year under way. Show them here the day your university publishes them.");
   assert.equal(liveOf(input({ moment: "awaitingProof", shown: true, voice: "funder", waitsForResults: true })).headline, "Waiting for their results.");
   assert.equal(liveOf(input({ moment: "awaitingProof", shown: true, voice: "funder", waitsForResults: true })).next, null);
   assert.equal(liveOf(input({ moment: "awaitingProof", shown: true, voice: "reader", waitsForResults: true })).headline, "Waiting for their results.");

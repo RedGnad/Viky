@@ -50,7 +50,8 @@ test("the gift's page never prints the contract's target for this shape, and dat
 
 test("the card draws no trail and no flag for it, and says where its proof stands", () => {
   const card = readFileSync("app/kit/GiftCard.tsx", "utf8");
-  assert.match(card, /milestone\.shape === "certificate" \? \(\s*<HadOrNot state=/);
+  // A university gift draws its path there, its character over the stop it is at (11 Oct 2026); any other, the character alone.
+  assert.match(card, /milestone\.university && !\(\(milestone\.finished \|\| milestone\.cancelled\) && !milestone\.reached\) \? \(\s*<UniversityPath[\s\S]+?\) : \(\s*<HadOrNot state=/);
   assert.match(card, /if \(status\.shape === "certificate"\) \{/);
   assert.deepEqual(GIFT_CARD.hadOrNot, {
     waiting: "Not proved yet.",
@@ -101,13 +102,14 @@ test("the title says where the proof stands, to each of the two people", () => {
   assert.equal(title({ proof: "refused", voice: "funder" }), "It was checked and did not show what the gift asks.");
   // The university's page still being built.
   // Said by what the person will be able to do and when (the founder, 10 Oct 2026).
-  assert.equal(title({ proof: "building", builtByInWords: "12 Oct" }), "Your university is being set up. You can show your page here from 12 Oct at the latest.");
-  assert.equal(title({ proof: "building", builtByInWords: "12 Oct", voice: "funder" }), "Their university is being set up. They can show their page from 12 Oct at the latest.");
+  // Whose turn it is (the founder's mockup of 11 Oct 2026): the path over the title carries the day, and the title says none.
+  assert.equal(title({ proof: "building", builtByInWords: "12 Oct" }), "Viky is setting up your university.");
+  assert.equal(title({ proof: "building", builtByInWords: "12 Oct", voice: "funder" }), "Viky is setting up their university.");
   // Once the day named has passed, the sentence stays and the day goes.
-  assert.equal(title({ proof: "building", builtByInWords: null }), "Your university is being set up. The money waits in your name.");
-  assert.equal(title({ proof: "building", builtByInWords: null, voice: "funder" }), "Their university is being set up.");
+  assert.equal(title({ proof: "building", builtByInWords: null }), "Viky is setting up your university.");
+  assert.equal(title({ proof: "building", builtByInWords: null, voice: "funder" }), "Viky is setting up their university.");
   assert.deepEqual([onALaterDay(Date.UTC(2026, 9, 13, 0, 5), Date.UTC(2026, 9, 12, 15), "UTC"), onALaterDay(Date.UTC(2026, 9, 12, 23, 55), Date.UTC(2026, 9, 12, 15), "UTC"), onALaterDay(Date.UTC(2026, 9, 12, 23, 55), Date.UTC(2026, 9, 12, 15), "Asia/Tokyo")], [true, false, false]);
-  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /builtByInWords: nowMs !== 0 && onALaterDay\(nowMs, \(status\.createdAtChain \+ 2 \* 86_400\) \* 1000, zone\) \? null : dayInWords\(\(status\.createdAtChain \+ 2 \* 86_400\) \* 1000, zone\),/);
+  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /const builtBy = nowMs !== 0 && onALaterDay\(nowMs, \(status\.createdAtChain \+ 2 \* 86_400\) \* 1000, zone\) \? null : dayInWords\(\(status\.createdAtChain \+ 2 \* 86_400\) \* 1000, zone\);/);
   // The card says it once: the block under it draws nothing while the university is being set up.
   assert.match(readFileSync("app/kit/ShowProof.tsx", "utf8"), /if \(review === "building" && state\.at !== "held"\) return null;/);
   assert.equal("building" in SHOW_PROOF, false);
@@ -126,8 +128,17 @@ test("the title says where the proof stands, to each of the two people", () => {
   assert.equal(under({ proof: "ended", lateUntilInWords: "31 Oct 2026", voice: "funder" }), "It comes back to you after 31 Oct 2026.");
   assert.equal(title({ proof: "ended", lateUntilInWords: "31 Oct 2026", voice: "reader" }), "The last day passed without it.");
   assert.equal(under({ proof: "ended", lateUntilInWords: "31 Oct 2026", voice: "reader" }), null);
-  // Nothing follows while the last day has not passed.
-  for (const proof of ["pending", "refused", "building"] as const) assert.equal(under({ proof }), null, proof);
+  // Nothing follows a proof held or refused while the last day has not passed.
+  for (const proof of ["pending", "refused"] as const) assert.equal(under({ proof }), null, proof);
+  // A university being set up says what follows, to each of its two people (the founder's mockup of 11 Oct 2026): the
+  // gift's last day to the person it is for, and to the one who paid the day the money really goes back.
+  assert.equal(under({ proof: "building", lastDayInWords: "30 Nov" }), "You are the first from it here, so this happens once. Then you show your page, any day until 30 Nov.");
+  assert.equal(under({ proof: "building" }), "You are the first from it here, so this happens once. Then you show your page.");
+  assert.equal(under({ proof: "building", voice: "funder", backOnInWords: "14 Dec" }), "First gift at this university: it is set up once. The money is in their name, and comes back to you on 14 Dec if it is not proved.");
+  assert.equal(under({ proof: "building", voice: "reader" }), null);
+  // A first proof held says who reads it.
+  assert.equal(under({ proof: "pending", firstAtItsUniversity: true }), "You are the first from your university here: a person at Viky reads this one.");
+  assert.equal(under({ proof: "pending", firstAtItsUniversity: true, voice: "funder" }), "They are the first from their university here: a person at Viky reads this one.");
   // The figure is still said once, under the title.
   assert.deepEqual(liveOf({ ...WAITING, proof: "pending" }).figure, { label: "In your name", value: "$25.00" });
   // The page hands it what the contract and the review say, and the late window is the contract's.

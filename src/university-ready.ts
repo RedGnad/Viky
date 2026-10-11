@@ -1,5 +1,6 @@
 import { DIRECTORY_PORTALS, type DirectoryPortal } from "./directory-portals";
 import { portalListed, type Portal, type PortalProvider, type PortalSense } from "./portal-store";
+import type { PathProvider } from "./university-path";
 
 /**
  * Whether a student of a university can show a proof today (the UI pass of 8 Oct 2026): the chooser lists those
@@ -54,7 +55,29 @@ export async function readyOnReclaimsCheck(load: (portalId: string) => Promise<P
   return ready;
 }
 
-/** A university as the list gives it to the chooser: what `portalListed` says of it, and the senses it is ready on. */
-export function universityListed(portal: Parameters<typeof portalListed>[0]): ReturnType<typeof portalListed> & Readonly<{ ready: readonly PortalSense[] }> {
-  return { ...portalListed(portal), ready: readySenses(portal) };
+/**
+ * What a university's provider is to the path of a gift (src/university-path.ts): none yet, one that carries no pin,
+ * one that is ready, or one a proof is paid on with nobody reading it and no agent writing its rule on the way, which
+ * is a fixed rule (`pin.fixed`, src/witness-portal.ts) or a check that is Reclaim's own.
+ */
+export function pathProviderOf(provider: PortalProvider | null | undefined): PathProvider {
+  if (!provider) return "none";
+  if (readyByTheDirectory(provider)) return "seconds";
+  if (provider.verification === "witness" && provider.pin !== null) return provider.pin.fixed ? "seconds" : "ready";
+  return "unpinned";
+}
+
+/**
+ * A university as the list gives it to the chooser: what `portalListed` says of it, the senses it is ready on, and
+ * what its provider of each sense is to a gift's path, said only where there is one (eleven thousand have none).
+ */
+export function universityListed(
+  portal: Parameters<typeof portalListed>[0],
+): ReturnType<typeof portalListed> & Readonly<{ ready: readonly PortalSense[]; path?: Readonly<Partial<Record<PortalSense, PathProvider>>> }> {
+  const path: Partial<Record<PortalSense, PathProvider>> = {};
+  for (const sense of ["enrolment", "results"] as const) {
+    const provider = pathProviderOf(portal[sense]);
+    if (provider !== "none") path[sense] = provider;
+  }
+  return { ...portalListed(portal), ready: readySenses(portal), ...(Object.keys(path).length > 0 ? { path } : {}) };
 }

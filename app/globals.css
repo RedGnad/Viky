@@ -1684,6 +1684,190 @@ dialog.sheet[open] {
 }
 
 /*
+ * The path of a university gift (app/kit/UniversityPath.tsx, the founder's mockup of 11 Oct 2026): one column per
+ * stop, the character's seat over the line, a dot per stop with the way in on its left and the way out on its right.
+ * Passed stops and the way to the one stood on are in ink; the stop stood on carries the sun; what is to come is pale.
+ * A stop that happens once for a university is small, and the way out of the first of them is dashed.
+ */
+.university-path {
+  --seat: 60px;
+  display: grid;
+  grid-template-rows: var(--seat) auto;
+  margin: 14px -6px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.university-path-flat {
+  --seat: 0px;
+  grid-template-rows: auto;
+  margin-top: 16px;
+}
+
+/* On a card of the list a sentence follows the path at once, where the gift's own page gives its drawing air. */
+:not(.gift-shape) > .university-path:not(.university-path-flat) {
+  margin-bottom: 10px;
+}
+
+/*
+ * The judges page: the path of a first gift beside the path of every gift after, one under the other on a phone. They
+ * stand on the ground and not on a card, so a stop is filled with the ground and joined by the ground's own hairline.
+ */
+.judges-paths {
+  --path-ground: var(--background);
+  --path-rule: var(--divider);
+  display: grid;
+  gap: 22px 26px;
+  margin: 14px 0 16px;
+}
+
+.judges-paths .university-path {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+/*
+ * Side by side they take the page's whole measure, under the row's name: half of it is the width a card gives four
+ * stops on a phone. Inside the row's own column a stop had 63px, and "Shown" touched "Checked".
+ */
+@media (min-width: 760px) {
+  .judges-paths {
+    grid-template-columns: 1fr 1fr;
+    margin-left: calc(-10rem - var(--space-md));
+  }
+}
+
+.university-path-seat {
+  grid-row: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.university-path-character,
+.university-path-character .had-or-not-character {
+  display: block;
+  width: 52px;
+}
+
+.university-stop {
+  grid-row: 2;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 2px;
+  text-align: center;
+}
+
+.university-path-flat .university-stop {
+  grid-row: 1;
+}
+
+.university-dot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  margin: 5px 0 8px;
+}
+
+.university-dot::after {
+  content: "";
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--waiting-edge);
+  border-radius: 50%;
+  background: var(--path-ground, var(--paper));
+}
+
+.university-stop::before,
+.university-stop::after {
+  content: "";
+  position: absolute;
+  top: 11px;
+  height: 2px;
+  background: var(--path-rule, var(--surface-rule));
+}
+
+.university-stop::before {
+  left: 0;
+  right: 50%;
+}
+
+.university-stop::after {
+  left: 50%;
+  right: 0;
+}
+
+.university-stop[data-first]::before,
+.university-stop[data-last]::after {
+  display: none;
+}
+
+.university-stop[data-state="done"] .university-dot::after {
+  border-color: var(--text);
+  background: var(--text);
+}
+
+.university-stop[data-state="done"]::before,
+.university-stop[data-state="done"]::after,
+.university-stop[data-state="now"]::before {
+  background: var(--text);
+}
+
+.university-stop[data-state="now"] .university-dot::after {
+  width: 14px;
+  height: 14px;
+  border-color: var(--text);
+  background: var(--accent);
+}
+
+.university-stop[data-once] .university-dot::after {
+  width: 8px;
+  height: 8px;
+  border-width: 1.5px;
+}
+
+.university-stop[data-once][data-state="now"] .university-dot::after {
+  width: 11px;
+  height: 11px;
+  border-width: 2px;
+}
+
+/*
+ * The dashed way out of the first small stop is drawn in two halves, one from each stop. Both count their dashes from
+ * the place they meet, a gap on one side and a dash on the other, so the dashes stay even across it whatever the
+ * column's width: counted from their own ends, the two halves met on a dash twice as long.
+ */
+.university-stop[data-lead]::after {
+  background: repeating-linear-gradient(270deg, transparent 0 4px, var(--path-dash, var(--path-rule, var(--surface-rule))) 4px 9px);
+}
+
+.university-stop[data-after-lead]::before {
+  background: repeating-linear-gradient(90deg, var(--path-dash, var(--path-rule, var(--surface-rule))) 0 5px, transparent 5px 9px);
+}
+
+.university-stop[data-lead][data-state="done"]::after,
+.university-stop[data-after-lead][data-state="done"]::before,
+.university-stop[data-after-lead][data-state="now"]::before {
+  --path-dash: var(--text);
+}
+
+.university-stop[data-state="done"] .university-stop-label,
+.university-stop[data-state="now"] .university-stop-label,
+.university-stop[data-state="now"] .university-stop-time {
+  color: var(--text);
+}
+
+.university-stop-time {
+  min-height: var(--type-help-leading);
+}
+
+/*
  * A fold that holds what a block says beyond its first sentence (app/kit/Said.tsx, rule 4): a name and the card's own
  * chevron, quiet, as tall as a thumb, with a hairline over it. On the ground the hairline is the ground's divider, on
  * the paper the paper's rule: `--divider` is re-pointed there.

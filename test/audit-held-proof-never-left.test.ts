@@ -9,7 +9,7 @@ import { GIFT_CARD } from "../src/sentences";
 
 /**
  * A university's first proof held for review and never reviewed (the audit of 8 Oct 2026, point 9). The person read
- * "checked within an hour", one email left, and the pass held the gift only from the moment the contract refused every
+ * "checked within a day", one email left, and the pass held the gift only from the moment the contract refused every
  * proof: nothing was paid and nothing came back until somebody refused by hand.
  *
  * Since then the operator is reminded each morning with the time the contract can still pay it, and once that time is

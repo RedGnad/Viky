@@ -1250,6 +1250,13 @@ export const GIFT_LIVE = {
     /** Beside a first proof held for review (the founder, 29 Sep 2026): the answer is what the person is waiting for. */
     reviewAlert: "Get a message when it is checked.",
     reviewAlertOn: "Viky will tell you when it is checked.",
+    /**
+     * Beside a university being set up (the founder's mockup of 11 Oct 2026): until then nothing told the student, who
+     * read a date and had to come back. True of `pnpm provider:add`, which tells the gift's people the moment the
+     * university is registered (src/set-up-told.ts).
+     */
+    setUpAlert: "Get a message when it is ready.",
+    setUpAlertOn: "Viky will tell you when it is ready.",
     alertInstall: "Add Viky to your Home Screen first, then open this page from there.",
   },
   /** Something granted once, waiting for the proof that it was. */
@@ -1267,7 +1274,7 @@ export const GIFT_LIVE = {
      */
     resultsYours: "Waiting for your results.",
     resultsTheirs: "Waiting for their results.",
-    resultsNextYours: "This gift is for the year under way. Your university publishes its results at the end of the year: show them here that day.",
+    resultsNextYours: "This gift is for the year under way. Show them here the day your university publishes them.",
     /**
      * Where a proof stands once there is one, or once the last day has passed (the audit of 1 Oct 2026: the title stayed
      * "Show it" and the funder read "has not shown it yet" over a proof held, refused, waited for or late).
@@ -1293,11 +1300,25 @@ export const GIFT_LIVE = {
      * 2026): the day is the gift's making plus two days, in the reader's clock. True of the code: the provider is
      * built within two days of a first gift (app/api/gift/certificate/create/route.ts).
      */
-    buildingYours: (from: string) => `Your university is being set up. You can show your page here from ${from} at the latest.`,
-    buildingTheirs: (from: string) => `Their university is being set up. They can show their page from ${from} at the latest.`,
-    /** Once the day named has passed and the page is still not read: the sentence stays and the day goes (the founder, 10 Oct 2026). */
-    buildingLateYours: "Your university is being set up. The money waits in your name.",
-    buildingLateTheirs: "Their university is being set up.",
+    buildingYours: "Viky is setting up your university.",
+    buildingTheirs: "Viky is setting up their university.",
+    /**
+     * Under it, one line (the founder's mockup of 11 Oct 2026): the path over the headline carries the order and the
+     * day, so the words say whose turn it is and what follows. The day named is the gift's last, to the person it is
+     * for; to the one who paid, the day the money really goes back, which is the end of the late window where there is
+     * one. With no day known, the sentence says none.
+     */
+    buildingNextYours: (until: string | null) => `You are the first from it here, so this happens once. Then you show your page${until ? `, any day until ${until}` : ""}.`,
+    buildingNextTheirs: (backOn: string | null) => `First gift at this university: it is set up once. The money is in their name${backOn ? `, and comes back to you on ${backOn} if it is not proved` : ""}.`,
+    /**
+     * Their turn, at a university whose first proof is still to be checked: the headline does not say "and it is
+     * yours", since a check follows, and the line under it says until when.
+     */
+    firstShownYours: (source: string) => `Show it from your own ${yourOwn(source)} account.`,
+    anyDayUntil: (until: string) => `Any day until ${until}.`,
+    /** A first proof held: who reads it. True of the code: a first proof is reviewed by the operator (src/portal-store.ts). */
+    readByAPersonYours: "You are the first from your university here: a person at Viky reads this one.",
+    readByAPersonTheirs: "They are the first from their university here: a person at Viky reads this one.",
     /**
      * Past the last day. True of the contract: what a source dates itself (a certificate granted, a test taken, a race
      * run) may be proved for fourteen days more if its date is in time, and then the gift goes back. The state is the
@@ -1761,6 +1782,8 @@ export const MORNING = {
     /** A proof nobody reviewed before the contract stopped taking it (the audit of 8 Oct 2026): sent as the gift goes back. */
     reviewUnreadTo: (amount: string, funder: string) => `Viky did not check your proof in time. ${opening(amount)} went back to ${funder}.`,
     reviewUnread: (amount: string) => `Viky did not check your proof in time. ${opening(amount)} went back.`,
+    /** The university a gift was waiting on is set up (the founder, 11 Oct 2026): the next step is the student's. */
+    setUp: "Your university is ready. Open your gift to show your page.",
   },
   funder: {
     /** "Léa did yesterday's lesson.": the second half is the register's, so no sentence here names a source. */
@@ -1779,6 +1802,8 @@ export const MORNING = {
     reviewNotYet: "The page shown was checked and it works. The result is not there yet.",
     reviewUnreadNamed: (name: string, amount: string) => `Viky did not check ${name}'s proof in time. ${opening(amount)} came back to you.`,
     reviewUnread: (amount: string) => `Viky did not check their proof in time. ${opening(amount)} came back to you.`,
+    setUpNamed: (name: string) => `${name}'s university is ready. They can show their page now.`,
+    setUp: "Their university is ready. They can show their page now.",
   },
 } as const;
 
@@ -1869,12 +1894,22 @@ export const UNIVERSITY_CHOICE = {
   /** Beside the university chosen, which folds the list away so what comes after it is in reach. */
   change: "Change",
   /**
-   * Under the university chosen, in one line about that university: the only place the two days are said to a payer.
-   * True of the code: a gift on a university Viky does not read yet is made and paid like any other, the contract
-   * holds the money in the recipient's name, and its provider is built within two days of that first gift.
+   * At the end of the line of every other university, for a gift on enrolment (the founder's mockup of 11 Oct 2026):
+   * in the country's own small type, with no pill, so no line reads as closed. True of the code: a gift on a
+   * university Viky does not read yet is made and paid like any other, and its provider is built within two days of
+   * that first gift. A gift on results says no time on any line: it waits for the year's results whatever the university.
    */
-  setUpInTwoDays: "They can show their page two days after you pay, at the latest. The money waits in their name meanwhile.",
-  showToday: "Its students show their page today.",
+  readyInTwoDays: "Ready in 2 days",
+  /** What the drawing of a gift's path is, to a reader who does not see it (app/kit/UniversityPath.tsx): the same in its three places. */
+  path: "How this gift goes, stop by stop",
+  /**
+   * Under that drawing, one line (the same mockup). The two small stops are ours and happen once: said where a first
+   * gift has both, and where the university's page is read already and only its first proof is still to be checked.
+   * The contract holds the money in the recipient's name from the payment on, which is what "waits" says.
+   */
+  firstGift: "First gift at this university: the next ones skip the two small stops. The money waits in their name meanwhile.",
+  firstProof: "First gift at this university: the next ones skip the small stop. The money waits in their name meanwhile.",
+  waitsMeanwhile: "The money waits in their name meanwhile.",
   /** Under a search that found nothing, and nowhere else: the way to the page where a university is asked for. */
   askForIt: "Ask for it",
 } as const;
@@ -1896,6 +1931,11 @@ export const SHOW_PROOF = {
   } as Readonly<Record<string, string>>,
   keptVerdict: "Viky keeps only whether it reaches what this gift is for.",
   keptNumber: "Viky keeps what it proves and nothing else.",
+  /**
+   * In the open, above the press, on a gift that is the first at its university (the founder's mockup of 11 Oct 2026):
+   * the rule that reads its page is written while the person waits, which a university read before does not need.
+   */
+  firstTime: "The first time at a university, it takes a few minutes.",
   button: "Show it",
   /**
    * On a gift that waits for a year's results (the founder, 10 Oct 2026): the wait's one press, in the secondary look,
@@ -1934,7 +1974,7 @@ export const SHOW_PROOF = {
    * A first proof from a university read through a witness with no pin yet (D312): checked on what is sure, held for
    * the operator's review, nothing relayed. True of `pnpm portal:pin`: the operator reads it and settles or refuses.
    */
-  held: "First proof from this university: checked within an hour.",
+  held: "First proof from this university: checked within a day.",
   /** The review found the page does not show what the gift is for (D312): nothing relayed, the contract untouched. */
   reviewRefused: "This university's page did not show what this gift is for, so nothing was counted. The money stays where it is.",
   refusals: {

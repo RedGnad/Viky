@@ -27,7 +27,7 @@ const SIZES = sizesFor(SHOTS);
 const shot = (page: Page, size: string, name: string) => capture(SHOTS, page, size, name);
 const WAITING = "Sign in there and stay on that page. It brings you back here.";
 const VERIFY_PAGE = "https://share.reclaimprotocol.org/verify/?template=reload";
-const HELD = "First proof from this university: checked within an hour.";
+const HELD = "First proof from this university: checked within a day.";
 /** Puts the page behind another, or back in front, as a browser tells a page of it. */
 const seen = (page: Page, state: "hidden" | "visible") =>
   page.evaluate(`Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "${state}" }); document.dispatchEvent(new Event("visibilitychange"));`);

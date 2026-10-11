@@ -47,7 +47,7 @@ import type { MilestoneStatus } from "@/src/milestone-view";
 import { contractDayInWords, contractRangeInWords, dateInWords, dayInWords, hourInWords, momentInWords, nextPassMs, onALaterDay } from "@/src/moments";
 import { COUNTING_PASS_UTC, settlingTimeInWords } from "@/src/pass-schedule";
 import { reserveOf } from "@/src/reserves";
-import { ACCOUNT_DOOR, CONSENT as C, GIFT_LIVE as L, GIFT_PAGE as W, LIMIT, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M, SHOW_PROOF, WAITS } from "@/src/sentences";
+import { ACCOUNT_DOOR, CONSENT as C, GIFT_LIVE as L, GIFT_PAGE as W, LIMIT, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M, SHOW_PROOF, UNIVERSITY_CHOICE, WAITS } from "@/src/sentences";
 import { waitsForResults } from "@/src/condition-proof";
 import { AskAgain } from "../kit/AskAgain";
 import { Button } from "../kit/Button";
@@ -74,6 +74,7 @@ import { Lines, MOST_LINES_IN_A_FOLD } from "../kit/Lines";
 import { LinkAgain } from "../kit/LinkAgain";
 import { Climb } from "../kit/Climb";
 import { HadOrNot } from "../kit/HadOrNot";
+import { UniversityPath } from "../kit/UniversityPath";
 import type { ToldAbout } from "../kit/MorningMessage";
 import { LiveLine, useLiveReading } from "../kit/LiveReading";
 import { openDayLine } from "@/src/client/limit";
@@ -436,6 +437,11 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
    */
   const hadOrNot = milestone?.shape === "certificate" ? milestone : null;
   const lateUntilMs = hadOrNot && hadOrNot.deadlineMs !== null ? hadOrNot.deadlineMs + MILESTONE_LATE_PROOF_SECONDS * 1000 : null;
+  // A university whose first proof a person still has to read: the stop is on the gift's path, and the words follow it.
+  const firstAtItsUniversity = milestone?.university ? milestone.university.provider === "none" || milestone.university.provider === "unpinned" : false;
+  // The day the university's page is read by at the latest: two days after the gift was made, in the reader's clock.
+  // Once that day has passed, no day is said: the stop keeps its place and the day goes (the founder, 10 Oct 2026).
+  const builtBy = nowMs !== 0 && onALaterDay(nowMs, (status.createdAtChain + 2 * 86_400) * 1000, zone) ? null : dayInWords((status.createdAtChain + 2 * 86_400) * 1000, zone);
   // The contract compares days: the whole of the last day counts, so "past" is the day after it, on its own clock.
   const pastTheLastDay = Boolean(hadOrNot && hadOrNot.deadlineMs !== null && nowMs !== 0 && Math.floor(nowMs / 86_400_000) > Math.floor(hadOrNot.deadlineMs / 86_400_000));
   // Where a source dates what it grants, what was had in time can still be proved; where the showing is what is dated,
@@ -508,9 +514,10 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
     // What a gift paid is used from Home, a habit's as a milestone's: nothing on this page takes it any more.
     takeableFromHome: earned > 0n,
     proof: proofStands,
-    // The day the university's page is read by at the latest: two days after the gift was made, in the reader's clock.
-    // Once that day has passed, no day is said: the sentence stays and the day goes (the founder, 10 Oct 2026).
-    builtByInWords: nowMs !== 0 && onALaterDay(nowMs, (status.createdAtChain + 2 * 86_400) * 1000, zone) ? null : dayInWords((status.createdAtChain + 2 * 86_400) * 1000, zone),
+    builtByInWords: builtBy,
+    firstAtItsUniversity,
+    lastDayInWords: hadOrNot && hadOrNot.deadlineMs !== null ? dayInWords(hadOrNot.deadlineMs, zone) : null,
+    backOnInWords: lateUntilMs !== null ? dayInWords(lateUntilMs, zone) : null,
     lateUntilInWords: lateUntilMs === null ? null : dateInWords(lateUntilMs, zone),
     // Ended by the person it is for: the day in this reader's clock, and the two amounts the ending moved.
     ended: status.ended ? { onInWords: dateInWords(status.ended.atMs, zone), keptDisplay: status.ended.keptDisplay, givenBackDisplay: status.ended.givenBackDisplay } : null,
@@ -841,7 +848,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
         }
         return showsProof ? (
           <>
-            <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} review={proofReview} reviewMessage={milestone.review?.message ?? null} limitReached={emptyReserve === "proofs"} openAtLoad={openProof} onChecking={setProofSilent} onShown={reloadAll} />
+            <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} review={proofReview} reviewMessage={milestone.review?.message ?? null} firstTime={firstAtItsUniversity} limitReached={emptyReserve === "proofs"} openAtLoad={openProof} onChecking={setProofSilent} onShown={reloadAll} />
             {resultsGift && mine && !checkingTheirOwn && !proofReview ? (
               <button type="button" onClick={() => setResultsOut(false)} className={`${SMALL_BUTTON} self-start`} data-results-not-yet="">
                 {SHOW_PROOF.notYet}
@@ -871,8 +878,30 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
   // it, so none of the three repeats a figure the state or the money carries.
   const shape = milestone ? (
     milestone.shape === "certificate" ? (
-      // Reached while this page stands: the character is told at once, and jumps before the card says it.
-      <HadOrNot state={reach.reaching || milestone.reached ? "reached" : milestone.finished || milestone.cancelled ? "void" : "waiting"} asleep={!milestone.opened} />
+      // A university gift has its path, and its character stands over the stop the gift is at (the founder, 11 Oct
+      // 2026). Over without its proof, the character has gone back and stands on nothing: drawn alone, as before.
+      milestone.university && !((milestone.finished || milestone.cancelled) && !milestone.reached) ? (
+        <UniversityPath
+          provider={milestone.university.provider}
+          results={milestone.university.results}
+          waitedOnSetUp={milestone.university.waitedOnSetUp}
+          readByAPerson={milestone.university.readByAPerson}
+          yours={voice === "recipient"}
+          label={UNIVERSITY_CHOICE.path}
+          setUpBy={builtBy}
+          standing={{
+            opened: milestone.opened,
+            // Reached while this page stands: the character is told at once, and jumps before the card says it.
+            reached: reach.reaching || milestone.reached,
+            over: false,
+            wait: milestone.review?.status === "building" ? "building" : milestone.review?.status === "pending" ? "pending" : null,
+            resultsToCome: resultsWait,
+          }}
+        />
+      ) : (
+        // Reached while this page stands: the character is told at once, and jumps before the card says it.
+        <HadOrNot state={reach.reaching || milestone.reached ? "reached" : milestone.finished || milestone.cancelled ? "void" : "waiting"} asleep={!milestone.opened} />
+      )
     ) : (
       <Climb giftId={giftId} status={milestone} />
     )
@@ -1002,13 +1031,16 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
     ? null
     : daily
       ? { kind: "morning" }
-      : milestone?.review?.status === "pending"
-        ? { kind: "review" }
-        : hadOrNot
-          ? { kind: "hadOrNot" }
-          : milestone && (readsLive || unopenedForItsFunder)
-            ? { kind: "reach", target: String(milestone.targetWords ?? milestone.target) }
-            : null;
+      : // A university being set up, where the gift's path draws that stop: its people wait on the day it is ready.
+        milestone?.review?.status === "building" && !resultsGift
+        ? { kind: "setUp" }
+        : milestone?.review?.status === "pending"
+          ? { kind: "review" }
+          : hadOrNot
+            ? { kind: "hadOrNot" }
+            : milestone && (readsLive || unopenedForItsFunder)
+              ? { kind: "reach", target: String(milestone.targetWords ?? milestone.target) }
+              : null;
   // The funder's page as the funder reads it now, for the sheet that says what they see: the same moment in their
   // voice, and the days up to today, drawn small. A climb and a gift had or not are their state and their figure.
   const theirs = liveOf({ ...liveInput, voice: "funder" });

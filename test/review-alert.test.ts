@@ -8,18 +8,18 @@ import { GIFT_LIVE, SHOW_PROOF, UNIVERSITY_CHOICE } from "../src/sentences";
 import { SHOWN_CONDITIONS } from "../src/shown-conditions";
 
 /**
- * A first proof held for review is checked within an hour (the founder, 29 Sep 2026): the person reads it, and the
+ * A first proof held for review is checked within a day (the founder, 29 Sep 2026, an hour until 11 Oct): the person reads it, and the
  * operator is told by email the moment the proof is held. And the show-it block says what is kept, per condition.
  */
 
 const REVIEW = { sessionId: "session_12345678", portalId: "utoulouse-fr", sense: "enrolment" as const, giftId: "1000042" };
 
-test("a first proof held for review is said to be checked within an hour, and the operator is emailed at once", async () => {
-  assert.equal(SHOW_PROOF.held, "First proof from this university: checked within an hour.");
-  assert.equal(UNIVERSITY_CHOICE.setUpInTwoDays, "They can show their page two days after you pay, at the latest. The money waits in their name meanwhile.", "setting a university up still waits on a first gift");
+test("a first proof held for review is said to be checked within a day, and the operator is emailed at once", async () => {
+  assert.equal(SHOW_PROOF.held, "First proof from this university: checked within a day.");
+  assert.equal(UNIVERSITY_CHOICE.readyInTwoDays, "Ready in 2 days", "setting a university up still waits on a first gift");
   const mail = reviewAlert(REVIEW, "Université de Toulouse");
   assert.equal(ALERT_TO, "founder@viky.cash");
-  assert.equal(mail.subject, "First proof to review within the hour: Université de Toulouse (utoulouse-fr), enrolment");
+  assert.equal(mail.subject, "First proof to review within a day: Université de Toulouse (utoulouse-fr), enrolment");
   assert.match(mail.text, /gift 1000042/);
   assert.match(mail.text, /pnpm portal:pin session_12345678/);
   assert.doesNotMatch(mail.text, /Inscrit|Enrolled/, "what the page carried stays in the database, for portal:pin alone");
@@ -39,6 +39,16 @@ test("the show-it block says what Viky keeps, by condition, and never a score it
     if (verdictOnly(id)) assert.match(said, /^Viky keeps only whether /, id);
   }
   assert.match(readFileSync("app/kit/ShowProof.tsx", "utf8"), /W\.kept\[conditionId\] \?\? \(verdictOnly\(conditionId\) \? W\.keptVerdict : W\.keptNumber\)/);
+});
+
+test("before the press, a gift that is the first at its university says the wait is longer", () => {
+  assert.equal(SHOW_PROOF.firstTime, "The first time at a university, it takes a few minutes.");
+  // In the open, above the button, and never folded: it is what the person needs to know before they press.
+  assert.match(readFileSync("app/kit/ShowProof.tsx", "utf8"), /\{firstTime \? <p className=\{HELP\} data-first-time="">\{W\.firstTime\}<\/p> : null\}\n\s+\{state\.at === "waiting" \? \(/);
+  const page = readFileSync("app/components/GiftPage.tsx", "utf8");
+  // First there: the university has no provider, or one whose first proof a person still has to read.
+  assert.match(page, /const firstAtItsUniversity = milestone\?\.university \? milestone\.university\.provider === "none" \|\| milestone\.university\.provider === "unpinned" : false;/);
+  assert.match(page, /<ShowProof [^\n]+ firstTime=\{firstAtItsUniversity\} /);
 });
 
 test("the two people are told how the review was decided, on the devices that asked", () => {

@@ -113,7 +113,7 @@ test("one list: the field says how many it searches, the ready come first with a
   assert.match(chooser, /<ChoiceList name="university" legend=\{W\.list\} legendHidden shape="lines" value=\{value\} onChange=\{pick\(listed\)\} options=\{listed\.slice\(0, count\)\.map\(line\)\} \/>/);
   assert.equal(chooser.split("<ChoiceList").length, 2, "one list, not two groups");
   // The mark on the line of a ready one, and nothing on the others: no "on request", no "more".
-  assert.match(chooser, /mark: readyFor\(one, sense\) \? <span className=\{READY_MARK\}>\{W\.ready\}<\/span> : undefined,/);
+  assert.match(chooser, /readyFor\(one, sense\) \? <span className=\{READY_MARK\}>\{W\.ready\}<\/span> : pathFor\(one, sense\) === "none" \? <span className=\{META\}>\{W\.readyInTwoDays\}<\/span> : undefined,/);
   assert.doesNotMatch(chooser, /W\.more|moreAlone|countInWords|note=\{/);
   const words = Object.values(UNIVERSITY_CHOICE).map((said) => (typeof said === "function" ? (said as (count?: string) => string)("3") : said));
   assert.doesNotMatch(JSON.stringify(words), /on request|more|Yours isn't|Add your/i);
@@ -125,19 +125,25 @@ test("one list: the field says how many it searches, the ready come first with a
   assert.deepEqual([countInWords(11_412), countInWords(999), countInWords(1)], ["11,000", "999", "1"]);
 });
 
-test("the two days are said once, to a payer, under the university chosen", () => {
-  // Said by what the student will be able to do (the founder, 10 Oct 2026, the same afternoon).
-  assert.equal(UNIVERSITY_CHOICE.setUpInTwoDays, "They can show their page two days after you pay, at the latest. The money waits in their name meanwhile.");
-  assert.equal(UNIVERSITY_CHOICE.showToday, "Its students show their page today.");
+test("under the university chosen, the gift's path and one line; on the list, every line of an enrolment gift says when", () => {
+  // The founder's mockup of 11 Oct 2026. "Two days after you pay, at the latest" read as a time limit on the student:
+  // it is our own delay, and the path says it on the stop it belongs to, "once, 2 days" (src/university-path.ts).
+  assert.equal(UNIVERSITY_CHOICE.firstGift, "First gift at this university: the next ones skip the two small stops. The money waits in their name meanwhile.");
+  assert.equal(UNIVERSITY_CHOICE.waitsMeanwhile, "The money waits in their name meanwhile.");
+  assert.equal(UNIVERSITY_CHOICE.readyInTwoDays, "Ready in 2 days");
   const chooser = readFileSync("app/kit/offer/UniversityChooser.tsx", "utf8");
+  // No character under a chosen university: nothing has started.
+  assert.match(chooser, /<UniversityPath provider=\{pathFor\(one, sense\)\} results=\{sense === "results"\} yours=\{false\} label=\{W\.path\} \/>/);
+  // The line under it: what a first gift adds, nothing for a university that is ready, and for results that the money waits.
+  assert.match(chooser, /if \(sense === "results"\) return W\.waitsMeanwhile;\n\s+return provider === "none" \? W\.firstGift : provider === "unpinned" \? W\.firstProof : null;/);
+  // On the list: no time on any line of a gift on results; the sun on the ready ones, the country's small type on the rest.
+  assert.match(chooser, /mark: sense === "results" \? undefined : readyFor\(one, sense\) \? <span className=\{READY_MARK\}>\{W\.ready\}<\/span> : pathFor\(one, sense\) === "none" \? <span className=\{META\}>\{W\.readyInTwoDays\}<\/span> : undefined,/);
   // Said from the list, by what the gift asks, and not at all while the list is unread: either line would be a guess.
   assert.match(chooser, /const one = Array\.isArray\(index\) \? index\.find\(\(entry\) => entry\.one\.pair === draft\.course\)\?\.one : undefined;/);
-  assert.match(chooser, /\{one \? \(\n\s+<p className=\{HELP\} data-university-when="">\n\s+\{readyFor\(one, sense\) \? W\.showToday : W\.setUpInTwoDays\}\n\s+<\/p>\n\s+\) : null\}/);
   // So the list is read for a university already chosen, the sheet open or not.
   assert.match(chooser, /if \(\(!open && !hasChosen\) \|\| index !== null\) return;/);
-  // Nowhere else in the chooser: not over a group, not under the list.
-  assert.equal(chooser.split("W.setUpInTwoDays").length, 2);
-  assert.doesNotMatch(JSON.stringify(Object.entries(UNIVERSITY_CHOICE).filter(([key]) => key !== "setUpInTwoDays").map(([, said]) => (typeof said === "function" ? (said as (count?: string) => string)("3") : said))), /two days/);
+  // The two days are said by the list's mark and by the path's first stop, and by no sentence of the chooser.
+  assert.doesNotMatch(JSON.stringify(Object.entries(UNIVERSITY_CHOICE).filter(([key]) => key !== "readyInTwoDays").map(([, said]) => (typeof said === "function" ? (said as (count?: string) => string)("3") : said))), /two days|2 days/);
 });
 test("the search within a country: every word, without case or accents, by name, and all of them when nothing is typed", () => {
   assert.deepEqual(matching(LIST, "").map((u) => u.pair), ["bem-sn", "ucad-sn", "ugb-sn"]);
@@ -185,7 +191,7 @@ test("the chooser lists names alone, says nothing about checking, and a search t
   assert.doesNotMatch(chooser, /W\.reading\}<\/p>|Reading the/, "no sentence while the list is read: empty lines hold its place");
   // Nothing about checking in the chooser: that is said folded on the gift's page, where the proof is shown.
   assert.doesNotMatch(chooser, /<details|<summary|navigator\.share|clipboard/);
-  assert.deepEqual(Object.keys(UNIVERSITY_CHOICE).sort(), ["askForIt", "change", "country", "everywhere", "inCountry", "list", "nothing", "reading", "ready", "search", "setUpInTwoDays", "showToday", "unreadable"]);
+  assert.deepEqual(Object.keys(UNIVERSITY_CHOICE).sort(), ["askForIt", "change", "country", "everywhere", "firstGift", "firstProof", "inCountry", "list", "nothing", "path", "reading", "ready", "readyInTwoDays", "search", "unreadable", "waitsMeanwhile"]);
   // The mark's words, as the founder drew them on the mockup of 10 Oct 2026.
   assert.equal(UNIVERSITY_CHOICE.ready, "Ready today");
   assert.doesNotMatch(JSON.stringify([...Object.values(UNIVERSITY_CHOICE).filter((v) => typeof v === "string"), UNIVERSITY_CHOICE.search("1")]), /unverified|password|proof|checked|connected|tested/i);

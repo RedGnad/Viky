@@ -19,6 +19,8 @@ export type ListedUniversity = Readonly<{
    * place, with the rule its proofs are checked against. Only for grouping, never said on the line.
    */
   ready?: readonly UniversitySense[];
+  /** What its provider of each sense is to a gift's path (src/university-path.ts), said only where it has one. */
+  path?: Readonly<Partial<Record<UniversitySense, PathProvider>>>;
 }>;
 
 /** What a university gift asks its student to show: that they are enrolled, or a page of results (D313). */
@@ -55,6 +57,11 @@ export function inGroups(universities: readonly ListedUniversity[], words: strin
 }
 
 const readyOn = (one: ListedUniversity, sense: UniversitySense) => one.ready?.includes(sense) === true;
+
+/** What this university's provider is to the path of a gift that asks for this: none, for all but a few of the list. */
+export function pathFor(one: ListedUniversity, sense: UniversitySense): PathProvider {
+  return one.path?.[sense] ?? "none";
+}
 
 /** Whether a student of this university can show their page today, for what the gift asks: its mark, and its line once chosen. */
 export function readyFor(one: ListedUniversity, sense: UniversitySense): boolean {
@@ -116,4 +123,5 @@ export function shownUniversities(index: readonly IndexedUniversity[], words: st
     (readyOn(entry.one, sense) ? ready : others).push(entry.one);
   }
   return { ready, others };
-}
+}import type { PathProvider } from "./university-path";
+

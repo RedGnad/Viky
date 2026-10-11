@@ -1,8 +1,15 @@
 import "../src/load-env";
 import { getAddress } from "viem";
+import { loadGift } from "../src/gift-store";
+import { readMilestoneGift } from "../src/milestone-reader";
+import { milestoneGiftsOn } from "../src/milestone-store";
+import { tellAboutSetUp } from "../src/morning-send";
+import { liveTellingDeps, pushConfigured } from "../src/morning-send-live";
 import { ensurePortalSchema, loadPortal, markRequestAlerted, markRequestBuilt, openRequests, saveProvider, type PortalSense } from "../src/portal-store";
 import { sendProviderAlert } from "../src/provider-alert";
 import { providerDomains } from "../src/provider-instruction";
+import { escrowOf } from "../src/relayer";
+import { tellSetUp } from "../src/set-up-told";
 
 /**
  * The providers funders' gifts are waiting on (D313). A gift on a university without a provider of the sense it reads
@@ -18,7 +25,8 @@ import { providerDomains } from "../src/provider-instruction";
  *   PROVEN_BY=0x… pnpm provider:add <portal id> <enrolment|results> <provider id> [--domain <domain>]
  *     registers the provider built from it as a witness provider with no pin yet, on the domain given, or the domains
  *     the university's other provider already reads, or the sign-in page's own, and closes the request: the next proof
- *     from it is held for review (`pnpm portal:pin`).
+ *     from it is held for review (`pnpm portal:pin`). The people of the enrolment gifts that were waiting on it are
+ *     told it is ready, on the devices that asked (src/set-up-told.ts).
  *
  * Against production, the operator command of "The test database" applies (`VIKY_ALLOW_PRODUCTION_DATABASE=1`).
  * `DRY_RUN=1` says what would be registered and writes nothing.
@@ -68,6 +76,17 @@ async function main() {
   await markRequestBuilt(portal.portalId, provider.sense);
   const back = await loadPortal(portal.portalId);
   console.log(JSON.stringify({ step: "read back", portal: portal.portalId, sense, provider: back?.[provider.sense]?.providerId ?? null }));
+  // The people who were waiting on it are told, once each. Never stops the command: the provider is written by now.
+  const told = await tellSetUp(portal.portalId, provider.sense, {
+    giftsOn: milestoneGiftsOn,
+    running: async (giftId) => {
+      const state = await readMilestoneGift(escrowOf(await loadGift(giftId)), giftId);
+      return !state.settled && !state.cancelled;
+    },
+    tell: (giftId) => tellAboutSetUp(giftId, liveTellingDeps()),
+  }).catch(() => null);
+  // `canTell` false: this machine holds no push keys, so nobody was told, whatever the counts say.
+  console.log(JSON.stringify({ step: "told", portal: portal.portalId, sense, canTell: pushConfigured(), gifts: told }));
 }
 
 main().catch((error) => {

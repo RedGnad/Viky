@@ -124,19 +124,20 @@ test.describe("a gift had or not, as its two people read it", () => {
       await expect(page.getByText("It was checked and did not show what the gift asks.")).toBeVisible();
       await shot(page, size.name, "3c-yours-refused");
 
-      // The university's page still being built.
-      // Said by what the person will be able to do, with the day: two days after the gift was made, here today.
+      // The university's page still being set up (the founder's mockup of 11 Oct 2026): who is at work, then what the
+      // person does next and until when. The day it is done by is on the gift's path, and no longer in the words.
       state = { review: { status: "building" }, createdAtChain: now() };
       await page.goto(`/g/${GIFT}`);
-      await expect(page.getByText(/^Your university is being set up\. You can show your page here from \d{1,2} [A-Z][a-z]{2} at the latest\.$/)).toBeVisible();
+      await expect(page.getByText("Viky is setting up your university.", { exact: true })).toBeVisible();
+      await expect(page.getByText(/^You are the first from it here, so this happens once\. Then you show your page, any day until \d{1,2} [A-Z][a-z]{2}\.$/)).toBeVisible();
       // The card says it once: the block under it, which said "within two days", draws nothing.
       await expect(page.getByText(/within two days/)).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Show it", exact: true })).toHaveCount(0);
       await shot(page, size.name, "3d-yours-being-built");
-      // Past the day named (this gift was made five days ago): the sentence stays and the day goes.
+      // Past the day it was due by (this gift was made five days ago): the words are the same, since they name no day.
       state = { review: { status: "building" } };
       await page.goto(`/g/${GIFT}`);
-      await expect(page.getByText("Your university is being set up. The money waits in your name.", { exact: true })).toBeVisible();
+      await expect(page.getByText("Viky is setting up your university.", { exact: true })).toBeVisible();
       await expect(page.getByText(/at the latest/)).toHaveCount(0);
       const late = await stateIsSharedOut(page);
       if (process.env.VIKY_SAY_LINES) console.log(`state lines, past the day (${size.name}): ${JSON.stringify(late)}`);
@@ -194,14 +195,15 @@ test.describe("a gift had or not, as its two people read it", () => {
       await expect(page.getByText(/Reach 1 on|reach 1,|Target 1/)).toHaveCount(0);
       await shot(page, size.name, "3g-theirs-what-was-agreed");
 
-      // The university's page still being set up, said by what the person will be able to do, with the day.
+      // The university's page still being set up: who is at work, and the day the money comes back if nothing is proved.
       state = { review: { status: "building" }, createdAtChain: now() };
       await page.goto(`/g/${GIFT}`);
-      await expect(page.getByText(/^Their university is being set up\. They can show their page from \d{1,2} [A-Z][a-z]{2} at the latest\.$/)).toBeVisible();
+      await expect(page.getByText("Viky is setting up their university.", { exact: true })).toBeVisible();
+      await expect(page.getByText(/^First gift at this university: it is set up once\. The money is in their name, and comes back to you on \d{1,2} [A-Z][a-z]{2} if it is not proved\.$/)).toBeVisible();
       await shot(page, size.name, "3g2-theirs-being-built");
       state = { review: { status: "building" } };
       await page.goto(`/g/${GIFT}`);
-      await expect(page.getByText("Their university is being set up.", { exact: true })).toBeVisible();
+      await expect(page.getByText("Viky is setting up their university.", { exact: true })).toBeVisible();
       await expect(page.getByText(/at the latest/)).toHaveCount(0);
       const theirs = await stateIsSharedOut(page);
       if (process.env.VIKY_SAY_LINES) console.log(`state lines, theirs past the day (${size.name}): ${JSON.stringify(theirs)}`);
