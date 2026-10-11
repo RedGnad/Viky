@@ -14,7 +14,7 @@ import { toFunctionSelector } from "viem";
 import { consentTermsFor } from "../src/consent-terms";
 import { HOME } from "../src/sentences";
 import { EXAMPLE_FOR_JUDGES_TX } from "../src/proof-journal";
-import { EXIT_ROUTER, USDC_ROUTER } from "../src/viky-contracts";
+import { EXIT_ROUTER, GIFT_ESCROW, USDC_ROUTER } from "../src/viky-contracts";
 
 const README = readFileSync("README.md", "utf8");
 const DOCS = { contracts: "docs/CONTRACTS.md", verification: "docs/VERIFICATION.md", pages: "docs/PAGES-AND-ROUTES.md", indexer: "docs/INDEXER.md" } as const;
@@ -186,7 +186,7 @@ test("what has run with real money is only what has a transaction, each with its
   // And what has not run is said.
   assert.match(ran, /What has not run on the third daily contract yet: a missed day going back, and a gift reaching its last day\./);
   // The day `pnpm verify:day` checks is the first of them, the one Why Monad gives the fee of.
-  assert.ok(links[0] === "0x5aa6752fc8c7db2526a5e5bafe6aeb91e09bd1cbe0cf3d4a6bc5e8f65f664ffd" && section("Why Monad").includes(links[0]));
+  assert.ok(links[0] === "0x55f9eafa857ee9897be5a7e092e055a3c75d2003d11a087dd9a0244e64726fab" && section("Why Monad").includes(links[0]));
   // The amounts add up: what was funded is what went back and what was withdrawn.
   assert.match(ran, /funded with 5\.61 AUSD/);
   assert.match(ran, /5\.423 AUSD/);
@@ -431,6 +431,9 @@ test("the day `pnpm verify:day` checks is named by the transaction the site publ
   const firstScreen = README.split("\n").find((line) => line.startsWith("| **A credited day, checked again from nothing** | `pnpm verify:day`"));
   assert.ok(firstScreen?.includes(`(https://monadvision.com/tx/${EXAMPLE_FOR_JUDGES_TX})`), "the first screen's table");
   const ran = README.slice(README.indexOf("- **A day credited on a proof.**"), README.indexOf("`pnpm verify:day` checks again."));
-  assert.ok(ran.includes("Gift 1, the day of 12 Sep 2026") && ran.includes(`(https://monadvision.com/tx/${EXAMPLE_FOR_JUDGES_TX})`), "what has run with real money");
+  assert.ok(ran.includes("Gift 2, the day of 12 Sep 2026, on `GiftEscrow` at `0x995A…e233`") && ran.includes(`(https://monadvision.com/tx/${EXAMPLE_FOR_JUDGES_TX})`), "what has run with real money");
+  // The gift's number and its contract are the ones the chain gives that transaction, and no trace of the other day is left.
+  assert.equal(GIFT_ESCROW.slice(0, 6) + "…" + GIFT_ESCROW.slice(-4), "0x995A…e233");
+  assert.doesNotMatch(README, /0x5aa6|Gift 1, the day of 12 Sep 2026/);
   assert.equal(README.split(EXAMPLE_FOR_JUDGES_TX).length - 1, 3, "and the note on its gas limit: the same transaction, three times");
 });

@@ -158,11 +158,13 @@ export async function proofOfReading(giftId: string, readingId: number): Promise
 export type JudgesExample = Readonly<{ giftId: string; day: number; txHash: string; fingerprint: string; recipient: string; escrow: string | null }>;
 
 /**
- * The credited day Viky publishes for anybody to check again, named by the transaction that settled it: gift 1, the
- * day of 12 Sep 2026, on the first GiftEscrow. The README names this transaction twice and `pnpm verify:day` checks
- * whatever is answered here, so the three are held to be one (test/readme.test.ts, test/proof-journal.test.ts).
+ * The credited day Viky publishes for anybody to check again, named by the transaction that settled it: gift 2, the
+ * day of 12 Sep 2026, on the GiftEscrow that followed the first (0x995A…e233). It is the day the site has answered
+ * all along. The README named another until 11 Oct 2026, gift 1's, credited the same date. The README names this
+ * transaction three times and `pnpm verify:day` checks whatever is answered here, so they are held to be one
+ * (test/readme.test.ts, test/proof-journal.test.ts).
  */
-export const EXAMPLE_FOR_JUDGES_TX = "0x5aa6752fc8c7db2526a5e5bafe6aeb91e09bd1cbe0cf3d4a6bc5e8f65f664ffd";
+export const EXAMPLE_FOR_JUDGES_TX = "0x55f9eafa857ee9897be5a7e092e055a3c75d2003d11a087dd9a0244e64726fab";
 
 /**
  * The day that transaction settled, while it still has its proof, among the gifts of the accounts given: Viky's own,
@@ -171,8 +173,10 @@ export const EXAMPLE_FOR_JUDGES_TX = "0x5aa6752fc8c7db2526a5e5bafe6aeb91e09bd1cb
  * that has its proof, and between two of the same date the gift with the lower number.
  *
  * It was "the newest" alone until 11 Oct 2026. Gifts 1 and 2 were both credited for 12 Sep 2026 and both kept their
- * proof: ordered by the day and by nothing else, the database answered either, and that day it answered gift 2 while
- * the README named gift 1's transaction (found by following the README from a fresh clone).
+ * proof: ordered by the day and by nothing else, the database could answer either. The site answered gift 2 while the
+ * README named gift 1's transaction (found by following the README from a fresh clone), and went on answering it once
+ * the order preferred gift 1's: which of the two is a candidate depends on the accounts given. So the transaction
+ * named is the one the site answers.
  */
 export async function exampleForJudges(accounts: readonly string[]): Promise<JudgesExample | null> {
   if (accounts.length === 0) return null;

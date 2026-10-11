@@ -24,7 +24,7 @@ gift's page with its days, and "Spend or withdraw".
 | `ExitRouter`: the way out of what a gift earned | [`0x8a1790DfD10CF1599bDaeD5eC8BB46B2A6eB6223`](https://monadvision.com/address/0x8a1790DfD10CF1599bDaeD5eC8BB46B2A6eB6223) | its source, an [exact match](https://sourcify-api-monad.blockvision.org/v2/contract/143/0x8a1790DfD10CF1599bDaeD5eC8BB46B2A6eB6223) |
 | `ExitRouter`, a second copy set on USDC: the converter of card payments | [`0xf05449c8b868Ce1e6a0D7223e2ceCbbfD1498F9c`](https://monadvision.com/address/0xf05449c8b868Ce1e6a0D7223e2ceCbbfD1498F9c) | its source, an [exact match](https://sourcify-api-monad.blockvision.org/v2/contract/143/0xf05449c8b868Ce1e6a0D7223e2ceCbbfD1498F9c) |
 | Their owner: a Safe 1.4.1 that signs with 2 of its 3 keys | [`0xE08D926c148A5065F4Df2892702785a183de86F9`](https://monadvision.com/address/0xE08D926c148A5065F4Df2892702785a183de86F9) | `owner()` on each contract |
-| **A credited day, checked again from nothing** | `pnpm verify:day`, below | five answers, each `yes`, for transaction [`0x5aa6…4ffd`](https://monadvision.com/tx/0x5aa6752fc8c7db2526a5e5bafe6aeb91e09bd1cbe0cf3d4a6bc5e8f65f664ffd) |
+| **A credited day, checked again from nothing** | `pnpm verify:day`, below | five answers, each `yes`, for transaction [`0x55f9…6fab`](https://monadvision.com/tx/0x55f9eafa857ee9897be5a7e092e055a3c75d2003d11a087dd9a0244e64726fab) |
 | **A refusal**: an account that is not the recipient asks for what a gift earned | `cast call`, below | the error `NotRecipient()`, `0x586d3357` |
 
 ```bash
@@ -140,7 +140,7 @@ Only what was measured, or what Monad's own documentation states.
   by one relayer, so neither person ever holds MON or reads a fee. Read from the chain on 2 Oct 2026 at 12:11 UTC
   with `pnpm relayer:fees`: 120 transactions sent since the first one, 2.196190 MON of fees in all, 0.0183 MON a
   transaction on average. A credited day costs 0.017544 MON (transaction
-  `0x5aa6752fc8c7db2526a5e5bafe6aeb91e09bd1cbe0cf3d4a6bc5e8f65f664ffd`: a limit of 172,000 at 102 gwei).
+  `0x55f9eafa857ee9897be5a7e092e055a3c75d2003d11a087dd9a0244e64726fab`: a limit of 172,000 at 102 gwei).
 - **A person waits about a second.** A block every 302 ms, measured over 10,000 blocks on 2 Oct 2026, and a
   block is final after two ([docs](https://docs.monad.xyz/developer-essentials/summary)). Nothing is shown as done
   before the block that holds it is at or below the `finalized` tag (`waitForFinality`, `src/monad/chain.ts`).
@@ -158,7 +158,8 @@ Only what was measured, or what Monad's own documentation states.
 Only what has a transaction on Monad mainnet. How many people have used Viky is counted on the judges page, from the
 index, and the testers' figures come with the submission.
 
-- **A day credited on a proof.** Gift 1, the day of 12 Sep 2026, on the first `GiftEscrow`: [`0x5aa6…4ffd`](https://monadvision.com/tx/0x5aa6752fc8c7db2526a5e5bafe6aeb91e09bd1cbe0cf3d4a6bc5e8f65f664ffd). It is the day
+- **A day credited on a proof.** Gift 2, the day of 12 Sep 2026, on `GiftEscrow` at `0x995A…e233`, the deployment that
+  followed the first: [`0x55f9…6fab`](https://monadvision.com/tx/0x55f9eafa857ee9897be5a7e092e055a3c75d2003d11a087dd9a0244e64726fab). It is the day
   `pnpm verify:day` checks again.
 - **A daily gift from its funding to its end, on the contract in service.** Gift 1000 on `GiftEscrowV3`, made by the
   author between two of his own accounts. All times are UTC.

@@ -212,13 +212,15 @@ test("the example the site publishes is the day the README names, whatever else 
     return session;
   };
   // Three gifts credited for the same date, written in the order least kind to the rule, and a newer day.
+  // The named day is gift 2's: gift 1, credited the same date, would come first by its number, and gift 9 by its day.
   await day("3", 20708, `0x${"33".repeat(32)}`, "3");
-  await day("2", 20708, `0x${"55".repeat(32)}`, "2");
-  const named = await day("1", 20708, EXAMPLE_FOR_JUDGES_TX, "1");
+  await day("1", 20708, `0x${"11".repeat(32)}`, "1");
+  const named = await day("2", 20708, EXAMPLE_FOR_JUDGES_TX, "2");
   const newer = await day("9", 20730, `0x${"99".repeat(32)}`, "9");
 
   const example = await exampleForJudges([OWN.address]);
-  assert.deepEqual([example?.giftId, example?.day, example?.txHash], ["1", 20708, EXAMPLE_FOR_JUDGES_TX]);
+  assert.deepEqual([example?.giftId, example?.day, example?.txHash], ["2", 20708, EXAMPLE_FOR_JUDGES_TX]);
+  assert.equal(EXAMPLE_FOR_JUDGES_TX, "0x55f9eafa857ee9897be5a7e092e055a3c75d2003d11a087dd9a0244e64726fab");
   // The README's two places, held against what was answered: its first screen, and what has run with real money.
   const readme = readFileSync("README.md", "utf8");
   const firstScreen = readme.split("\n").find((line) => line.startsWith("| **A credited day, checked again from nothing** | `pnpm verify:day`"));
@@ -231,5 +233,5 @@ test("the example the site publishes is the day the README names, whatever else 
   await db.query("UPDATE viky_proof_sessions SET proofs = NULL WHERE session_id = $1", [named]);
   assert.equal((await exampleForJudges([OWN.address]))?.giftId, "9");
   await db.query("UPDATE viky_proof_sessions SET proofs = NULL WHERE session_id = $1", [newer]);
-  assert.equal((await exampleForJudges([OWN.address]))?.giftId, "2");
+  assert.equal((await exampleForJudges([OWN.address]))?.giftId, "1");
 });
