@@ -26,6 +26,7 @@ env:
 #
 # - three jobs side by side, the contracts, the policy tests, and the screens in a browser cut in two parts (three
 #   until 2 Oct 2026: the policy tests are the longest job, so a third part bought no time and cost its own set-up);
+#   and since 11 Oct 2026 a fourth beside them, the screens that make a gift, on a build that names a gift contract;
 # - a tree a green pass already walked is not walked again: the pass leaves a mark named after the tree it tested,
 #   and the next pass on the same tree reads it and stops. A pull request is tested as merged into main, so the
 #   commit main receives carries the same tree whenever the branch was up to date, and its pass is one job of seconds;
@@ -221,9 +222,55 @@ jobs:
           SESSION_SIGNING_SECRET: ci-only-session-secret-that-protects-nothing
         run: pnpm test:browser --shard=${{ matrix.part }}/2
 
+  # The screens that make a gift, walked on a build that names a gift contract (11 Oct 2026). The build above names
+  # none, and from such a build a creation is never sent: the tests that walk one stopped in silence on every pass, and
+  # one of them had been failing since the card became a store the page reads. It is the path money takes. Here a
+  # creation that is not sent is a failure (VIKY_BUILD_NAMES_A_CONTRACT, test/browser/gift-kit.ts). The address is the
+  # third gift contract's, which the judges page prints; nothing is sent to it, each test stands in for the chain.
+  making:
+    name: Screens that make a gift
+    needs: scope
+    if: needs.scope.outputs.validated != 'true' && needs.scope.outputs.browser == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_GIFT_ESCROW_ADDRESS: "0x591d76863177E70FfcA2C793212d4715A367Ec70"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm from packageManager
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application, with a gift contract named
+        run: pnpm build
+
+      - name: Install the browser used by the screen tests
+        run: pnpm exec playwright install --with-deps chromium
+
+      # The specs that call `needsAContract`, every one of them (test/ci-scope.test.ts holds this list to the files).
+      - name: Walk the screens that make a gift
+        env:
+          SESSION_SIGNING_SECRET: ci-only-session-secret-that-protects-nothing
+          VIKY_BUILD_NAMES_A_CONTRACT: "1"
+        run: pnpm test:browser card-kept-on-the-way-out card-payment-wait judge-credit-on-the-wait page-closed-while-making
+
   validated:
     name: Mark the tree as walked
-    needs: [scope, contracts, policy, browser]
+    needs: [scope, contracts, policy, browser, making]
     # Only after a pass where the policy tests ran and passed and nothing failed or was cut. A job the change did not
     # ask for is skipped, which is not a failure; a pass stopped by the mark leaves no second mark.
     if: ${{ always() && needs.scope.outputs.validated != 'true' && needs.policy.result == 'success' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}

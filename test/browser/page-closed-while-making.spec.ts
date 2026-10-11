@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { DAY, answerTheChain, json, makeAnAccount, now, profile, type Profile } from "./gift-kit";
+import { answerTheChain, DAY, json, makeAnAccount, needsAContract, now, profile, type Profile } from "./gift-kit";
 
 /**
  * A page closed while the gift was being made (the final audit of 9 Oct 2026, A4).
@@ -11,6 +11,13 @@ import { DAY, answerTheChain, json, makeAnAccount, now, profile, type Profile } 
  * Walked here, twice. The account's list holds the gift that was made: Home says nothing of a gift to finish, and the
  * device forgets it. And the person opens the wait again before the list is read: the same signed request is sent
  * again, first, the server says the gift is made, and the device forgets it as that is read, with nothing pressed.
+ *
+ * That second walk failed from the day the card became a store the page reads (11 Oct 2026, found on a build that
+ * names a contract, which no pass of the CI was): a page loaded again holds the starting card at its first image, and
+ * the wait looked at once. The account held fifty dollars, so it signed a gift of thirty for nobody named, wrote that
+ * request over the one it kept, and then signed the real gift a second time: three different requests. The wait now
+ * makes only the gift whose payment this device started (src/pending-gift.ts), which the third walk holds from the
+ * other side: a wait opened with nothing started makes nothing, whatever the account holds.
  *
  * What is real: the product's pages against the server under test, a real account and its passkey, every press. What
  * is stood in for: the chain, the creation and the list of gifts, as in ./card-payment-wait.spec.ts; and the tab being
@@ -90,7 +97,7 @@ test.describe("a page closed while the gift was being made", () => {
     // The creation is on its way and does not answer while the page stands.
     await page.route("**/api/gift/create", (route) => void sent.push(route.request().postData() ?? ""));
     const reached = await untilTheCreationIsSent(funder, sent);
-    test.skip(!reached, "this build names no gift contract: a creation is never sent from it");
+    needsAContract(reached);
     const kept = JSON.parse((await keptOnTheDevice(page)) ?? "null") as { recipientName: string; dollars: string; days: string } | null;
     expect(kept?.recipientName).toBe("Boo");
     await closeThePage(page);
@@ -122,7 +129,7 @@ test.describe("a page closed while the gift was being made", () => {
       return route.fulfill(json({ error: "This gift is already made. It is in your gifts.", code: "ALREADY_MADE" }, 409));
     });
     const reached = await untilTheCreationIsSent(funder, sent);
-    test.skip(!reached, "this build names no gift contract: a creation is never sent from it");
+    needsAContract(reached);
     const first = sent.length;
     await closeThePage(page);
     went = true;
@@ -132,11 +139,54 @@ test.describe("a page closed while the gift was being made", () => {
     await expect(page.getByText("This gift is already made. It is in your gifts.", { exact: true })).toBeVisible({ timeout: 60_000 });
     expect(sent.length, "it was sent again").toBeGreaterThan(first);
     expect(new Set(sent).size, "the same signed request, never a second signature").toBe(1);
+    // And it is the gift that was set up: nineteen dollars for Boo, never the starting card's thirty for nobody.
+    for (const one of sent) expect(JSON.parse(one)).toMatchObject({ recipientName: "Boo", amount: "19000000" });
     // Forgotten as it was read, with nothing pressed: Home says nothing of a gift to finish.
     await expect.poll(() => keptOnTheDevice(page)).toBeNull();
     await page.goto("/");
     await expect(page.getByRole("button", { name: /^Sign in$/ })).toHaveCount(0);
     await expect(toFinish(page)).toHaveCount(0);
+    await context.close();
+  });
+
+  test("a wait opened where no payment was started makes nothing, though the account holds more than the starting card", async ({ browser, baseURL }) => {
+    const funder = await profile(browser, baseURL, { width: 390, height: 844 });
+    const { page, context } = funder;
+    const sent: string[] = [];
+    await page.route("**/api/gift/create", (route) => {
+      sent.push(route.request().postData() ?? "");
+      return route.fulfill(json({ error: "This gift is already made. It is in your gifts.", code: "ALREADY_MADE" }, 409));
+    });
+    await answerTheChain(context, { ausd: 50_000_000n, mon: 0n, usdc: 0n });
+    await page.route("**/api/rails/where**", (route) =>
+      route.fulfill(json({ country: "fr", ask: false, fromConnection: "fr", fromDevice: "fr", waysOut: {}, waysIn: {}, card: { offered: true, country: "fr" }, out: { bank: null, cardSmallest: null } })),
+    );
+    await makeAnAccount(funder);
+    expect(await keptOnTheDevice(page), "nothing is set up on this device").toBeNull();
+
+    // The wait's own address, loaded whole, by an account that could pay for the starting card: thirty dollars for
+    // nobody named, which nobody set up. Longer than the wait's own look at the account (eight seconds).
+    await page.goto("/fund?step=paying");
+    await page.waitForTimeout(12_000);
+    expect(sent, "no creation for a card nobody started paying for").toEqual([]);
+    // The same again once the card is only filled in: written on the device, and no pay press behind it.
+    await page.goto("/");
+    await card(page).getByLabel("Their first name").fill("Boo");
+    await card(page).getByLabel("how much").fill("19");
+    await expect.poll(() => keptOnTheDevice(page)).not.toBeNull();
+    await page.goto("/fund?step=paying");
+    await page.waitForTimeout(12_000);
+    expect(sent, "no creation for a card that was only filled in").toEqual([]);
+
+    // And this build does make a gift when one is paid for, so the silence above is the rule's: the pay press, then
+    // one creation, for the card as it was filled.
+    await page.goto("/");
+    await card(page).locator("[data-card-action]").click();
+    await sheet(page).getByRole("button", { name: /^Put .+ in Boo's name$/ }).click();
+    await page.waitForURL(/\/fund\?step=paying/, { timeout: 60_000 });
+    const reached = await expect.poll(() => sent.length, { timeout: 25_000 }).toBeGreaterThan(0).then(() => true, () => false);
+    needsAContract(reached);
+    expect(JSON.parse(sent[0])).toMatchObject({ recipientName: "Boo", amount: "19000000" });
     await context.close();
   });
 });

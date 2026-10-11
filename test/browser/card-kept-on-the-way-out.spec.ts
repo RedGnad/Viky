@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { TERMS, daily, serve } from "./gift-fixtures";
-import { answerTheChain, json, makeAnAccount, neverAskedToBeTold, profile, type Profile } from "./gift-kit";
+import { answerTheChain, json, makeAnAccount, needsAContract, neverAskedToBeTold, profile, type Profile } from "./gift-kit";
 
 /**
  * From the press that pays to the page that follows, the card never changes (the founder, 11 Oct 2026).
@@ -85,7 +85,7 @@ test.describe("the card never changes between the press that pays and the page t
       await route.fulfill(json({ giftId: GIFT, claimUrl: `${funder.baseURL}/g/${GIFT}?t=AbCdEfGhIjKlMnOpQrStUv`, funded: true }));
     });
     const reached = await untilTheCreationIsSent(funder, sent);
-    test.skip(!reached, "this build names no gift contract: a creation is never sent from it");
+    needsAContract(reached);
 
     // The gift being made, with the gift itself under the ring.
     await expect(page.getByText("Putting $19.00 in Boo's name.", { exact: true })).toBeVisible();
@@ -124,7 +124,7 @@ test.describe("the card never changes between the press that pays and the page t
       return route.fulfill(json({ error: "This gift is already made. It is in your gifts.", code: "ALREADY_MADE" }, 409));
     });
     const reached = await untilTheCreationIsSent(funder, sent);
-    test.skip(!reached, "this build names no gift contract: a creation is never sent from it");
+    needsAContract(reached);
 
     const said = page.getByText("This gift is already made. It is in your gifts.", { exact: true });
     await expect(said).toBeVisible({ timeout: 60_000 });

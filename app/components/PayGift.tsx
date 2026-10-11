@@ -33,7 +33,7 @@ import { rememberGiftLink } from "@/src/gift-link-memory";
 import { markJustMade } from "@/src/just-made";
 import { formatAusd } from "@/src/gift-reader";
 import { dollarsToUnits } from "@/src/money";
-import { forgetPendingGift, peekPendingGift, savePendingGift, type PendingGift } from "@/src/pending-gift";
+import { forgetPendingGift, loadStartedGift, peekPendingGift, savePendingGift, type PendingGift } from "@/src/pending-gift";
 import { wayInAsksNothing, wayInPage, waysIn, WAY_IN_USDC, type WayIn } from "@/src/rails";
 import { JudgeCode } from "../kit/offer/JudgeCode";
 import { CardNotOffered, CardTermsLine } from "../kit/offer/CardTerms";
@@ -352,7 +352,16 @@ export function PayGift() {
     [condition, milestone, certificate, cadence, draft.course, draft.scale, draft.standing, subject, target, days, units, recipient, funder],
   );
 
+  /**
+   * The payment this device started for the card this screen holds, read on the device at the moment it is asked
+   * (src/pending-gift.ts): the one gift this wait may make. Nothing at the page's first image, which holds the
+   * starting card and not the device's; nothing for a card nobody pressed pay on.
+   */
+  const startedHere = useCallback(() => (browser && address ? loadStartedGift(address, draftToTerms(draft, address)) : undefined), [browser, address, draft]);
+
   const give = useCallback(async () => {
+    // Held again where the signature is asked: never for a card nobody started paying for on this device.
+    if (!startedHere()) throw new Error(W.failures.other);
     // Opens the passkey here if the page was reloaded or came back from the card page: the signature is the first
     // moment one is needed, and the account is the one the server's cookie already names.
     const account = await ensureSigner();
@@ -439,11 +448,14 @@ export function PayGift() {
     // The gift's own page is the screen after paying (the UI pass of 8 Oct 2026, screen 3): its card says "Send it",
     // with the link under it. A screen of its own said the amount and the condition a second time.
     router.replace(`/g/${result.giftId}`);
-  }, [router, ensureSigner, termsOf, condition, milestone, certificate, cadence, draft.course, draft.scale, draft.standing, draft.standingReadAt, subject, target, days, units, recipient, funder]);
+  }, [router, ensureSigner, startedHere, termsOf, condition, milestone, certificate, cadence, draft.course, draft.scale, draft.standing, draft.standingReadAt, subject, target, days, units, recipient, funder]);
 
   // While paying: watch the account, turn what arrived into what a gift holds, then make the gift.
   useEffect(() => {
     if (step !== "paying" || !address || units === null || phase === "short" || phase === "failed") return;
+    // The wait is for the payment this device started, and for no other card (the founder, 11 Oct 2026). At the
+    // page's first image the screen holds the starting card: looked at, it was a gift to make.
+    if (!startedHere()) return;
     const wanted = units;
     let live = true;
     const look = async () => {
@@ -451,6 +463,8 @@ export function PayGift() {
       try {
         // Making the gift, and what its failure means once the money is in the account (src/after-paying.ts).
         const make = async () => {
+          // One at a time, and never by a look whose screen has moved on: it holds the terms of the screen it began on.
+          if (!live || working.current) return;
           working.current = true;
           setPhase("giving");
           try {
@@ -502,7 +516,8 @@ export function PayGift() {
           }
         }
         const read = await refresh();
-        if (!read) return;
+        // The account was read while the screen moved on: the look that follows it is the one that acts.
+        if (!read || !live) return;
         const inGifts = totalEarned(earned ?? []);
         const next = nextFundingStep({ held: read.held, arriving: read.arriving, arrivingUsdc: read.usdc, inGifts, wanted, failedAtMs: failedAtMs.current, nowMs: Date.now() });
         if (next.do === "takeFromGifts") {
@@ -637,7 +652,7 @@ export function PayGift() {
       live = false;
       clearInterval(timer);
     };
-  }, [step, address, units, phase, refresh, give, termsOf, ensureSigner, earned]);
+  }, [step, address, units, phase, refresh, give, startedHere, termsOf, ensureSigner, earned]);
 
   const copy = (what: "code" | "link", text: string) => {
     void navigator.clipboard
@@ -884,7 +899,14 @@ export function PayGift() {
             needed={units}
             held={balance}
             onCredited={() => void refresh()}
-            onMakeIt={(dollars) => writeCardDraft({ ...draft, dollars, typedAmount: dollars, typedIn: "USD" }, address)}
+            onMakeIt={(dollars) => {
+              // A credit under the gift brings the gift to the credit (D300), on the card as here, and the payment
+              // stays the one this device started: written as "Make it" writes it, the card and then its way in.
+              // The card alone left no payment started, and the wait makes only a gift whose payment was (11 Oct 2026).
+              const next = { ...draft, dollars, typedAmount: dollars, typedIn: "USD" };
+              writeCardDraft(next, address);
+              keepOnDevice(next);
+            }}
           />
         </section>
         {problem ? <FieldRefusal id="waiting-refused">{problem}</FieldRefusal> : null}

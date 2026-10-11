@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 /**
@@ -71,7 +71,7 @@ test("the workflow runs three jobs side by side, marks a tree only after a green
     return workflow.slice(from, next < 0 ? undefined : from + 1 + next);
   };
   // The three jobs wait for the scope and for nothing else, so they run side by side.
-  for (const name of ["contracts", "policy", "browser"]) assert.match(job(name), /\n {4}needs: scope\n/, `${name} waits for another job`);
+  for (const name of ["contracts", "policy", "browser", "making"]) assert.match(job(name), /\n {4}needs: scope\n/, `${name} waits for another job`);
   // Two parts since 2 Oct 2026 (the founder): the policy tests are the longest job, so a third part bought no time.
   assert.match(job("browser"), /part: \[1, 2\]\n/, "the screens in two parts");
   assert.match(job("browser"), /pnpm test:browser --shard=\$\{\{ matrix\.part \}\}\/2\n/);
@@ -85,7 +85,7 @@ test("the workflow runs three jobs side by side, marks a tree only after a green
   // The mark: named after the tree that was tested, written only when the policy tests passed and nothing failed or
   // was cut, and looked for before anything runs.
   const mark = job("validated");
-  assert.match(mark, /needs: \[scope, contracts, policy, browser\]/);
+  assert.match(mark, /needs: \[scope, contracts, policy, browser, making\]/);
   assert.match(mark, /needs\.policy\.result == 'success' && !contains\(needs\.\*\.result, 'failure'\) && !contains\(needs\.\*\.result, 'cancelled'\)/);
   assert.match(mark, /name: validated-\$\{\{ needs\.scope\.outputs\.tree \}\}/);
   assert.match(job("scope"), /tree=\$\(git rev-parse 'HEAD\^\{tree\}'\)/);
@@ -93,4 +93,28 @@ test("the workflow runs three jobs side by side, marks a tree only after a green
   assert.match(job("scope"), /\|\| echo 0\)/, "a lookup that fails finds no mark, and the pass runs");
   // The workflow asks to read and nothing more.
   assert.match(workflow, /permissions:\n {2}contents: read\n[^]*? {2}actions: read\n {2}pull-requests: read\n\nconcurrency:/);
+});
+
+test("the screens that make a gift are walked on a build that names a contract, every spec of them, and a creation not sent fails there", () => {
+  const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
+  const from = workflow.indexOf("\n  making:\n");
+  const making = workflow.slice(from, workflow.indexOf("\n  validated:\n"));
+  assert.ok(from > 0, "no job making");
+  assert.match(making, /name: Screens that make a gift\n/);
+  // Asked for whenever the screens are, on a build of its own that names the gift contract, for the build and the server.
+  assert.match(making, /if: needs\.scope\.outputs\.validated != 'true' && needs\.scope\.outputs\.browser == 'true'\n/);
+  assert.match(making, /\n {4}env:\n {6}NEXT_PUBLIC_GIFT_ESCROW_ADDRESS: "0x[0-9a-fA-F]{40}"\n {4}steps:/);
+  assert.match(making, /VIKY_BUILD_NAMES_A_CONTRACT: "1"\n/);
+  // The other build names none: there these tests say so and stop, as the kit writes it.
+  const others = workflow.slice(workflow.indexOf("\n  browser:\n"), workflow.indexOf("\n  # The screens that make a gift"));
+  assert.ok(others.includes("pnpm test:browser --shard="));
+  assert.doesNotMatch(others, /NEXT_PUBLIC_GIFT_ESCROW_ADDRESS|VIKY_BUILD_NAMES_A_CONTRACT/);
+  const kit = readFileSync("test/browser/gift-kit.ts", "utf8");
+  assert.match(kit, /if \(process\.env\.VIKY_BUILD_NAMES_A_CONTRACT === "1"\) expect\(creationSent, "[^"]+"\)\.toBe\(true\);\n\s+else test\.skip\(!creationSent, "this build names no gift contract: a creation is never sent from it"\);/);
+  // Every spec that walks a creation is named in the job, and no spec stops by itself for that reason any more.
+  const specs = readdirSync("test/browser").filter((file) => file.endsWith(".spec.ts"));
+  const walking = specs.filter((file) => /needsAContract\(/.test(readFileSync(`test/browser/${file}`, "utf8"))).map((file) => file.replace(".spec.ts", "")).sort();
+  assert.deepEqual(walking, ["card-kept-on-the-way-out", "card-payment-wait", "judge-credit-on-the-wait", "page-closed-while-making"]);
+  assert.match(making, new RegExp(`run: pnpm test:browser ${walking.join(" ")}\\n`));
+  for (const file of specs) assert.doesNotMatch(readFileSync(`test/browser/${file}`, "utf8"), /test\.skip\([^\n]*names no gift contract/, file);
 });

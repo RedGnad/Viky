@@ -1,6 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { expect, type Browser, type BrowserContext, type Page, type Route } from "@playwright/test";
+import { expect, test, type Browser, type BrowserContext, type Page, type Route } from "@playwright/test";
 import { holdAPasskey, passkeySite, signedIn } from "./virtual-passkey";
 
 /**
@@ -87,6 +87,17 @@ export function agreement(giftId: string, what: string) {
 }
 
 export type Profile = { context: BrowserContext; page: Page; baseURL: string };
+
+/**
+ * What a test that walks a creation does when none was sent. A build that names no gift contract never sends one, and
+ * the test then says so and stops. Where the build is said to name one (VIKY_BUILD_NAMES_A_CONTRACT=1, which the CI
+ * job that builds with one sets), a creation that is not sent is a failure. Until 11 Oct 2026 no pass built with a
+ * contract: these tests stopped in silence on every one, and one of them had been failing all the while.
+ */
+export function needsAContract(creationSent: boolean): void {
+  if (process.env.VIKY_BUILD_NAMES_A_CONTRACT === "1") expect(creationSent, "this build names a gift contract: the creation has to be sent").toBe(true);
+  else test.skip(!creationSent, "this build names no gift contract: a creation is never sent from it");
+}
 
 /**
  * An address of its own for each window, as the platform would name it. The server keeps its sign-in limit per

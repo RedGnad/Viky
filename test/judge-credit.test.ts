@@ -166,7 +166,8 @@ test("the code is asked where a person is about to pay: the pay sheet and the wa
   assert.match(sheet, /\[open, address, balanceRead\]/);
   const wait = readFileSync("app/components/PayGift.tsx", "utf8");
   assert.match(wait, /<JudgeCode\s+needed=\{units\}/, "on the waiting screen a first funder lands on");
-  assert.match(wait, /onMakeIt=\{\(dollars\) => writeCardDraft\(\{ \.\.\.draft, dollars, typedAmount: dollars, typedIn: "USD" \}, address\)\}/);
+  // On the wait the card is written with its way in, as a payment started (11 Oct 2026): the wait makes only such a gift.
+  assert.match(wait, /onMakeIt=\{\(dollars\) => \{\n(\s*\/\/[^\n]*\n)+\s+const next = \{ \.\.\.draft, dollars, typedAmount: dollars, typedIn: "USD" \};\n\s+writeCardDraft\(next, address\);\n\s+keepOnDevice\(next\);\n\s+\}\}/);
   const route = readFileSync("app/api/judge/credit/route.ts", "utf8");
   assert.match(route, /return NextResponse\.json\(\{ open, credited: false \}/, "without a session: open or not, and nobody is a judge yet");
   assert.doesNotMatch(readFileSync("app/judges/page.tsx", "utf8"), /JudgeCredit/, "no second field on the judges page");

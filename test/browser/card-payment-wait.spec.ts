@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { answerTheChain, json, makeAnAccount, profile, shot as capture, sizesFor } from "./gift-kit";
+import { answerTheChain, json, makeAnAccount, needsAContract, profile, shot as capture, sizesFor } from "./gift-kit";
 
 /**
  * The gift being made, and a creation that does not answer (the founder, 5 Oct 2026).
@@ -53,7 +53,7 @@ test.describe("the gift being made: a creation that does not answer keeps the sc
       await page.waitForURL(/\/fund\?step=paying/, { timeout: 60_000 });
 
       const reached = await expect.poll(() => sent.length, { timeout: 25_000 }).toBeGreaterThan(0).then(() => true, () => false);
-      test.skip(!reached, "this build names no gift contract: a creation is never sent from it");
+      needsAContract(reached);
 
       // Not answered: the screen that makes the gift stays, and says what is known. No failure, nothing to press.
       const asksAgain = page.locator("[data-asks-again]");

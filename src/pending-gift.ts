@@ -122,6 +122,26 @@ export function pendingGiftFor(raw: string | null, account: string | undefined, 
 }
 
 /**
+ * The payment this device started for exactly this card, or nothing (the founder, 11 Oct 2026).
+ *
+ * The screen that waits for a payment makes the gift by itself once the account holds its amount. So the gift it
+ * makes has to be one somebody started paying for here: written down by the pay press, with the way in that press
+ * chose, by this account, and the very card the screen holds. A page loaded again holds the starting card at its
+ * first image, thirty dollars for nobody named, before the device's own card is read: a wait that looked at once
+ * signed for that card when the account held thirty dollars, and wrote its request over the one kept for the real
+ * gift, which was then signed a second time. A card nobody started paying for is never made by a wait.
+ */
+const STARTED_BY: readonly (keyof PendingGiftTerms)[] = ["recipientName", "funderName", "conditionId", "username", "dollars", "days", "target", "course", "scale", "cadence", "standing", "standingReadAt"];
+
+export function startedGiftFor(raw: string | null, account: string | undefined, card: PendingGiftTerms, nowMs: number): PendingGift | undefined {
+  if (!account) return undefined;
+  const kept = pendingGiftFor(raw, account, nowMs);
+  // Started: the pay press names the way in, and writes the account that pressed. A card only filled in has neither.
+  if (!kept?.wayIn || kept.account !== account.toLowerCase()) return undefined;
+  return STARTED_BY.every((term) => (kept[term] ?? "") === (card[term] ?? "")) ? kept : undefined;
+}
+
+/**
  * Whether a gift kept on this device was made after all (the final audit of 9 Oct 2026, A4). The screen that makes a
  * gift says "You can close this page", and a page closed while the creation was on its way never heard that it went
  * through: for three days the device went on saying the gift was set up and not made, with a button that would make a
@@ -227,6 +247,15 @@ export function savePendingGift(terms: PendingGiftTerms): boolean {
 export function loadPendingGift(account: string): PendingGift | undefined {
   try {
     return pendingGiftFor(window.localStorage.getItem(PENDING_GIFT_STORAGE_KEY), account, Date.now());
+  } catch {
+    return undefined;
+  }
+}
+
+/** The payment this device started for this card, read on the device now (`startedGiftFor`). */
+export function loadStartedGift(account: string | undefined, card: PendingGiftTerms): PendingGift | undefined {
+  try {
+    return startedGiftFor(window.localStorage.getItem(PENDING_GIFT_STORAGE_KEY), account, card, Date.now());
   } catch {
     return undefined;
   }
