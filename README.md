@@ -355,6 +355,10 @@ with `MONAD_RPC_URL` set it also runs the mainnet fork tests against the real AU
 
 ## Declarations, environment and licences
 
+This repository carries the project's whole history since 10 Sep 2026. It was republished on 11 Oct 2026 with the names
+and identifiers of other people replaced by invented ones in past commits. The original is available to the organisers
+on request.
+
 <details>
 <summary><b>AI tools</b></summary>
 
