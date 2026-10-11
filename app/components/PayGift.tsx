@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { flushSync } from "react-dom";
 import { useMoneySession } from "@/src/account/money-session";
 import { useAccount } from "@/src/account/provider";
 import { ApiError } from "@/src/client/api";
@@ -144,7 +145,21 @@ export function PayGift() {
   const step: Step = ALL_STEPS.includes(asked as Step) ? (asked as Step) : "pay";
 
   // The gift is read from the same store the card writes (src/card-draft.ts): one gift, in one place, on the device.
-  const draft = useSyncExternalStore(subscribeToCardDraft, cardDraft, startingCardDraft);
+  const stored = useSyncExternalStore(subscribeToCardDraft, cardDraft, startingCardDraft);
+  // The card as it stood when this screen began to leave it (the founder, 11 Oct 2026). A gift just made, a gift read
+  // as made already, a different gift asked for: the device forgets the card at once, and this screen read the card
+  // on the device, so until the next page had come it drew the starting card, thirty dollars and no first name. From
+  // the press that pays to the page that follows, the card this screen draws never changes.
+  const [leftWith, setLeftWith] = useState<GiftDraft | null>(null);
+  const draft = leftWith ?? stored;
+  // And nothing more is made from a screen on its way out: the card it keeps is a whole gift, and the wait below
+  // makes one whenever the account holds its amount.
+  const leaving = useRef(false);
+  /** Called before anything is forgotten: what is on the screen is settled first, then the device forgets. */
+  const keepTheCardOnScreen = () => {
+    leaving.current = true;
+    flushSync(() => setLeftWith(cardDraft()));
+  };
   /** The gift this screen made a moment ago: its page is where the person is being taken, and nothing is paid twice. */
   const [madeGift, setMadeGift] = useState<string | null>(null);
   const [kept, setKept] = useState<PendingGift | undefined>(() => (typeof window === "undefined" ? undefined : peekPendingGift()));
@@ -413,7 +428,8 @@ export function PayGift() {
     const claimUrl = await linkOfMade(account, result, request.salt);
     // This device keeps the link: the gift's page, which is the screen that follows, shows it to be sent.
     rememberGiftLink(result.giftId, claimUrl);
-    // Made, so nothing is left on this device to pick up or to fill in again (D74).
+    // Made, so nothing is left on this device to pick up or to fill in again (D74). The screen keeps its card.
+    keepTheCardOnScreen();
     forgetPendingGift();
     clearedCardDraft();
     setKept(undefined);
@@ -431,7 +447,7 @@ export function PayGift() {
     const wanted = units;
     let live = true;
     const look = async () => {
-      if (!live || working.current) return;
+      if (!live || working.current || leaving.current) return;
       try {
         // Making the gift, and what its failure means once the money is in the account (src/after-paying.ts).
         const make = async () => {
@@ -643,11 +659,10 @@ export function PayGift() {
   };
 
   const differentGift = () => {
+    // Forgotten on the device, and nothing on this screen moves until Home has come: it used to empty itself first.
+    keepTheCardOnScreen();
     forgetPendingGift();
     clearedCardDraft();
-    setKept(undefined);
-    setPhase("waiting");
-    setProblem(null);
     router.push("/");
   };
 
@@ -806,6 +821,7 @@ export function PayGift() {
               href="/gifts"
               className={PRIMARY_BUTTON}
               onClick={() => {
+                keepTheCardOnScreen();
                 forgetPendingGift();
                 clearedCardDraft();
               }}
