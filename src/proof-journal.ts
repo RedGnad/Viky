@@ -158,9 +158,21 @@ export async function proofOfReading(giftId: string, readingId: number): Promise
 export type JudgesExample = Readonly<{ giftId: string; day: number; txHash: string; fingerprint: string; recipient: string; escrow: string | null }>;
 
 /**
- * The newest credited day that still has its proof, among the gifts of the accounts given: Viky's own, whose holder
- * agreed on 18 Sep 2026 that this one proof may be public. Nobody else's gift can be picked, which is the whole point
- * of passing the accounts in rather than searching the table.
+ * The credited day Viky publishes for anybody to check again, named by the transaction that settled it: gift 1, the
+ * day of 12 Sep 2026, on the first GiftEscrow. The README names this transaction twice and `pnpm verify:day` checks
+ * whatever is answered here, so the three are held to be one (test/readme.test.ts, test/proof-journal.test.ts).
+ */
+export const EXAMPLE_FOR_JUDGES_TX = "0x5aa6752fc8c7db2526a5e5bafe6aeb91e09bd1cbe0cf3d4a6bc5e8f65f664ffd";
+
+/**
+ * The day that transaction settled, while it still has its proof, among the gifts of the accounts given: Viky's own,
+ * whose holder agreed on 18 Sep 2026 that this one proof may be public. Nobody else's gift can be picked, which is the
+ * whole point of passing the accounts in rather than searching the table. Without that day, the newest credited day
+ * that has its proof, and between two of the same date the gift with the lower number.
+ *
+ * It was "the newest" alone until 11 Oct 2026. Gifts 1 and 2 were both credited for 12 Sep 2026 and both kept their
+ * proof: ordered by the day and by nothing else, the database answered either, and that day it answered gift 2 while
+ * the README named gift 1's transaction (found by following the README from a fresh clone).
  */
 export async function exampleForJudges(accounts: readonly string[]): Promise<JudgesExample | null> {
   if (accounts.length === 0) return null;
@@ -177,7 +189,7 @@ export async function exampleForJudges(accounts: readonly string[]): Promise<Jud
      WHERE d.outcome = 'earned'
        AND s.proofs IS NOT NULL
        AND lower(g.recipient) = ANY(${lowered as string[]})
-     ORDER BY d.day DESC
+     ORDER BY (lower(d.tx_hash) = ${EXAMPLE_FOR_JUDGES_TX}) DESC, d.day DESC, length(d.gift_id), d.gift_id
      LIMIT 1`;
   const row = rows[0];
   if (!row || row.fingerprint === null || row.fingerprint === undefined) return null;

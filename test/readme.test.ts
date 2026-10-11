@@ -13,6 +13,7 @@ import test from "node:test";
 import { toFunctionSelector } from "viem";
 import { consentTermsFor } from "../src/consent-terms";
 import { HOME } from "../src/sentences";
+import { EXAMPLE_FOR_JUDGES_TX } from "../src/proof-journal";
 import { EXIT_ROUTER, USDC_ROUTER } from "../src/viky-contracts";
 
 const README = readFileSync("README.md", "utf8");
@@ -423,3 +424,13 @@ test("the README's measured figures are src/measured.ts's own, and the documents
   }
 });
 
+
+test("the day `pnpm verify:day` checks is named by the transaction the site publishes, in both places", () => {
+  // The command takes its example from the site, and the site answers this transaction (src/proof-journal.ts, where
+  // test/proof-journal.test.ts holds it against a database). The README said one and the command checked another.
+  const firstScreen = README.split("\n").find((line) => line.startsWith("| **A credited day, checked again from nothing** | `pnpm verify:day`"));
+  assert.ok(firstScreen?.includes(`(https://monadvision.com/tx/${EXAMPLE_FOR_JUDGES_TX})`), "the first screen's table");
+  const ran = README.slice(README.indexOf("- **A day credited on a proof.**"), README.indexOf("`pnpm verify:day` checks again."));
+  assert.ok(ran.includes("Gift 1, the day of 12 Sep 2026") && ran.includes(`(https://monadvision.com/tx/${EXAMPLE_FOR_JUDGES_TX})`), "what has run with real money");
+  assert.equal(README.split(EXAMPLE_FOR_JUDGES_TX).length - 1, 3, "and the note on its gas limit: the same transaction, three times");
+});

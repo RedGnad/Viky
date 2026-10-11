@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import test, { after, before } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
@@ -6,7 +7,7 @@ import { ACCOUNT_AUTH_COOKIE_NAME, createAccountAuthChallenge, issueAccountAuthS
 import { configureGiftStore, ensureGiftSchema, markClaimed, newClaimToken, recordSettledDays, saveGift } from "../src/gift-store";
 import { configureMilestoneStore, ensureMilestoneSchema } from "../src/milestone-store";
 import { configureProofSessionStore, ensureProofSessionSchema } from "../src/proof-session-store";
-import { configureProofJournal, dailyJournal, exampleForJudges, proofOfDay } from "../src/proof-journal";
+import { configureProofJournal, dailyJournal, EXAMPLE_FOR_JUDGES_TX, exampleForJudges, proofOfDay } from "../src/proof-journal";
 import type { SqlExecutor } from "../src/proof-session-store";
 import { GET as journalGet } from "../app/api/gift/[id]/journal/route";
 import { GET as proofGet } from "../app/api/gift/[id]/proof/route";
@@ -189,4 +190,46 @@ test("a day settled before the link was recorded is found again through the tran
   const kept = await proofOfDay("8", 20331);
   assert.deepEqual(kept?.proof, { claimData: { identifier: "0xdef" } });
   assert.equal(await proofOfDay("8", 20330), null, "a drained day has no proof, whatever transaction it shares");
+});
+
+/**
+ * The README says twice which day `pnpm verify:day` checks, by its transaction, and the command checks whatever the
+ * site publishes. On 11 Oct 2026 the two had parted: gifts 1 and 2 were both credited for 12 Sep 2026, the example was
+ * "the newest day", and of two days of one date the database answered the other one.
+ */
+test("the example the site publishes is the day the README names, whatever else was credited", async () => {
+  const OWN = privateKeyToAccount(`0x${"11".repeat(32)}`);
+  const day = async (giftId: string, dayNumber: number, tx: `0x${string}`, mark: string) => {
+    const session = `public:${giftId}:count:${dayNumber}:${mark.repeat(16)}`;
+    await saveGift({ giftId, funder: FUNDER.address, contactHash: `0x${mark.repeat(64)}`, claimToken: newClaimToken(), goalType: 1, dailyTarget: 10, durationDays: 7, amount: 7_000_000n, createdTx: tx, escrow: "0x00000000000000000000000000000000000000e1", goalUsername: "ama_learns" });
+    await markClaimed(giftId, OWN.address, tx);
+    await db.query(
+      `INSERT INTO viky_proof_sessions (session_id, account, gift_id, phase, duolingo_username, duolingo_profile_id, consumed_at, attestation, proofs)
+       VALUES ($1, $2, $3, 'check-in', 'ama_learns', '123', now(), $4::jsonb, $5::jsonb)`,
+      [session, OWN.address.toLowerCase(), giftId, JSON.stringify({ message: { nullifier: `0x${mark.repeat(64)}` }, signature: "0x00" }), JSON.stringify({ claimData: { identifier: `0x${mark}` } })],
+    );
+    await recordSettledDays(giftId, [{ day: dayNumber, outcome: "earned" }], tx, session);
+    return session;
+  };
+  // Three gifts credited for the same date, written in the order least kind to the rule, and a newer day.
+  await day("3", 20708, `0x${"33".repeat(32)}`, "3");
+  await day("2", 20708, `0x${"55".repeat(32)}`, "2");
+  const named = await day("1", 20708, EXAMPLE_FOR_JUDGES_TX, "1");
+  const newer = await day("9", 20730, `0x${"99".repeat(32)}`, "9");
+
+  const example = await exampleForJudges([OWN.address]);
+  assert.deepEqual([example?.giftId, example?.day, example?.txHash], ["1", 20708, EXAMPLE_FOR_JUDGES_TX]);
+  // The README's two places, held against what was answered: its first screen, and what has run with real money.
+  const readme = readFileSync("README.md", "utf8");
+  const firstScreen = readme.split("\n").find((line) => line.startsWith("| **A credited day, checked again from nothing** | `pnpm verify:day`"));
+  const ranWithMoney = readme.slice(readme.indexOf("- **A day credited on a proof.**"), readme.indexOf("`pnpm verify:day` checks again."));
+  for (const said of [firstScreen ?? "", ranWithMoney]) {
+    assert.deepEqual([...said.matchAll(/monadvision\.com\/tx\/(0x[0-9a-f]{64})/g)].map((found) => found[1]), [example?.txHash], "the README names the transaction the example answers");
+  }
+
+  // Without that day's proof, the newest day that has one; and of two days of one date, the lower gift number.
+  await db.query("UPDATE viky_proof_sessions SET proofs = NULL WHERE session_id = $1", [named]);
+  assert.equal((await exampleForJudges([OWN.address]))?.giftId, "9");
+  await db.query("UPDATE viky_proof_sessions SET proofs = NULL WHERE session_id = $1", [newer]);
+  assert.equal((await exampleForJudges([OWN.address]))?.giftId, "2");
 });
