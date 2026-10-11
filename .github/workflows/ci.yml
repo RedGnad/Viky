@@ -26,7 +26,8 @@ env:
 #
 # - three jobs side by side, the contracts, the policy tests, and the screens in a browser cut in two parts (three
 #   until 2 Oct 2026: the policy tests are the longest job, so a third part bought no time and cost its own set-up);
-#   and since 11 Oct 2026 a fourth beside them, the screens that make a gift, on a build that names a gift contract;
+#   and since 11 Oct 2026 two more beside them, each on a build of its own: the screens that make a gift, where a
+#   gift contract is named, and the screens of the card way, where Rampnow's settings are;
 # - a tree a green pass already walked is not walked again: the pass leaves a mark named after the tree it tested,
 #   and the next pass on the same tree reads it and stops. A pull request is tested as merged into main, so the
 #   commit main receives carries the same tree whenever the branch was up to date, and its pass is one job of seconds;
@@ -268,9 +269,58 @@ jobs:
           VIKY_BUILD_NAMES_A_CONTRACT: "1"
         run: pnpm test:browser card-kept-on-the-way-out card-payment-wait judge-credit-on-the-wait page-closed-while-making
 
+  # The card way through Rampnow, walked on a build that names its settings as production does (11 Oct 2026): the way
+  # in, its frame, the converter of its dollars, and the gift contract. Twenty-three tests need such a build, and no
+  # pass made one: they stopped in silence, and the frame's own spec had gone on expecting an address in euros since the
+  # frame was asked in the reader's money (#114). Nothing leaves for Rampnow: each test stands in for its page and its
+  # quote, and no key of its account is set here.
+  card:
+    name: Screens of the card way
+    needs: scope
+    if: needs.scope.outputs.validated != 'true' && needs.scope.outputs.browser == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NEXT_PUBLIC_GIFT_ESCROW_ADDRESS: "0x591d76863177E70FfcA2C793212d4715A367Ec70"
+      NEXT_PUBLIC_RAMPNOW_WAY_IN: "on"
+      NEXT_PUBLIC_RAMPNOW_FRAME: "on"
+      NEXT_PUBLIC_USDC_ROUTER_ADDRESS: "0xf05449c8b868Ce1e6a0D7223e2ceCbbfD1498F9c"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm from packageManager
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application, with the card way switched on
+        run: pnpm build
+
+      - name: Install the browser used by the screen tests
+        run: pnpm exec playwright install --with-deps chromium
+
+      # The specs that ask for this build, every one of them (test/ci-scope.test.ts holds this list to the files).
+      - name: Walk the screens of the card way
+        env:
+          SESSION_SIGNING_SECRET: ci-only-session-secret-that-protects-nothing
+          VIKY_RAMPNOW_FRAME_BUILD: "1"
+        run: pnpm test:browser pay-sheet rampnow-frame way-out
+
   validated:
     name: Mark the tree as walked
-    needs: [scope, contracts, policy, browser, making]
+    needs: [scope, contracts, policy, browser, making, card]
     # Only after a pass where the policy tests ran and passed and nothing failed or was cut. A job the change did not
     # ask for is skipped, which is not a failure; a pass stopped by the mark leaves no second mark.
     if: ${{ always() && needs.scope.outputs.validated != 'true' && needs.policy.result == 'success' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}

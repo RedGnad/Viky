@@ -71,7 +71,7 @@ test("the workflow runs three jobs side by side, marks a tree only after a green
     return workflow.slice(from, next < 0 ? undefined : from + 1 + next);
   };
   // The three jobs wait for the scope and for nothing else, so they run side by side.
-  for (const name of ["contracts", "policy", "browser", "making"]) assert.match(job(name), /\n {4}needs: scope\n/, `${name} waits for another job`);
+  for (const name of ["contracts", "policy", "browser", "making", "card"]) assert.match(job(name), /\n {4}needs: scope\n/, `${name} waits for another job`);
   // Two parts since 2 Oct 2026 (the founder): the policy tests are the longest job, so a third part bought no time.
   assert.match(job("browser"), /part: \[1, 2\]\n/, "the screens in two parts");
   assert.match(job("browser"), /pnpm test:browser --shard=\$\{\{ matrix\.part \}\}\/2\n/);
@@ -85,7 +85,7 @@ test("the workflow runs three jobs side by side, marks a tree only after a green
   // The mark: named after the tree that was tested, written only when the policy tests passed and nothing failed or
   // was cut, and looked for before anything runs.
   const mark = job("validated");
-  assert.match(mark, /needs: \[scope, contracts, policy, browser, making\]/);
+  assert.match(mark, /needs: \[scope, contracts, policy, browser, making, card\]/);
   assert.match(mark, /needs\.policy\.result == 'success' && !contains\(needs\.\*\.result, 'failure'\) && !contains\(needs\.\*\.result, 'cancelled'\)/);
   assert.match(mark, /name: validated-\$\{\{ needs\.scope\.outputs\.tree \}\}/);
   assert.match(job("scope"), /tree=\$\(git rev-parse 'HEAD\^\{tree\}'\)/);
@@ -98,7 +98,7 @@ test("the workflow runs three jobs side by side, marks a tree only after a green
 test("the screens that make a gift are walked on a build that names a contract, every spec of them, and a creation not sent fails there", () => {
   const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
   const from = workflow.indexOf("\n  making:\n");
-  const making = workflow.slice(from, workflow.indexOf("\n  validated:\n"));
+  const making = workflow.slice(from, workflow.indexOf("\n  # The card way through Rampnow"));
   assert.ok(from > 0, "no job making");
   assert.match(making, /name: Screens that make a gift\n/);
   // Asked for whenever the screens are, on a build of its own that names the gift contract, for the build and the server.
@@ -117,4 +117,29 @@ test("the screens that make a gift are walked on a build that names a contract, 
   assert.deepEqual(walking, ["card-kept-on-the-way-out", "card-payment-wait", "judge-credit-on-the-wait", "page-closed-while-making"]);
   assert.match(making, new RegExp(`run: pnpm test:browser ${walking.join(" ")}\\n`));
   for (const file of specs) assert.doesNotMatch(readFileSync(`test/browser/${file}`, "utf8"), /test\.skip\([^\n]*names no gift contract/, file);
+});
+
+test("the card way is walked on a build that names Rampnow's settings, every spec that asks for one", () => {
+  const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
+  const from = workflow.indexOf("\n  card:\n");
+  assert.ok(from > 0, "no job card");
+  const card = workflow.slice(from, workflow.indexOf("\n  validated:\n"));
+  assert.match(card, /name: Screens of the card way\n/);
+  assert.match(card, /if: needs\.scope\.outputs\.validated != 'true' && needs\.scope\.outputs\.browser == 'true'\n/);
+  // The build production makes: the way in, its frame, the converter of its dollars, the gift contract. No key.
+  for (const setting of ['NEXT_PUBLIC_RAMPNOW_WAY_IN: "on"', 'NEXT_PUBLIC_RAMPNOW_FRAME: "on"']) assert.ok(card.includes(setting), setting);
+  assert.match(card, /NEXT_PUBLIC_USDC_ROUTER_ADDRESS: "0x[0-9a-fA-F]{40}"\n/);
+  assert.match(card, /NEXT_PUBLIC_GIFT_ESCROW_ADDRESS: "0x[0-9a-fA-F]{40}"\n/);
+  assert.doesNotMatch(card, /RAMPNOW_API_KEY|RAMPNOW_SECRET/);
+  assert.match(card, /VIKY_RAMPNOW_FRAME_BUILD: "1"\n/);
+  // No other job is given these settings: the screens are walked without them too, as most people meet them.
+  assert.doesNotMatch(workflow.slice(0, workflow.indexOf("\n  # The card way through Rampnow")), /NEXT_PUBLIC_RAMPNOW|VIKY_RAMPNOW_FRAME_BUILD/);
+  // Every spec that asks for such a build is named in the job.
+  const asking = readdirSync("test/browser").filter((file) => file.endsWith(".spec.ts") && readFileSync(`test/browser/${file}`, "utf8").includes("process.env.VIKY_RAMPNOW_FRAME_BUILD")).map((file) => file.replace(".spec.ts", "")).sort();
+  assert.deepEqual(asking, ["pay-sheet", "rampnow-frame", "way-out"]);
+  assert.match(card, new RegExp(`run: pnpm test:browser ${asking.join(" ")}\\n`));
+  // The frame is asked in the money the sheet said (#114): its spec no longer expects euros.
+  const frame = readFileSync("test/browser/rampnow-frame.spec.ts", "utf8");
+  assert.doesNotMatch(frame, /\\\?euros=|srcCurrency=EUR/);
+  assert.match(frame, /expect\(ask\.get\("currency"\)\)\.toBe\("USD"\);/);
 });

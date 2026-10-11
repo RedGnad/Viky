@@ -55,28 +55,42 @@ async function rampnowStandIn(context: BrowserContext, silent: boolean): Promise
   );
 }
 
-async function toTheFrame(page: Page, context: BrowserContext, silent = false, holdings: Holdings = { ausd: 0n, mon: 0n }): Promise<void> {
+async function toTheFrame(page: Page, context: BrowserContext, silent = false, holdings: Holdings = { ausd: 0n, mon: 0n }): Promise<string> {
   await answerTheChain(context, holdings);
   // After the chain's stand-in, which refuses every other host: the route registered last is the one asked first.
   await rampnowStandIn(context, silent);
   await page.route("**/api/rails/where**", (route) =>
     route.fulfill(json({ country: "fr", ask: false, fromConnection: "fr", fromDevice: "fr", waysOut: { Ramp: "serves", Mercuryo: "serves" }, waysIn: {}, card: { offered: true, country: "fr" }, out: { bank: null, cardSmallest: null } })),
   );
-  let asked = "";
+  const asked: string[] = [];
   await page.route("**/api/fund/rampnow-frame**", (route) => {
-    asked = route.request().url();
+    asked.push(new URL(route.request().url()).search);
     return route.fulfill(json({ url: "https://app.rampnow.io/order/quote?stand-in=1" }));
   });
   await page.goto("/");
   await page.getByRole("link", { name: "Offer a gift" }).first().click();
   await card(page).getByLabel("Their first name").fill("Boo");
   await card(page).locator("[data-card-action]").click();
-  await sheet(page).getByRole("button", { name: /^(Pay \S+ by card|Pay)$/ }).first().click();
+  const pay = sheet(page).getByRole("button", { name: /^(Pay \S+ by card|Pay)$/ }).first();
+  const said = ((await pay.textContent()) ?? "").trim();
+  await pay.click();
   await page.waitForURL(/\/fund\?step=paying&rampnow=1/, { timeout: 60_000 });
   await expect(frameOf(page)).toBeVisible();
   // Camera and payment allowed, and the address asked of the server, which puts in the key and the session's account.
   await expect(frameOf(page)).toHaveAttribute("allow", "camera; microphone; payment; clipboard-write; publickey-credentials-get");
-  expect(asked).toMatch(/\/api\/fund\/rampnow-frame(\?euros=\d+(\.\d+)?)?$/);
+  // The frame is asked in the money the sheet said, for the amount its button named (#114, 9 Oct 2026): dollars by the
+  // rule here, where no quote is answered. It was asked in euros until then, and this line went on expecting them.
+  await expect.poll(() => asked.filter((search) => search !== "").length, { timeout: 30_000 }).toBeGreaterThan(0);
+  const named = [...new Set(asked.filter((search) => search !== ""))];
+  expect(named, "one amount, in one money").toHaveLength(1);
+  const ask = new URLSearchParams(named[0]);
+  expect([...ask.keys()]).toEqual(["currency", "amount"]);
+  expect(ask.get("currency")).toBe("USD");
+  const amount = ask.get("amount") ?? "";
+  expect(amount).toMatch(/^\d+\.\d{2}$/);
+  const onTheButton = said.match(/^Pay \$(\d+\.\d{2}) by card$/);
+  if (onTheButton) expect(amount, "the amount the pay button named").toBe(onTheButton[1]);
+  return amount;
 }
 
 /** The frame is the same element before and after: a mark written on it is still there, so Rampnow's page was not loaded anew. */
@@ -94,7 +108,7 @@ test.describe("Rampnow in a frame: one gift, one payment", () => {
     test(`the frame open, no payment known: no cross and no other way to close, one way out under it, and the page beside (${size.name})`, async ({ browser, baseURL }) => {
       const funder = await profile(browser, baseURL, size.viewport);
       const { page, context } = funder;
-      await toTheFrame(page, context);
+      const amount = await toTheFrame(page, context);
       await mark(page);
       // No cross, and nothing else closes it: Escape, twice, since a browser closes a dialog on the second whatever
       // the first was answered; a press outside the sheet; a pull on its head.
@@ -118,7 +132,8 @@ test.describe("Rampnow in a frame: one gift, one payment", () => {
       await expect(under.getByText("Can't sign in here?", { exact: true })).toBeVisible();
       const beside = under.getByRole("link", { name: "Open the card page" });
       await expect(beside).toHaveAttribute("target", "_blank");
-      expect(await beside.getAttribute("href")).toMatch(/^https:\/\/app\.rampnow\.io\/order\/quote\?orderType=buy&srcChain=fiat&srcCurrency=EUR/);
+      // Rampnow's own page beside is opened on the same money and the same amount as the frame.
+      expect(await beside.getAttribute("href")).toMatch(new RegExp(`^https://app\\.rampnow\\.io/order/quote\\?orderType=buy&srcChain=fiat&srcCurrency=USD&srcAmount=${amount.replace(".", "\\.")}&`));
       // The link that pays by card carries the card's line too, as every button or link that pays by card does.
       await expect(under.getByText(/^By paying by card, you confirm you are 18 or older and accept/)).toBeVisible();
       await expect(under.locator("[data-rampnow-keep-open]")).toHaveCount(0);
