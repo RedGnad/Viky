@@ -380,7 +380,7 @@ Two things in this repository were not written for this hackathon.
 **Code ported from Lock-in.** Lock-in is an earlier project by the same author, in a private repository. It verified
 a daily Duolingo lesson and a Strava run with Reclaim proofs. Viky is another product: a third party funds, and nothing
 is staked. What it took from Lock-in is the verification plumbing, ported file by file on 10 Sep 2026 (commit
-`67656ba`) and edited since:
+`9c280af`) and edited since:
 
 - the account session and the guards every route starts with: `src/account-auth-server.ts`, `src/api-guard.ts`,
   `src/rate-limit.ts`, `src/monad-gas.ts`;

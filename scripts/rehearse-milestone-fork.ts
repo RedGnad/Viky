@@ -80,7 +80,8 @@ async function main() {
 
   // A settled rating (its RD under the threshold of D90), so the ordinary path runs and not an operator's exception. Any
   // public account with one will do: Chess.com's ratings page of a single player can fail for a while (D90).
-  const player = process.env.REHEARSAL_PLAYER?.trim() || "ida_plays";
+  const player = process.env.REHEARSAL_PLAYER?.trim();
+  if (!player) throw new Error("REHEARSAL_PLAYER names the public Chess.com account to read: any with a settled rating in the cadence");
   const cadence = (process.env.REHEARSAL_CADENCE?.trim() || "bullet") as ChessMode;
   const standing = await readChessStanding(player, cadence);
   if (standing.rating === null || standing.rd === null || standing.rd >= CHESS_SETTLED_RD_BELOW) {

@@ -86,7 +86,7 @@ test("a proof about another page, another name, or taken far from its other half
 });
 
 test("zkFetch's refusals, as measured, become the right typed refusal", async () => {
-  // The three messages read on 17 Sep 2026 against uma_plays, an unknown name, and uma_plays's blitz.
+  // The three messages read on 17 Sep 2026 against an account that exists, an unknown name, and that account's blitz.
   const notFound = "protocol terminated with error: HTTP response status 404 is not a success status: received HTTP 404, expected 2xx";
   const noName = `attestor submission failed: failed to submit TEE bundle: failed to send request: RPC request failed: Invalid receipt. Regex "${CHESS_PROFILE.matches[2].value}" didn't match (code: 1)`;
   const noBlitz = `attestor submission failed: failed to submit TEE bundle: failed to send request: RPC request failed: Invalid receipt. Regex "${chessRatingPattern("blitz")}" didn't match (code: 1)`;
@@ -133,7 +133,7 @@ test("the plain read answers who and where, and says which failure it met", asyn
     "https://api.chess.com/pub/player/uma_plays/stats": { status: 200, body: { chess_rapid: { last: { rating: 1705, date: 1775022187 } }, fide: 0 } },
     "https://api.chess.com/pub/player/nobody-zz9": { status: 404, body: { code: 0, message: "User not found." } },
     "https://api.chess.com/pub/player/flaky-zz9": { status: 200, body: { player_id: 7, username: "flaky-zz9", status: "premium" } },
-    // Measured on 18 Sep 2026: ivo_plays answers 200 with status "closed", and its ratings page answers as any other.
+    // Measured on 18 Sep 2026: a closed account answers 200 with status "closed", and its ratings page answers as any other.
     "https://api.chess.com/pub/player/ivo_plays": { status: 200, body: { player_id: 990000000002, username: "ivo_plays", status: "closed" } },
     "https://api.chess.com/pub/player/ivo_plays/stats": { status: 200, body: { chess_rapid: { last: { rating: 990, date: 1620668644, rd: 105 } } } },
     "https://api.chess.com/pub/player/unfair-zz9": { status: 200, body: { player_id: 5, username: "unfair-zz9", status: "closed:fair_play_violations" } },
@@ -161,7 +161,7 @@ test("the plain read answers who and where, and says which failure it met", asyn
 test("an account Chess.com has closed is refused, and a profile without a status is a reading that failed on our side", async () => {
   // Chess.com documents six values for `status` ("closed, closed:fair_play_violations, basic, premium, mod, staff") and
   // its Fair Play policy says it may "close your account and label it publicly closed for Fair Play violations".
-  // Measured on 18 Sep 2026: ama_plays premium, yan_plays staff, SevyB basic, ivo_plays closed.
+  // Measured on 18 Sep 2026 on four accounts: one premium, one staff, one basic, one closed.
   assert.equal(accountIsClosed("basic"), false);
   assert.equal(accountIsClosed("premium"), false);
   assert.equal(accountIsClosed("staff"), false);
@@ -238,7 +238,7 @@ test("the register's name check is Chess.com's own rule, and the milestone half 
 
 test("a rating has settled below the RD measured on 17 Sep 2026, and not at it, nor without an RD (D90)", () => {
   assert.equal(CHESS_SETTLED_RD_BELOW, 60);
-  // Low: ama_plays's blitz, 31. High: a new account, 350 as Chess.com starts one; uma_plays's rapid, 197. None: never played.
+  // Low: a much played blitz, 31. High: a new account, 350 as Chess.com starts one; a little played rapid, 197. None: never played.
   assert.equal(ratingHasSettled(31), true);
   assert.equal(ratingHasSettled(59), true);
   assert.equal(ratingHasSettled(60), false);

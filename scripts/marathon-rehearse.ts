@@ -9,14 +9,15 @@ import { SHAPE_HAVE_OR_NOT } from "../src/milestone-protocol";
  * result, with everything else stood in for. The reading service reads the runner's page through the attested fetch,
  * exactly as production does; the gift, its state and the relay are fakes that print what they would have received.
  *
- *   NAME="Sam Example" BIB=900347 RACE=dakar-2023/marathon pnpm exec tsx scripts/marathon-rehearse.ts
+ *   NAME="<the runner, as the result prints them>" BIB=<their bib> RACE=dakar-2023/marathon pnpm exec tsx scripts/marathon-rehearse.ts
  *
  * Nothing moves: the "relay" prints the EIP-712 message it would have sent and returns a made-up hash, and the
  * "record" prints the reading line. Proof (c), a test payment that goes, is the same path with the real gift.
  */
 async function main() {
-  const name = process.env.NAME?.trim() || "Sam Example";
-  const bib = process.env.BIB?.trim() || "900347";
+  const name = process.env.NAME?.trim();
+  const bib = process.env.BIB?.trim();
+  if (!name || !bib) throw new Error("NAME and BIB say whose public result is read: the runner as the result prints them, and their bib");
   const courseId = process.env.RACE?.trim() || "dakar-2023/marathon";
   const found = marathonEventById(courseId);
   if (!found) throw new Error(`no race ${courseId}`);

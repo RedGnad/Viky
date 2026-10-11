@@ -15,13 +15,13 @@ import { SHAPE_CLIMB } from "../src/milestone-protocol";
  * The puzzle record on Chess.com: a climb read from the same page as the ratings, with no cadence to choose and no
  * RD to settle (the founder's line of 20 Sep 2026).
  *
- * Every shape below was measured the same day on api.chess.com, on sevyb, ama_plays, ida_plays and yan_plays. What the
+ * Every shape below was measured the same day on api.chess.com, on four accounts. What the
  * tests are really guarding is the one way this reading could pay the wrong number: the block carries two ratings,
  * the record and the lowest the account ever fell to, and a pattern that could match either would let the second
  * settle a gift made on the first.
  */
 
-/** yan_plays's stats page on 20 Sep 2026, the fragment this reading is about, with what surrounds it on the page. */
+/** One account's stats page on 20 Sep 2026, the fragment this reading is about, with what surrounds it on the page. */
 const YAN_PLAYS =
   '{"chess_daily":{"last":{"rating":1502,"date":1789854578,"rd":63},"best":{"rating":2065,"date":1256228875}},' +
   '"chess_rapid":{"last":{"rating":1904,"date":1764957051,"rd":80}},' +
@@ -58,7 +58,7 @@ function honest(record: Record<string, string> = { rating: "2096", date: "176049
 test("the record is read from the block that holds it, and the lowest rating can never come out instead", () => {
   const pattern = new RegExp(chessTacticsPattern());
   const found = pattern.exec(YAN_PLAYS);
-  assert.equal(found?.groups?.rating, "2096", "the record yan_plays held on 20 Sep 2026");
+  assert.equal(found?.groups?.rating, "2096", "the record that account held on 20 Sep 2026");
   assert.equal(found?.groups?.date, "1760495253");
   // The same page, with the two halves of the block the other way round: a reading anchored on `highest` finds
   // nothing rather than handing over the 1795 the account once fell to.

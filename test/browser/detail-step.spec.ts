@@ -6,7 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
  * the bar for a day. It now opens the catalogue while nothing is chosen and that condition's own questions from then
  * on, with the way back to the catalogue as the step's first control. One line, because the card stays quiet.
  *
- * The profile read is stubbed with what production answered for "Zia_learns" on 20 Sep 2026 (French 77530, Japanese 4199,
+ * The profile read is stubbed with what production answered for one public profile on 20 Sep 2026 (French 77530, Japanese 4199,
  * Spanish 13022, German 2348, Swedish 1012, current French), so this measures our screen and not the source's uptime.
  */
 const ZIA_LEARNS = {

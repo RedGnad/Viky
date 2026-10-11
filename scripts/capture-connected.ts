@@ -632,7 +632,7 @@ function manifest(base: string, taken: string, commit: string, chromiumVersion: 
   lines.push(
     // Written down on the first run and dated to it on purpose. Once the design pass fixes these, a later run
     // printing them as current would describe screens that no longer exist.
-    "## Noticed while capturing, on the run of 16 Sep 2026 (commit `34d6cec`)",
+    "## Noticed while capturing, on the run of 16 Sep 2026 (commit `419ad59`)",
     "",
     "Recorded because they bear on reading the images. Not assessed, and nothing was changed. They describe the screens as they were at that commit: a later run does not check them again.",
     "",

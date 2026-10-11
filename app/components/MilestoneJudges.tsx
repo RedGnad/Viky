@@ -127,7 +127,7 @@ export function MilestoneJudges() {
           a gift nor reach a target, and the whole amount goes back to the funder at the deadline, exactly as for a target not reached. The
           standing is on the same public profile, in the documented field &quot;status&quot; (closed, closed:fair_play_violations, basic, premium,
           mod, staff), and the policy says Chess.com &quot;may close your account and label it publicly closed for Fair Play violations&quot;. It is
-          read on every reading, plain and attested. Measured that day: ama_plays premium, yan_plays staff, SevyB basic, ivo_plays closed. A profile whose
+          read on every reading, plain and attested. Measured that day on four accounts: one premium, one staff, one basic, one closed. A profile whose
           status cannot be read is a reading that failed on our side: nothing is paid and nothing is taken back that day.
         </li>
       </ul>

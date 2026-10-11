@@ -70,14 +70,14 @@ test("the patterns match what those pages actually answer", () => {
   for (const m of CHESS_PLAYER.matches) assert.match(noName, new RegExp(m.value), m.value);
   assert.equal(CHESS_PROFILE.matches.every((m) => new RegExp(m.value).test(noName)), false, "a binding needs a name to hold the code");
 
-  // ivo_plays, an account Chess.com has closed, read on 18 Sep 2026: the same shape, and the status says so (U1).
+  // An account Chess.com has closed, read on 18 Sep 2026: the same shape, and the status says so (U1).
   const closed =
     '{"avatar":"https://images.chesscomfiles.com/uploads/v1/user/0.00000000.200x200o.000000000000.gif","player_id":990000000002,"@id":"https://api.chess.com/pub/player/ivo_plays","url":"https://www.chess.com/member/Ivo_plays","username":"ivo_plays","followers":0,"country":"https://api.chess.com/pub/country/NL","last_online":1620662445,"joined":1462908315,"status":"closed","is_streamer":false,"verified":false,"streaming_platforms":[]}';
   for (const m of CHESS_PLAYER.matches) assert.match(closed, new RegExp(m.value), m.value);
   assert.equal(new RegExp(chessStatusPattern()).exec(closed)?.groups?.status, "closed");
   assert.equal(new RegExp(chessStatusPattern()).exec(chessProfile)?.groups?.status, "staff");
 
-  // ama_plays's page lists daily first, then rapid, bullet and blitz. Each cadence must read its own block.
+  // One account's page lists daily first, then rapid, bullet and blitz. Each cadence must read its own block.
   const chessStats =
     '{"chess_daily":{"last":{"rating":2239,"date":1770563021,"rd":103}},"chess960_daily":{"last":{"rating":1231,"date":1444458214,"rd":230}},"chess_rapid":{"last":{"rating":2838,"date":1786796329,"rd":44}},"chess_bullet":{"last":{"rating":3403,"date":1789235988,"rd":30}},"chess_blitz":{"last":{"rating":3410,"date":1789613471,"rd":31}}}';
   const read = (mode: keyof typeof CHESS_RATINGS) => new RegExp(CHESS_RATINGS[mode].matches[0].value).exec(chessStats)?.groups;

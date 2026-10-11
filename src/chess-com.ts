@@ -11,7 +11,7 @@ import { keccak256, stringToHex, type Hex } from "viem";
  *   name is the field a person edits, so it is where a binding code goes, as on Duolingo. `player_id` does not change
  *   when a username does, so it is the identity a gift is bound to.
  * - `/pub/player/{name}/stats` carries one block per cadence, `"chess_rapid":{"last":{"rating":1904,"date":...}}`,
- *   in no fixed order (ama_plays's begins with daily, ida_plays's with rapid), and a cadence never played has no
+ *   in no fixed order (one account's begins with daily, another's with rapid), and a cadence never played has no
  *   block at all. So a reading names its cadence in its own pattern; a pattern for "any cadence" returns whichever
  *   comes first, which would let a bullet rating settle a rapid gift.
  * - An unknown name answers 404 with a JSON message. A mixed-case name answers 301 to the lower-case one.
@@ -27,10 +27,10 @@ export function isChessMode(value: unknown): value is ChessMode {
 
 /**
  * The puzzle rating, which is on the same page and is not a cadence: no game is played against anybody, and the
- * number is a person's own record. Measured on 20 Sep 2026 on sevyb, ama_plays, ida_plays and yan_plays: the block is
+ * number is a person's own record. Measured on 20 Sep 2026 on four accounts, the founder's own among them: the block is
  * `"tactics":{"highest":{"rating":2096,"date":1760495253},"lowest":{"rating":1795,"date":...}}`, carrying no `last`
  * and no RD at all. `highest` is the best that account ever reached and never goes down, so the climb it holds is
- * "beat your own record": yan_plays 2096 against a lowest of 1795, ama_plays 2730 held since 2014, ida_plays the 400 an
+ * "beat your own record": one account at 2096 against a lowest of 1795, one at 2730 held since 2014, one at the 400 an
  * account starts at. A person who never solved a puzzle is refused rather than read as nothing.
  */
 export const CHESS_TACTICS = "tactics";
@@ -108,7 +108,7 @@ export function chessClimbPattern(climb: ChessClimb): string {
  * The account's standing with Chess.com itself, which the profile publishes as `status`. Chess.com documents the six
  * values ("closed, closed:fair_play_violations, basic, premium, mod, staff") and its Fair Play policy says what a
  * closed one can mean: "we may close your account and label it publicly closed for Fair Play violations". Measured on
- * 18 Sep 2026: ama_plays premium, ida_plays premium, oda_plays premium, yan_plays staff, SevyB basic, ivo_plays closed.
+ * 18 Sep 2026 on six accounts: three premium, one staff, one basic (the founder's own) and one closed.
  * A closed account still serves its profile and its ratings, so the status is the only thing that says so.
  */
 export function chessStatusPattern(): string {
@@ -216,7 +216,7 @@ export function ratingOfStats(body: unknown, mode: ChessMode): ChessClimbReading
   const { rating, date, rd } = last as Record<string, unknown>;
   if (typeof rating !== "number" || !Number.isSafeInteger(rating) || rating <= 0) return null;
   // `best` is a block of its own beside `last`, and a young account has none: measured on 17 Sep 2026, SevyB had a
-  // rapid rating and no best at all, while ida_plays, uma_plays and sol_plays had one in every cadence they played.
+  // rapid rating and no best at all, while three older accounts had one in every cadence they played.
   const best = (block as Record<string, unknown>).best;
   const bestRating = best && typeof best === "object" ? (best as Record<string, unknown>).rating : undefined;
   return {

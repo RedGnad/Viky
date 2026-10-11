@@ -7,15 +7,14 @@
  * gives now, and the size of the rating changes over its most recent rated games, read from the monthly game archives
  * (each game carries the player's rating after it). Read only, public pages, one request at a time.
  *
- * Usage: npx tsx scripts/measure-chess-rd.ts [extra usernames...]
+ * Usage: npx tsx scripts/measure-chess-rd.ts [usernames...]
  */
 
 import { CHESS_MODES, type ChessMode } from "../src/chess-com";
 
 const UA = "Viky/1.0 (+https://viky.cash)";
 const API = "https://api.chess.com/pub";
-/** The names read on 17 Sep 2026: players of every level named in D88, then accounts from Luxembourg's public list. */
-const NAMED = ["ama_plays", "ida_plays", "oda_plays", "yan_plays", "john", "abc", "uma_plays"];
+/** Read on 17 Sep 2026: seven accounts of every level, given on the command line, then accounts from Luxembourg's public list. */
 const SAMPLED_FROM_COUNTRY = "LU";
 const SAMPLE_SIZE = 40;
 const RECENT_GAMES = 20;
@@ -90,7 +89,7 @@ async function main() {
   // Every n-th name of the list, so the sample is spread over it and the same on every run.
   const step = Math.max(1, Math.floor(country.length / SAMPLE_SIZE));
   const sampled = country.filter((_, index) => index % step === 0).slice(0, SAMPLE_SIZE);
-  const names = [...NAMED, ...extra, ...sampled];
+  const names = [...extra, ...sampled];
   console.log(`measured ${new Date().toISOString()}, ${names.length} profiles (${sampled.length} from ${SAMPLED_FROM_COUNTRY}'s list of ${country.length})`);
   console.log("username\tjoined\tcadence\tgames\trd\trating\tlast game\tdeltas\tmedian |change|\tmax |change|");
   for (const username of names) {

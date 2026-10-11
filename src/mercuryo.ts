@@ -3,7 +3,7 @@ import { GiftApiError } from "./gift-api";
 
 /**
  * What the card payout service will take today, asked of the service rather than remembered (D60, and the audit of
- * 1 Oct 2026 which found the check gone since commit a11823e).
+ * 1 Oct 2026 which found the check gone since commit a4407ac).
  *
  * `GET https://api.mercuryo.io/v1.6/lib/limits/sell` answers one row per coin, network and currency. For the chain's
  * own coin on Monad in euros it read, on 1 Oct 2026: `fiat_limits.min` "15.00", and `crypto_limits.min` about 636 of

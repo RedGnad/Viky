@@ -138,7 +138,7 @@ function chessError(error: unknown, ratingPattern: string, namePattern: string, 
       return new ChessReadError("INVALID_USERNAME", "That is not a Chess.com name", { cause: error });
     case "NOT_FOUND":
       // Only the profile says who exists. The ratings page of a player whose profile was just read also answers 404, with
-      // "An internal error has occurred" (yan_plays, 17 Sep 2026 15:50 UTC, while ama_plays's answered): that is Chess.com failing,
+      // "An internal error has occurred" (one account, 17 Sep 2026 15:50 UTC, while another's answered): that is Chess.com failing,
       // not the player missing, and it must never tell a recipient their account is gone.
       return half === "profile"
         ? new ChessReadError("PROFILE_NOT_FOUND", "No Chess.com player goes by that name", { cause: error })

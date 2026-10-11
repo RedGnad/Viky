@@ -27,11 +27,12 @@ import { listWcaCompetitions, readWcaCompetition, readWcaResult } from "../src/w
  *
  * It moves no money, signs nothing and needs no secret. It reads public pages as the app does, naming itself.
  *
- * The accounts that exist: this file names only public profiles this repository already names. A source whose only
- * real pages are one person's own certificate takes its sample from `private-fixtures/check-sources.json`, which is
- * never committed (`{ "det": "<certificate id>", "edx": "...", "mitx": "...", "credly": "...", "accredible": "...",
- * "coursera": "...", "breizh": "<event|heat|bib>", "raceresult": "<event|contest|bib>" }`); without one, that
- * source's `reads` and `patterns` are skipped and said so, and its `refuses` still runs.
+ * The accounts that exist: this file names nobody. Every source takes its sample from
+ * `private-fixtures/check-sources.json`, which is never committed (`{ "chess": "<name>", "codeforces": "<handle>",
+ * "duolingo": "<name>", "wca": "<competition|event|WCA ID>", "det": "<certificate id>", "edx": "...", "mitx": "...",
+ * "credly": "...", "accredible": "...", "coursera": "...", "breizh": "<event|heat|bib>",
+ * "raceresult": "<event|contest|bib>" }`); without one, that source's `reads` and `patterns` are skipped and said
+ * so, and its `refuses` still runs.
  *
  * Usage: pnpm check:sources            every source
  *        pnpm check:sources chess,wca  some of them
@@ -115,34 +116,39 @@ const wants = (name: string) => !asked || asked.includes(name);
 
 async function main() {
   if (wants("chess")) {
-    // Public profiles this repository already names (src/chess-com.ts, src/chess-reading.ts).
-    for (const climb of ["rapid", "blitz", "bullet", "daily", "tactics"] as const) {
-      await reads("chess", `ama_plays's ${climb} standing`, () => readChessStanding("ama_plays", climb));
-      await sleep(400);
-    }
+    if (samples.chess) {
+      for (const climb of ["rapid", "blitz", "bullet", "daily", "tactics"] as const) {
+        await reads("chess", `a player's ${climb} standing`, () => readChessStanding(samples.chess, climb));
+        await sleep(400);
+      }
+      await patterns("chess-profile", samples.chess);
+      await patterns("chess-player", samples.chess);
+      for (const mode of ["rapid", "blitz", "bullet", "daily"]) await patterns(`chess-ratings-${mode}`, samples.chess);
+      await patterns("chess-tactics", samples.chess);
+    } else skip("chess", "reads and patterns");
     await refuses("chess", "a player nobody is", ["PROFILE_NOT_FOUND"], () => readChessStanding("zzqxnobody12345", "rapid"));
-    await patterns("chess-profile", "ama_plays", "ama_plays");
-    await patterns("chess-player", "ama_plays", "ama_plays");
-    for (const mode of ["rapid", "blitz", "bullet", "daily"]) await patterns(`chess-ratings-${mode}`, "ama_plays", "ama_plays");
-    await patterns("chess-tactics", "ama_plays", "ama_plays");
   }
   if (wants("codeforces")) {
-    await reads("codeforces", "ada_codes's standing", () => readCodeforcesStanding("ada_codes"));
-    await sleep(2_200);
+    if (samples.codeforces) {
+      await reads("codeforces", "a handle's standing", () => readCodeforcesStanding(samples.codeforces));
+      await sleep(2_200);
+      await patterns("codeforces-user", samples.codeforces);
+      await sleep(2_200);
+      await patterns("codeforces-user-named", samples.codeforces);
+      await sleep(2_200);
+    } else skip("codeforces", "reads and patterns");
     await refuses("codeforces", "a handle nobody has", ["PROFILE_NOT_FOUND"], () => readCodeforcesStanding("zzqxnobody12345"));
-    await sleep(2_200);
-    await patterns("codeforces-user", "ada_codes", "ada_codes");
-    await sleep(2_200);
-    await patterns("codeforces-user-named", "ada_codes", "ada_codes");
   }
   if (wants("duolingo")) {
-    await reads("duolingo", "zia_learns's public profile", async () => {
-      const profile = await resolvePublicDuolingoProfile("Zia_learns");
-      if (!profile) throw new Error("no profile answered for a name that exists");
-      return profile;
-    });
+    if (samples.duolingo) {
+      await reads("duolingo", "a public profile", async () => {
+        const profile = await resolvePublicDuolingoProfile(samples.duolingo);
+        if (!profile) throw new Error("no profile answered for a name that exists");
+        return profile;
+      });
+      await patterns("duolingo-profile", samples.duolingo);
+    } else skip("duolingo", "reads and patterns");
     await refuses("duolingo", "a name nobody has", ["NO_SUCH_PROFILE"], () => resolvePublicDuolingoProfile("zzqx-nobody-12345"));
-    await patterns("duolingo-profile", "Zia_learns", "Zia_learns");
   }
   if (wants("det")) {
     if (samples.det) {
@@ -189,10 +195,13 @@ async function main() {
     await refuses("accredible", "a credential nobody holds", ["NO_CERTIFICATE", "INVALID_LINK"], () => readAccredibleCredential("00000000-0000-4000-8000-000000000000"));
   }
   if (wants("wca")) {
-    // The competition and the result this repository's own source description was measured on (src/attested-sources.ts).
-    await reads("wca", "a competition", () => readWcaCompetition("SaintSymphorienSpeedcubing2026"));
-    await reads("wca", "a result at it", () => readWcaResult("SaintSymphorienSpeedcubing2026/333", "2019EXEM04"));
-    await patterns("wca-person-results", "2019EXEM04|SaintSymphorienSpeedcubing2026|333|f", "that result");
+    // A competition, an event and somebody who took part in it, as the sample writes them: "<competition>|<event>|<WCA ID>".
+    const [competition, event, cuber] = (samples.wca ?? "").split("|");
+    if (competition && event && cuber) {
+      await reads("wca", "a competition", () => readWcaCompetition(competition));
+      await reads("wca", "a result at it", () => readWcaResult(`${competition}/${event}`, cuber));
+      await patterns("wca-person-results", `${cuber}|${competition}|${event}|f`, "that result");
+    } else skip("wca", "reads and patterns of a result");
     await reads("wca", "the competitions to come", async () => {
       const coming = await listWcaCompetitions(new Date().toISOString().slice(0, 10));
       if (coming.length === 0) throw new Error("the list of coming competitions is empty");

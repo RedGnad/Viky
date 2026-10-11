@@ -14,7 +14,7 @@ import {ReviewerRig} from "./ReviewerRigV3.sol";
 ///
 ///         The first four tests are the reviewer's own, as he wrote them on a copy of the contract carrying the
 ///         one line (`GiftEscrowV3Fix`), run here on the contract itself. The first of them failed on the contract
-///         as it stood at a1fdb4b. The last two are what the correction costs, said by him and tested here: the
+///         as it stood before this correction. The last two are what the correction costs, said by him and tested here: the
 ///         first day now depends on the block and not on a signed figure, so whoever sends the transaction can,
 ///         by holding it a few minutes around midnight, move the first day a day later. That is to the recipient's
 ///         advantage and costs the funder nothing.

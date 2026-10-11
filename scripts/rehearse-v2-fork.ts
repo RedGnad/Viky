@@ -386,7 +386,8 @@ async function main() {
   expect((await anchored(giftId)) === 1n && /^0x[0-9a-f]{64}$/.test((await consentHistory(giftId))[0].anchorTx ?? ""), "the yes is on the anchor, and its row names the transaction");
 
   console.log("STEP 4b: two milestone gifts made and opened on the second version");
-  const player = process.env.REHEARSAL_PLAYER?.trim() || "ida_plays";
+  const player = process.env.REHEARSAL_PLAYER?.trim();
+  if (!player) throw new Error("REHEARSAL_PLAYER names the public Chess.com account to read: any with a settled rating in the cadence");
   const cadence = (process.env.REHEARSAL_CADENCE?.trim() || "bullet") as ChessMode;
   const standing = await readChessStanding(player, cadence);
   if (standing.rating === null || standing.rd === null || standing.rd >= CHESS_SETTLED_RD_BELOW) {

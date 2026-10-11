@@ -120,7 +120,7 @@ test("the standing route refuses a cadence it does not know before reading anyth
   assert.equal(((await response.json()) as { code: string }).code, "INVALID_MODE");
 });
 
-/** Chess.com's two pages for yan_plays, as the plain read before any relay gets them, with the rapid RD given. */
+/** Chess.com's two pages for one account, as the plain read before any relay gets them, with the rapid RD given. */
 function chessPages(rapid: { rating: number; date: number; rd: number } | null): typeof fetch {
   return (async (input: string | URL | Request) => {
     const url = String(input instanceof Request ? input.url : input);
@@ -132,7 +132,7 @@ function chessPages(rapid: { rating: number; date: number; rd: number } | null):
 
 test("the standing route refuses an account Chess.com has closed, before any money moves (U1)", async () => {
   const realFetch = globalThis.fetch;
-  // Measured on 18 Sep 2026: ivo_plays answers 200 with status "closed", and its ratings page answers as any other.
+  // Measured on 18 Sep 2026: a closed account answers 200 with status "closed", and its ratings page answers as any other.
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url === "https://api.chess.com/pub/player/ivo_plays") return new Response(JSON.stringify({ player_id: 990000000002, username: "ivo_plays", status: "closed" }), { status: 200 });

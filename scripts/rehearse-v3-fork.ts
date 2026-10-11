@@ -80,8 +80,9 @@ const AUSD = "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a" as const;
 const POOL = "0x942644106B073E30D72c2C5D7529D5C296ea91ab" as const;
 const SAFE = "0xE08D926c148A5065F4Df2892702785a183de86F9" as const;
 const DAY = 86_400;
-/** A public profile the look can read for real: the one `pnpm check:sources` already asks. */
-const PROFILE = "Zia_learns";
+/** A public Duolingo profile the look can read for real: the operator names it, as for `pnpm check:sources`. */
+const PROFILE = process.env.REHEARSAL_PROFILE?.trim() ?? "";
+if (!PROFILE) throw new Error("REHEARSAL_PROFILE names the public Duolingo profile to read");
 type Account = ReturnType<typeof privateKeyToAccount>;
 
 const erc20 = [

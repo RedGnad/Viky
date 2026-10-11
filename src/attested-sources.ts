@@ -145,7 +145,7 @@ export const CHESS_PLAYER: AttestedSource = {
 
 /**
  * Chess.com's public ratings, one reading per cadence. The page lists its cadences in no fixed order, so a single
- * pattern for "any cadence" returned whichever came first: `daily` for ama_plays, `rapid` for ida_plays, measured on
+ * pattern for "any cadence" returned whichever came first: `daily` for one account, `rapid` for another, measured on
  * 17 Sep 2026. Each cadence is therefore its own source with its own pattern, and the goal type of a gift names one.
  */
 function chessRatings(mode: ChessMode): AttestedSource {
@@ -450,7 +450,7 @@ export const RACE_RESULT_ROW: AttestedSource = {
 /**
  * A speedcuber's results on the World Cube Association's public API (the founder, 27 Sep 2026: "Set a time at a WCA
  * competition"), measured on Saint Symphorien 2026 on 26 Sep 2026. The account is the person's WCA id, the
- * competition, the event and the round, `2019EXEM04|SaintSymphorienSpeedcubing2026|333|f`: the page is the person's
+ * competition, the event and the round, as `2019EXEM04|SaintSymphorienSpeedcubing2026|333|f` with an id nobody has: the page is the person's
  * own list of results, and the one pattern, built for the account, takes the row of that competition, that event and
  * that round in the order the API prints its keys, with the best single, the average and the name as it prints them
  * (a time in hundredths of a second, -1 for a DNF). The API answers 403 to a bare user agent and 200 to one that
