@@ -405,7 +405,7 @@ test("MikaTiming: a plain read finds the runner then reads their page; the year,
   await assert.rejects(readMarathonResult("frankfurt.r.mikatiming.de/2031|L_|903166", pages("")), refused("UNKNOWN_RACE"));
 });
 
-test("MikaTiming: its own goal and provider, one line for both timing companies, and nothing offered until goal 31 is signed", () => {
+test("MikaTiming: its own goal and provider, one line for both timing companies, and nothing offered until goal 31 is signed", (t) => {
   assert.equal(MIKA_TIMING_GOAL_TYPE, 31);
   assert.equal(marathonGoalTypeOf("mika-timing"), 31);
   assert.equal(marathonProviderIdOf("mika-timing"), "0x5f162f6734f7ec9371fc0cfc3eff666a1c01397748a818073a2cec9b4a2708b7");
@@ -415,6 +415,9 @@ test("MikaTiming: its own goal and provider, one line for both timing companies,
   assert.equal(MIKA_TIMING_OPEN, true, "since the founder signed goal 31");
   const now = new Date("2026-10-01T12:00:00Z").getTime();
   assert.ok(racesOffered(now, false).some((race) => race.raceId === "chicago-2026"), "listed to everybody once open");
+  // The rule reads the clock itself, and Chicago was run on 11 Oct 2026: the test gives it the same moment, so what it
+  // holds is the rule and not the day it is run on (it failed on main from that day on).
+  t.mock.timers.enable({ apis: ["Date"], now });
   assert.equal(MARATHON_MILESTONE.course?.refuses?.("chicago-2026/marathon", false), undefined);
   assert.match(readFileSync("app/api/gift/certificate/create/route.ts", "utf8"), /goalType: \(course && certificate\.goalTypeOf\?\.\(course\)\) \|\| certificate\.goalType/);
   assert.match(readFileSync("src/certificate-reading.ts", "utf8"), /if \(marathonGoalTypeOf\(reading\.race\.timer\) !== goalType\) throw new MarathonReadError\("PROOF_MISMATCH"/);
