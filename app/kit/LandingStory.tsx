@@ -206,6 +206,25 @@ function usePosters(root: { readonly current: HTMLElement | null }): void {
       // A phone's address bar coming and going resizes the window: the triggers are not measured again for that.
       ScrollTrigger.config({ ignoreMobileResize: true });
       played = gsap.context(() => {
+        // A character in a title never touches a letter, at any width (the founder, 11 Oct 2026). What stands around
+        // it is read from where the words are laid out, never from where a movement has them.
+        const laidOut = (held: HTMLElement) => {
+          const beside = held.previousElementSibling as HTMLElement | null;
+          const words = [...(held.closest("[data-poster]")?.querySelectorAll<HTMLElement>("[data-w]") ?? [])];
+          const half = (beside?.offsetHeight ?? 0) / 2;
+          const line = beside?.offsetTop ?? 0;
+          return {
+            underALine: words.some((word) => word.offsetTop < line - half),
+            overALine: words.some((word) => word.offsetTop > line + half),
+            beforeAWord: words.some((word) => Math.abs(word.offsetTop - line) < half && word.offsetLeft > held.offsetLeft),
+          };
+        };
+        // A spring goes past its place before it settles. Under a line of its title a character lands from its top,
+        // and over one from its feet: what goes past goes where no letter is. Read as it lands, the words in place.
+        const landsFrom = (held: HTMLElement) => {
+          const { underALine, overALine } = laidOut(held);
+          return underALine === overALine ? P.character.origin.alone : underALine ? P.character.origin.under : P.character.origin.over;
+        };
         for (const band of story.querySelectorAll<HTMLElement>("[data-band]")) {
           const words = band.querySelectorAll("[data-w]");
           const figure = band.querySelector("[data-figure]");
@@ -226,7 +245,7 @@ function usePosters(root: { readonly current: HTMLElement | null }): void {
             } else {
               // A character lands in its word: out of nothing, then itself, on a spring.
               play
-                .set(one, { opacity: 1 }, `-=${seconds(P.character.beforeEndMs)}`)
+                .set(one, { opacity: 1, transformOrigin: () => landsFrom(one) }, `-=${seconds(P.character.beforeEndMs)}`)
                 .fromTo(one, { scale: 0, rotate: P.character.fromTurn }, { scale: 1, rotate: 0, duration: seconds(P.character.landMs), ease: P.character.ease }, "<");
             }
           }
@@ -242,6 +261,9 @@ function usePosters(root: { readonly current: HTMLElement | null }): void {
         // bottom of the screen until it leaves by the top. Scrolling back plays it backwards.
         const A = P.acts;
         const whole = (held: Element) => ({ trigger: held, start: "top bottom", end: "bottom top", scrub: A.catchUpS });
+        // Where a title takes several lines, a line stands over the one that hops and a word stands in the way of
+        // the one that comes back: each then plays the short form of its act, read again each time the triggers are
+        // measured, since the page's typefaces and a window that turns both move the words to other lines.
         for (const held of story.querySelectorAll<HTMLElement>("[data-ch][data-act]")) {
           const drawn = held.querySelector("svg");
           if (!drawn) continue;
@@ -253,19 +275,23 @@ function usePosters(root: { readonly current: HTMLElement | null }): void {
             gsap.fromTo(drawn, { x: `-${A.roll.shift}`, [TURN]: `${-A.roll.turn}deg` }, { x: A.roll.shift, [TURN]: `${A.roll.turn}deg`, ease: "none", scrollTrigger: whole(held) });
           } else if (act === "hop") {
             // Today hops, squashing where it lands.
-            const hops = gsap.timeline({ scrollTrigger: whole(held), defaults: { transformOrigin: A.hop.origin } });
+            // Under a line of its title, its hop stops under the letters above.
+            const hops = gsap.timeline({ scrollTrigger: { ...whole(held), invalidateOnRefresh: true }, defaults: { transformOrigin: A.hop.origin } });
+            const up = () => (laidOut(held).underALine ? A.hop.under : A.hop);
             for (let hop = 0; hop < A.hop.times; hop += 1) {
               hops
-                .to(drawn, { y: A.hop.height, scaleY: A.hop.stretch.y, scaleX: A.hop.stretch.x, rotate: hop % 2 ? A.hop.turn : -A.hop.turn, ease: A.hop.upEase, duration: A.hop.upS })
+                .to(drawn, { y: () => up().height, scaleY: () => up().stretch.y, scaleX: () => up().stretch.x, rotate: () => (hop % 2 ? up().turn : -up().turn), ease: A.hop.upEase, duration: A.hop.upS })
                 .to(drawn, { y: 0, scaleY: A.hop.squash.y, scaleX: A.hop.squash.x, rotate: 0, ease: A.hop.downEase, duration: A.hop.downS })
                 .to(drawn, { scaleY: 1, scaleX: 1, ease: A.hop.settleEase, duration: A.hop.settleS });
             }
           } else if (act === "back") {
             // The day that was missed comes back from the far side as the page is scrolled, and is home by mid screen.
+            // With a word after it on its line, it comes back where it stands: its way would go through that word.
+            const way = () => (laidOut(held).beforeAWord ? A.back.hemmed : A.back);
             gsap.fromTo(
               drawn,
-              { x: A.back.from, rotate: A.back.fromTurn, opacity: 0 },
-              { x: 0, rotate: 0, opacity: 1, ease: A.back.ease, transformOrigin: A.back.origin, scrollTrigger: { trigger: held, start: `top ${A.back.startAt * 100}%`, end: `top ${A.back.homeAt * 100}%`, scrub: A.catchUpS } },
+              { x: () => way().from, rotate: () => way().fromTurn, opacity: 0 },
+              { x: 0, rotate: 0, opacity: 1, ease: A.back.ease, transformOrigin: A.back.origin, scrollTrigger: { trigger: held, start: `top ${A.back.startAt * 100}%`, end: `top ${A.back.homeAt * 100}%`, scrub: A.catchUpS, invalidateOnRefresh: true } },
             );
           } else if (act === "shades") {
             // The sunglasses come down onto the face as the title reaches mid screen, and the head tilts as it goes by.

@@ -567,7 +567,12 @@ export const MOTION = {
   poster: {
     startAt: 0.8,
     word: { riseMs: 650, staggerMs: 70, fadeMs: 200, from: "0.6em", fromTurn: 2, ease: "back.out(1.8)", fadeEase: "power1.out" },
-    character: { landMs: 800, fromTurn: -25, ease: "elastic.out(1, 0.5)", beforeEndMs: 400 },
+    /**
+     * A character lands in its word on a spring, which goes a fifth past its size before it settles. Where its title
+     * takes several lines it lands from its top under a line, and from its feet over one, so that what goes past goes
+     * where no letter is (the founder's rule of 11 Oct 2026: a character in a title never touches a letter).
+     */
+    character: { landMs: 800, fromTurn: -25, ease: "elastic.out(1, 0.5)", beforeEndMs: 400, origin: { alone: "50% 50%", under: "50% 0%", over: "50% 100%" } },
     line: { ms: 400, rise: 14, staggerMs: 160, ease: "power2.out", beforeEndMs: 500 },
     strip: { ms: 450, rise: 24, ease: "power2.out", beforeEndMs: 250 },
     figure: { ms: 700, rise: 60, fromHeight: 0.7, ease: "back.out(2.2)", wordsAfterMs: 250, origin: "50% 100%" },
@@ -580,9 +585,37 @@ export const MOTION = {
        */
       roll: { turn: 270, shift: "0.3em" },
       /** Today hops three times, half an em up, stretching as it rises and squashing where it lands. */
-      hop: { times: 3, height: "-0.5em", turn: 8, stretch: { x: 0.94, y: 1.1 }, squash: { x: 1.12, y: 0.82 }, upS: 1, downS: 1, settleS: 0.35, upEase: "power2.out", downEase: "power2.in", settleEase: "power1.out", origin: "50% 100%" },
+      hop: {
+        times: 3,
+        height: "-0.5em",
+        turn: 8,
+        stretch: { x: 0.94, y: 1.1 },
+        squash: { x: 1.12, y: 0.82 },
+        upS: 1,
+        downS: 1,
+        settleS: 0.35,
+        upEase: "power2.out",
+        downEase: "power2.in",
+        settleEase: "power1.out",
+        origin: "50% 100%",
+        /**
+         * Under a line of its title, where the title takes two lines on a phone: a character in a title never touches
+         * a letter, at any width (the founder, 11 Oct 2026), and the letters above stand a quarter of an em over it. Its
+         * hop then stops under them. Measured in a browser, image by image up the screen (test/browser).
+         */
+        under: { height: "-0.13em", turn: 3, stretch: { x: 0.98, y: 1.03 } },
+      },
       /** The day missed comes back from the right, from the moment its title is in until it reaches mid screen. */
-      back: { from: "4.4em", fromTurn: 50, startAt: 0.96, homeAt: 0.48, ease: "power2.out", origin: "50% 60%" },
+      back: {
+        from: "4.4em",
+        fromTurn: 50,
+        startAt: 0.96,
+        homeAt: 0.48,
+        ease: "power2.out",
+        origin: "50% 60%",
+        /** With a word after it on its line, the way from the right goes through that word: it comes back where it stands. */
+        hemmed: { from: "0.2em", fromTurn: 20 },
+      },
       /** The sunglasses come down onto the face as the title reaches mid screen, and the head tilts as it goes by. */
       shades: { drop: -15, fromTurn: -22, startAt: 0.72, onAt: 0.46, ease: "back.out(2.4)", origin: "50% 50%", tilt: 12, tiltOrigin: "50% 60%" },
     },

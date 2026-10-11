@@ -12,7 +12,7 @@ import { CHOICE_GROUPS, liveConditions } from "../src/conditions";
 import { MOTION } from "../src/design-tokens";
 import { inRows, readByName } from "../src/landing-read";
 import { MOVES, MOVES_BOOT_SCRIPT, POSTERS, POSTERS_READY, POSTERS_STILL } from "../src/moves";
-import { HOME, LANDING_STORY, TRADEMARKS } from "../src/sentences";
+import { HOME, LANDING_STORY, ME, TRADEMARKS } from "../src/sentences";
 
 /**
  * Under the card on the landing: five posters, the phone, and one last way to the card (the founder, 5 Oct 2026,
@@ -211,6 +211,19 @@ test("the movement: the first image is the starting state, and without it everyt
   assert.match(moving, /const giveUp = window\.setTimeout\(still, P\.giveUpMs\);/);
 });
 
+test("installing is offered in the same two words on a phone and on a computer", () => {
+  // The founder, 11 Oct 2026: the button at the foot of the landing and the title of Me's sheet said "Install Viky on
+  // this phone", and somebody at a desk read it too. The landing's own title is about a phone, and stays.
+  assert.equal(ME.install, "Install Viky");
+  assert.equal(ME.installShort, "Install");
+  assert.equal(LANDING_STORY.phone.title, "On your phone, like an app.");
+  const install = readFileSync("app/kit/Install.tsx", "utf8");
+  assert.match(install, /<Sheet open=\{how\} title=\{W\.install\} onClose=/, "the title of Me's sheet");
+  assert.match(install, /className=\{SECONDARY_BUTTON\}>\n\s*\{W\.install\}\n/, "the button under the landing's phone");
+  assert.match(story, /<h2 className=\{`\$\{SAY\} \[text-wrap:balance\]`\}>\{W\.phone\.title\}<\/h2>\n\s*<p[^\n]*\n\s*<Install \/>/);
+  for (const said of [ME.install, ME.installShort, ME.installHow, ME.installByHand]) assert.doesNotMatch(said, /this phone/i, said);
+});
+
 test("each character's act is tied to the scroll, with the mockup's values, and plays backwards when the page is scrolled back", () => {
   const A = MOTION.poster.acts;
   // The values of the living mockup, in the tokens.
@@ -244,7 +257,28 @@ test("each character's act is tied to the scroll, with the mockup's values, and 
     const other = renderToStaticMarkup(createElement(Character, { state, standing: false, drawn: "inline" }));
     assert.ok(other.indexOf('data-part="gloss"') < other.indexOf('data-part="face"'), state);
   }
-  assert.match(acts, /\{ x: A\.back\.from, rotate: A\.back\.fromTurn, opacity: 0 \},\n\s*\{ x: 0, rotate: 0, opacity: 1, ease: A\.back\.ease/);
+  assert.match(acts, /\{ x: \(\) => way\(\)\.from, rotate: \(\) => way\(\)\.fromTurn, opacity: 0 \},\n\s*\{ x: 0, rotate: 0, opacity: 1, ease: A\.back\.ease/);
+  // A character in a title never touches a letter, at any width (the founder, 11 Oct 2026). Under a line of its title
+  // the hop is the short one, which stops under the letters above, and with a word after it on its line the day
+  // missed comes back where it stands. The mockup's values, above, are those of a title on one line.
+  assert.deepEqual(A.hop.under, { height: "-0.13em", turn: 3, stretch: { x: 0.98, y: 1.03 } });
+  assert.deepEqual(A.back.hemmed, { from: "0.2em", fromTurn: 20 });
+  assert.ok(parseFloat(A.hop.under.height) > parseFloat(A.hop.height) && A.hop.under.turn < A.hop.turn && A.hop.under.stretch.y < A.hop.stretch.y, "shorter in every measure");
+  assert.ok(parseFloat(A.back.hemmed.from) < parseFloat(A.back.from) && A.back.hemmed.fromTurn < A.back.fromTurn);
+  assert.match(acts, /const up = \(\) => \(laidOut\(held\)\.underALine \? A\.hop\.under : A\.hop\);/);
+  assert.match(acts, /const way = \(\) => \(laidOut\(held\)\.beforeAWord \? A\.back\.hemmed : A\.back\);/);
+  assert.match(acts, /\.to\(drawn, \{ y: \(\) => up\(\)\.height, scaleY: \(\) => up\(\)\.stretch\.y, scaleX: \(\) => up\(\)\.stretch\.x, rotate: \(\) => \(hop % 2 \? up\(\)\.turn : -up\(\)\.turn\)/);
+  assert.equal(acts.match(/invalidateOnRefresh: true/g)?.length, 2, "read again each time the triggers are measured: the typefaces coming in, a window that turns");
+  // Read from where the words are laid out, never from where a movement has them.
+  const laidOut = moving.slice(moving.indexOf("const laidOut"), moving.indexOf("const landsFrom"));
+  assert.match(laidOut, /underALine: words\.some\(\(word\) => word\.offsetTop < line - half\)/);
+  assert.match(laidOut, /beforeAWord: words\.some\(\(word\) => Math\.abs\(word\.offsetTop - line\) < half && word\.offsetLeft > held\.offsetLeft\)/);
+  assert.doesNotMatch(laidOut, /getBoundingClientRect/);
+  // The spring a character lands on goes a fifth past its size before it settles. Under a line of its title it lands
+  // from its top, and over one from its feet: what goes past goes where no letter is.
+  assert.deepEqual(MOTION.poster.character.origin, { alone: "50% 50%", under: "50% 0%", over: "50% 100%" });
+  assert.match(moving, /return underALine === overALine \? P\.character\.origin\.alone : underALine \? P\.character\.origin\.under : P\.character\.origin\.over;/);
+  assert.match(moving, /\.set\(one, \{ opacity: 1, transformOrigin: \(\) => landsFrom\(one\) \}, `-=\$\{seconds\(P\.character\.beforeEndMs\)\}`\)/, "read as it lands, the words in place");
   assert.match(acts, /const shades = drawn\.querySelector\('\[data-prop="shades"\]'\);/);
   // They come straight down, turning from their own middle: the library is given the drawing's box to turn them in.
   assert.match(acts, /\{ y: A\.shades\.drop, rotate: A\.shades\.fromTurn, opacity: 0, transformBox: "view-box" \},/);

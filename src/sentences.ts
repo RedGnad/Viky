@@ -690,7 +690,6 @@ export const GIFT_CARD = {
   forYou: "For you",
   forWhoever: "For whoever opens the link",
   forName: (name: string) => `For ${name}`,
-  fromName: (name: string) => `From ${name}`,
   /**
    * The label at the head of a card. "Your gift" is said to the one who made the gift and to nobody else (the
    * founder, 10 Oct 2026): until then a card also said it to the person the gift is for when the funder gave no name,
@@ -699,13 +698,6 @@ export const GIFT_CARD = {
   yourGift: "Your gift",
   /** To everybody else: whose gift it is, and "A gift" when the funder gave no name. Neither "your" nor anybody's. */
   aGiftFrom: (funder: string | null) => (funder?.trim() ? `A gift from ${funder}` : "A gift"),
-  /** Read by neither of the gift's two people: both sides named, and nothing addressed to the reader. */
-  fromFor: (funder: string | null, recipient: string | null) => {
-    if (funder && recipient) return `From ${funder}, for ${recipient}`;
-    if (funder) return `From ${funder}`;
-    if (recipient) return `For ${recipient}`;
-    return "Somebody else's gift";
-  },
   amountDaily: (total: string, perDay: string, days: number) => `${total}, ${perDay} a day for ${days} days`,
   notOpened: "Not opened yet.",
   counting: (done: number, of: number, missed: number) => `Counting: ${done} of ${of} days done, ${missed} missed.`,
@@ -2043,7 +2035,8 @@ export const ME = {
   /** The two words of Me's round controls (the founder's rule 6 of 1 Oct 2026): the sentences above are their sheets' and the door's. */
   otherAccount: "Other account",
   installShort: "Install",
-  install: "Install Viky on this phone",
+  /** Said on a computer as on a phone (the founder, 11 Oct 2026): it said "on this phone" to both. */
+  install: "Install Viky",
   installHow: "On iPhone: tap Share, then Add to Home Screen.",
   /** When the browser offers us no prompt of its own, which is where it keeps the same thing (D138). */
   installByHand: "If nothing opens, use your browser's menu: Add to Home screen, or Install.",

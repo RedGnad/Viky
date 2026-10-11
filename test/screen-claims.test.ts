@@ -7,7 +7,8 @@ import { catchUpDay, deadlineInWords } from "../src/catch-up";
 import { ARRIVAL_FLOOR, CONVERSION_RESERVE, fundingStageShown, nextFundingStep, paymentArrived } from "../src/funding-step";
 import { AmountError, dollarsToUnits, MIN_GIFT_UNITS } from "../src/money";
 import { exampleGift } from "../app/kit/example-gift.js";
-import { amountsInWords, whoInWords } from "../app/kit/GiftCard.js";
+import { amountsInWords } from "../app/kit/GiftCard.js";
+import { eyebrowOf, titleOf } from "../src/gift-live.js";
 import { CASH_OUT, GIFT_CARD } from "../src/sentences";
 
 /**
@@ -288,7 +289,7 @@ test("the example gift says it is an example, and reads as a gift under way", ()
   // gift is for, and the card said "yours" to them until the relecture of 18 Sep (D99).
   assert.equal(example.role, "reader");
   assert.equal(amountsInWords(example, true), "$4.00 of $14.00 theirs, $2.00 gone back");
-  assert.equal(whoInWords(example), "From Sam");
+  assert.deepEqual([eyebrowOf(example.role, example.funderName), titleOf(example.role, example.recipientName ?? example.goalUsername)], ["A gift from Sam", "For somebody"]);
 });
 
 /**

@@ -143,9 +143,15 @@ test.describe("whose gift a card says it is", () => {
       await theirs.page.goto(`/g/${GIFT}`);
       await expect(head(theirs.page)).toHaveText("A gift from Mom");
       await expect(who(theirs.page)).toHaveText("For you");
-      await theirs.page.goto("/gifts");
-      await expect(listCard(theirs.page)).toBeVisible();
-      expect(await listHead(theirs.page)).toBe("A gift from Mom");
+      // On the lists the card's title is the page's own, by one rule (the founder, 11 Oct 2026): it said "From Mom"
+      // right under "A gift from Mom", the same thing twice, while the page of the same gift said "For you".
+      for (const list of ["/gifts", "/"]) {
+        await theirs.page.goto(list);
+        await expect(listCard(theirs.page)).toBeVisible();
+        expect(await listHead(theirs.page)).toBe("A gift from Mom");
+        await expect(listCard(theirs.page).getByText("For you", { exact: true })).toBeVisible();
+        await expect(theirs.page.getByText("From Mom", { exact: true })).toHaveCount(0);
+      }
       await theirs.context.close();
 
       // The one who made it, who wrote no name of their own: the gift is theirs to call "your".

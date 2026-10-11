@@ -268,9 +268,22 @@ test.describe("the posters under the landing's card", () => {
     const lowAgain = await put("roll", 0.85);
     expect(lowAgain, "scrolled back, it is where it was").toEqual(low);
     // The day that was missed is not there when its title comes in, and is home by mid screen. Scrolled back, it goes.
+    // What stands around a character in its title, read from where the words are laid out: a line over it, a word
+    // after it on its line. A character never touches a letter (the founder, 11 Oct 2026), so each changes its act.
+    const around = async (act: string) =>
+      (await page.evaluate(`(() => {
+        const held = document.querySelector('[data-landing-story] [data-act="${act}"]');
+        const beside = held.previousElementSibling;
+        const words = [...held.closest("[data-poster]").querySelectorAll("[data-w]")];
+        const half = beside.offsetHeight / 2;
+        return { underALine: words.some((word) => word.offsetTop < beside.offsetTop - half), beforeAWord: words.some((word) => Math.abs(word.offsetTop - beside.offsetTop) < half && word.offsetLeft > held.offsetLeft), em: parseFloat(getComputedStyle(held).fontSize), tall: held.getBoundingClientRect().height / innerHeight };
+      })()`)) as { underALine: boolean; beforeAWord: boolean; em: number; tall: number };
     const away = await put("back", 0.97);
     expect(away.shown).toBeLessThan(0.1);
-    expect(away.x).toBeGreaterThan(100);
+    // From the far side where nothing stands after it; where a word does, on a phone, from a fifth of an em.
+    const back = await around("back");
+    if (back.beforeAWord) expect(away.x / back.em).toBeCloseTo(0.2, 1);
+    else expect(away.x).toBeGreaterThan(100);
     const home = await put("back", 0.4);
     expect(home).toMatchObject({ shown: 1, x: 0, turn: 0 });
     expect((await put("back", 0.97)).shown, "scrolled back, it has gone again").toBeLessThan(0.1);
@@ -298,8 +311,14 @@ test.describe("the posters under the landing's card", () => {
     expect(await page.evaluate(`(() => { const held = document.querySelector('[data-landing-story] [data-act="shades"]'); const lenses = [...held.querySelectorAll('[data-prop="shades"] rect')].slice(0, 2).map((one) => one.getBoundingClientRect()); return [...held.querySelectorAll('[data-part="under-shades"] circle')].map((eye) => eye.getBoundingClientRect()).every((eye, index) => eye.left >= lenses[index].left && eye.right <= lenses[index].right && eye.top >= lenses[index].top && eye.bottom <= lenses[index].bottom); })()`)).toBe(true);
     // The yes is today, and it hops: it is off the ground at some point of its way up the screen.
     await expect(page.locator('[data-landing-story] [data-band="yes"] [data-ch]')).toHaveAttribute("data-act", "hop");
-    const hops = [await put("hop", 0.8), await put("hop", 0.6), await put("hop", 0.45), await put("hop", 0.3)];
-    expect(Math.min(...hops.map((one) => one.y)), "it left the ground").toBeLessThan(-5);
+    // The top of its first hop is one part in seven of its way up the screen: an up, a down and a settling, three times.
+    const hop = await around("hop");
+    const top = 1 - (1 / (3 * 2.35)) * (1 + hop.tall);
+    const hops = [await put("hop", 0.8), await put("hop", top), await put("hop", 0.6), await put("hop", 0.45), await put("hop", 0.3)];
+    const highest = Math.min(...hops.map((one) => one.y));
+    // Half an em where its title is on one line; under a line of it, on a phone, it stops under the letters above.
+    if (hop.underALine) expect(highest / hop.em, "it left the ground, and stayed under the line above").toBeCloseTo(-0.13, 1);
+    else expect(highest / hop.em, "it left the ground").toBeCloseTo(-0.5, 1);
     await expect(page.locator('[data-landing-story] [data-act="nod"]'), "no character nods any more").toHaveCount(0);
     // The rows of names drift opposite ways with the scroll, and with nothing else.
     const drift = async () => (await page.evaluate(`[...document.querySelectorAll("[data-strip] .pill-rows")].filter((rows) => getComputedStyle(rows).display !== "none").flatMap((rows) => [...rows.querySelectorAll("[data-pills]")]).map((row) => Math.round(new DOMMatrixReadOnly(getComputedStyle(row).transform).e))`)) as number[];

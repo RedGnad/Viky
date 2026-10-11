@@ -146,6 +146,10 @@ export function eyebrowOf(voice: Voice, funderName: string | null): string {
 /**
  * The card's title: "For you" to the person it is for, "For Léa" when a name is known, "For whoever opens the link" to
  * a funder who named nobody, and "For somebody" to a reader given no name. It printed "For" and nothing until V4.
+ *
+ * One rule for the gift's own page and for the lists (the founder, 11 Oct 2026). A list's card had a rule of its own,
+ * which said "From Mom" to the person the gift is for, right under "A gift from Mom": the same thing twice, while the
+ * page of the same gift said "For you".
  */
 export function titleOf(voice: Voice, name: string | null): string {
   if (voice === "recipient") return W_CARD.forYou;

@@ -5,7 +5,7 @@ import { useReaderZone } from "@/src/client/reader-zone";
 import { Nature } from "./Nature";
 import { conditionById, conditionOfGoal } from "@/src/conditions";
 import type { GiftSummary } from "@/src/client/gift";
-import { eyebrowOf } from "@/src/gift-live";
+import { eyebrowOf, titleOf } from "@/src/gift-live";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { dateInWords } from "@/src/moments";
 import { END_GIFT as E, GIFT_CARD as W, MILESTONE_PAGE as M } from "@/src/sentences";
@@ -55,7 +55,7 @@ export function GiftCard({
         ) : null
       }
       label={eyebrowOf(gift.role, gift.funderName)}
-      title={whoInWords(gift)}
+      title={titleOf(gift.role, gift.recipientName ?? gift.goalUsername)}
       under={condition?.name ?? ""}
       nature={condition ? <Nature nature={condition.nature} to={gift.role} /> : null}
       chevron={!example}
@@ -156,14 +156,6 @@ export function CardFace({
       {bottom}
     </>
   );
-}
-
-/** For whom, on the funder's side; from whom, on the recipient's. The names given when it was offered come first. */
-export function whoInWords(gift: Pick<GiftSummary, "role" | "recipientName" | "funderName" | "goalUsername">): string {
-  if (gift.role === "reader") return W.fromFor(gift.funderName, gift.recipientName ?? gift.goalUsername);
-  if (gift.role === "recipient") return gift.funderName ? W.fromName(gift.funderName) : W.forYou;
-  if (gift.recipientName) return W.forName(gift.recipientName);
-  return gift.goalUsername ? W.forName(gift.goalUsername) : W.forWhoever;
 }
 
 /** One line of amounts: the terms until a day is counted, then how much of the whole is theirs and how much came back. */

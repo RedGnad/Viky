@@ -3,9 +3,9 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import { notTheirs, voiceOf, type Voice } from "../src/gift-voice.js";
 import { readAs } from "../src/gift-moment.js";
-import { whoInWords, amountsInWords } from "../app/kit/GiftCard.js";
+import { amountsInWords } from "../app/kit/GiftCard.js";
 import { GIFT_PAGE, GIFT_CARD, REACHED_MOMENT } from "../src/sentences.js";
-import { eyebrowOf } from "../src/gift-live.js";
+import { eyebrowOf, titleOf } from "../src/gift-live.js";
 import { CONDITIONS } from "../src/conditions.js";
 import type { GiftSummary } from "../src/client/gift.js";
 
@@ -71,7 +71,7 @@ test("nothing a reader is shown speaks to them in the second person", () => {
     assert.doesNotMatch(title, you, `"${title}" speaks to the reader`);
     assert.match(title, /\$20\.00/);
   }
-  assert.doesNotMatch(GIFT_CARD.fromFor("Mom", "Ama"), you);
+  for (const funder of ["Mom", null]) for (const recipient of ["Ama", null]) assert.doesNotMatch(`${eyebrowOf("reader", funder)} ${titleOf("reader", recipient)}`, you);
   assert.doesNotMatch(GIFT_CARD.theirsGoneBack("$8.00", "$20.00", "$4.00"), you);
   assert.doesNotMatch(GIFT_PAGE.dayWords.returnedReading, you);
   assert.doesNotMatch(GIFT_PAGE.readingWhose("Mom", "Ama"), you);
@@ -116,10 +116,31 @@ const summary = (role: GiftSummary["role"]): GiftSummary =>
     takeable: "0",
   }) as GiftSummary;
 
-test("the card at the head of the page names both sides when neither of them is reading", () => {
-  assert.equal(whoInWords(summary("reader")), "From Mom, for Ama");
-  assert.equal(whoInWords(summary("recipient")), "From Mom");
-  assert.equal(whoInWords(summary("funder")), "For Ama");
+/** The title a list's card gives a gift: the rule of the gift's own page, with the name the list holds. */
+const titleOn = (gift: GiftSummary) => titleOf(gift.role, gift.recipientName ?? gift.goalUsername);
+
+test("a card's title is the same on the lists and on the gift's own page, by one rule", () => {
+  // The founder, 11 Oct 2026: a card received said "From Mom" under "A gift from Mom", while its page said "For you".
+  const card = readFileSync("app/kit/GiftCard.tsx", "utf8");
+  assert.match(card, /title=\{titleOf\(gift\.role, gift\.recipientName \?\? gift\.goalUsername\)\}/);
+  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /who=\{titleOf\(voice, recipientName \?\? account\.username\)\}/);
+  assert.doesNotMatch(card, /whoInWords|fromName|fromFor/, "the list has no rule of its own any more");
+  assert.equal(titleOn(summary("recipient")), "For you");
+  assert.equal(titleOn(summary("funder")), "For Ama");
+  assert.equal(titleOn({ ...summary("funder"), recipientName: null, goalUsername: null }), "For whoever opens the link");
+  assert.equal(titleOn({ ...summary("funder"), recipientName: null }), "For ama_learns");
+  // Neither of the two is reading: both sides are still named, one on each line of the card's head.
+  assert.deepEqual([eyebrowOf("reader", "Mom"), titleOn(summary("reader"))], ["A gift from Mom", "For Ama"]);
+  // No two lines of a card's head say the same thing, whoever reads it and whatever names it carries.
+  for (const role of ["recipient", "funder", "reader"] as const) {
+    for (const funderName of ["Mom", null]) {
+      for (const recipientName of ["Ama", null]) {
+        const gift = { ...summary(role), funderName, recipientName, goalUsername: null };
+        const [label, title] = [eyebrowOf(gift.role, gift.funderName), titleOn(gift)];
+        assert.notEqual(label.toLowerCase().replace(/^a gift /, ""), title.toLowerCase(), `${role}: "${label}" over "${title}"`);
+      }
+    }
+  }
 
   const reader = amountsInWords(summary("reader"), true);
   assert.equal(reader, "$2.85 of $20.00 theirs, $8.55 gone back");
@@ -134,8 +155,8 @@ test("a list's card says 'Your gift' to the one who made it and to nobody else, 
   assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /from=\{eyebrowOf\(voice, funderName\)\}/);
   // What the person a gift is for reads on their list when the funder gave no name: "A gift" above "For you".
   const unnamed = { ...summary("recipient"), funderName: null };
-  assert.deepEqual([eyebrowOf(unnamed.role, unnamed.funderName), whoInWords(unnamed)], ["A gift", "For you"]);
-  assert.deepEqual([eyebrowOf("recipient", "Mom"), whoInWords(summary("recipient"))], ["A gift from Mom", "From Mom"]);
+  assert.deepEqual([eyebrowOf(unnamed.role, unnamed.funderName), titleOn(unnamed)], ["A gift", "For you"]);
+  assert.deepEqual([eyebrowOf("recipient", "Mom"), titleOn(summary("recipient"))], ["A gift from Mom", "For you"]);
   assert.equal(eyebrowOf(summary("funder").role, null), "Your gift");
   // The moment a gift is reached keeps its own words, which are a whole sentence and stand alone.
   assert.equal(REACHED_MOMENT.fromFunder(null), "A gift for you");
