@@ -58,11 +58,13 @@ test("the card draws no trail and no flag for it, and says where its proof stand
     checking: "Shown. Viky is checking it.",
     refused: "Checked: it did not show what the gift asks.",
     unread: "Shown. Viky did not check it in time.",
-    building: "Waiting for the university's page to be set up.",
     proved: "Proved.",
     missed: "Not proved in time.",
   });
   for (const sentence of Object.values(GIFT_CARD.hadOrNot)) assert.doesNotMatch(sentence, /\d/, "no target, no number");
+  // A university being set up is said on the card of the list as on the gift's own page, to each reader (11 Oct 2026).
+  assert.match(card, /if \(where === "building"\) return status\.youAreTheRecipient \? L\.awaitingProof\.buildingYours : L\.awaitingProof\.buildingTheirs;/);
+  assert.doesNotMatch(readFileSync("src/sentences.ts", "utf8"), /Waiting for the university's page to be set up/);
 });
 
 const WAITING: LiveInput = {

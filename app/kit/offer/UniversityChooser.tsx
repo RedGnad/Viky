@@ -182,10 +182,10 @@ export function UniversityChooser({
     value: one.pair,
     label: one.title,
     tag: country ? undefined : <span className={META}>{countryInWords(one.country) ?? one.issuer}</span>,
-    // A gift on results says no time on any line. A gift on enrolment says one wherever it is true: "Ready today" in
-    // the sun, "Ready in 2 days" where nothing is set up yet. A university set up whose first proof nobody has read
-    // waits on no setting up and is not paid on sign-in either: its line says neither, and its path says the check.
-    mark: sense === "results" ? undefined : readyFor(one, sense) ? <span className={READY_MARK}>{W.ready}</span> : pathFor(one, sense) === "none" ? <span className={META}>{W.readyInTwoDays}</span> : undefined,
+    // A gift on results says no time on any line; a gift on enrolment says one on every line. "Ready today" in the
+    // sun wherever a student can show their page today, a first proof read there or not (src/university-choice.ts),
+    // and "Ready in 2 days" where nothing is set up yet.
+    mark: sense === "results" ? undefined : readyFor(one, sense) ? <span className={READY_MARK}>{W.ready}</span> : <span className={META}>{W.readyInTwoDays}</span>,
   });
 
   return (

@@ -201,6 +201,9 @@ test.describe("a university gift draws its path", () => {
       const card = page.locator(`a[href="/g/${GIFT}"]`);
       await expectPath(card, ["Set up: now", "Shown: toCome", "Checked (once, 1 day): toCome", "Theirs: toCome"]);
       await expect(seatOf(card)).toHaveCSS("grid-column-start", "1");
+      // And it says what the gift's own page says, in the reader's words.
+      await expect(card.getByText("Viky is setting up their university.", { exact: true })).toBeVisible();
+      await expect(card.getByText(/Waiting for the university/)).toHaveCount(0);
       await shotDayAndNight(page, size.name, "9b-payer-card-in-gifts");
       await device.context.close();
     });
@@ -365,9 +368,9 @@ test.describe("a university gift draws its path", () => {
       const chosen = sheet.locator("[data-university-chosen]");
       const modes = sheet.getByRole("group", { name: "What will they show?" });
 
-      // The list of a gift on enrolment: the ready one in the sun, "Ready in 2 days" where nothing is set up, and no
-      // time on the line of a university set up whose first proof nobody has read.
-      await expect(lines).toHaveText(["Université Cheikh Anta DiopSenegalReady today", "Université d'Abomey-CalaviBenin", "Université Gaston BergerSenegalReady in 2 days", "University of LagosNigeriaReady in 2 days"]);
+      // The list of a gift on enrolment: "Ready today" in the sun wherever a student can show their page today, a
+      // first proof read there or not, and "Ready in 2 days" where nothing is set up. No line is left without a time.
+      await expect(lines).toHaveText(["Université Cheikh Anta DiopSenegalReady today", "Université d'Abomey-CalaviBeninReady today", "Université Gaston BergerSenegalReady in 2 days", "University of LagosNigeriaReady in 2 days"]);
       await shot(page, size.name, "14-chooser-list-enrolment");
 
       // Nothing set up yet: the four stops, every one to come, and no character.
@@ -390,7 +393,7 @@ test.describe("a university gift draws its path", () => {
       // Set up, its first proof still to be read: three stops.
       await lines.filter({ hasText: "Abomey-Calavi" }).click();
       await expectPath(chosen, ["Shown: toCome", "Checked (once, 1 day): toCome", "Theirs: toCome"]);
-      await expect(chosen.locator("[data-university-when]")).toHaveText("First gift at this university: the next ones skip the small stop. The money waits in their name meanwhile.");
+      await expect(chosen.locator("[data-university-when]")).toHaveText("First student from this university: the next ones skip the small stop. The money waits in their name meanwhile.");
       await shot(page, size.name, "18-chooser-first-proof");
       await chosen.getByRole("button", { name: /Change/ }).click();
 

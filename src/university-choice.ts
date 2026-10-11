@@ -56,7 +56,12 @@ export function inGroups(universities: readonly ListedUniversity[], words: strin
   return { ready: found.filter((one) => readyOn(one, sense)), others: found.filter((one) => !readyOn(one, sense)) };
 }
 
-const readyOn = (one: ListedUniversity, sense: UniversitySense) => one.ready?.includes(sense) === true;
+/**
+ * A student of this university can show their page today, for what the gift asks: its provider is ready, or it is set
+ * up and its first proof is still to be read (the founder, 11 Oct 2026). Such a one waits on no setting up, so its line
+ * says "Ready today" as the others', and its path says the check a first proof meets.
+ */
+const readyOn = (one: ListedUniversity, sense: UniversitySense) => one.ready?.includes(sense) === true || (one.path?.[sense] ?? "none") !== "none";
 
 /** What this university's provider is to the path of a gift that asks for this: none, for all but a few of the list. */
 export function pathFor(one: ListedUniversity, sense: UniversitySense): PathProvider {

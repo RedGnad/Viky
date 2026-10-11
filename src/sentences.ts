@@ -723,7 +723,6 @@ export const GIFT_CARD = {
     refused: "Checked: it did not show what the gift asks.",
     /** Shown, held, and never reviewed before the contract stopped taking it (the audit of 8 Oct 2026): ours. */
     unread: "Shown. Viky did not check it in time.",
-    building: "Waiting for the university's page to be set up.",
     proved: "Proved.",
     missed: "Not proved in time.",
   },
@@ -1908,7 +1907,11 @@ export const UNIVERSITY_CHOICE = {
    * The contract holds the money in the recipient's name from the payment on, which is what "waits" says.
    */
   firstGift: "First gift at this university: the next ones skip the two small stops. The money waits in their name meanwhile.",
-  firstProof: "First gift at this university: the next ones skip the small stop. The money waits in their name meanwhile.",
+  /**
+   * A university set up whose first proof nobody has read yet (the founder, 11 Oct 2026): not the first gift there,
+   * its first student. Said without the word the chooser keeps for the gift's own page, and with where the money waits.
+   */
+  firstProof: "First student from this university: the next ones skip the small stop. The money waits in their name meanwhile.",
   waitsMeanwhile: "The money waits in their name meanwhile.",
   /** Under a search that found nothing, and nowhere else: the way to the page where a university is asked for. */
   askForIt: "Ask for it",

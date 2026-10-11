@@ -106,6 +106,12 @@ test("one list: the field says how many it searches, the ready come first with a
   assert.deepEqual([searchedCount(index, null), searchedCount(index, "SN"), searchedCount(index, "NG"), searchedCount(index, "FR")], [5, 4, 1, 0]);
   // Ready is said of one university, for what the gift asks.
   assert.deepEqual([readyFor(ready, "enrolment"), readyFor(ready, "results"), readyFor(LIST[0], "enrolment")], [true, false, false]);
+  // Set up, its first proof still to be read (the founder, 11 Oct 2026): its students can show today, so its line says
+  // "Ready today" and it stands with the ready ones, for the sense its provider reads and for no other.
+  const setUp = { ...one("uac-bj", "Université d'Abomey-Calavi", "Benin", "BJ"), path: { enrolment: "unpinned" } as const };
+  assert.deepEqual([readyFor(setUp, "enrolment"), readyFor(setUp, "results")], [true, false]);
+  assert.deepEqual(shownUniversities(indexUniversities([...LIST, ready, setUp]), "", null, "enrolment").ready.map((u) => u.pair), ["uadb-sn", "uac-bj"]);
+  assert.deepEqual(shownUniversities(indexUniversities([...LIST, ready, setUp]), "", null, "results").ready, []);
   const chooser = readFileSync("app/kit/offer/UniversityChooser.tsx", "utf8");
   assert.match(chooser, /label=\{W\.search\(searched === null \? undefined : searched\.toLocaleString\("en-US"\)\)\}/);
   // One list, the ready first, then every other, each by its own name; the sheet's title asks the question.
@@ -113,7 +119,7 @@ test("one list: the field says how many it searches, the ready come first with a
   assert.match(chooser, /<ChoiceList name="university" legend=\{W\.list\} legendHidden shape="lines" value=\{value\} onChange=\{pick\(listed\)\} options=\{listed\.slice\(0, count\)\.map\(line\)\} \/>/);
   assert.equal(chooser.split("<ChoiceList").length, 2, "one list, not two groups");
   // The mark on the line of a ready one, and nothing on the others: no "on request", no "more".
-  assert.match(chooser, /readyFor\(one, sense\) \? <span className=\{READY_MARK\}>\{W\.ready\}<\/span> : pathFor\(one, sense\) === "none" \? <span className=\{META\}>\{W\.readyInTwoDays\}<\/span> : undefined,/);
+  assert.match(chooser, /readyFor\(one, sense\) \? <span className=\{READY_MARK\}>\{W\.ready\}<\/span> : <span className=\{META\}>\{W\.readyInTwoDays\}<\/span>,/);
   assert.doesNotMatch(chooser, /W\.more|moreAlone|countInWords|note=\{/);
   const words = Object.values(UNIVERSITY_CHOICE).map((said) => (typeof said === "function" ? (said as (count?: string) => string)("3") : said));
   assert.doesNotMatch(JSON.stringify(words), /on request|more|Yours isn't|Add your/i);
@@ -130,6 +136,9 @@ test("under the university chosen, the gift's path and one line; on the list, ev
   // it is our own delay, and the path says it on the stop it belongs to, "once, 2 days" (src/university-path.ts).
   assert.equal(UNIVERSITY_CHOICE.firstGift, "First gift at this university: the next ones skip the two small stops. The money waits in their name meanwhile.");
   assert.equal(UNIVERSITY_CHOICE.waitsMeanwhile, "The money waits in their name meanwhile.");
+  // Under a university set up whose first proof is still to be read: its first student, never "the first gift" (11 Oct 2026).
+  assert.equal(UNIVERSITY_CHOICE.firstProof, "First student from this university: the next ones skip the small stop. The money waits in their name meanwhile.");
+  assert.match(UNIVERSITY_CHOICE.firstGift, /^First gift at this university: /);
   assert.equal(UNIVERSITY_CHOICE.readyInTwoDays, "Ready in 2 days");
   const chooser = readFileSync("app/kit/offer/UniversityChooser.tsx", "utf8");
   // No character under a chosen university: nothing has started.
@@ -137,7 +146,7 @@ test("under the university chosen, the gift's path and one line; on the list, ev
   // The line under it: what a first gift adds, nothing for a university that is ready, and for results that the money waits.
   assert.match(chooser, /if \(sense === "results"\) return W\.waitsMeanwhile;\n\s+return provider === "none" \? W\.firstGift : provider === "unpinned" \? W\.firstProof : null;/);
   // On the list: no time on any line of a gift on results; the sun on the ready ones, the country's small type on the rest.
-  assert.match(chooser, /mark: sense === "results" \? undefined : readyFor\(one, sense\) \? <span className=\{READY_MARK\}>\{W\.ready\}<\/span> : pathFor\(one, sense\) === "none" \? <span className=\{META\}>\{W\.readyInTwoDays\}<\/span> : undefined,/);
+  assert.match(chooser, /mark: sense === "results" \? undefined : readyFor\(one, sense\) \? <span className=\{READY_MARK\}>\{W\.ready\}<\/span> : <span className=\{META\}>\{W\.readyInTwoDays\}<\/span>,/);
   // Said from the list, by what the gift asks, and not at all while the list is unread: either line would be a guess.
   assert.match(chooser, /const one = Array\.isArray\(index\) \? index\.find\(\(entry\) => entry\.one\.pair === draft\.course\)\?\.one : undefined;/);
   // So the list is read for a university already chosen, the sheet open or not.

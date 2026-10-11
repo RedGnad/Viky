@@ -8,7 +8,7 @@ import type { GiftSummary } from "@/src/client/gift";
 import { eyebrowOf, titleOf } from "@/src/gift-live";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { dateInWords } from "@/src/moments";
-import { END_GIFT as E, GIFT_CARD as W, MILESTONE_PAGE as M, UNIVERSITY_CHOICE } from "@/src/sentences";
+import { END_GIFT as E, GIFT_CARD as W, GIFT_LIVE as L, MILESTONE_PAGE as M, UNIVERSITY_CHOICE } from "@/src/sentences";
 import { BODY, CARD, CARD_LABEL, CARD_TITLE, HELP } from "../components/ui";
 import { DayStrip } from "./DayStrip";
 import { Climb } from "./Climb";
@@ -219,7 +219,12 @@ function milestoneStateInWords(status: MilestoneStatus): string {
     if (status.review?.status === "unread") return W.hadOrNot.unread;
     if (status.finished) return W.hadOrNot.missed;
     if (!status.opened) return W.notOpened;
-    if (status.review) return W.hadOrNot[status.review.status === "pending" ? "checking" : status.review.status];
+    if (status.review) {
+      const where = status.review.status;
+      // A university being set up is said as the gift's own page says it, to each of its readers (11 Oct 2026).
+      if (where === "building") return status.youAreTheRecipient ? L.awaitingProof.buildingYours : L.awaitingProof.buildingTheirs;
+      return W.hadOrNot[where === "pending" ? "checking" : where];
+    }
     return W.hadOrNot.waiting;
   }
   if (status.target === null) return status.finished ? W.milestoneEnded : status.opened ? W.milestoneUnderWay : W.notOpened;
