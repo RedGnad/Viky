@@ -1620,6 +1620,11 @@ export const CONSENT = {
 export const END_GIFT = {
   working: "One moment",
   failed: "The gift could not be ended. Nothing was changed. Try again.",
+  /**
+   * The ending left and no answer came back (the founder, 13 Oct 2026): whether the gift is ended is not known, so
+   * neither "ended" nor "nothing was changed" is said. The page reads the gift again as this is shown.
+   */
+  noAnswer: "Viky got no answer. Look at this gift in a minute before ending it again.",
   /** The funder's side, in the fold "What was agreed", before as after. */
   /**
    * The gift's page once it is ended (the founder's mockup you-decide.html of 1 Oct 2026, fourth frame): the day as a

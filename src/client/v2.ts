@@ -4,7 +4,7 @@ import { isMilestoneGiftId } from "../milestone-protocol";
 import { dailyVersionOf, linkOpenedDailyContracts, milestoneGiftV2Address, milestoneVersionOf, newDailyGiftsContract, type ContractVersion } from "../v2";
 import { endTypedData, giftLink, giftLinkTypedData, linkFingerprint, linkSecretFrom, openingAccount, OPEN_TTL_SECONDS, openTypedData, previewTokenOf, startTypedData, type V2Kind } from "../v2-protocol";
 import { GIFT_PAGE } from "../sentences";
-import { ApiError, postJson } from "./api";
+import { ApiError, NoAnswer, postJson, postJsonThatMoves } from "./api";
 
 /**
  * The browser's half of the second version of the two gift contracts (the audit of 1 Oct 2026). Everything here is off
@@ -107,18 +107,28 @@ export async function openWithTheLinkSecret(input: { giftId: string; linkSecret:
 /**
  * Ends a gift, on the person's own signature over the two amounts their screen showed. The contract works both out
  * again and refuses if either differs, and then the screen shows them again.
+ *
+ * An ending sends money back and cannot be undone, so once it is signed the request is one that moves money (the
+ * founder, 13 Oct 2026): no answer of the route, or its plain failure, which cannot vouch that nothing changed, is
+ * `NoAnswer`, and the screen says neither that the gift is ended nor that nothing was changed.
  */
 export async function endGift(input: { account: LocalAccount; giftId: string; contract: Hex; offer: EndOffer }): Promise<{ ended: boolean; keep: string; giveBack: string }> {
   const deadline = BigInt(Math.floor(Date.now() / 1_000) + 10 * 60);
   const message = { giftId: BigInt(input.giftId), keep: BigInt(input.offer.keep), giveBack: BigInt(input.offer.giveBack), nonce: BigInt(input.offer.nonce), deadline };
+  // A signature refused stops here, before anything is asked of Viky: nothing can have changed.
   const signature = await input.account.signTypedData(endTypedData(kindOf(input.giftId), input.contract, message));
-  return postJson(`/api/gift/${input.giftId}/end`, {
-    keep: message.keep.toString(),
-    giveBack: message.giveBack.toString(),
-    nonce: message.nonce.toString(),
-    deadline: deadline.toString(),
-    signature,
-  });
+  try {
+    return await postJsonThatMoves(`/api/gift/${input.giftId}/end`, {
+      keep: message.keep.toString(),
+      giveBack: message.giveBack.toString(),
+      nonce: message.nonce.toString(),
+      deadline: deadline.toString(),
+      signature,
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.code === "FAILED") throw new NoAnswer(error.status);
+    throw error;
+  }
 }
 
 /** What the server answers in place of a first reading's outcome: it read, holds it, and this is what there is to sign. */

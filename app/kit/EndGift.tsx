@@ -37,8 +37,16 @@ export function useEnding({ giftId, contract, offer, onEnded }: Readonly<{ giftI
       await onEnded();
       return true;
     } catch (error) {
+      // The ending left and no answer came back (the founder, 13 Oct 2026): the gift may be ended and its money sent
+      // back, so neither that nor "nothing was changed" is said. The gift is read again before anything is offered
+      // again: ended, the page says so in the sheet's place; not ended, the sentence stands over the same two amounts.
+      if (error instanceof ApiError && error.code === "NO_ANSWER") {
+        setProblem(E.noAnswer);
+        await Promise.resolve(onEnded()).catch(() => undefined);
+        return false;
+      }
       // The server's own sentence when it has one (the amounts changed, the gift is finished), the passkey's when the
-      // passkey refused, and otherwise the one true thing: nothing was changed.
+      // passkey refused, and otherwise the one true thing: nothing was changed, since nothing left.
       setProblem(error instanceof ApiError ? error.message : isAccountError(error) ? error.guidance : E.failed);
       // An ending refused because the amounts moved: the page is read again so the sheet shows the new ones.
       if (error instanceof ApiError && error.code === "END_CHANGED") await onEnded();
