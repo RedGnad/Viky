@@ -1,5 +1,6 @@
 import { operatorAccounts } from "@/src/dev-access";
 import { followsThirdDailyContract, type IndexRead } from "@/src/envio-index";
+import { whenIndexRead } from "@/src/index-kept";
 import { formatAusd } from "@/src/gift-reader";
 import { between, countOfFounderAccounts, founderAccounts, shortOf, usageOf, type GiftBetween } from "@/src/pilot-accounts";
 import { giftEscrowV3Address } from "@/src/v2";
@@ -51,9 +52,9 @@ export function JudgesWhoUsed({ index, credited }: Readonly<{ index: IndexRead |
       <Fold id="who" title="Who has used Viky">
         <p className={HELP} data-who-used="unread">
           The gifts, who funded them and who opened them are counted from the index of the contracts&apos; events, and
-          the index could not be read just now, or no endpoint is set for this deployment. So no count is shown here
-          rather than an old one. The gifts themselves are on the contracts listed under Network, where anybody can
-          read them.
+          the index could not be read just now and no earlier reading of it is kept, or no endpoint is set for this
+          deployment. So no count is shown here. The gifts themselves are on the contracts listed under Network, where
+          anybody can read them.
         </p>
       </Fold>
     );
@@ -76,8 +77,8 @@ export function JudgesWhoUsed({ index, credited }: Readonly<{ index: IndexRead |
   return (
     <Fold id="who" title="Who has used Viky">
       <p className={HELP}>
-        Counted from the index of the contracts&apos; events as this page is served, at block{" "}
-        {index.block.toLocaleString("en-US")}. The founder&apos;s own test accounts are named as his: they are the{" "}
+        Counted from the index of the contracts&apos; events {whenIndexRead(index)}, at block{" "}
+        {index.block.toLocaleString("en-US")}.{index.keptFrom ? " The index did not answer just now." : ""} The founder&apos;s own test accounts are named as his: they are the{" "}
         {countOfFounderAccounts()} listed in <code>src/pilot-accounts.ts</code>. Every other account is somebody
         else&apos;s, and nothing more is said here of whose.
         {usage.fromJudgeCredit > 0 ? (

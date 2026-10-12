@@ -61,7 +61,9 @@ for (const size of SIZES) {
         await expect(index.getByText(/the index's events add up to \$[\d.]+ still held/).first()).toBeVisible();
         await expect(index.locator('a[href^="https://monadvision.com/tx/0x"]').first()).toBeVisible();
       } else {
-        await expect(index.locator('[data-index="unread"]')).toContainText("no figure of it is shown here rather than an old one");
+        await expect(index.locator('[data-index="unread"]')).toContainText("no earlier reading of it is kept, or no endpoint is set for this deployment, so no figure of it is shown here.");
+        // The plan the hosted index runs on, in one line (the founder, 12 Oct 2026).
+        await expect(index.locator('[data-index="plan"]')).toHaveText("The index runs on Envio's hosted service, on its free Development plan: 750 indexing hours a month. When it does not answer, this page shows the last figures it read, with their block and their date.");
         await expect(index.locator('a[href^="https://monadvision.com/tx/"]')).toHaveCount(0);
       }
 

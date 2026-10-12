@@ -100,12 +100,14 @@ test("at the slightest doubt it answers nothing, and never throws", async () => 
 
 test("the judges page shows the index beside the chain, and says so when it cannot be read; no money path reads it", () => {
   const block = readFileSync("app/judges/JudgesIndex.tsx", "utf8");
-  // Read once, in the page, for the two blocks that show it; each says so in a sentence when there is nothing.
+  // Asked once, in the page, for the blocks that show it (through src/index-kept.ts since 12 Oct 2026, which keeps the
+  // answer); each says so in a sentence when there is nothing.
   const page = readFileSync("app/judges/page.tsx", "utf8");
-  assert.match(page, /const index = await readIndex\(\);/);
-  assert.equal(page.match(/readIndex\(/g)?.length, 1);
+  assert.match(page, /const index = await indexToShow\(\);/);
+  assert.equal(page.match(/indexToShow\(/g)?.length, 1);
+  assert.match(readFileSync("src/index-kept.ts", "utf8"), /const asked = await ask\(\);/);
   assert.match(block, /export async function JudgesIndex\(\{ index \}: Readonly<\{ index: IndexRead \| null \}>\) \{\s*if \(!index\) \{/);
-  assert.match(block, /so no figure of it is shown here rather than\s+an old one/);
+  assert.match(block, /not be read just now and no earlier reading of it is kept, or no endpoint is set for this deployment, so no\s+figure of it is shown here\./);
   assert.match(block, /functionName: "balanceOf"/, "the reconciliation is with the token's own balance");
   assert.match(block, /client\.getBlockNumber\(\)/, "the index's block is set beside the chain's head");
   assert.match(block, /https:\/\/monadvision\.com\/tx\/\$\{gift\.createdInTransaction\}/);
@@ -113,7 +115,9 @@ test("the judges page shows the index beside the chain, and says so when it cann
   assert.match(page, /<JudgesWhoUsed index=\{index\} credited=\{credited\} \/>/);
   // The index is read by the judges page and by nothing else: its blocks, and the counting of who used Viky.
   const users = execFileSync("grep", ["-rl", "envio-index", "app", "src"], { encoding: "utf8" }).trim().split("\n").sort();
-  assert.deepEqual(users, ["app/judges/JudgesIndex.tsx", "app/judges/JudgesMera.tsx", "app/judges/JudgesMinute.tsx", "app/judges/JudgesWhoUsed.tsx", "app/judges/page.tsx", "src/pilot-accounts.ts"]);
+  assert.deepEqual(users, ["app/judges/JudgesIndex.tsx", "app/judges/JudgesMera.tsx", "app/judges/JudgesMinute.tsx", "app/judges/JudgesWhoUsed.tsx", "src/index-kept.ts", "src/pilot-accounts.ts"]);
+  // The page itself asks through the kept answer, and nothing else under app or src does.
+  assert.deepEqual(execFileSync("grep", ["-rl", "indexToShow(", "app", "src"], { encoding: "utf8" }).trim().split("\n").sort(), ["app/judges/page.tsx", "src/index-kept.ts"]);
   // An index that does not answer is a sentence on each block, never an error on the page (the founder, 2 Oct 2026):
   // the reading never throws, and no block prints anything of a failure.
   for (const file of ["app/judges/JudgesIndex.tsx", "app/judges/JudgesWhoUsed.tsx", "app/judges/JudgesMera.tsx", "app/judges/JudgesMinute.tsx"]) {
@@ -121,7 +125,7 @@ test("the judges page shows the index beside the chain, and says so when it cann
     assert.doesNotMatch(source, /error\.message|catch \(error\)/, `${file} prints nothing of a failure`);
   }
   const who = readFileSync("app/judges/JudgesWhoUsed.tsx", "utf8");
-  assert.match(who, /if \(!index\) \{[\s\S]*?data-who-used="unread"[\s\S]*?So no count is shown here\s+rather than an old one\./);
+  assert.match(who, /if \(!index\) \{[\s\S]*?data-who-used="unread"[\s\S]*?no earlier reading of it is kept, or no endpoint is set for this\s+deployment\. So no count is shown here\./);
   assert.match(readFileSync("app/judges/JudgesMera.tsx", "utf8"), /How many are written there could not be read from the index just now\./);
   assert.match(readFileSync("app/judges/JudgesMinute.tsx", "utf8"), /The index of the contracts' events could not be read just now, so no count is given here: /);
   assert.match(readFileSync("src/envio-index.ts", "utf8"), /\} catch \{\s*return null;\s*\}\s*\}/, "the reading answers nothing, it never throws");

@@ -28,7 +28,7 @@ import { pinInWords } from "@/src/witness-portal";
 import { usesDelivered } from "@/src/phone-order-store";
 import { consentAnchorAddress, giftEscrowV2Address, giftEscrowV3Address, milestoneGiftV2Address } from "@/src/v2";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, PUBLIC_RPC_URL } from "@/src/monad/chain";
-import { readIndex } from "@/src/envio-index";
+import { indexToShow } from "@/src/index-kept";
 import { MOBILE_CEILINGS, mobileMoneyOn } from "@/src/mobile-money";
 import { JudgesAgora } from "./JudgesAgora";
 import { JudgesConditions } from "./JudgesConditions";
@@ -138,9 +138,10 @@ export default async function JudgesPage() {
   // The third daily contract, where a day is paid the day it is read: said only once it is set, like the second.
   const escrowV3 = giftEscrowV3Address();
   const thirdVersionSet = escrowV3 !== null;
-  // The index of the contracts' events, read once for the two blocks that show it. It answers nothing rather than an
-  // error (src/envio-index.ts), and each block then says so in a sentence.
-  const index = await readIndex();
+  // The index of the contracts' events, asked once for the blocks that show it. When it does not answer, the last
+  // answer kept is shown, with its block and the moment it was read (src/index-kept.ts); when none is kept it is
+  // nothing rather than an error, and each block then says so in a sentence.
+  const index = await indexToShow();
   const used = (count: number | undefined) => (uses === null || count === undefined ? "the count could not be read right now" : count === 0 ? "Open. Nobody has used it yet." : count === 1 ? "Open. Used once." : `Open. Used ${count} times.`);
   // Gifts created before the D30 corrections keep running on the contract that holds them, and every
   // gift record names its own contract, so both are listed here for as long as the older one holds one.

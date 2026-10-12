@@ -145,7 +145,7 @@ test("the judges page reads the journal of credits once, shows no count when it 
   assert.match(minute, /"The journal of judge credits could not be read just now, so no count is given here: "/);
   // Each count carries its own share that is not the founder's, in the founder's words of 10 Oct 2026.
   const said = minute.replace(/\s+/g, " ");
-  assert.ok(said.includes(`{count(usage.funders.all, "account", "accounts")}, {usage.funders.all - usage.funders.founders} of them not the founder&apos;s, and opened by {usage.recipients.all}, {usage.recipients.all - usage.recipients.founders} of them not his. {formatAusd(usage.earned)} earned, {formatAusd(usage.sentBack)} gone back. Counted from the index as this page is served:`));
+  assert.ok(said.includes(`{count(usage.funders.all, "account", "accounts")}, {usage.funders.all - usage.funders.founders} of them not the founder&apos;s, and opened by {usage.recipients.all}, {usage.recipients.all - usage.recipients.founders} of them not his. {formatAusd(usage.earned)} earned, {formatAusd(usage.sentBack)} gone back. Counted from the index{" "} {index ? whenIndexRead(index) : "as this page is served"}:`));
   assert.doesNotMatch(said, /of which/);
   // "the seven listed" is the list's own length, never a word typed beside it.
   assert.equal(countOfFounderAccounts(), "seven");

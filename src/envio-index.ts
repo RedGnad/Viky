@@ -6,7 +6,8 @@
  * with who funded each gift and who opened it, and what the anchor of agreements has written down.
  * Nothing that moves money reads it. This is one POST to `ENVIO_GRAPHQL_URL`, cut at four seconds, and it answers
  * nothing at the slightest doubt: no setting, an endpoint that does not answer, an answer of another shape. The page
- * then says the index could not be read, rather than showing a figure it cannot stand behind.
+ * then shows the last answer it kept, with the block and the moment it was read (src/index-kept.ts), or says the
+ * index could not be read: never a figure it cannot stand behind.
  */
 
 export type IndexedGift = Readonly<{
@@ -52,6 +53,11 @@ export type IndexRead = Readonly<{
   totals: IndexTotals;
   /** Every gift, oldest first. */
   gifts: readonly IndexedGift[];
+  /**
+   * Set when these figures are not the index's answer of now but the last one kept (src/index-kept.ts): the moment
+   * that answer was read. Every block that prints a figure of the index then says so, with this moment.
+   */
+  keptFrom?: Date;
 }>;
 
 const QUERY = `{
@@ -110,20 +116,14 @@ const text = (value: unknown, pattern: RegExp): string => {
   return value;
 };
 
-/** The index as it answers now, or nothing. It never throws. */
-export async function readIndex(fetchImpl: typeof fetch = fetch, url: string | null = envioGraphqlUrl()): Promise<IndexRead | null> {
-  if (!url) return null;
+/**
+ * What an answer of the index says, or nothing when it is not the shape expected. The same reading is made of an
+ * answer just received and of the last one kept, so a kept answer is held to every check a fresh one is.
+ */
+export function indexFrom(data: unknown): IndexRead | null {
   try {
-    const response = await fetchImpl(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ query: QUERY }),
-      signal: AbortSignal.timeout(INDEX_TIMEOUT_MS),
-      cache: "no-store",
-    });
-    if (!response.ok) return null;
-    const body = (await response.json()) as { data?: { _meta?: unknown[]; GlobalStat?: unknown[]; Gift?: unknown[] }; errors?: unknown };
-    if (body.errors || !body.data) return null;
+    if (!data || typeof data !== "object") return null;
+    const body = { data: data as { _meta?: unknown[]; GlobalStat?: unknown[]; Gift?: unknown[] } };
     const meta = (body.data._meta ?? []).find((entry) => Number((entry as { chainId?: unknown }).chainId) === 143) as { progressBlock?: unknown; sourceBlock?: unknown } | undefined;
     const global = (body.data.GlobalStat ?? [])[0] as Record<string, unknown> | undefined;
     if (!meta || !global || !Array.isArray(body.data.Gift)) return null;
@@ -168,6 +168,32 @@ export async function readIndex(fetchImpl: typeof fetch = fetch, url: string | n
   } catch {
     return null;
   }
+}
+
+/** The index as it answers now, with the answer itself as it came, or nothing. It never throws. */
+export async function askIndex(fetchImpl: typeof fetch = fetch, url: string | null = envioGraphqlUrl()): Promise<{ index: IndexRead; answer: unknown } | null> {
+  if (!url) return null;
+  try {
+    const response = await fetchImpl(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ query: QUERY }),
+      signal: AbortSignal.timeout(INDEX_TIMEOUT_MS),
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const body = (await response.json()) as { data?: unknown; errors?: unknown };
+    if (body.errors || !body.data) return null;
+    const index = indexFrom(body.data);
+    return index ? { index, answer: body.data } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The index as it answers now, or nothing. It never throws. */
+export async function readIndex(fetchImpl: typeof fetch = fetch, url: string | null = envioGraphqlUrl()): Promise<IndexRead | null> {
+  return (await askIndex(fetchImpl, url))?.index ?? null;
 }
 
 /**

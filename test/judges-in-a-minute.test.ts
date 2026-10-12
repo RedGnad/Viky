@@ -34,7 +34,7 @@ test("the first block says the page in seven lines, and what it said at length i
   assert.match(minute, /\{count\(usage\.funders\.all - usage\.funders\.founders, "account", "accounts"\)\} funded a gift and\{" "\}\s+\{usage\.recipients\.all - usage\.recipients\.founders\} opened one\./);
   // Nothing removed: the four answers as they stood, under one row.
   const atLength = minute.slice(minute.indexOf('<Row title="The same, at length">'), minute.indexOf("</Row>"));
-  for (const kept of ["Nobody profits from a missed day.", "a parent", 'data-minute="judge-credit"', "gone back. Counted from the index as this page", "AUSD is on Monad with EIP-3009", "{FINALITY_GAP.fewestBlocks} or {FINALITY_GAP.mostBlocks} blocks after its own"]) assert.ok(atLength.includes(kept), kept);
+  for (const kept of ["Nobody profits from a missed day.", "a parent", 'data-minute="judge-credit"', "gone back. Counted from the index", "AUSD is on Monad with EIP-3009", "{FINALITY_GAP.fewestBlocks} or {FINALITY_GAP.mostBlocks} blocks after its own"]) assert.ok(atLength.includes(kept), kept);
   // The universities are a fold of their own, and the first block leads to it.
   assert.ok(minute.includes('href="#universities"') && !minute.includes("<UniversityPath"));
   assert.match(read("app/judges/JudgesUniversities.tsx"), /<Fold id="universities" title="Universities: set up once, then paid on sign-in">/);

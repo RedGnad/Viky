@@ -7,3 +7,7 @@ aggregates per day, per condition and in all). It answers GraphQL at
 an endpoint that changes with each hosted deployment: that repository's README gives the one in service. The app reads
 it in one place, the judges page (who has used Viky, and the index set beside the chain); no movement of money depends
 on it, and every figure a funder or a recipient sees comes from the contracts themselves.
+
+The hosted index runs on Envio's free Development plan: 750 indexing hours a month (its dashboard, read on 12 Oct 2026).
+The judges page keeps each answer it gets (`src/index-kept.ts`, one row), and when the index does not answer it shows
+the last one, with the block it had reached and the moment it was read.

@@ -1,5 +1,7 @@
 import { operatorAccounts } from "@/src/dev-access";
 import type { IndexRead } from "@/src/envio-index";
+import { whenIndexRead } from "@/src/index-kept";
+import { momentInWords } from "@/src/judges-first-use";
 import { formatAusd } from "@/src/gift-reader";
 import { BLOCK_TIME, creditedDayMon, dollarsOf, FINALITY_GAP, monWords, RELAYER_FEES } from "@/src/measured";
 import { PUBLIC_RPC_URL } from "@/src/monad/chain";
@@ -72,6 +74,8 @@ export function JudgesMinute({
               <strong>{count(usage.gifts, "gift", "gifts")}</strong>, <strong>{formatAusd(usage.funded)}</strong> put into them. Outside the
               founder&apos;s own tries: {count(usage.funders.all - usage.funders.founders, "account", "accounts")} funded a gift and{" "}
               {usage.recipients.all - usage.recipients.founders} opened one.{" "}
+              {/* The index did not answer: the count is the last one kept, and the line says of when. */}
+              {index?.keptFrom ? <span data-minute="index-kept">Counted at the index&apos;s last reading, on {momentInWords(index.keptFrom)}. </span> : null}
             </>
           ) : index ? (
             "The journal of judge credits could not be read just now, so no count is given here. "
@@ -178,8 +182,8 @@ export function JudgesMinute({
                 {/* Each count with its own share that is not the founder's (the founder's words, 10 Oct 2026). */}
                 {count(usage.funders.all, "account", "accounts")}, {usage.funders.all - usage.funders.founders} of them not the
                 founder&apos;s, and opened by {usage.recipients.all}, {usage.recipients.all - usage.recipients.founders} of them not
-                his. {formatAusd(usage.earned)} earned, {formatAusd(usage.sentBack)} gone back. Counted from the index as this page
-                is served:{" "}
+                his. {formatAusd(usage.earned)} earned, {formatAusd(usage.sentBack)} gone back. Counted from the index{" "}
+                {index ? whenIndexRead(index) : "as this page is served"}:{" "}
               </>
             ) : index ? (
               "The journal of judge credits could not be read just now, so no count is given here: "

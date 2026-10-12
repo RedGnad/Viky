@@ -1,4 +1,5 @@
 import type { IndexRead } from "@/src/envio-index";
+import { momentInWords } from "@/src/judges-first-use";
 import { ARRIVAL } from "@/src/measured";
 import { consentAnchorAddress } from "@/src/v2";
 import { CopyLine } from "../kit/CopyLine";
@@ -63,7 +64,7 @@ export function JudgesMera({ index }: Readonly<{ index: IndexRead | null }>) {
             signed (event <code>ConsentAnchored</code>).{" "}
             <span data-anchor-count>
               {index
-                ? `As this page is served the index counts ${index.totals.consentKeysBound} ${index.totals.consentKeysBound === 1 ? "key" : "keys"} bound, ${index.totals.yesAnchored} yes and ${index.totals.stopsAnchored} ${index.totals.stopsAnchored === 1 ? "stop" : "stops"} written down.`
+                ? `${index.keptFrom ? `At its last reading, on ${momentInWords(index.keptFrom)}, the index counted` : "As this page is served the index counts"} ${index.totals.consentKeysBound} ${index.totals.consentKeysBound === 1 ? "key" : "keys"} bound, ${index.totals.yesAnchored} yes and ${index.totals.stopsAnchored} ${index.totals.stopsAnchored === 1 ? "stop" : "stops"} written down.`
                 : "How many are written there could not be read from the index just now."}
             </span>
           </p>
