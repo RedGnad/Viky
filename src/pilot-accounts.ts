@@ -4,7 +4,11 @@ import type { IndexedGift } from "./envio-index";
 /**
  * Whose accounts made and opened the gifts the judges page counts (the founder, 1 and 2 Oct 2026).
  *
- * The five accounts below are the founder's own test accounts, named by him on 1 Oct 2026. They are public on the
+ * The accounts below are the founder's own test accounts: five named by him on 1 Oct 2026, and two more on 12 Oct
+ * 2026, the account that paid for gift 1001 on the third daily contract and the one that opened it, which are the two
+ * accounts of his film of the product. Left out, gift 1001 read as a gift between two other people, gift 1002, which
+ * the second of them opened, as a gift from the founder to somebody else, and the page counted one person too many
+ * who had opened a gift. They are public on the
  * chain like every account, and they are listed here so that the page can say which gifts are his own tries: a count
  * of gifts that did not tell them apart would read as people using Viky when it was one person testing it. Any
  * account that is not in this list, nor an operator account of this deployment, is somebody else's, and nothing more
@@ -21,16 +25,18 @@ export const FOUNDER_TEST_ACCOUNTS: readonly string[] = [
   "0x91c964e745ffd6265c75df33ca9137d81c3c454d",
   "0x881350ea7a98f607f42dc4c2e2edde70f8724c3d",
   "0x57193d615c1f11c5afaf8166fab8fe93dcb61697",
+  "0x9e635a5e6e83a7e6b2dff53d6d7a24079521dae9",
+  "0x811a7b7d6a1984ab622f7573fe33840a83e52376",
 ];
 
-/** The founder's accounts as one set of lower-case addresses: the five above and this deployment's operator accounts. */
+/** The founder's accounts as one set of lower-case addresses: those listed above and this deployment's operator accounts. */
 export function founderAccounts(operators: Iterable<string> = []): ReadonlySet<string> {
   const all = new Set(FOUNDER_TEST_ACCOUNTS.map((account) => account.toLowerCase()));
   for (const account of operators) if (isAddress(account)) all.add(account.toLowerCase());
   return all;
 }
 
-/** The length of the list in a word, as the page says it: "the five listed". A figure past the words. */
+/** The length of the list in a word, as the page says it: "the seven listed". A figure past the words. */
 const IN_WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"] as const;
 export function countOfFounderAccounts(): string {
   return IN_WORDS[FOUNDER_TEST_ACCOUNTS.length] ?? String(FOUNDER_TEST_ACCOUNTS.length);

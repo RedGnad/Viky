@@ -36,12 +36,12 @@ function gift(over: Partial<IndexedGift>): IndexedGift {
   };
 }
 
-test("the founder's accounts are five whole addresses, compared in one case, with the deployment's operator accounts beside them", () => {
-  assert.equal(FOUNDER_TEST_ACCOUNTS.length, 5);
+test("the founder's accounts are seven whole addresses, compared in one case, with the deployment's operator accounts beside them", () => {
+  assert.equal(FOUNDER_TEST_ACCOUNTS.length, 7);
   for (const account of FOUNDER_TEST_ACCOUNTS) assert.match(account, /^0x[0-9a-f]{40}$/);
-  assert.equal(new Set(FOUNDER_TEST_ACCOUNTS).size, 5);
+  assert.equal(new Set(FOUNDER_TEST_ACCOUNTS).size, 7);
   const all = founderAccounts(["0xabcdef0123456789abcdef0123456789abcdef01", "not an account"]);
-  assert.equal(all.size, 6);
+  assert.equal(all.size, 8);
   assert.ok(all.has("0xabcdef0123456789abcdef0123456789abcdef01"));
   assert.equal(shortOf(ANNA), "0x1111…1aAa");
 });
@@ -147,8 +147,34 @@ test("the judges page reads the journal of credits once, shows no count when it 
   const said = minute.replace(/\s+/g, " ");
   assert.ok(said.includes(`{count(usage.funders.all, "account", "accounts")}, {usage.funders.all - usage.funders.founders} of them not the founder&apos;s, and opened by {usage.recipients.all}, {usage.recipients.all - usage.recipients.founders} of them not his. {formatAusd(usage.earned)} earned, {formatAusd(usage.sentBack)} gone back. Counted from the index as this page is served:`));
   assert.doesNotMatch(said, /of which/);
-  // "the five listed" is the list's own length, never a word typed beside it.
-  assert.equal(countOfFounderAccounts(), "five");
+  // "the seven listed" is the list's own length, never a word typed beside it.
+  assert.equal(countOfFounderAccounts(), "seven");
   assert.match(who, /they are the\{" "\}\s+\{countOfFounderAccounts\(\)\} listed in <code>src\/pilot-accounts\.ts<\/code>/);
   assert.doesNotMatch(who, /they are the five/);
+});
+
+test("the two accounts of the founder's film are his: gifts 1001 and 1002 are his own tries (12 Oct 2026)", () => {
+  // The account that paid for gift 1001 and the one that opened it, which also opened gift 1002, paid by his main one.
+  const PAID_1001 = "0x9e635a5e6e83a7e6b2dff53d6d7a24079521dae9";
+  const OPENED_BOTH = "0x811a7b7d6a1984ab622f7573fe33840a83e52376";
+  assert.ok(FOUNDER_TEST_ACCOUNTS.includes(PAID_1001) && FOUNDER_TEST_ACCOUNTS.includes(OPENED_BOTH));
+  const founders = founderAccounts();
+  // Before they were listed: a gift between two other people, and a gift from the founder to somebody else.
+  const before = new Set(FOUNDER_TEST_ACCOUNTS.filter((account) => account !== PAID_1001 && account !== OPENED_BOTH));
+  assert.equal(before.size, 5);
+  assert.equal(between({ funder: PAID_1001, recipient: OPENED_BOTH }, before), "two others");
+  assert.equal(between({ funder: FOUNDER, recipient: OPENED_BOTH }, before), "founder to another");
+  // Listed, both gifts are his own tries, and neither account counts among the people who are not him.
+  assert.equal(between({ funder: PAID_1001, recipient: OPENED_BOTH }, founders), "the founder's own try");
+  assert.equal(between({ funder: FOUNDER, recipient: OPENED_BOTH }, founders), "the founder's own try");
+  const usage = usageOf(
+    [
+      gift({ giftId: "1001", kind: "daily", funder: PAID_1001, recipient: OPENED_BOTH }),
+      gift({ giftId: "1002", kind: "daily", funder: FOUNDER, recipient: OPENED_BOTH }),
+    ],
+    founders,
+  );
+  assert.deepEqual(usage.funders, { all: 2, founders: 2 });
+  assert.deepEqual(usage.recipients, { all: 1, founders: 1 });
+  assert.equal(usage.between["the founder's own try"], 2);
 });
