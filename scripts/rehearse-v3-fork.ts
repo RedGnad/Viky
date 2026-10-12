@@ -57,7 +57,7 @@ import { GIFT_ESCROW, MILESTONE_GIFT } from "../src/viky-contracts";
  *      connection, a lesson read that day pays that day, the same figure pays nothing twice, a second lesson that day
  *      is counted by the first reading of the next day, a missed day is paid first by the next lesson;
  *   6. the same gift as the app reads it: its status, the look its page asks for, by each of its two people and by
- *      nobody else, with the real public profile and no proof paid for, and the pass of every quarter of an hour;
+ *      nobody else, with the real public profile and no proof paid for, and the pass of every hour;
  *   7. the gift of step 1, read the next day by the second version's rule and under the second version's domain;
  *   8. the money: a day taken out on the recipient's signed intent, the gift ended by the person it is for, and the
  *      Safe's brake pulled on the third contract through its own tool.
@@ -387,7 +387,7 @@ async function main() {
   console.log("STEP 6: the same gift as the app reads it");
   let status = await statusOf(giftId, recipientCookie);
   expect(status.version === 3 && status.creditedDays === 1 && status.startDay === day1, "its status says the third version, the first day and today counted");
-  expect(readAsTheDayGoes((await loadGift(giftId))!) === true, "it is read as the day goes: by its page as it opens, and by the pass of every quarter of an hour");
+  expect(readAsTheDayGoes((await loadGift(giftId))!) === true, "it is read as the day goes: by its page as it opens, and by the pass of every hour");
   expect(readAsTheDayGoes((await loadGift(before.giftId))!) === false, "and the gift on the second version is not: it is read each morning");
   for (const [who, cookie] of [["the person it is for", recipientCookie], ["the person who offered it", funderCookie]] as const) {
     const looked = await look(giftId, cookie);
@@ -396,7 +396,7 @@ async function main() {
   expect((await look(giftId, await cookieFor(thief))).status === 403, "nobody else may ask for it");
   expect((await look(before.giftId, recipientCookie)).body.code === "NOT_READ_LIVE", "and a gift on the second version has no look to ask for");
   const passed = await frequentDailyPass();
-  expect(passed.length === 1 && passed[0].giftId === giftId && passed[0].result === "looked: NOTHING_TO_CREDIT", "the pass of every quarter of an hour reads that gift alone, and takes no proof for a day already counted");
+  expect(passed.length === 1 && passed[0].giftId === giftId && passed[0].result === "looked: NOTHING_TO_CREDIT", "the pass of every hour reads that gift alone, and takes no proof for a day already counted");
 
   console.log("STEP 7: the next day, on both contracts");
   await warpTo((day1 + 1) * DAY + 20 * 60);

@@ -116,7 +116,7 @@ test("stale sentences are gone: Coursera is open, no verifier is on the chain, a
   assert.doesNotMatch(read("app/components/MilestoneJudges.tsx"), /Viky reads twice a day/);
   assert.match(read("src/conditions.ts"), /id: "coursera-certificate",[^}]*?state: "open"/);
   assert.match(read("src/reclaim-proof-set.ts"), /PINNED_RECLAIM_WITNESS/);
-  assert.match(read("src/frequent-pass.ts"), /A pass over the milestones still climbing every five minutes/);
+  assert.match(read("src/frequent-pass.ts"), /A pass over the milestones still climbing every hour/);
 });
 
 test("the second version's three contracts are on the page with the transactions that made and handed them over", () => {
@@ -215,8 +215,9 @@ test("a day's ceiling and the month's limit hold no day: the page says the day s
 
 test("what Viky asks of Duolingo is said for the contract a daily gift is made on today", () => {
   assert.ok(page.includes("On the first two versions of the daily contract Viky reads a profile once a day for each gift made on it"));
-  assert.ok(page.includes("it looks at the profile every quarter of an hour while a day of the gift is open, and once a minute while the gift's page is open, plainly; an attested reading is taken only for a lesson a look saw"));
-  // The quarter of an hour, the minute, and the look that comes before any reading.
+  assert.ok(page.includes("it looks at the profile every hour while a day of the gift is open, and once a minute while the gift's page is open, plainly; an attested reading is taken only for a lesson a look saw"));
+  // The hour is the scheduler's (set by the founder on 12 Oct 2026), which the pass's own guard lets through; the
+  // minute, and the look that comes before any reading.
   assert.match(read("src/frequent-pass.ts"), /export const FREQUENT_DAILY_PASS_EVERY_SECONDS = 14 \* 60;/);
   assert.match(read("app/kit/LiveReading.tsx"), /60_000|EVERY_MS|every minute|once a minute/i);
   assert.ok(read("src/daily-look.ts").includes("if (noDay) return { kind: \"refused\", refusal: noDay };"), "no day open, and the source is not even asked");
@@ -291,8 +292,8 @@ test("the sentences the audit of 9 Oct 2026 asked to redo from the code: a provi
   assert.doesNotMatch(page + register, /2,126 coming|Lusaka|Francistown|Marathon de Dakar/);
   // The rhythm of readings since the third daily contract, in the register as in the page's own steps.
   assert.ok(register.includes('inShort: "Read from Duolingo the day the lesson is done.'));
-  assert.ok(register.includes("read through an attested fetch the day the lesson is done: when the gift's page is opened after the lesson, or within a quarter of an hour."));
-  assert.ok(page.includes("when the gift's page is opened after the lesson, or within a quarter of an hour"), "the page's own step says the same");
+  assert.ok(register.includes("read through an attested fetch the day the lesson is done: when the gift's page is opened after the lesson, or within the hour."));
+  assert.ok(page.includes("when the gift's page is opened after the lesson, or within the hour"), "the page's own step says the same");
   assert.ok(register.includes("read through an attested fetch when the climb starts and when its target is reached, and checked the same way as Duolingo."));
   assert.ok(register.includes("when the person binds the account, when the climb starts and when its target is reached"));
   assert.doesNotMatch(register, /Read each morning from Duolingo|read once a morning|read every day through an attested fetch|at every daily reading/);

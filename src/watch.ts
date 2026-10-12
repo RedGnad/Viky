@@ -143,7 +143,7 @@ export function absentPassAlert(last: Date | null, nowMs: number): Alert | null 
  * is in the logs of that minute, where the health reading writes it, and never in the email.
  */
 export function healthAlert(health: Pick<Health, "database" | "worker"> & Partial<Pick<Health, "relayer" | "passes">>): Alert | null {
-  // The relayer under its alert and the five-minute call (the final audit of 9 Oct 2026). The relayer was told at the
+  // The relayer under its alert and the hourly call (the final audit of 9 Oct 2026; every five minutes until 12 Oct 2026). The relayer was told at the
   // start of a pass alone, so between two passes a balance that fell said nothing; and nothing named the call every
   // frequent reading and the morning summary ride on, which two hours of an outage are enough to switch off.
   const relayer = health.relayer;
@@ -152,7 +152,7 @@ export function healthAlert(health: Pick<Health, "database" | "worker"> & Partia
     ...(health.database.ok ? [] : [`the database (${health.database.fault ?? "unreachable"})`]),
     ...(health.worker.ok ? [] : [`the reading service (${health.worker.fault ?? "unreachable"})`]),
     ...(!relayer || (relayer.ok && !relayer.underAlert) ? [] : [relayer.mon === undefined ? `the relayer (${relayer.fault ?? "unreachable"})` : `the relayer (${relayer.mon} MON, under ${mon(RELAYER_ALERT_BELOW)})`]),
-    ...(!frequent || frequent.ok ? [] : [`the five-minute call (${frequent.fault === "never ran" || frequent.last === null ? "never ran" : `late, last at ${frequent.last}`})`]),
+    ...(!frequent || frequent.ok ? [] : [`the hourly call (${frequent.fault === "never ran" || frequent.last === null ? "never ran" : `late, last at ${frequent.last}`})`]),
   ];
   if (down.length === 0) return null;
   return {

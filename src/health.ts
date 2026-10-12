@@ -36,9 +36,11 @@ const FORWARDER_ABI = [{ type: "function", name: "getRouter", stateMutability: "
 /**
  * How old the last run of a pass may be before it counts as missing. The two nightly passes run once a day, inside the
  * hour their schedule names (src/pass-log.ts), so two runs are at most twenty-five hours apart. The milestones' pass is
- * called every five minutes from outside (src/frequent-pass.ts): twenty minutes is four calls in a row lost.
+ * called from outside (src/frequent-pass.ts), every hour since 12 Oct 2026: late is two calls in a row lost, and ten
+ * minutes for a call that comes late. It was twenty minutes while the scheduler called every five, four calls in a
+ * row lost; kept under an hourly call, it said the pass late from twenty minutes after each call until the next one.
  */
-export const PASS_LATE_AFTER_SECONDS = { counting: 26 * 3_600, settling: 26 * 3_600, milestones: 20 * 60 } as const;
+export const PASS_LATE_AFTER_SECONDS = { counting: 26 * 3_600, settling: 26 * 3_600, milestones: 130 * 60 } as const;
 
 export type PassKind = keyof typeof PASS_LATE_AFTER_SECONDS;
 

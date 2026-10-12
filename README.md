@@ -237,7 +237,7 @@ flowchart LR
     APP[Next.js PWA and routes]
     REL[Relayer: submits and pays every step]
     SIG[Evidence signer: EIP-712 attestations]
-    CRON[Passes: 00:30, 03:30 and 07:00 UTC, and one called every five minutes]
+    CRON[Passes: 00:30, 03:30 and 07:00 UTC, and one called every hour]
   end
   DB[(Neon Postgres: sessions, records, agreements)]
   subgraph Sources

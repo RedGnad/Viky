@@ -111,7 +111,7 @@ test("each thing that does not hold makes the whole answer fail, and says which 
     ["another evidence key", { evidenceKeys: async () => ({ ours: KEY, named: [{ contract: A, signer: B }] }) }, (h) => h.evidenceKey.fault, "differs"],
     ["a counting pass two days old", { lastPasses: async () => ({ counting: new Date(NOW - 48 * 3_600_000), settling: new Date(NOW), milestones: new Date(NOW) }) }, (h) => h.passes.counting.fault, "late"],
     ["a settling pass that never ran", { lastPasses: async () => ({ counting: new Date(NOW), settling: null, milestones: new Date(NOW) }) }, (h) => h.passes.settling.fault, "never ran"],
-    ["a milestones pass half an hour old", { lastPasses: async () => ({ counting: new Date(NOW), settling: new Date(NOW), milestones: new Date(NOW - 30 * 60_000) }) }, (h) => h.passes.milestones.fault, "late"],
+    ["a milestones pass three hours old", { lastPasses: async () => ({ counting: new Date(NOW), settling: new Date(NOW), milestones: new Date(NOW - 3 * 3_600_000) }) }, (h) => h.passes.milestones.fault, "late"],
     ["a journal that cannot be read", { lastPasses: failing }, (h) => h.passes.counting.fault, "unreachable"],
   ];
   for (const [name, over, fault, expected] of cases) {
@@ -152,7 +152,11 @@ test("a pass is late after the longest gap its schedule allows", () => {
   // The nightly passes run inside the hour their schedule names, once a day: two runs are at most 25 hours apart.
   assert.equal(PASS_LATE_AFTER_SECONDS.counting, 26 * 3_600);
   assert.equal(PASS_LATE_AFTER_SECONDS.settling, 26 * 3_600);
-  assert.equal(PASS_LATE_AFTER_SECONDS.milestones, 20 * 60);
+  // The milestones' pass is called every hour since 12 Oct 2026: late is two calls in a row lost, and ten minutes.
+  // The twenty minutes of a call every five said it late for forty minutes of every hour.
+  assert.equal(PASS_LATE_AFTER_SECONDS.milestones, 130 * 60);
+  // Between two hourly calls the pass holds: the fifty-ninth minute after a call is not late, nor is one call lost.
+  assert.ok(PASS_LATE_AFTER_SECONDS.milestones > 2 * 3_600 && PASS_LATE_AFTER_SECONDS.milestones < 3 * 3_600);
 });
 
 test("the route answers 503 when a check fails, needs no secret, and keeps one answer for half a minute", () => {

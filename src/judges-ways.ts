@@ -81,8 +81,9 @@ export function waysOfReading(): readonly WayOfReading[] {
 /**
  * The public lines whose real page was read under attestation without a gift, on the founder's word, on 12 Oct 2026:
  * one attested read of each source that had never passed a real one, asked of production's own reading service. Every
- * one of them gave a proof (the readings are counted with October's cycle, `OUTSIDE_THE_JOURNAL` in
- * src/attested-calls.ts). A line is said "read with no gift yet" only while it has no real proof of its own.
+ * one of them gave a proof, and so did the read of a race run the day before, made that evening (the readings are
+ * counted with October's cycle, `OUTSIDE_THE_JOURNAL` in src/attested-calls.ts). A line is said "read with no gift
+ * yet" only while it has no real proof of its own.
  */
 export const READ_WITHOUT_A_GIFT: Readonly<{ on: string; conditions: readonly string[] }> = {
   on: "12 Oct 2026",

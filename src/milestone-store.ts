@@ -185,8 +185,8 @@ export async function recordReading(reading: MilestoneReading): Promise<void> {
 
 /**
  * When a look finds exactly what the gift's newest reading found, that row's moment is moved to the look's and no row
- * is added (the audit of 1 Oct 2026): the pass that runs every five minutes wrote one identical row per gift each
- * time. Only an unattested look that said "not yet" is ever moved, and only when it is the gift's newest row: a start,
+ * is added (the audit of 1 Oct 2026): the pass, which ran every five minutes then, wrote one identical row per gift
+ * each time. Only an unattested look that said "not yet" is ever moved, and only when it is the gift's newest row: a start,
  * a reading that reached, a refusal and every attested reading stay where and when they were. Answers whether a row
  * was moved; when none was, the caller writes the look as a row of its own.
  */

@@ -133,10 +133,12 @@ export const BEFORE_THE_JOURNAL = { cycleFrom: "2026-10-01T00:00:00.000Z", start
  * machine of production's own reading service (Codeforces, the Chess.com puzzles rating, the WCA, the Duolingo English
  * Test, Coursera, edX, MITx Online, Credly's two pages, Accredible, Breizh Chrono, race result and MikaTiming).
  * Fourteen fetches, thirteen of them a proof: the fourteenth met a redirect, a race's page MikaTiming had moved to its
- * archive. They reach the same Reclaim application and the same allowance, so they are counted with that cycle, from
- * the minute the last of them was made.
+ * archive. And one more that evening, on his word too, at 17:56 UTC: the result of a race run the day before, the
+ * Chicago Marathon, on the page MikaTiming gives a race just run, which gave its proof. Fifteen fetches, fourteen of
+ * them a proof. They reach the same Reclaim application and the same allowance, so they are counted with that cycle,
+ * from the minute the last of them was made.
  */
-export const OUTSIDE_THE_JOURNAL = { cycleFrom: "2026-10-01T00:00:00.000Z", at: "2026-10-12T09:03:00.000Z", started: 14, proved: 13 } as const;
+export const OUTSIDE_THE_JOURNAL = { cycleFrom: "2026-10-01T00:00:00.000Z", at: "2026-10-12T17:57:00.000Z", started: 15, proved: 14 } as const;
 
 /**
  * The cycle before, September 2026, as far as it is known: 98 proofs given (35 daily readings kept with their proof
@@ -477,7 +479,7 @@ async function providersWaited(): Promise<readonly WaitingProvider[]> {
 
 /**
  * The summary of the day before, when it is due: a morning of the judging, from six o'clock UTC, once. Asked by the
- * call that already arrives every five minutes (app/api/cron/milestones), so it leaves within minutes of six.
+ * call that already arrives every hour (app/api/cron/milestones), so it leaves within the hour after six.
  */
 export async function morningSummaryDue(nowMs: number = Date.now(), deps: MorningSummaryDeps = { claim: claimPass, spent: spentOn, use: cycleUse, waiting: providersWaited }): Promise<Alert | null> {
   const now = new Date(nowMs);

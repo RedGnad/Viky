@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 /**
- * The frequent passes (src/frequent-pass.ts), called every five minutes by cron-job.org. Public and without a secret:
+ * The frequent passes (src/frequent-pass.ts), called every hour by cron-job.org (every five minutes until 12 Oct
+ * 2026, when the founder slowed it: the call never let the free database sleep). Public and without a secret:
  * each pass guards itself, and a call in between answers 200 and does nothing. It answers at once and carries no
  * gift's data; the passes run after the answer.
  *
@@ -45,7 +46,7 @@ export async function GET() {
       });
     }
     // A gift that asks for a line offered on request is told to the operator once, whichever way it was paid: this
-    // call arrives every five minutes, so the mail leaves within minutes of the gift (src/on-request.ts).
+    // call arrives every hour, so the mail leaves within the hour of the gift (src/on-request.ts).
     after(async () => {
       try {
         const told = await tellOfGiftsAsking({ gifts: loadAllGifts, onChain: giftOnChain, send: sendAlert });
@@ -55,7 +56,7 @@ export async function GET() {
       }
     });
     // The morning's summary of what Reclaim was asked the day before, during the judging (src/attested-calls.ts): this
-    // call arrives every five minutes, so it leaves within minutes of six o'clock UTC, once.
+    // call arrives every hour, so it leaves within the hour after six o'clock UTC, once.
     after(async () => {
       try {
         const summary = await morningSummaryDue();

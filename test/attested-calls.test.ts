@@ -165,18 +165,19 @@ test("what was spent before the journal began counts for October 2026's cycle, a
 test("the readings of 12 Oct 2026 made outside the journal are counted with their cycle, from the minute they were made", async () => {
   // One attested read of each public source that had never passed a real one, without a gift, on the founder's word:
   // fourteen fetches asked of production's reading service from a developer's machine, thirteen of them a proof.
-  assert.deepEqual(OUTSIDE_THE_JOURNAL, { cycleFrom: "2026-10-01T00:00:00.000Z", at: "2026-10-12T09:03:00.000Z", started: 14, proved: 13 });
-  const before = await cycleUse(Date.parse("2026-10-12T09:02:59Z"), {});
-  const after = await cycleUse(Date.parse("2026-10-12T09:03:00Z"), {});
-  assert.equal(after.fetches.started - before.fetches.started, 14);
-  assert.equal(after.fetches.proved - before.fetches.proved, 13);
+  // And one more that evening, on his word too: a race run the day before, the Chicago Marathon, which gave its proof.
+  assert.deepEqual(OUTSIDE_THE_JOURNAL, { cycleFrom: "2026-10-01T00:00:00.000Z", at: "2026-10-12T17:57:00.000Z", started: 15, proved: 14 });
+  const before = await cycleUse(Date.parse("2026-10-12T17:56:59Z"), {});
+  const after = await cycleUse(Date.parse("2026-10-12T17:57:00Z"), {});
+  assert.equal(after.fetches.started - before.fetches.started, 15);
+  assert.equal(after.fetches.proved - before.fetches.proved, 14);
   assert.deepEqual(after.verifications, before.verifications, "nothing was asked of a person");
   // The cycle that follows starts from nothing.
   const journal = await cycleUse(Date.parse("2026-11-01T08:00:00Z"), {});
   assert.deepEqual({ started: journal.fetches.started, proved: journal.fetches.proved }, { started: 0, proved: 0 });
   // The judges page says them, for that cycle alone, beside the count they are in.
   const page = readFileSync("app/judges/page.tsx", "utf8");
-  assert.match(page, /\{reclaimUse\?\.from === OUTSIDE_THE_JOURNAL\.cycleFrom\s+\? ` \$\{OUTSIDE_THE_JOURNAL\.started\} more were asked on 12 Oct 2026 from a developer's machine, outside the journal and counted here: one attested read, without a gift, of each public source that had never passed a real one\. \$\{OUTSIDE_THE_JOURNAL\.proved\} gave a proof, and one met a redirect\.`\s+: ""\}/);
+  assert.match(page, /\{reclaimUse\?\.from === OUTSIDE_THE_JOURNAL\.cycleFrom\s+\? ` \$\{OUTSIDE_THE_JOURNAL\.started\} more were asked on 12 Oct 2026 from a developer's machine, outside the journal and counted here: one attested read, without a gift, of each public source that had never passed a real one, and one of a race run the day before, the Chicago Marathon\. \$\{OUTSIDE_THE_JOURNAL\.proved\} gave a proof, and one met a redirect\.`\s+: ""\}/);
   assert.equal(OUTSIDE_THE_JOURNAL.started - OUTSIDE_THE_JOURNAL.proved, 1, "one met a redirect");
 });
 
@@ -449,12 +450,12 @@ test("the morning's summary leaves once a day, from six o'clock UTC, and only du
   assert.deepEqual(asked, [Date.parse("2026-10-13T00:00:00Z")], "the day before, whole");
   assert.equal(await due("2026-10-14T06:06:00Z"), null, "once");
   assert.equal(await due("2026-10-14T23:55:00Z"), null);
-  // A morning the five-minute call missed is still told, later that day.
+  // A morning the hourly call missed is still told, later that day.
   assert.equal(await due("2026-10-15T13:20:00Z"), "Reclaim, 14 Oct 2026: 1 proof spent, 88 left until 1 Dec 2026");
   assert.equal(await due("2026-11-03T06:00:00Z"), "Reclaim, 2 Nov 2026: 1 proof spent, 88 left until 1 Dec 2026", "the last morning");
   assert.equal(await due("2026-11-04T06:00:00Z"), null, "the judging is over");
   assert.equal(claimed.length, 3);
-  // It rides the call that already arrives every five minutes, and leaves through the operator's alerts.
+  // It rides the call that already arrives every hour, and leaves through the operator's alerts.
   const route = readFileSync("app/api/cron/milestones/route.ts", "utf8");
   assert.match(route, /const summary = await morningSummaryDue\(\);\n\s+if \(summary\) await sendAlert\(summary\);/);
 });
@@ -679,7 +680,7 @@ test("the judges page says the cycle's count from the journal, the limit when it
   assert.match(page, /\{reclaimLimits\?\.readings \? ` The limit of readings is reached: [^`]*"\$\{LIMIT\.said\("Duolingo", "readings", startsAgainInWords\(\)\)\}"` : ""\}/, "the same sentence a person reads");
   assert.match(page, /\{reclaimLimits\?\.proofs \? ` The limit of proofs is reached: [^`]*"\$\{LIMIT\.said\("their university", "proofs", startsAgainInWords\(\)\)\}"` : ""\}/);
   assert.match(page, /once in \{PROOF_EVERY_SECONDS\.unseen \/ 3_600\} hours after a look that failed or showed no rating, once an hour in the gift&apos;s last day, and every \{PROOF_EVERY_SECONDS\.atTheTarget \/ 60\} minutes at the target/);
-  assert.equal(PROOF_EVERY_SECONDS.unseenInTheLastDay, 3_600, "once an hour, as the page says in words");
+  assert.equal(PROOF_EVERY_SECONDS.unseenInTheLastDay, 55 * 60, "once an hour, as the page says in words: the guard is five minutes under it, so an hourly call that comes early is not refused");
   // What was counted before the journal began is said only for the cycle it is about.
   assert.match(page, /\{reclaimUse\?\.from === BEFORE_THE_JOURNAL\.cycleFrom \? ` Of this cycle's fetches, \$\{BEFORE_THE_JOURNAL\.started\} were started before the journal began and each gave a proof, counted on 3 Oct 2026 from the reading service's logs: two on 1 Oct, two on 2 Oct, one on 3 Oct\.` : ""\}/);
   assert.equal(BEFORE_THE_JOURNAL.started, BEFORE_THE_JOURNAL.proved, "each gave a proof");

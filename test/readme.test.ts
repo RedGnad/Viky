@@ -486,12 +486,13 @@ test("the README says the passes that run, what the word check reads, and what c
   // The README and the documents its long sections moved to on 12 Oct 2026.
   const text = EVERYTHING;
   // The passes: Vercel's own schedule, and the one a scheduler outside it calls, which pays a day the day it is done.
+  // That one is called every hour since 12 Oct 2026 (the founder set the scheduler that day; every five minutes before).
   assert.doesNotMatch(text, /Two passes a day/);
-  assert.match(text, /CRON\[Passes: 00:30, 03:30 and 07:00 UTC, and one called every five minutes\]/);
-  assert.match(text, /A fifth address, `\/api\/cron\/milestones`, is not\non Vercel's schedule: a scheduler outside Vercel, cron-job\.org, calls it every five minutes\./);
+  assert.match(text, /CRON\[Passes: 00:30, 03:30 and 07:00 UTC, and one called every hour\]/);
+  assert.match(text, /A fifth address, `\/api\/cron\/milestones`, is not\non Vercel's schedule: a scheduler outside Vercel, cron-job\.org, calls it every hour\./);
   const schedule = JSON.parse(readFileSync("vercel.json", "utf8")) as { crons: { path: string; schedule: string }[] };
   assert.deepEqual(schedule.crons.map((cron) => `${cron.path} ${cron.schedule}`).sort(), ["/api/cron/daily 30 0 * * *", "/api/cron/recount 30 3 * * *", "/api/cron/settle 0 7 * * *", "/api/cron/watch 0 2 * * *"]);
-  assert.match(readFileSync("app/api/cron/milestones/route.ts", "utf8"), /called every five minutes by cron-job\.org/);
+  assert.match(readFileSync("app/api/cron/milestones/route.ts", "utf8"), /called every hour by cron-job\.org/);
   // The word check: its seven words, and where it reads.
   assert.match(text, /A check\s+looks for seven such words at every change \(wallet, gas, chain, seed, token, transaction hash, address:/);
   assert.match(readFileSync("src/consumer-words.ts", "utf8"), /wallets\?\|gas\|chains\?\|seeds\?\|tokens\?\|transaction hash\(\?:es\)\?\|address\(\?:es\)\?/);

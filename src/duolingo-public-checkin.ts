@@ -34,14 +34,14 @@ import { StartNotSigned } from "./v2-start";
  * the window of its oldest open day closes before the next pass.
  *
  * On the third daily contract a day is paid by a reading taken that same day, so a gift there is also read when its
- * page opens and by a pass every quarter of an hour. There a proof is claimed before it is paid for, whoever asks:
+ * page opens and by a pass every hour. There a proof is claimed before it is paid for, whoever asks:
  * one per gift every `PROOF_EVERY_SECONDS` at most.
  */
 
 /**
  * How often a proof is taken for one daily gift by an open page or the frequent pass, in seconds: the first at once,
  * and one that did not settle the day, because the fetch failed or the contract refused it, four minutes later at the
- * soonest, whoever asks. The page looks each minute and the pass each quarter of an hour: without this, a reading the
+ * soonest, whoever asks. The page looks each minute and the pass each hour: without this, a reading the
  * contract kept refusing would cost a proof a minute.
  */
 export const PROOF_EVERY_SECONDS = 4 * 60;
@@ -49,14 +49,14 @@ export const PROOF_EVERY_SECONDS = 4 * 60;
 
 export type PublicCheckInPurpose = "bind" | "count";
 
-/** The passes that read daily gifts: the two of the morning, and the one of every quarter of an hour (src/frequent-pass.ts). */
+/** The passes that read daily gifts: the two of the morning, and the one of every hour (src/frequent-pass.ts). */
 export type ReadingPass = "counting" | "recount" | "frequent";
 
 /**
  * Within how long the window of a gift's oldest open day must close for a pass to take the reading of last resort, or
  * nothing when whoever asks may take none (src/daily-look.ts). A gift read as the day goes is read by a pass every
- * quarter of an hour, so any pass is its last before a window that closes within twenty minutes. Any other gift is
- * read in the morning, and its last pass before 06:00 is the second reading.
+ * hour, so a pass is its last before a window that closes within sixty-five minutes. Any other gift is read in the
+ * morning, and its last pass before 06:00 is the second reading.
  */
 export function lastResortWithin(pass: ReadingPass | undefined, version: ContractVersion): number | null {
   if (!pass) return null;
@@ -219,7 +219,7 @@ async function readPublicly(
     if (looked.kind === "gone") return { kind: "refused", giftId, code: "PROFILE_NOT_FOUND", message: messages.PROFILE_NOT_FOUND, looked: true };
     if (looked.kind === "seen") {
       if (input.lookOnly) return { kind: "seen", giftId, xp: looked.xp };
-      // A gift read as the day goes is asked by its page each minute and by a pass each quarter of an hour: the proof
+      // A gift read as the day goes is asked by its page each minute and by a pass each hour: the proof
       // is claimed before it is paid for, so no two of them take one, nor one of them at every ask.
       if (paysTheSameDay(onChain.version) && deps.claimProof && !(await deps.claimProof(giftId, PROOF_EVERY_SECONDS))) return { kind: "already", giftId, reason: "read_recently" };
     }

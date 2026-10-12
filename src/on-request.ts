@@ -186,8 +186,8 @@ export async function giftsAsking(deps: Pick<AskedDeps, "gifts" | "onChain">): P
 }
 
 /**
- * Tells the operator of each gift that asks for a line, once for a gift: called by the pass that runs every five
- * minutes, so a gift is told whichever way it was paid. A gift is marked told before its mail leaves; one whose mail
+ * Tells the operator of each gift that asks for a line, once for a gift: called by the pass that runs every hour,
+ * so a gift is told whichever way it was paid, within the hour. A gift is marked told before its mail leaves; one whose mail
  * did not leave is in the next morning's reminder. Returns the gifts told by this call.
  */
 export async function tellOfGiftsAsking(deps: AskedDeps): Promise<readonly string[]> {

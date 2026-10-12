@@ -26,8 +26,7 @@ import { paysTheSameDay } from "./v2";
  * them in five hours on 30 Sep. One reading goes without a look, the reading of last resort: taken by a pass, once
  * for a gift in a day, and only when the window of the gift's oldest open day closes before the next pass that could
  * read it. Until then the day stays open and the next pass looks again, which costs nothing. On the first two
- * versions that pass is the second reading of the morning; on the third, the last pass of the quarter of an hour
- * before the window closes.
+ * versions that pass is the second reading of the morning; on the third, the last pass before the window closes.
  */
 
 /** The days a contract holds for a gift, and which version of the daily contract holds them: the rule is the version's. */
@@ -129,11 +128,14 @@ export async function lookBeforeCount(input: { username: string; courseId: strin
  * inside those twenty hours, and one that closes the morning after is not. The pass of half past midnight takes none:
  * the second reading comes after it, before anything closes.
  *
- * A gift read as the day goes (the third daily contract) is read by a pass every quarter of an hour, whichever pass
- * asks. The scheduler calls every five minutes and the pass guards itself for fourteen (src/frequent-pass.ts), so the
- * next one comes fifteen to twenty minutes later: twenty.
+ * A gift read as the day goes (the third daily contract) is read by the frequent pass, whichever pass asks. The
+ * scheduler calls it every hour since 12 Oct 2026 (src/frequent-pass.ts), so the next one comes an hour later:
+ * sixty-five minutes, with five for a call that comes late. It was twenty minutes while the scheduler called every
+ * five and the pass guarded itself for fourteen; kept under an hourly call, a window that closed more than twenty
+ * minutes after a pass, and before the next, got no reading of last resort. Two calls can fall inside the sixty-five
+ * minutes: the reading is taken once for a gift in a day, by the first of them.
  */
-export const LAST_RESORT_WITHIN_SECONDS = { recount: 20 * 3_600, frequent: 20 * 60 } as const;
+export const LAST_RESORT_WITHIN_SECONDS = { recount: 20 * 3_600, frequent: 65 * 60 } as const;
 
 /**
  * Whether a reading without a look is the last chance of a day: the window of the gift's oldest open day closes

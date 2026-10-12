@@ -426,7 +426,10 @@ test.describe("a university gift draws its path", () => {
       // No character on this page: nothing has started, on either path.
       await expect(seatOf(block)).toHaveCount(0);
       await expect(block.getByRole("link", { name: "the gift paid" })).toHaveCount(2);
-      await expect(page.getByText(/within (an|the) hour/)).toHaveCount(0);
+      // No hour is promised for setting a university up (the rule of 11 Oct 2026), and that is asked of this block.
+      // It was asked of the whole page until 12 Oct 2026: elsewhere the page now says "within the hour" of the pass a
+      // scheduler calls every hour, which is another promise and a true one.
+      await expect(block.getByText(/within (an|the) hour/)).toHaveCount(0);
       await block.scrollIntoViewIfNeeded();
       await page.evaluate(`document.querySelector('[data-minute="universities"]').scrollIntoView({ block: "center" })`);
       await shotDayAndNight(page, size.name, "13-judges-universities");

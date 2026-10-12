@@ -109,7 +109,7 @@ test("the morning's summary names each university that waits for its provider, w
   assert.ok(unread && !/Waiting for a provider/.test(unread.text));
 });
 
-test("the nightly watch says the relayer under its alert, and names the five-minute call when it is late", () => {
+test("the nightly watch says the relayer under its alert, and names the hourly call when it is late", () => {
   const holds = { database: { ok: true }, worker: { ok: true } };
   const passes = (milestones: { ok: boolean; fault?: "late" | "never ran"; last: string | null }) => ({ ok: milestones.ok, counting: { ok: true, last: null }, settling: { ok: true, last: null }, milestones }) as never;
   assert.equal(healthAlert(holds), null, "what it was given before still says nothing when both hold");
@@ -119,9 +119,9 @@ test("the nightly watch says the relayer under its alert, and names the five-min
   assert.equal(healthAlert({ ...holds, relayer: { ok: false, fault: "low", mon: "9.00" } })?.subject, "Not holding at the nightly watch: the relayer (9.00 MON, under 25.00)");
   assert.equal(healthAlert({ ...holds, relayer: { ok: false, fault: "unreachable" } })?.subject, "Not holding at the nightly watch: the relayer (unreachable)");
   // The call every frequent reading and the morning summary ride on.
-  assert.equal(healthAlert({ ...holds, passes: passes({ ok: false, fault: "late", last: "2026-10-19T23:40:00.000Z" }) })?.subject, "Not holding at the nightly watch: the five-minute call (late, last at 2026-10-19T23:40:00.000Z)");
-  assert.equal(healthAlert({ ...holds, passes: passes({ ok: false, fault: "never ran", last: null }) })?.subject, "Not holding at the nightly watch: the five-minute call (never ran)");
+  assert.equal(healthAlert({ ...holds, passes: passes({ ok: false, fault: "late", last: "2026-10-19T23:40:00.000Z" }) })?.subject, "Not holding at the nightly watch: the hourly call (late, last at 2026-10-19T23:40:00.000Z)");
+  assert.equal(healthAlert({ ...holds, passes: passes({ ok: false, fault: "never ran", last: null }) })?.subject, "Not holding at the nightly watch: the hourly call (never ran)");
   // One email for everything the reading found.
   const all = healthAlert({ database: { ok: false, fault: "unreachable" }, worker: { ok: true }, relayer: { ok: true, mon: "20.00", underAlert: true }, passes: passes({ ok: false, fault: "late", last: "2026-10-19T23:40:00.000Z" }) });
-  assert.equal(all?.subject, "Not holding at the nightly watch: the database (unreachable), the relayer (20.00 MON, under 25.00), the five-minute call (late, last at 2026-10-19T23:40:00.000Z)");
+  assert.equal(all?.subject, "Not holding at the nightly watch: the database (unreachable), the relayer (20.00 MON, under 25.00), the hourly call (late, last at 2026-10-19T23:40:00.000Z)");
 });

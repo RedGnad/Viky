@@ -26,7 +26,7 @@ export async function readDailyGift(input: { giftId: string; purpose: PublicChec
 }
 
 /**
- * Whether a daily gift is read as the day goes, by its open page and by the pass of every quarter of an hour (the
+ * Whether a daily gift is read as the day goes, by its open page and by the pass of every hour (the
  * founder, 3 Oct 2026): it is on the third daily contract, where a reading pays its own day, and its source can be
  * looked at plainly, which is what keeps those readings free until a lesson is in. A gift on a connected source is
  * read by the nightly pass alone, on every version.

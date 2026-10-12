@@ -162,7 +162,7 @@ test("the operator is written to once for a gift that asks, and again each morni
     "In production, with the operator's environment: VIKY_ALLOW_PRODUCTION_DATABASE=1 before the command above.",
   ]);
 
-  // Once for a gift: the pass that runs every five minutes tells each gift the first time it sees it, and never again.
+  // Once for a gift: the pass that runs every hour tells each gift the first time it sees it, and never again.
   const sent: string[] = [];
   const send = async (alert: { subject: string }) => void sent.push(alert.subject);
   assert.deepEqual(await tellOfGiftsAsking({ gifts, onChain, send }), ["1002", "1003"]);

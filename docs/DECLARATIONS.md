@@ -79,9 +79,9 @@ passes: `/api/cron/daily` at 00:30 UTC and `/api/cron/settle` at 07:00 UTC. A th
 emails the operator when the morning pass is not in the journal. A fourth, `/api/cron/recount` at 03:30 UTC, reads
 again the gifts whose reading failed on our side, before the day's catch-up window closes at 06:00 UTC, and runs the
 whole reading pass when the morning one left nothing in the journal. A fifth address, `/api/cron/milestones`, is not
-on Vercel's schedule: a scheduler outside Vercel, cron-job.org, calls it every five minutes. It reads the milestones
-still climbing, and every quarter of an hour the daily gifts of the third daily contract, which is how a day there is
-paid the day it is done (`src/frequent-pass.ts`). `/api/health` answers 200 when the database, the
+on Vercel's schedule: a scheduler outside Vercel, cron-job.org, calls it every hour. It reads the milestones still
+climbing and the daily gifts of the third daily contract, which is how a day there is paid the day it is done
+(`src/frequent-pass.ts`). `/api/health` answers 200 when the database, the
 network, the reading worker, the relayer, the exchange's pin, the evidence key and the passes all hold, and 503 when
 one does not; it needs no secret and answers nothing of any gift.
 

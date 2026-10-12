@@ -345,9 +345,10 @@ test("on the third contract a look that failed takes a reading of last resort on
   await withVersions(true, async () => {
     // Hours before the window closes: the next pass looks again, which costs nothing. No proof, no claim.
     assert.deepEqual(await at(NOON, "frequent"), { outcome: "FETCH_FAILED", calls: ["look"] });
-    assert.deepEqual(await at(closes - 21 * 60, "frequent"), { outcome: "FETCH_FAILED", calls: ["look"] });
-    // The last pass before it closes: the reading of last resort, claimed for the gift and the day.
-    assert.deepEqual(await at(closes - 19 * 60, "frequent"), { outcome: "the attested fetch was reached", calls: ["look", `lastResort:7:${TODAY + 1}`, "proof"] });
+    assert.deepEqual(await at(closes - 66 * 60, "frequent"), { outcome: "FETCH_FAILED", calls: ["look"] });
+    // The last pass before it closes, the scheduler calling every hour since 12 Oct 2026: the reading of last resort,
+    // claimed for the gift and the day.
+    assert.deepEqual(await at(closes - 64 * 60, "frequent"), { outcome: "the attested fetch was reached", calls: ["look", `lastResort:7:${TODAY + 1}`, "proof"] });
     // The passes of the morning are passes too, and the same rule holds them: at 03:30 the window is hours away.
     assert.deepEqual(await at((TODAY + 1) * DAY + 3 * 3_600 + 30 * 60, "recount"), { outcome: "FETCH_FAILED", calls: ["look"] });
     assert.deepEqual(await at(closes - 10 * 60, "counting"), { outcome: "the attested fetch was reached", calls: ["look", `lastResort:7:${TODAY + 1}`, "proof"] });
@@ -360,7 +361,7 @@ test("on the third contract a look that failed takes a reading of last resort on
   });
   // The rule by version, in one place: a gift read each morning has its last resort at the second reading alone.
   assert.equal(lastResortWithin(undefined, 3), null);
-  assert.deepEqual((["counting", "recount", "frequent"] as const).map((pass) => lastResortWithin(pass, 3)), [1_200, 1_200, 1_200]);
+  assert.deepEqual((["counting", "recount", "frequent"] as const).map((pass) => lastResortWithin(pass, 3)), [3_900, 3_900, 3_900], "the next hourly call, and five minutes");
   assert.deepEqual((["counting", "recount", "frequent"] as const).map((pass) => lastResortWithin(pass, 2)), [null, 72_000, null]);
   assert.deepEqual((["counting", "recount", "frequent"] as const).map((pass) => lastResortWithin(pass, 1)), [null, 72_000, null]);
 });
@@ -385,7 +386,7 @@ test("which gifts are read as the day goes: on the third contract, on a source t
   assert.match(count, /readDailyGift\(live \? \{ giftId: id, purpose: "count", lookOnly: look \} : \{ giftId: id, purpose: "count", force: true \}\)/);
 });
 
-test("the pass of every quarter of an hour reads those gifts alone, one after another, and one failure is one line", async () => {
+test("the pass of every hour reads those gifts alone, one after another, and one failure is one line", async () => {
   await withVersions(true, async () => {
     const asked: string[] = [];
     const lines = await frequentDailyPass({

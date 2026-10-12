@@ -161,7 +161,7 @@ export function MilestoneJudges() {
             <li>The attestor&apos;s own TEE attestation is not in the proof zk-fetch returns, so it is not verified; its signature and address are.</li>
             <li>The evidence signer is a key Viky holds. The contract trusts its signature, and anyone holding that key could sign a reading.</li>
             <li>
-              The contract judges when a reading was taken, not when the rated game was played. Viky looks at each climb every five minutes, when
+              The contract judges when a reading was taken, not when the rated game was played. Viky looks at each climb every hour, when
               an outside scheduler calls its pass, and the recipient can ask for a reading at any time; a rating reached and then lost again between two readings, or reached in the last hours and first read
               after the deadline, does not pay.
             </li>

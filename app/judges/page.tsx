@@ -309,7 +309,7 @@ export default async function JudgesPage() {
                     First, Duolingo, a lesson a day: two readings for one connection, one lesson and one day paid.
                     Connecting the account is one, counting the day is the other.{" "}
                     {thirdVersionSet
-                      ? "On a gift made now, the day is paid the day its lesson is done: when the gift's page is opened after the lesson, or within a quarter of an hour. On a gift made on the second version, the day counts the morning after it ends (the readings pass of 00:30 UTC). Either way a "
+                      ? "On a gift made now, the day is paid the day its lesson is done: when the gift's page is opened after the lesson, or within the hour. On a gift made on the second version, the day counts the morning after it ends (the readings pass of 00:30 UTC). Either way a "
                       : "The day counts the morning after it ends (the readings pass of 00:30 UTC). A "}
                     day without a lesson costs no reading, a plain look sees it first, and it comes back to the funder 31
                     hours after it ends (the settling pass of 07:00 UTC, two mornings later).
@@ -629,7 +629,7 @@ export default async function JudgesPage() {
             <p className={HELP} data-third-version-rule>
               On the third daily contract, where a daily gift is made now, a day is paid the day it is read. The first day
               is the day the account is connected. The gift&apos;s page looks at the public profile as it opens, a pass looks
-              every quarter of an hour, and an attested read is taken only for a lesson a look saw. A reading pays the
+              every hour, and an attested read is taken only for a lesson a look saw. A reading pays the
               oldest open day first, and never a day that has not begun. A lesson taken after the day was paid is counted
               by the first reading of the next day; taken before, it is not kept. So one lesson never pays two days, no more
               days are paid than lessons were taken, and a day can be paid on which no lesson was taken: the one after a day
@@ -720,7 +720,7 @@ export default async function JudgesPage() {
                 ? ` Of this cycle's fetches, ${BEFORE_THE_JOURNAL.started} were started before the journal began and each gave a proof, counted on 3 Oct 2026 from the reading service's logs: two on 1 Oct, two on 2 Oct, one on 3 Oct.`
                 : ""}
               {reclaimUse?.from === OUTSIDE_THE_JOURNAL.cycleFrom
-                ? ` ${OUTSIDE_THE_JOURNAL.started} more were asked on 12 Oct 2026 from a developer's machine, outside the journal and counted here: one attested read, without a gift, of each public source that had never passed a real one. ${OUTSIDE_THE_JOURNAL.proved} gave a proof, and one met a redirect.`
+                ? ` ${OUTSIDE_THE_JOURNAL.started} more were asked on 12 Oct 2026 from a developer's machine, outside the journal and counted here: one attested read, without a gift, of each public source that had never passed a real one, and one of a race run the day before, the Chicago Marathon. ${OUTSIDE_THE_JOURNAL.proved} gave a proof, and one met a redirect.`
                 : ""}
               {reclaimUse ? <span data-cycle-left> {readingsLeftInWords(reclaimUse)}</span> : null}{" "}
               <span data-september-fault>
@@ -755,7 +755,7 @@ export default async function JudgesPage() {
             profile once a day for each gift made on it, a second time that day when the first shows a day to credit,
             and again each time the person connects it or asks for a count.
             {thirdVersionSet
-              ? " On the third, where a daily gift is made today, it looks at the profile every quarter of an hour while a day of the gift is open, and once a minute while the gift's page is open, plainly; an attested reading is taken only for a lesson a look saw, and when the person connects the account."
+              ? " On the third, where a daily gift is made today, it looks at the profile every hour while a day of the gift is open, and once a minute while the gift's page is open, plainly; an attested reading is taken only for a lesson a look saw, and when the person connects the account."
               : ""}{" "}
             The risk is
             accepted and spread by having several conditions rather than one; the shape of that endpoint is pinned by
@@ -841,7 +841,7 @@ export default async function JudgesPage() {
             The founder takes the subscription the day a gift asks for Strava, so the line is offered on request: a
             gift is made and paid like any other, its two people read a day two days after it, and until the line is
             opened nobody is sent to Strava&apos;s page and nothing is asked of Strava or of Reclaim for it. Each such
-            gift is told to the operator at once and again each morning while it waits. A gift opened and never started
+            gift is told to the operator within the hour and again each morning while it waits. A gift opened and never started
             goes back to the account that paid fourteen days after it was opened, as on every line: that holds here
             too if Strava were not opened in time.
             What Strava&apos;s terms ask, for the day the line is open: Strava&apos;s API Agreement (read 23 Sep 2026) asks
@@ -1015,7 +1015,7 @@ export default async function JudgesPage() {
             A target reached before the account is connected pays nothing:
             the first reading is recorded as the starting point whatever it says, so the climb is measured from there.
             And a rating that drops back before the reading that would have paid it does not pay either, because the
-            contract judges the reading, not the game: Viky looks at each climb every five minutes, when an outside
+            contract judges the reading, not the game: Viky looks at each climb every hour, when an outside
             scheduler calls its pass, and whenever the recipient asks from the gift&apos;s page, and a rating reached and
             lost between two readings never settles.
           </Row>

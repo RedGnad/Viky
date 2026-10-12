@@ -1779,7 +1779,7 @@ export const MORNING = {
   installFirst: "Add Viky to your Home Screen first. Then Viky can tell you each morning.",
   recipient: {
     earned: (amount: string) => `Yesterday counted. ${opening(amount)} is yours.`,
-    /** A day counted the day it was done (the third daily contract): told within the quarter of an hour. */
+    /** A day counted the day it was done (the third daily contract): told within the hour. */
     earnedToday: (amount: string) => `Today counted. ${opening(amount)} is yours.`,
     returnedTo: (funder: string) => `Yesterday went back to ${funder}. Today still counts.`,
     returned: "Yesterday went back. Today still counts.",

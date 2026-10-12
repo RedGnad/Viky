@@ -219,7 +219,7 @@ test("a reading a pause kept from being sent is kept, paid for once, and sent wh
   assert.deepEqual(run.calls, ["prove"]);
   assert.deepEqual(run.recorded, ["reach:attested:refused:ProofIsPaused"]);
 
-  // The next pass, five minutes later, still paused: that reading is enough. No proof is paid for again.
+  // The next pass, an hour later, still paused: that reading is enough. No proof is paid for again.
   run = harness(BOUND, paused);
   Object.assign(run.deps, keeps(run), { plain: async () => assert.fail("no look"), attest: async () => assert.fail("no second proof while the first is kept") });
   outcome = await runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, run.deps);
@@ -402,15 +402,15 @@ test("when the plain read fails, the attested reading is taken anyway, so lookin
   assert.equal(outcome.kind, "reached", "exactly the target is enough");
 });
 
-test("the pass that runs every five minutes pays for no proof when the look itself fails, except in a gift's last day (the audit of 1 Oct 2026)", async () => {
-  // Two attested fetches per gift every five minutes, for as long as the source falters, used up the month's
-  // allowance; after it nothing attested could be read for anybody.
+test("the frequent pass pays for no proof when the look itself fails, except in a gift's last day (the audit of 1 Oct 2026)", async () => {
+  // Two attested fetches per gift at every pass, every five minutes then, for as long as the source faltered, used up
+  // the month's allowance; after it nothing attested could be read for anybody. The pass comes every hour since 12 Oct 2026.
   const failing = { plain: async () => Promise.reject(new ChessReadError("FETCH_FAILED", "Chess.com answered 429")), attest: async () => attested(1960) };
   let run = harness(BOUND, CLIMBING, failing);
   let outcome = await runMilestoneReading({ giftId: "1000000", purpose: "reach", lookMustSucceed: true }, run.deps);
   assert.equal(outcome.kind === "refused" && outcome.code, "FETCH_FAILED");
   assert.deepEqual(run.proved, [], "no proof was taken");
-  assert.deepEqual(run.recorded, [], "and nothing is written: the pass comes back in five minutes");
+  assert.deepEqual(run.recorded, [], "and nothing is written: the pass comes back within the hour");
 
   // A reading a person asks for carries no such flag: the proof is still taken, so looking never costs them.
   run = harness(BOUND, CLIMBING, failing);
@@ -434,7 +434,7 @@ test("the pass that runs every five minutes pays for no proof when the look itse
 });
 
 test("a proof is claimed before it is paid for: once in six hours after a look that failed, once an hour in the last day, every four minutes at the target (3 Oct 2026)", async () => {
-  assert.deepEqual(PROOF_EVERY_SECONDS, { atTheTarget: 4 * 60, unseen: 6 * 3_600, unseenInTheLastDay: 3_600 });
+  assert.deepEqual(PROOF_EVERY_SECONDS, { atTheTarget: 4 * 60, unseen: 6 * 3_600, unseenInTheLastDay: 55 * 60 });
   const failing = { plain: async () => Promise.reject(new ChessReadError("FETCH_FAILED", "Chess.com answered 404")), attest: async () => attested(1960) };
   const claims: Array<[string, number]> = [];
   const claim = (granted: boolean) => ({
@@ -453,12 +453,12 @@ test("a proof is claimed before it is paid for: once in six hours after a look t
   assert.deepEqual(run.recorded, [], "and nothing is written");
   assert.deepEqual(claims, [["1000000", 6 * 3_600], ["1000000", 6 * 3_600]]);
 
-  // The pass of every five minutes, in a gift's last day: one proof an hour, not one at every pass.
+  // The frequent pass, in a gift's last day: one proof an hour at the most.
   claims.length = 0;
   const lastDay = { ...CLIMBING, deadline: NOW + 86_400 - 1 };
   run = harness(BOUND, lastDay, { ...failing, ...claim(false), attest: async () => assert.fail("no proof at every pass") });
   assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "reach", lookMustSucceed: true }, run.deps)).kind, "refused");
-  assert.deepEqual(claims, [["1000000", 3_600]]);
+  assert.deepEqual(claims, [["1000000", 55 * 60]]);
   // Before its last day that pass stops at the look, and claims nothing.
   claims.length = 0;
   run = harness(BOUND, CLIMBING, { ...failing, ...claim(true) });

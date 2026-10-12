@@ -10,14 +10,17 @@ import { RelayerError } from "./relayer";
 export { claimPass, configurePassGuard, ensurePassGuardSchema, lastGuardedPass } from "./pass-guard";
 
 /**
- * A pass over the milestones still climbing every five minutes, called from outside by a free scheduler
- * (cron-job.org, the founder, 29 Sep 2026), so a target reached in the afternoon is told within minutes rather than at
- * the next nightly pass. It reads and tells, nothing else: settling and sending back stay with the two nightly passes.
+ * A pass over the milestones still climbing every hour, called from outside by a free scheduler (cron-job.org, the
+ * founder, 29 Sep 2026), so a target reached in the afternoon is told within the hour rather than at the next nightly
+ * pass. It reads and tells, nothing else: settling and sending back stay with the two nightly passes.
+ *
+ * The scheduler called every five minutes until 12 Oct 2026. The founder set it to once an hour that day: a call every
+ * five minutes never let the free database sleep, and it had used 76.81 of its 100 compute hours of the month.
  *
  * Its address is public and carries no secret, so it guards itself: at most one pass every four minutes, claimed in the
- * database so two instances cannot both run one, and a call in between does nothing. Four and not five: the scheduler
- * calls every five minutes and a call can arrive a little early, which a five-minute guard would drop, leaving every
- * gift read every ten. Gifts are read one after another,
+ * database so two instances cannot both run one, and a call in between does nothing. The four minutes date from the
+ * call of every five (a call can arrive a little early, which a five-minute guard would have dropped); a call every
+ * hour passes them whenever it comes. Gifts are read one after another,
  * never in parallel, which is how Chess.com asks to be read. What a reading reaches is told with the table that tells
  * each gift's news once (`claimTelling`).
  */
@@ -35,7 +38,7 @@ function frequentPassDeps(): MilestonePassDeps {
   const live = liveMilestonePassDeps();
   return {
     ...live,
-    // A look that fails costs no proof here: this pass comes back in five minutes (src/milestone-reading.ts).
+    // A look that fails costs no proof here: this pass comes back within the hour (src/milestone-reading.ts).
     reach: (giftId) => runMilestoneReading({ giftId, purpose: "reach", recentSeconds: FREQUENT_PASS_RECENT_SECONDS, lookMustSucceed: true }),
     // Creations left half made are the nightly passes' to complete.
     completeCreations: undefined,
@@ -44,16 +47,17 @@ function frequentPassDeps(): MilestonePassDeps {
 
 /**
  * The same for the daily gifts read as the day goes (src/daily-count.ts, the founder, 3 Oct 2026): on the third daily
- * contract a reading pays its own day, so a lesson done at noon is paid within the quarter of an hour rather than at
- * the next night's pass. Every quarter of an hour, each such gift is looked at plainly, which costs nothing, and an
+ * contract a reading pays its own day, so a lesson done at noon is paid within the hour rather than at the next
+ * night's pass. At each call of the scheduler, every hour, each such gift is looked at plainly, which costs nothing, and an
  * attested reading is taken only for a lesson the look saw: one proof for a day credited, none for a day without a
  * lesson, and none when the look fails, but for the reading of last resort (src/daily-look.ts): once for a gift in a
  * day, when the window of its oldest open day closes before the next pass. It reads and credits, nothing else:
  * settling and sending back stay with the nightly passes, and a day it credits is told as any credited day is
  * (src/gift-relay.ts).
  *
- * It has no address of its own. The scheduler's one call every five minutes (`/api/cron/milestones`) claims it under
- * its own guard, fourteen minutes: a call can arrive a little early, which a guard of fifteen would drop.
+ * It has no address of its own. The scheduler's one call every hour (`/api/cron/milestones`) claims it under its own
+ * guard, fourteen minutes: set when the scheduler called every five minutes and this pass ran once in three calls, and
+ * passed by a call every hour whenever it comes.
  */
 export const FREQUENT_DAILY_PASS_EVERY_SECONDS = 14 * 60;
 

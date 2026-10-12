@@ -26,14 +26,17 @@ after(async () => {
   await db.close();
 });
 
-test("one pass every four minutes at most: a call in between claims nothing, each call of a five-minute scheduler runs", async () => {
+test("one pass every four minutes at most: a call in between claims nothing, and the scheduler's own call always runs", async () => {
   assert.equal(FREQUENT_PASS_EVERY_SECONDS, 4 * 60);
   const start = Date.UTC(2026, 8, 29, 12, 3);
   assert.equal(await claimPass("milestones", FREQUENT_PASS_EVERY_SECONDS, start), true);
   assert.equal(await claimPass("milestones", FREQUENT_PASS_EVERY_SECONDS, start + 60_000), false);
   assert.equal(await claimPass("milestones", FREQUENT_PASS_EVERY_SECONDS, start + 3 * 60_000), false);
-  // The scheduler's next call, even twenty seconds early, runs: a five-minute guard would have dropped it.
-  assert.equal(await claimPass("milestones", FREQUENT_PASS_EVERY_SECONDS, start + 5 * 60_000 - 20_000), true, "the next call of the scheduler");
+  // The guard dates from a scheduler that called every five minutes: its next call, even twenty seconds early, ran,
+  // which a five-minute guard would have dropped.
+  assert.equal(await claimPass("milestones", FREQUENT_PASS_EVERY_SECONDS, start + 5 * 60_000 - 20_000), true, "the next call of a five-minute scheduler");
+  // It calls every hour since 12 Oct 2026, and that call runs whenever it comes.
+  assert.equal(await claimPass("milestones", FREQUENT_PASS_EVERY_SECONDS, start + 65 * 60_000 - 40_000), true, "the next call of the hourly scheduler");
   assert.equal(await claimPass("other", FREQUENT_PASS_EVERY_SECONDS, start + 60_000), true, "each pass by its own name");
 });
 
@@ -46,7 +49,7 @@ test("the route answers at once with nothing about any gift, and the pass reads 
   const pass = readFileSync("src/frequent-pass.ts", "utf8");
   assert.match(pass, /milestonePass\(false, deps\)/, "reading and telling, never settling");
   assert.match(pass, /recentSeconds: FREQUENT_PASS_RECENT_SECONDS/);
-  assert.equal(FREQUENT_PASS_RECENT_SECONDS, 4 * 60, "a gift read by the last pass, five minutes ago, is read again by this one");
+  assert.equal(FREQUENT_PASS_RECENT_SECONDS, 4 * 60, "a gift read by the last pass, an hour ago, is read again by this one");
   const milestones = readFileSync("src/milestone-pass.ts", "utf8");
   assert.match(milestones, /for \(const record of await deps\.gifts\(\)\) \{\n\s*try \{\n\s*lines\.push\(\.\.\.\(await passOne/, "one gift after another");
   assert.match(milestones, /if \(outcome\.kind === "reached"\) \{\n\s*await tell\(giftId, "reached"\);/, "told when reached");
