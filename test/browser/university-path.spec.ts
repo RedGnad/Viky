@@ -410,6 +410,8 @@ test.describe("a university gift draws its path", () => {
       const device = await profile(browser, baseURL, size.viewport, { passkey: false });
       const { page } = device;
       await page.goto("/judges");
+      // The universities are a fold of their own since 12 Oct 2026: a judge opens it by its title.
+      await page.locator("#universities > details > summary").click();
       const block = page.locator('[data-minute="universities"]');
       await expect(block.getByText("A university is set up once, by its first gift.", { exact: true })).toBeVisible();
       await expect(block.getByText("Its first proof is read by hand. Viky then fixes the rule that reads its page, and every later proof is paid on sign-in.", { exact: true })).toBeVisible();

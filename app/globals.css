@@ -2697,3 +2697,76 @@ html[data-moves] [data-landing-story]:not([data-still]) [data-band] :is([data-w]
 .judges-subfold > summary h3 {
   min-width: 0;
 }
+
+/*
+ * A row of the judges page (app/judges/Fold.tsx, the founder's preview of 12 Oct 2026): one line that carries a
+ * title, with what it has to say of itself at its right, and under it the whole of a long text. A fold opens on a few
+ * of these, never on the text. As tall as a thumb, like every fold; the line is the page's own divider.
+ */
+.judges-rows {
+  border-top: 1px solid var(--divider);
+}
+.judges-row {
+  border-bottom: 1px solid var(--divider);
+}
+.judges-row > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--tap-target);
+  padding: 6px 0;
+  font-size: var(--type-help);
+}
+.judges-row > summary::-webkit-details-marker {
+  display: none;
+}
+.judges-row > summary > span:first-child {
+  font-weight: 500;
+  min-width: 0;
+}
+.judges-row-meta {
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  text-align: right;
+  font-weight: 400;
+}
+.judges-row-body {
+  padding: 2px 0 var(--space-md);
+  font-size: var(--type-help);
+  color: var(--muted);
+}
+.judges-row-body > * + * {
+  margin-top: var(--space-sm);
+}
+
+/* The three ways a condition is read, side by side from a wide screen, one under the other on a phone. */
+.judges-stands {
+  display: grid;
+  gap: var(--space-sm);
+}
+@media (min-width: 900px) {
+  .judges-stands {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.judges-stand {
+  border: 1px solid var(--divider);
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: var(--type-help);
+}
+.judges-stand > * + * {
+  margin-top: 6px;
+}
+
+/* A group of rows under its own name, with how many it holds and one line saying what they are about. */
+.judges-group > h3 > span {
+  color: var(--muted);
+  font-weight: 400;
+}

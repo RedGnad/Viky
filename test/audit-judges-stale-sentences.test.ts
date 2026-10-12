@@ -225,7 +225,8 @@ test("what Viky asks of Duolingo is said for the contract a daily gift is made o
 test("the card services are said in the order the pay sheet tries them", () => {
   assert.doesNotMatch(page, /A third way is Rampnow/);
   assert.ok(page.includes('The pay sheet tries them in this order:{" "} {waysIn().map((way) => way.name).join(", then ")}.'));
-  assert.ok(page.includes("{rampnowOn ? ( <> {rampnowWay} {rampWay} </> ) : ( <> {rampWay} {rampnowWay} </> )}"));
+  // A row a card service since 12 Oct 2026, in the same order.
+  assert.ok(page.includes('{rampnowOn ? ( <> <Row title="Rampnow, by card">{rampnowWay}</Row> <Row title="Ramp, by card or bank transfer">{rampWay}</Row> </> ) : ( <> <Row title="Ramp, by card or bank transfer">{rampWay}</Row> <Row title="Rampnow, by card">{rampnowWay}</Row> </> )}'));
   // The order is the code's: Rampnow first where it is on, then the two there were.
   assert.deepEqual(waysIn({ rampnow: true }).map((way) => way.name), ["Rampnow", "Ramp", "Mercuryo"]);
   assert.deepEqual(waysIn({}).map((way) => way.name), ["Ramp", "Mercuryo"]);

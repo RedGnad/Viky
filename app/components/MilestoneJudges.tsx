@@ -3,7 +3,7 @@ import { MILESTONE_EVIDENCE as E } from "@/src/milestone-evidence";
 import { PUBLIC_RPC_URL } from "@/src/monad/chain";
 import { PINNED_RECLAIM_WITNESS } from "@/src/reclaim-proof-set";
 import { milestoneGiftV2Address } from "@/src/v2";
-import { Fold } from "../judges/Fold";
+import { Fold, Row, Rows } from "../judges/Fold";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
@@ -28,46 +28,58 @@ export function MilestoneJudges() {
   const second = milestoneGiftV2Address();
   return (
     <Fold id="milestone" title="A milestone: a Chess.com rating">
-      <p className={HELP}>
-        MilestoneGift holds a gift for one thing rather than a habit: the whole amount becomes the recipient&apos;s the first time an
-        attested reading shows the rating reached, or all of it goes back when the time runs out. Contract{" "}
-        <a className="underline [overflow-wrap:anywhere]" href={`https://monadvision.com/address/${address}`}>
-          {address}
-        </a>
-        {E.sourcifyMatch ? `, source verified through Sourcify (match ${E.sourcifyMatch})` : ""}
-        {E.deployTx ? (
-          <>
-            , deployed in <Explorer tx={E.deployTx} />
-          </>
-        ) : null}
-        . Owned by the same Safe as the other contracts, two signatures of three, read from the chain at the head of this page
-        and in the contracts section, and never by the key that deployed it. Gift numbers start at 1,000,000, so no number can mean a daily gift
-        and a milestone gift at once.
-        {second
-          ? ` This is the first version, where the first real milestone gifts ran: it takes no new gift since 2 Oct 2026. A milestone gift made today is on the second version, ${second}, which keeps the rule below and continues the numbers.`
-          : ""}
+      {/* The fold opens on this line and on its rows (12 Oct 2026): each text that stood here is whole, one level down. */}
+      <p className={HELP} data-milestone-lead>
+        A gift for one thing reached rather than a habit, held by a contract of its own. A Chess.com rating is the one read here.
       </p>
-      <p className={HELP}>
-        The rule it rests on: the funder signs the target and the highest start they pay a climb from; the first reading
-        is recorded as the start whatever it says, so a recipient cannot retry until a reading suits them, and a start above what the funder
-        accepted can never pay. Each cadence is its own goal with its own provider id, so a blitz rating can never settle a rapid gift:
-      </p>
-      <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
-        {CHESS_MODES.map((mode) => (
-          <li key={mode} className="[overflow-wrap:anywhere]">
-            goal {chessGoalType(mode)}, {mode}: {chessProviderId(mode)}
-          </li>
-        ))}
-      </ul>
-      <p className={HELP}>
-        How a reading is made: two attested reads through Reclaim zkFetch and Reclaim&apos;s TEE client, api.chess.com/pub/player/&lt;name&gt; for
-        the player id (the identity a gift is bound to, which survives a change of name) and /stats for the cadence&apos;s rating. Viky verifies
-        the attestor&apos;s signature, pins its address, and checks each proof is about exactly that page and exactly those patterns; the
-        evidence signer then signs an EIP-712 Proof under the domain &quot;Viky Milestone&quot;, and the contract accepts or refuses it. The funder
-        names the Chess.com account when they offer the gift, and that naming is the whole tie: no code is asked, so whoever opens the link
-        is paid when that account gets there. Only an account the recipient names themselves is asked for a one-hour code in the
-        profile&apos;s name, which the first reading reads.
-      </p>
+      <Rows>
+        <Row title="What the milestone contract holds, and when it pays">
+          <p className={HELP}>
+            MilestoneGift holds a gift for one thing rather than a habit: the whole amount becomes the recipient&apos;s the first time an
+            attested reading shows the rating reached, or all of it goes back when the time runs out. Contract{" "}
+            <a className="underline [overflow-wrap:anywhere]" href={`https://monadvision.com/address/${address}`}>
+              {address}
+            </a>
+            {E.sourcifyMatch ? `, source verified through Sourcify (match ${E.sourcifyMatch})` : ""}
+            {E.deployTx ? (
+              <>
+                , deployed in <Explorer tx={E.deployTx} />
+              </>
+            ) : null}
+            . Owned by the same Safe as the other contracts, two signatures of three, read from the chain at the head of this page
+            and in the contracts section, and never by the key that deployed it. Gift numbers start at 1,000,000, so no number can mean a daily gift
+            and a milestone gift at once.
+            {second
+              ? ` This is the first version, where the first real milestone gifts ran: it takes no new gift since 2 Oct 2026. A milestone gift made today is on the second version, ${second}, which keeps the rule below and continues the numbers.`
+              : ""}
+          </p>
+        </Row>
+        <Row title="The rule it rests on, and its goals">
+          <p className={HELP}>
+            The rule it rests on: the funder signs the target and the highest start they pay a climb from; the first reading
+            is recorded as the start whatever it says, so a recipient cannot retry until a reading suits them, and a start above what the funder
+            accepted can never pay. Each cadence is its own goal with its own provider id, so a blitz rating can never settle a rapid gift:
+          </p>
+          <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
+            {CHESS_MODES.map((mode) => (
+              <li key={mode} className="[overflow-wrap:anywhere]">
+                goal {chessGoalType(mode)}, {mode}: {chessProviderId(mode)}
+              </li>
+            ))}
+          </ul>
+        </Row>
+        <Row title="How a reading is made">
+          <p className={HELP}>
+            How a reading is made: two attested reads through Reclaim zkFetch and Reclaim&apos;s TEE client, api.chess.com/pub/player/&lt;name&gt; for
+            the player id (the identity a gift is bound to, which survives a change of name) and /stats for the cadence&apos;s rating. Viky verifies
+            the attestor&apos;s signature, pins its address, and checks each proof is about exactly that page and exactly those patterns; the
+            evidence signer then signs an EIP-712 Proof under the domain &quot;Viky Milestone&quot;, and the contract accepts or refuses it. The funder
+            names the Chess.com account when they offer the gift, and that naming is the whole tie: no code is asked, so whoever opens the link
+            is paid when that account gets there. Only an account the recipient names themselves is asked for a one-hour code in the
+            profile&apos;s name, which the first reading reads.
+          </p>
+        </Row>
+      </Rows>
       {E.giftId ? (
         <>
           <p className={HELP}>
@@ -103,64 +115,74 @@ export function MilestoneJudges() {
           <code className={CODE}>{E.refusal.command}</code>
         </>
       ) : null}
-      <p className={HELP}>
-        What the owner of this first-version contract can do, and what it cannot, read from the contract
-        {second ? " (the second version bounds its owner further: the contracts section says how)" : ""}:
-      </p>
-      <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
-        <li>Pause and reopen new gifts, and pause and reopen readings. While readings are paused nothing can be taken back, and every window a pause ran across (the grace after a deadline, the wait for a first reading) counts again from the moment readings reopen.</li>
-        <li>Replace the evidence signer, and register a goal or change the provider id its readings must carry, which applies to gifts already made on that goal.</li>
-        <li>Hand the ownership over, or renounce it; renounced while readings are paused, the gifts under way could never settle.</li>
-        <li>
-          Move money: no. No function lets the owner send AUSD anywhere. Money leaves only to a gift&apos;s recipient, from what was earned and at
-          their signed request, or to the refund address the funder signed, from what was not earned. The terms a funder signed cannot be changed.
-        </li>
-        <li>
-          What that does not cover: the evidence signer attests who opened a gift and what a reading said, so whoever holds its key, which the
-          owner can replace, could open a gift nobody has opened yet and attest a reading for it.
-        </li>
-      </ul>
-      <p className={HELP}>What was hardened against cheating, with the source read and the day it was read:</p>
-      <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
-        <li>
-          18 Sep 2026, Chess.com&apos;s published data API and its Fair Play policy: an account Chess.com has closed can neither be connected to
-          a gift nor reach a target, and the whole amount goes back to the funder at the deadline, exactly as for a target not reached. The
-          standing is on the same public profile, in the documented field &quot;status&quot; (closed, closed:fair_play_violations, basic, premium,
-          mod, staff), and the policy says Chess.com &quot;may close your account and label it publicly closed for Fair Play violations&quot;. It is
-          read on every reading, plain and attested. Measured that day on four accounts: one premium, one staff, one basic, one closed. A profile whose
-          status cannot be read is a reading that failed on our side: nothing is paid and nothing is taken back that day.
-        </li>
-      </ul>
-      <p className={HELP}>
-        Whom a settlement trusts, exactly: each reading is a claim signed by Reclaim&apos;s attestor ({PINNED_RECLAIM_WITNESS}), whose TEE mode
-        Reclaim labels beta, and Viky&apos;s own evidence signer then signs it as an EIP-712 Proof the contract accepts. We trust those two keys,
-        and we say so: Reclaim writes that a third party must trust that the attestor did not collude with the user.
-      </p>
-      <p className={HELP}>What is not proven, written as it is:</p>
-      <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
-        <li>The attestor&apos;s own TEE attestation is not in the proof zk-fetch returns, so it is not verified; its signature and address are.</li>
-        <li>The evidence signer is a key Viky holds. The contract trusts its signature, and anyone holding that key could sign a reading.</li>
-        <li>
-          The contract judges when a reading was taken, not when the rated game was played. Viky looks at each climb every five minutes, when
-          an outside scheduler calls its pass, and the recipient can ask for a reading at any time; a rating reached and then lost again between two readings, or reached in the last hours and first read
-          after the deadline, does not pay.
-        </li>
-        <li>
-          Below the target, a day&apos;s reading is a plain read of the public page and carries no proof, because the contract refuses a reading
-          short of the target and records nothing. Only a reading at or past the target is attested and sent.
-        </li>
-        <li>Where the person stood when the funder chose is a plain read too: it sets what the funder signs, with their own eyes, and moves nothing.</li>
-        <li>
-          A gift whose target was already reached when the recipient connected pays nothing: the first reading is the start, a start at or
-          past the target can never settle, and the whole amount goes back at the deadline. The screens say so before and after; nobody else
-          keeps any of it.
-        </li>
-        <li>
-          The climb is measured from the rating on the day the funder paid, read again just before the money moves. A rating that happened to
-          be low that day, after a bad session, makes the climb easier than it looks, and nothing here corrects for that.
-        </li>
-        <li>Chess.com publishes no rule for what its name field accepts; the code is six letters so that any name field takes it.</li>
-      </ul>
+      <Rows>
+        <Row title="What the owner of this contract can do, and what it cannot">
+          <p className={HELP}>
+            What the owner of this first-version contract can do, and what it cannot, read from the contract
+            {second ? " (the second version bounds its owner further: the contracts section says how)" : ""}:
+          </p>
+          <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
+            <li>Pause and reopen new gifts, and pause and reopen readings. While readings are paused nothing can be taken back, and every window a pause ran across (the grace after a deadline, the wait for a first reading) counts again from the moment readings reopen.</li>
+            <li>Replace the evidence signer, and register a goal or change the provider id its readings must carry, which applies to gifts already made on that goal.</li>
+            <li>Hand the ownership over, or renounce it; renounced while readings are paused, the gifts under way could never settle.</li>
+            <li>
+              Move money: no. No function lets the owner send AUSD anywhere. Money leaves only to a gift&apos;s recipient, from what was earned and at
+              their signed request, or to the refund address the funder signed, from what was not earned. The terms a funder signed cannot be changed.
+            </li>
+            <li>
+              What that does not cover: the evidence signer attests who opened a gift and what a reading said, so whoever holds its key, which the
+              owner can replace, could open a gift nobody has opened yet and attest a reading for it.
+            </li>
+          </ul>
+        </Row>
+        <Row title="What was hardened against cheating">
+          <p className={HELP}>What was hardened against cheating, with the source read and the day it was read:</p>
+          <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
+            <li>
+              18 Sep 2026, Chess.com&apos;s published data API and its Fair Play policy: an account Chess.com has closed can neither be connected to
+              a gift nor reach a target, and the whole amount goes back to the funder at the deadline, exactly as for a target not reached. The
+              standing is on the same public profile, in the documented field &quot;status&quot; (closed, closed:fair_play_violations, basic, premium,
+              mod, staff), and the policy says Chess.com &quot;may close your account and label it publicly closed for Fair Play violations&quot;. It is
+              read on every reading, plain and attested. Measured that day on four accounts: one premium, one staff, one basic, one closed. A profile whose
+              status cannot be read is a reading that failed on our side: nothing is paid and nothing is taken back that day.
+            </li>
+          </ul>
+        </Row>
+        <Row title="Whom a settlement trusts">
+          <p className={HELP}>
+            Whom a settlement trusts, exactly: each reading is a claim signed by Reclaim&apos;s attestor ({PINNED_RECLAIM_WITNESS}), whose TEE mode
+            Reclaim labels beta, and Viky&apos;s own evidence signer then signs it as an EIP-712 Proof the contract accepts. We trust those two keys,
+            and we say so: Reclaim writes that a third party must trust that the attestor did not collude with the user.
+          </p>
+        </Row>
+        <Row title="What is not proven">
+          <p className={HELP}>What is not proven, written as it is:</p>
+          <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
+            <li>The attestor&apos;s own TEE attestation is not in the proof zk-fetch returns, so it is not verified; its signature and address are.</li>
+            <li>The evidence signer is a key Viky holds. The contract trusts its signature, and anyone holding that key could sign a reading.</li>
+            <li>
+              The contract judges when a reading was taken, not when the rated game was played. Viky looks at each climb every five minutes, when
+              an outside scheduler calls its pass, and the recipient can ask for a reading at any time; a rating reached and then lost again between two readings, or reached in the last hours and first read
+              after the deadline, does not pay.
+            </li>
+            <li>
+              Below the target, a day&apos;s reading is a plain read of the public page and carries no proof, because the contract refuses a reading
+              short of the target and records nothing. Only a reading at or past the target is attested and sent.
+            </li>
+            <li>Where the person stood when the funder chose is a plain read too: it sets what the funder signs, with their own eyes, and moves nothing.</li>
+            <li>
+              A gift whose target was already reached when the recipient connected pays nothing: the first reading is the start, a start at or
+              past the target can never settle, and the whole amount goes back at the deadline. The screens say so before and after; nobody else
+              keeps any of it.
+            </li>
+            <li>
+              The climb is measured from the rating on the day the funder paid, read again just before the money moves. A rating that happened to
+              be low that day, after a bad session, makes the climb easier than it looks, and nothing here corrects for that.
+            </li>
+            <li>Chess.com publishes no rule for what its name field accepts; the code is six letters so that any name field takes it.</li>
+          </ul>
+        </Row>
+      </Rows>
     </Fold>
   );
 }

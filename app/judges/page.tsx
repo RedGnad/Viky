@@ -38,10 +38,11 @@ import { JudgesEarlyGifts } from "./JudgesEarlyGifts";
 import { JudgesIndex } from "./JudgesIndex";
 import { JudgesMera } from "./JudgesMera";
 import { JudgesMinute } from "./JudgesMinute";
+import { JudgesUniversities } from "./JudgesUniversities";
 import { JudgesReliability } from "./JudgesReliability";
 import { JudgesVerify } from "./JudgesVerify";
 import { JudgesWhoUsed } from "./JudgesWhoUsed";
-import { Fold } from "./Fold";
+import { Fold, Row, RowGroup, Rows } from "./Fold";
 
 export const metadata: Metadata = {
   title: "For judges",
@@ -224,10 +225,6 @@ export default async function JudgesPage() {
       <JudgesMinute
         index={index}
         credited={credited}
-        // The universities beyond the ones a student can show from today: listed, less those whose rule is pinned and
-        // those ready on Reclaim's own check.
-        moreUniversities={portals && witnessLines ? Math.max(0, portals.listed - new Set([...witnessLines.filter((line) => line.pin).map((line) => line.portalId), ...readyOnReclaim.map((one) => one.portalId)]).size) : null}
-        readyOnReclaim={readyOnReclaim.map((one) => one.said)}
         // Where a gift is made today: the third daily contract once it is set, with the second version's two others.
         contracts={
           secondVersionSet
@@ -250,105 +247,149 @@ export default async function JudgesPage() {
             gift from the home page.
           </li>
           <li>
-            The pay sheet opens on the code, already filled in. Press &quot;Use the code&quot;: your face or your fingerprint
-            makes a passkey on your device, which is your account. Viky keeps no account for you, and you keep the
-            passkey. Your account receives {judgeCredit ? formatAusd(judgeCredit.units) : "a set amount"}: a judge credit from
-            Viky&apos;s treasury, once per account. A real funder pays by card instead, on the page of the card service
-            their country is served by (&quot;How money comes in&quot;, below). Without the link, press &quot;Have a code?&quot;,
-            right above the pay button, and type the code from those instructions.{" "}
-            <span data-judge-code-until>The code works until {lastDayOfTheCode()}, UTC.</span>
-            {judgeCredit ? <span data-judge-standing> {standingInWords(judgeStanding)}</span> : null}
+            Press &quot;Use the code&quot; on the pay sheet: your face or your fingerprint makes your account, and it receives{" "}
+            {judgeCredit ? formatAusd(judgeCredit.units) : "a set amount"}.
+            <Rows>
+              <Row title="The code, the credit, and what a real funder pays">
+                The pay sheet opens on the code, already filled in. Press &quot;Use the code&quot;: your face or your fingerprint
+                makes a passkey on your device, which is your account. Viky keeps no account for you, and you keep the
+                passkey. Your account receives {judgeCredit ? formatAusd(judgeCredit.units) : "a set amount"}: a judge credit from
+                Viky&apos;s treasury, once per account. A real funder pays by card instead, on the page of the card service
+                their country is served by (&quot;How money comes in&quot;, below). Without the link, press &quot;Have a code?&quot;,
+                right above the pay button, and type the code from those instructions.{" "}
+                <span data-judge-code-until>The code works until {lastDayOfTheCode()}, UTC.</span>
+                {judgeCredit ? <span data-judge-standing> {standingInWords(judgeStanding)}</span> : null}
+              </Row>
+            </Rows>
           </li>
           <li>
-            The sheet then pays with your credit and opens no card service; a gift above the credit is brought to the
-            credit, and the sheet says so.
+            The sheet then pays with your credit and opens no card service.
+            <Rows>
+              <Row title="A gift above the credit">
+                The sheet then pays with your credit and opens no card service; a gift above the credit is brought to the
+                credit, and the sheet says so.
+              </Row>
+            </Rows>
           </li>
           <li>
-            To see the other side on this device: copy the link, press the back arrow, then Me, then Other account,
-            then Create a new account. This browser is then signed in to a second account: paste the link in the
-            address bar and press Open my gift. Then connect the source. With one account you only ever see the
-            funder&apos;s side of your own gift.
+            To see the other side on this device, make a second account: Me, then Other account, then Create a new account.
+            <Rows>
+              <Row title="The other side, gesture by gesture">
+                To see the other side on this device: copy the link, press the back arrow, then Me, then Other account,
+                then Create a new account. This browser is then signed in to a second account: paste the link in the
+                address bar and press Open my gift. Then connect the source. With one account you only ever see the
+                funder&apos;s side of your own gift.
+              </Row>
+            </Rows>
           </li>
           <li data-try-paths>
-            What to offer. Each path asks something of you: Duolingo, an account there, and a lesson done after you
-            connect it; Chess.com, an account there, and one rating point won. For Duolingo, type your own Duolingo name
-            on the card, under &quot;Their Duolingo name&quot;, and connecting is one press. With no account of a source,
-            the short path is the next step: open the gift, then end it. And what each costs of the month&apos;s attested
-            readings, which are few and counted under &quot;How a day is read&quot;, below.
-            {reclaimUse ? <span data-readings-left> {readingsLeftInWords(reclaimUse)}</span> : null}
-            <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)] pt-[var(--space-xs)]">
-              <li>
-                First, Duolingo, a lesson a day: two readings for one connection, one lesson and one day paid.
-                Connecting the account is one, counting the day is the other.{" "}
-                {thirdVersionSet
-                  ? "On a gift made now, the day is paid the day its lesson is done: when the gift's page is opened after the lesson, or within a quarter of an hour. On a gift made on the second version, the day counts the morning after it ends (the readings pass of 00:30 UTC). Either way a "
-                  : "The day counts the morning after it ends (the readings pass of 00:30 UTC). A "}
-                day without a lesson costs no reading, a plain look sees it first, and it comes back to the funder 31
-                hours after it ends (the settling pass of 07:00 UTC, two mornings later).
-              </li>
-              <li>
-                A climb on Chess.com: four readings, started and reached. Each reading is two fetches, the profile and
-                the ratings: two at the start, two at the target. It settles in one sitting: offer a rating one point
-                above the account&apos;s own, and once it is reached open the gift&apos;s page: a climb is read as its page
-                opens, and has no button for it. On
-                Codeforces a reading is one fetch: two, started and reached.
-              </li>
-              <li>
-                A certificate by its link (Coursera, edX, MITx Online, Accredible, the Duolingo English Test) or a WCA
-                time: one reading, taken only once a plain look has found that the page can pay. A Credly badge: two.
-                A race finished: one.
-              </li>
-              <li>
-                Fitbit, by the day: one reading to connect, then one each morning that has a day to credit. Strava was
-                read the same way, and is closed.
-              </li>
-              <li>
-                A document a person shows (a score, an enrolment, a grade): no reading. It is one of the month&apos;s{" "}
-                {RECLAIM_ALLOWANCE.verifications} proofs shown by people.
-              </li>
-            </ul>
+            Choose what to offer: each path asks something of you, and costs some of the month&apos;s attested readings.
+            <Rows>
+              <Row title="What each path asks, and what it costs in readings">
+                What to offer. Each path asks something of you: Duolingo, an account there, and a lesson done after you
+                connect it; Chess.com, an account there, and one rating point won. For Duolingo, type your own Duolingo name
+                on the card, under &quot;Their Duolingo name&quot;, and connecting is one press. With no account of a source,
+                the short path is the next step: open the gift, then end it. And what each costs of the month&apos;s attested
+                readings, which are few and counted under &quot;How a day is read&quot;, below.
+                {reclaimUse ? <span data-readings-left> {readingsLeftInWords(reclaimUse)}</span> : null}
+                <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)] pt-[var(--space-xs)]">
+                  <li>
+                    First, Duolingo, a lesson a day: two readings for one connection, one lesson and one day paid.
+                    Connecting the account is one, counting the day is the other.{" "}
+                    {thirdVersionSet
+                      ? "On a gift made now, the day is paid the day its lesson is done: when the gift's page is opened after the lesson, or within a quarter of an hour. On a gift made on the second version, the day counts the morning after it ends (the readings pass of 00:30 UTC). Either way a "
+                      : "The day counts the morning after it ends (the readings pass of 00:30 UTC). A "}
+                    day without a lesson costs no reading, a plain look sees it first, and it comes back to the funder 31
+                    hours after it ends (the settling pass of 07:00 UTC, two mornings later).
+                  </li>
+                  <li>
+                    A climb on Chess.com: four readings, started and reached. Each reading is two fetches, the profile and
+                    the ratings: two at the start, two at the target. It settles in one sitting: offer a rating one point
+                    above the account&apos;s own, and once it is reached open the gift&apos;s page: a climb is read as its page
+                    opens, and has no button for it. On
+                    Codeforces a reading is one fetch: two, started and reached.
+                  </li>
+                  <li>
+                    A certificate by its link (Coursera, edX, MITx Online, Accredible, the Duolingo English Test) or a WCA
+                    time: one reading, taken only once a plain look has found that the page can pay. A Credly badge: two.
+                    A race finished: one.
+                  </li>
+                  <li>
+                    Fitbit, by the day: one reading to connect, then one each morning that has a day to credit. Strava was
+                    read the same way, and is closed.
+                  </li>
+                  <li>
+                    A document a person shows (a score, an enrolment, a grade): no reading. It is one of the month&apos;s{" "}
+                    {RECLAIM_ALLOWANCE.verifications} proofs shown by people.
+                  </li>
+                </ul>
+              </Row>
+            </Rows>
           </li>
           {/* The short path for a judge with no account at a source (the audit of 9 Oct 2026): it sent them to a link
               the portal's instructions might give. An opened gift has its round buttons before anything is connected
               (test/browser/you-decide.spec.ts), and ending it sends everything back. */}
           <li data-try-short-path>
-            With no account at Duolingo or Chess.com: open your gift from the other account, as above, and connect
-            nothing. Press &quot;Stop&quot;, then &quot;End the gift&quot;, and confirm: all of it goes back to the account that
-            paid. Money leaves a gift for the person it is for only once a reading has credited it.
+            With no account at Duolingo or Chess.com: open your gift from the other account, connect nothing, and end it.
+            <Rows>
+              <Row title="The short path, and where the money goes">
+                With no account at Duolingo or Chess.com: open your gift from the other account, as above, and connect
+                nothing. Press &quot;Stop&quot;, then &quot;End the gift&quot;, and confirm: all of it goes back to the account that
+                paid. Money leaves a gift for the person it is for only once a reading has credited it.
+              </Row>
+            </Rows>
           </li>
           <li>
-            Mera&apos;s stateless test runs on this same account: sign out, clear this site&apos;s storage or take another
-            device, and sign in with the same passkey. The account, its gifts and its money come back from the passkey
-            alone. What the first device kept (which passkey to offer, a gift&apos;s link, the theme) is a convenience the
-            account does not need.
+            Mera&apos;s stateless test: sign out, then sign in with the same passkey. The account comes back from the passkey alone.
+            <Rows>
+              <Row title="What comes back, and what the first device kept">
+                Mera&apos;s stateless test runs on this same account: sign out, clear this site&apos;s storage or take another
+                device, and sign in with the same passkey. The account, its gifts and its money come back from the passkey
+                alone. What the first device kept (which passkey to offer, a gift&apos;s link, the theme) is a convenience the
+                account does not need.
+              </Row>
+            </Rows>
           </li>
           <li>
-            One Passkey, Many Keys: the same sign-in asks the passkey&apos;s PRF for a second salt,
-            sha256(&quot;viky:consent:v1&quot;), and its output is an Ed25519 key held in memory. It signs the recipient&apos;s yes
-            to what a gift reads, and their stop, and nothing else: it cannot move money. In six gestures:
-            <ol className="list-decimal space-y-[var(--space-xs)] pl-[var(--space-lg)] pt-[var(--space-xs)]">
-              <li>Sign in on this device. The one prompt asks the passkey for both salts.</li>
-              <li>
-                Read &quot;Your agreement key&quot; at the foot of this page: the public half of that Ed25519 key, from this
-                page&apos;s memory.
-              </li>
-              {/* A new gift has no key named Agree: the yes is signed by the press that asks for the first reading
-                  (app/components/GiftPage.tsx, `start`). The gesture names that press by the words its key carries. */}
-              <li data-gesture-yes>
-                Open a gift made for you and press the key that starts its first reading, &quot;{GIFT_PAGE.startCounting}&quot;
-                or &quot;{GIFT_PAGE.iAddedIt}&quot; on a daily gift: that press signs your yes with this key, before anything is
-                read.
-              </li>
-              <li>On a second device, sign in with the same passkey.</li>
-              <li>Read &quot;Your agreement key&quot; there: it is the same key.</li>
-              <li>
-                Press Stop on the gift from the second device. Back on the first, the gift says Viky stopped reading:
-                every reading that could move money checks the latest signed yes first (src/consent-guard.ts).
-              </li>
-            </ol>
+            One Passkey, Many Keys: the same sign-in makes a second key, which signs the recipient&apos;s yes and stop.
+            <Rows>
+              <Row title="The second key, in six gestures">
+                One Passkey, Many Keys: the same sign-in asks the passkey&apos;s PRF for a second salt,
+                sha256(&quot;viky:consent:v1&quot;), and its output is an Ed25519 key held in memory. It signs the recipient&apos;s yes
+                to what a gift reads, and their stop, and nothing else: it cannot move money. In six gestures:
+                <ol className="list-decimal space-y-[var(--space-xs)] pl-[var(--space-lg)] pt-[var(--space-xs)]">
+                  <li>Sign in on this device. The one prompt asks the passkey for both salts.</li>
+                  <li>
+                    Read &quot;Your agreement key&quot; at the foot of this page: the public half of that Ed25519 key, from this
+                    page&apos;s memory.
+                  </li>
+                  {/* A new gift has no key named Agree: the yes is signed by the press that asks for the first reading
+                      (app/components/GiftPage.tsx, `start`). The gesture names that press by the words its key carries. */}
+                  <li data-gesture-yes>
+                    Open a gift made for you and press the key that starts its first reading, &quot;{GIFT_PAGE.startCounting}&quot;
+                    or &quot;{GIFT_PAGE.iAddedIt}&quot; on a daily gift: that press signs your yes with this key, before anything is
+                    read.
+                  </li>
+                  <li>On a second device, sign in with the same passkey.</li>
+                  <li>Read &quot;Your agreement key&quot; there: it is the same key.</li>
+                  <li>
+                    Press Stop on the gift from the second device. Back on the first, the gift says Viky stopped reading:
+                    every reading that could move money checks the latest signed yes first (src/consent-guard.ts).
+                  </li>
+                </ol>
+              </Row>
+            </Rows>
           </li>
         </ol>
       </Fold>
+
+      {/* A fold of their own since 12 Oct 2026: the first block says the one pass in a line and points here. */}
+      <JudgesUniversities
+        // The universities beyond the ones a student can show from today: listed, less those whose rule is pinned and
+        // those ready on Reclaim's own check.
+        moreUniversities={portals && witnessLines ? Math.max(0, portals.listed - new Set([...witnessLines.filter((line) => line.pin).map((line) => line.portalId), ...readyOnReclaim.map((one) => one.portalId)]).size) : null}
+        readyOnReclaim={readyOnReclaim.map((one) => one.said)}
+      />
 
       <JudgesWhoUsed index={index} credited={credited} />
 
@@ -377,40 +418,45 @@ export default async function JudgesPage() {
             <>
               <dt className="text-[var(--muted)]">Where a gift is made today</dt>
               <dd className="[overflow-wrap:anywhere]" data-second-version>
-                {escrowV3 ? (
-                  // The address is the setting's, never one written here: the page says where a daily gift is made as the
-                  // app makes it (src/v2.ts, `newDailyGiftsContract`).
-                  <span data-third-version>
-                    A habit, day by day: {escrowV3} (<a className="underline" href={`https://monadvision.com/address/${escrowV3}`}>MonadVision</a>, deployed in{" "}
-                    <Tx hash="0xe6edce353863afaf302f3840068a5bb92300fb8380d234d8477afb5983a897f3" />), the third version of the daily contract,
-                    deployed on 3 Oct 2026 by 0x65F9c9225A646423878f0405f750a209c3648335; who owns it is read from the chain with the
-                    others, below. The second version&apos;s daily contract, {escrowV2} (
-                    <a className="underline" href={`https://monadvision.com/address/${escrowV2}`}>MonadVision</a>, deployed in{" "}
-                    <Tx hash="0x8be062b29a506c17b581587f2ba0b2f8d1460cd5fc2705e0aa191a2f9c8ac409" />), runs the gifts it holds.
-                  </span>
-                ) : (
-                  <>
-                    The second version of the contracts, deployed on 2 Oct 2026. A habit, day by day: {escrowV2} (
-                    <a className="underline" href={`https://monadvision.com/address/${escrowV2}`}>MonadVision</a>, deployed in{" "}
-                    <Tx hash="0x8be062b29a506c17b581587f2ba0b2f8d1460cd5fc2705e0aa191a2f9c8ac409" />).
-                  </>
-                )}{" "}
-                One thing reached: {milestoneV2} (
-                <a className="underline" href={`https://monadvision.com/address/${milestoneV2}`}>MonadVision</a>, deployed in{" "}
-                <Tx hash="0x15c355472e145a6d70e3d25af7bcee2bcc1c1560e80e0940e3a460bd7678bd4c" />). The anchor of agreements, which holds no
-                money: {anchor} (<a className="underline" href={`https://monadvision.com/address/${anchor}`}>MonadVision</a>, deployed in{" "}
-                <Tx hash="0xe0a2b4127067d5c24282254886a8e32da9667e835c24dd98461e4e4a3c90d412" />). The source of {escrowV3 ? "the four" : "the three"} is verified through
-                Sourcify, an exact match. {escrowV3 ? "The three of the second version were deployed on 2 Oct 2026" : "They were deployed"} by a key made for that day alone,
-                0xEFc6820AA6EFafb824f6e9c102079c8f81845840, which handed each to the Safe; the Safe accepted them in{" "}
-                <Tx hash="0x5a8dca52982b71dba715feb187e33f0494f4412c3cbb984147d97d4bf63aeae9" />,{" "}
-                <Tx hash="0xb5b8b17b735fffb5a0323ee52b3eccbe0ee58c24ecf2703bdf6bee0c1222921e" /> and{" "}
-                <Tx hash="0x4125aef710d8017a09fcc8c842ce9808d2b7def366dfc0befaa61f05413b171b" />, and that key owns nothing. The same day the
-                Safe closed new gifts on the three first-version contracts, in{" "}
-                <Tx hash="0x0c2e70edd97c91d010527ef930d60c2e12fd25578109a3e4cd94e0f57cec5397" />,{" "}
-                <Tx hash="0x10e8d50ec6c88d9492cbcc7d826b6afc5b7753cb046c033ae4898411131457b5" /> and{" "}
-                <Tx hash="0x32ec292bd099897081bac962f95efacc40fdfbb87e0092cd58f8d75537ab181a" />: they go on running the gifts they hold, to
-                the end. Whether a gift has run on {escrowV3 ? "each of these" : "the second version"} yet is counted from the index under &quot;Who has used
-                Viky&quot;: nothing is claimed as working on {escrowV3 ? "one of them" : "it"} before one has, end to end, with real amounts.
+                {escrowV3 ? "On the third version of the daily contract, and on the second version of the two others." : "On the second version of the contracts."} The addresses are in the first block of this page.
+                <Rows>
+                  <Row title="Each address, its deployment, its verified source and its hand-over to the Safe">
+                    {escrowV3 ? (
+                      // The address is the setting's, never one written here: the page says where a daily gift is made as the
+                      // app makes it (src/v2.ts, `newDailyGiftsContract`).
+                      <span data-third-version>
+                        A habit, day by day: {escrowV3} (<a className="underline" href={`https://monadvision.com/address/${escrowV3}`}>MonadVision</a>, deployed in{" "}
+                        <Tx hash="0xe6edce353863afaf302f3840068a5bb92300fb8380d234d8477afb5983a897f3" />), the third version of the daily contract,
+                        deployed on 3 Oct 2026 by 0x65F9c9225A646423878f0405f750a209c3648335; who owns it is read from the chain with the
+                        others, below. The second version&apos;s daily contract, {escrowV2} (
+                        <a className="underline" href={`https://monadvision.com/address/${escrowV2}`}>MonadVision</a>, deployed in{" "}
+                        <Tx hash="0x8be062b29a506c17b581587f2ba0b2f8d1460cd5fc2705e0aa191a2f9c8ac409" />), runs the gifts it holds.
+                      </span>
+                    ) : (
+                      <>
+                        The second version of the contracts, deployed on 2 Oct 2026. A habit, day by day: {escrowV2} (
+                        <a className="underline" href={`https://monadvision.com/address/${escrowV2}`}>MonadVision</a>, deployed in{" "}
+                        <Tx hash="0x8be062b29a506c17b581587f2ba0b2f8d1460cd5fc2705e0aa191a2f9c8ac409" />).
+                      </>
+                    )}{" "}
+                    One thing reached: {milestoneV2} (
+                    <a className="underline" href={`https://monadvision.com/address/${milestoneV2}`}>MonadVision</a>, deployed in{" "}
+                    <Tx hash="0x15c355472e145a6d70e3d25af7bcee2bcc1c1560e80e0940e3a460bd7678bd4c" />). The anchor of agreements, which holds no
+                    money: {anchor} (<a className="underline" href={`https://monadvision.com/address/${anchor}`}>MonadVision</a>, deployed in{" "}
+                    <Tx hash="0xe0a2b4127067d5c24282254886a8e32da9667e835c24dd98461e4e4a3c90d412" />). The source of {escrowV3 ? "the four" : "the three"} is verified through
+                    Sourcify, an exact match. {escrowV3 ? "The three of the second version were deployed on 2 Oct 2026" : "They were deployed"} by a key made for that day alone,
+                    0xEFc6820AA6EFafb824f6e9c102079c8f81845840, which handed each to the Safe; the Safe accepted them in{" "}
+                    <Tx hash="0x5a8dca52982b71dba715feb187e33f0494f4412c3cbb984147d97d4bf63aeae9" />,{" "}
+                    <Tx hash="0xb5b8b17b735fffb5a0323ee52b3eccbe0ee58c24ecf2703bdf6bee0c1222921e" /> and{" "}
+                    <Tx hash="0x4125aef710d8017a09fcc8c842ce9808d2b7def366dfc0befaa61f05413b171b" />, and that key owns nothing. The same day the
+                    Safe closed new gifts on the three first-version contracts, in{" "}
+                    <Tx hash="0x0c2e70edd97c91d010527ef930d60c2e12fd25578109a3e4cd94e0f57cec5397" />,{" "}
+                    <Tx hash="0x10e8d50ec6c88d9492cbcc7d826b6afc5b7753cb046c033ae4898411131457b5" /> and{" "}
+                    <Tx hash="0x32ec292bd099897081bac962f95efacc40fdfbb87e0092cd58f8d75537ab181a" />: they go on running the gifts they hold, to
+                    the end. Whether a gift has run on {escrowV3 ? "each of these" : "the second version"} yet is counted from the index under &quot;Who has used
+                    Viky&quot;: nothing is claimed as working on {escrowV3 ? "one of them" : "it"} before one has, end to end, with real amounts.
+                  </Row>
+                </Rows>
               </dd>
             </>
           ) : null}
@@ -429,45 +475,49 @@ export default async function JudgesPage() {
           </dd>
           <dt className="text-[var(--muted)]">Who owns the contracts</dt>
           <dd className="[overflow-wrap:anywhere]">
-            {ownership ? ownershipWords(ownership) : "The chain could not be read just now, so nothing is said here about who owns the contracts rather than something out of date."}{" "}
-            The four of the first version were handed to the Safe on 20 Sep 2026, in{" "}
-            <a className="underline" href="https://monadvision.com/tx/0x1aa2887ef13988fd86efffe992651e6b9b2294161e2bbdc75c5e1466051f47d3">
-              0x1aa2887e…47d3
-            </a>{" "}
-            (gifts),{" "}
-            <a className="underline" href="https://monadvision.com/tx/0x534555010acde11dd8791ad58d3ea02d485967ecf9f3045e7fb70e89bcfb6635">
-              0x53455501…6635
-            </a>{" "}
-            (the earlier gift contract),{" "}
-            <a className="underline" href="https://monadvision.com/tx/0x960a5ad8edd9f5f0909bbc1f5bc85da86d081339364699248876375981fa072b">
-              0x960a5ad8…072b
-            </a>{" "}
-            (milestone gifts) and{" "}
-            <a className="underline" href="https://monadvision.com/tx/0xcd2b1ac3ef8c334596d49d7154fb8288efb14ad268bf272a86c79367bfe67b78">
-              0xcd2b1ac3…7b78
-            </a>{" "}
-            (the way out), from the founder&apos;s key 0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64, which had held each since its deployment or
-            its hand-over, from 16 to 18 Sep 2026, and never was the key that deployed them (the gift contract in{" "}
-            <a className="underline" href="https://monadvision.com/tx/0xa01ae787c52409157ec83aa95cc2ca2a4dca4a2caaab3caef8ea8c5650dfa009">
-              0xa01ae787…a009
-            </a>
-            , the earlier one in{" "}
-            <a className="underline" href="https://monadvision.com/tx/0xe6f5b531d9c6dd981b72f2be7dc7e2e2d0adca071e59fd78e532dae804043840">
-              0xe6f5b531…3840
-            </a>
-            ). Each owner is read again from the chain further down, with what that owner can and cannot do. Handing
-            ownership over moved no money: the earlier contract held the 8.571432 AUSD of its first gift before and after
-            it. That gift has since ended, and its last refund went back to its funder on 23 Sep 2026.
-            {converter === USDC_ROUTER ? (
-              <>
-                {" "}The converter of card payments was born owned by a key made for its deployment alone, which handed it
-                to the Safe in its third transaction on 3 Oct 2026, in{" "}
-                <a className="underline" href="https://monadvision.com/tx/0x87d44ed94b31fa7c8ba18872b5225415dc8a2651f62ff83794bcc38e85177103">
-                  0x87d44ed9…7103
+            {ownership ? ownershipWords(ownership) : "The chain could not be read just now, so nothing is said here about who owns the contracts rather than something out of date."}
+            <Rows>
+              <Row title="How each contract was handed to the Safe, and by which key">
+                The four of the first version were handed to the Safe on 20 Sep 2026, in{" "}
+                <a className="underline" href="https://monadvision.com/tx/0x1aa2887ef13988fd86efffe992651e6b9b2294161e2bbdc75c5e1466051f47d3">
+                  0x1aa2887e…47d3
+                </a>{" "}
+                (gifts),{" "}
+                <a className="underline" href="https://monadvision.com/tx/0x534555010acde11dd8791ad58d3ea02d485967ecf9f3045e7fb70e89bcfb6635">
+                  0x53455501…6635
+                </a>{" "}
+                (the earlier gift contract),{" "}
+                <a className="underline" href="https://monadvision.com/tx/0x960a5ad8edd9f5f0909bbc1f5bc85da86d081339364699248876375981fa072b">
+                  0x960a5ad8…072b
+                </a>{" "}
+                (milestone gifts) and{" "}
+                <a className="underline" href="https://monadvision.com/tx/0xcd2b1ac3ef8c334596d49d7154fb8288efb14ad268bf272a86c79367bfe67b78">
+                  0xcd2b1ac3…7b78
+                </a>{" "}
+                (the way out), from the founder&apos;s key 0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64, which had held each since its deployment or
+                its hand-over, from 16 to 18 Sep 2026, and never was the key that deployed them (the gift contract in{" "}
+                <a className="underline" href="https://monadvision.com/tx/0xa01ae787c52409157ec83aa95cc2ca2a4dca4a2caaab3caef8ea8c5650dfa009">
+                  0xa01ae787…a009
                 </a>
-                .
-              </>
-            ) : null}
+                , the earlier one in{" "}
+                <a className="underline" href="https://monadvision.com/tx/0xe6f5b531d9c6dd981b72f2be7dc7e2e2d0adca071e59fd78e532dae804043840">
+                  0xe6f5b531…3840
+                </a>
+                ). Each owner is read again from the chain further down, with what that owner can and cannot do. Handing
+                ownership over moved no money: the earlier contract held the 8.571432 AUSD of its first gift before and after
+                it. That gift has since ended, and its last refund went back to its funder on 23 Sep 2026.
+                {converter === USDC_ROUTER ? (
+                  <>
+                    {" "}The converter of card payments was born owned by a key made for its deployment alone, which handed it
+                    to the Safe in its third transaction on 3 Oct 2026, in{" "}
+                    <a className="underline" href="https://monadvision.com/tx/0x87d44ed94b31fa7c8ba18872b5225415dc8a2651f62ff83794bcc38e85177103">
+                      0x87d44ed9…7103
+                    </a>
+                    .
+                  </>
+                ) : null}
+              </Row>
+            </Rows>
           </dd>
           {earlierEscrow ? (
             <>
@@ -514,17 +564,20 @@ export default async function JudgesPage() {
             ? "Rampnow comes first where it serves the payer's country and takes the gift's amount; where it does not, the sheet goes on to the next."
             : "Rampnow, by card, is written and switched off on this deployment: the two others are the ways offered."}
         </p>
-        {rampnowOn ? (
-          <>
-            {rampnowWay}
-            {rampWay}
-          </>
-        ) : (
-          <>
-            {rampWay}
-            {rampnowWay}
-          </>
-        )}
+        {/* A row a card service, in the order the pay sheet tries them: what each is, keeps and delivers is one level down. */}
+        <Rows>
+          {rampnowOn ? (
+            <>
+              <Row title="Rampnow, by card">{rampnowWay}</Row>
+              <Row title="Ramp, by card or bank transfer">{rampWay}</Row>
+            </>
+          ) : (
+            <>
+              <Row title="Ramp, by card or bank transfer">{rampWay}</Row>
+              <Row title="Rampnow, by card">{rampnowWay}</Row>
+            </>
+          )}
+        </Rows>
       </Fold>
 
       {/* How money goes out (the audit of 9 Oct 2026): one line a way, with what opens it and where it stands, as the
@@ -554,119 +607,137 @@ export default async function JudgesPage() {
       </Fold>
 
       <Fold id="reading" title="How a day is read">
+        {/* The fold opens on this line and on its rows (12 Oct 2026): each text that stood here is whole, one level down. */}
+        <p className={HELP} data-reading-lead>
+          A day is read from the source&apos;s own servers through Reclaim&apos;s attested fetch, and each reading is counted
+          against a month&apos;s allowance.{reclaimUse ? ` ${readingsLeftInWords(reclaimUse)}` : ""}
+        </p>
         {thirdVersionSet ? (
-          <p className={HELP} data-third-version-rule>
-            On the third daily contract, where a daily gift is made now, a day is paid the day it is read. The first day
-            is the day the account is connected. The gift&apos;s page looks at the public profile as it opens, a pass looks
-            every quarter of an hour, and an attested read is taken only for a lesson a look saw. A reading pays the
-            oldest open day first, and never a day that has not begun. A lesson taken after the day was paid is counted
-            by the first reading of the next day; taken before, it is not kept. So one lesson never pays two days, no more
-            days are paid than lessons were taken, and a day can be paid on which no lesson was taken: the one after a day
-            with a second lesson that came after that day&apos;s pay. A gift made on the second version stays there, under
-            the rule the next paragraph says.
-          </p>
+          <Row title="A daily gift made today: a day is paid the day it is read">
+            <p className={HELP} data-third-version-rule>
+              On the third daily contract, where a daily gift is made now, a day is paid the day it is read. The first day
+              is the day the account is connected. The gift&apos;s page looks at the public profile as it opens, a pass looks
+              every quarter of an hour, and an attested read is taken only for a lesson a look saw. A reading pays the
+              oldest open day first, and never a day that has not begun. A lesson taken after the day was paid is counted
+              by the first reading of the next day; taken before, it is not kept. So one lesson never pays two days, no more
+              days are paid than lessons were taken, and a day can be paid on which no lesson was taken: the one after a day
+              with a second lesson that came after that day&apos;s pay. A gift made on the second version stays there, under
+              the rule the next paragraph says.
+            </p>
+          </Row>
         ) : null}
-        <p className={HELP}>
-          Duolingo runs in public mode: once a day, Viky&apos;s keeper looks at the recipient&apos;s public profile
-          plainly, and when that look shows a day the contract can credit, reads it through an attested fetch (Reclaim
-          zkFetch through Reclaim&apos;s TEE client). The look is never evidence: it is not signed and not sent, and it
-          can only spare a reading the contract would refuse (<code>src/daily-look.ts</code>). The attestor signs
-          Duolingo&apos;s response; Viky verifies that signature, pins the attestor&apos;s address (the one in <code>src/reclaim-proof-set.ts</code>)
-          and checks the proof is about the right URL and username; the evidence signer then turns the
-          signed reading into an EIP-712 check-in, and the contract credits or refuses it. What is not verified: the
-          attestor&apos;s own TEE attestation, which zk-fetch 1.1.0 does not put in the proof. The person signs in to
-          nothing and installs nothing. The account is tied to the gift once: by the funder naming it, which proves
-          nothing about whose it is, or, when the recipient names it themselves, by a short code they place in their
-          Duolingo display name.
-        </p>
-        <p className={HELP}>
-          Hardened on 18 Sep 2026, from Duolingo&apos;s own public profile (U1): a gift can be counted on one course rather
-          than on the experience total. The funder picks the course from that profile&apos;s own courses, the daily reading is
-          anchored on that course&apos;s id, and experience won in another course is not in the reading at all. Measured that
-          day over 19 public profiles and 74 courses: every course carries its id, its title and its experience, and the sum
-          of the courses is exactly the total the profile prints. A course gift is its own goal on the contract (goal 5,
-          provider id keccak256(&quot;viky:provider:duolingo-course-zkfetch:v1&quot;), registered in{" "}
-          <a className="underline" href="https://monadvision.com/tx/0xcaadaca7d0d3d362eb1112b3e45f66a1116d4335166283bf837053cf5fee8a69">
-            0xcaadaca7…8a69
-          </a>
-          ) and its identity is the person and the course together, pinned by the contract at the first reading. So a reading
-          of another course, or of the whole profile, cannot settle it, and gifts made before this keep counting the total
-          exactly as they did. What this does not cover: a gift whose funder did not name the account has no course to choose
-          from, so it counts the whole profile; and the course a gift counts is recorded by Viky, like the account name, not
-          signed into the terms on the chain.
-        </p>
-        <p className={HELP}>
-          What a reading costs, written here on purpose: each attested read is paid on Reclaim&apos;s side (their public
-          price starts at $0.10 per verification). Reads are counted per gift, never per person: the morning pass looks
-          at each daily gift once, takes an attested read only for one whose look shows a day to credit, and skips one
-          already counted that day, so two gifts on one Duolingo account are two reads on a morning both earned a day. A
-          look that failed takes no read: the gift is looked at again at 03:30 UTC, and only then, if a day of it closes
-          at 06:00 that morning, is one read taken without a look, once. And a breaker holds every paid read
-          (<code>src/attested-calls.ts</code>): {dailyCeilings().perGift} for one gift in a UTC day and {dailyCeilings().all} for
-          all gifts, counted on the proofs given. Past it nothing is asked of Reclaim until the next day, and the
-          gift&apos;s page says when reading resumes and until when its open day can still be counted. The ceiling holds
-          no day: a day not read stays open until its catch-up window closes, 30 hours after it ends, and then goes back
-          to the funder like a missed day, whoever was at fault. A certificate&apos;s link is looked at plainly
-          before its proof, and a climb at its target is given three proofs a day at most. Connecting the account is one more, and a connection by code takes it only once a plain look
-          has found the code in the name; a count the person asks for looks first in the same way. No daily ceiling bounds
-          those asks, only ten in ten minutes from one IP address, counted in each app server&apos;s memory. A gift on
-          Fitbit is asked plainly first, with the person&apos;s key, and no proof is taken from a source that
-          refuses or does not answer; that look does not judge the day, so it is read attested each morning that has a
-          day to credit, earned or not. Strava was read the same way, and is closed. A climb
-          is looked at plainly, not through Reclaim, in both of the day&apos;s passes and at each ask, and read attested
-          only to connect the account or when that look does not show it below its target. Private sources keep the
-          user-proof path through the Reclaim verifier app.
-        </p>
-        <p className={HELP} data-reclaim-cycle>
-          The month&apos;s count, kept here because Reclaim&apos;s dashboard shows no count of the fetches: its free tier
-          allows up to {RECLAIM_ALLOWANCE.fetches} attested fetches and {RECLAIM_ALLOWANCE.verifications} verifications a
-          month, and gives more on request only. {cycleInWords(reclaimUse)} A cycle runs from the 1st of a month to
-          the 1st of the next, as Reclaim&apos;s dashboard shows it for the account that holds Viky&apos;s two
-          applications.
-          {reclaimUse && (reclaimUse.fetches.allowed !== RECLAIM_ALLOWANCE.fetches || reclaimUse.verifications.allowed !== RECLAIM_ALLOWANCE.verifications)
-            ? " Reclaim has granted more than the free tier, and the limits in force are the ones counted against."
-            : ""}
-          {reclaimLimits?.readings
-            ? ` The limit of readings is reached: Viky sends no attested reading to Reclaim until the next cycle or until more is granted. The limit holds no day: a day waiting for a reading stays open until its catch-up window closes, then goes back to the funder like a missed day. A person whose gift waits for one reads this on its page, by the gift's own source, with what they can do folded under it: "${LIMIT.said("Duolingo", "readings", startsAgainInWords())}"`
-            : ""}
-          {reclaimLimits?.proofs
-            ? ` The limit of proofs is reached: Viky opens no new proof at Reclaim, and a person reads this before starting one, by the gift's own source: "${LIMIT.said("their university", "proofs", startsAgainInWords())}"`
-            : ""}{" "}
-          The limit Viky holds itself to goes by the readings that gave a proof and by the proofs that came back, not by
-          what was started or asked: what Reclaim counts is not published, and in September&apos;s cycle readings went
-          on giving their proof after the hundredth fetch was started, with no refusal for a quota: {SEPTEMBER_2026.proofs}{" "}
-          proofs given that we know of, for at least {SEPTEMBER_2026.started} fetches started.
-          {reclaimUse?.from === BEFORE_THE_JOURNAL.cycleFrom
-            ? ` Of this cycle's fetches, ${BEFORE_THE_JOURNAL.started} were started before the journal began and each gave a proof, counted on 3 Oct 2026 from the reading service's logs: two on 1 Oct, two on 2 Oct, one on 3 Oct.`
-            : ""}
-          {reclaimUse?.from === OUTSIDE_THE_JOURNAL.cycleFrom
-            ? ` ${OUTSIDE_THE_JOURNAL.started} more were asked on 12 Oct 2026 from a developer's machine, outside the journal and counted here: one attested read, without a gift, of each public source that had never passed a real one. ${OUTSIDE_THE_JOURNAL.proved} gave a proof, and one met a redirect.`
-            : ""}
-          {reclaimUse ? <span data-cycle-left> {readingsLeftInWords(reclaimUse)}</span> : null}{" "}
-          <span data-september-fault>
-            A fault of ours, found and corrected, in September&apos;s cycle: on 30 Sep 2026 the ratings of one Chess.com
-            gift answered 404, and the pass of every five minutes took a new proof of the profile at each round,{" "}
-            {LOST_ON_30_SEP_2026.fetches} fetches in five hours and {LOST_ON_30_SEP_2026.proofs} proofs lost. Corrected on
-            3 Oct 2026: a proof is claimed before it is paid for and a day has its ceilings, so the same fault now costs{" "}
-            {dailyCeilings().perGift} proofs in a day at most.
-          </span>{" "}
-          Since 3 Oct 2026 every fetch is written down as it leaves, proof or not, and a proof is claimed before it is
-          paid for: for one gift, once in {PROOF_EVERY_SECONDS.unseen / 3_600} hours after a look that failed or showed no
-          rating, once an hour in the gift&apos;s last day, and every {PROOF_EVERY_SECONDS.atTheTarget / 60} minutes at the
-          target until one settles it. The operator is told by email when{" "}
-          {RECLAIM_ALERT_LEFT.filter((mark) => mark > 0).join(", ")} and none are left of an allowance, the last with the days then waiting for a reading, and
-          each morning of the judging (from {utcDayInWords(JUDGING.from)} to {utcDayInWords(JUDGING.until)}) with what the
-          day before spent, by gift and by reason. What is not closed: a gift on Fitbit takes a proof for a
-          day that was not earned, a proof whose sending failed is taken again at the next reading, what a person shows has no ceiling of its own
-          for a gift, and a reading asked from a developer&apos;s machine reaches the same Reclaim application without
-          being written in this journal.
-        </p>
+        <Rows>
+          <Row title="Duolingo, read in public mode">
+            <p className={HELP}>
+              Duolingo runs in public mode: once a day, Viky&apos;s keeper looks at the recipient&apos;s public profile
+              plainly, and when that look shows a day the contract can credit, reads it through an attested fetch (Reclaim
+              zkFetch through Reclaim&apos;s TEE client). The look is never evidence: it is not signed and not sent, and it
+              can only spare a reading the contract would refuse (<code>src/daily-look.ts</code>). The attestor signs
+              Duolingo&apos;s response; Viky verifies that signature, pins the attestor&apos;s address (the one in <code>src/reclaim-proof-set.ts</code>)
+              and checks the proof is about the right URL and username; the evidence signer then turns the
+              signed reading into an EIP-712 check-in, and the contract credits or refuses it. What is not verified: the
+              attestor&apos;s own TEE attestation, which zk-fetch 1.1.0 does not put in the proof. The person signs in to
+              nothing and installs nothing. The account is tied to the gift once: by the funder naming it, which proves
+              nothing about whose it is, or, when the recipient names it themselves, by a short code they place in their
+              Duolingo display name.
+            </p>
+          </Row>
+          <Row title="Hardened on 18 Sep 2026: one course, and the account as Duolingo names it">
+            <p className={HELP}>
+              Hardened on 18 Sep 2026, from Duolingo&apos;s own public profile (U1): a gift can be counted on one course rather
+              than on the experience total. The funder picks the course from that profile&apos;s own courses, the daily reading is
+              anchored on that course&apos;s id, and experience won in another course is not in the reading at all. Measured that
+              day over 19 public profiles and 74 courses: every course carries its id, its title and its experience, and the sum
+              of the courses is exactly the total the profile prints. A course gift is its own goal on the contract (goal 5,
+              provider id keccak256(&quot;viky:provider:duolingo-course-zkfetch:v1&quot;), registered in{" "}
+              <a className="underline" href="https://monadvision.com/tx/0xcaadaca7d0d3d362eb1112b3e45f66a1116d4335166283bf837053cf5fee8a69">
+                0xcaadaca7…8a69
+              </a>
+              ) and its identity is the person and the course together, pinned by the contract at the first reading. So a reading
+              of another course, or of the whole profile, cannot settle it, and gifts made before this keep counting the total
+              exactly as they did. What this does not cover: a gift whose funder did not name the account has no course to choose
+              from, so it counts the whole profile; and the course a gift counts is recorded by Viky, like the account name, not
+              signed into the terms on the chain.
+            </p>
+          </Row>
+          <Row title="What a reading costs, and the ceilings Viky holds itself to">
+            <p className={HELP}>
+              What a reading costs, written here on purpose: each attested read is paid on Reclaim&apos;s side (their public
+              price starts at $0.10 per verification). Reads are counted per gift, never per person: the morning pass looks
+              at each daily gift once, takes an attested read only for one whose look shows a day to credit, and skips one
+              already counted that day, so two gifts on one Duolingo account are two reads on a morning both earned a day. A
+              look that failed takes no read: the gift is looked at again at 03:30 UTC, and only then, if a day of it closes
+              at 06:00 that morning, is one read taken without a look, once. And a breaker holds every paid read
+              (<code>src/attested-calls.ts</code>): {dailyCeilings().perGift} for one gift in a UTC day and {dailyCeilings().all} for
+              all gifts, counted on the proofs given. Past it nothing is asked of Reclaim until the next day, and the
+              gift&apos;s page says when reading resumes and until when its open day can still be counted. The ceiling holds
+              no day: a day not read stays open until its catch-up window closes, 30 hours after it ends, and then goes back
+              to the funder like a missed day, whoever was at fault. A certificate&apos;s link is looked at plainly
+              before its proof, and a climb at its target is given three proofs a day at most. Connecting the account is one more, and a connection by code takes it only once a plain look
+              has found the code in the name; a count the person asks for looks first in the same way. No daily ceiling bounds
+              those asks, only ten in ten minutes from one IP address, counted in each app server&apos;s memory. A gift on
+              Fitbit is asked plainly first, with the person&apos;s key, and no proof is taken from a source that
+              refuses or does not answer; that look does not judge the day, so it is read attested each morning that has a
+              day to credit, earned or not. Strava was read the same way, and is closed. A climb
+              is looked at plainly, not through Reclaim, in both of the day&apos;s passes and at each ask, and read attested
+              only to connect the account or when that look does not show it below its target. Private sources keep the
+              user-proof path through the Reclaim verifier app.
+            </p>
+          </Row>
+          <Row title="The count of the month, and what was spent">
+            <p className={HELP} data-reclaim-cycle>
+              The month&apos;s count, kept here because Reclaim&apos;s dashboard shows no count of the fetches: its free tier
+              allows up to {RECLAIM_ALLOWANCE.fetches} attested fetches and {RECLAIM_ALLOWANCE.verifications} verifications a
+              month, and gives more on request only. {cycleInWords(reclaimUse)} A cycle runs from the 1st of a month to
+              the 1st of the next, as Reclaim&apos;s dashboard shows it for the account that holds Viky&apos;s two
+              applications.
+              {reclaimUse && (reclaimUse.fetches.allowed !== RECLAIM_ALLOWANCE.fetches || reclaimUse.verifications.allowed !== RECLAIM_ALLOWANCE.verifications)
+                ? " Reclaim has granted more than the free tier, and the limits in force are the ones counted against."
+                : ""}
+              {reclaimLimits?.readings
+                ? ` The limit of readings is reached: Viky sends no attested reading to Reclaim until the next cycle or until more is granted. The limit holds no day: a day waiting for a reading stays open until its catch-up window closes, then goes back to the funder like a missed day. A person whose gift waits for one reads this on its page, by the gift's own source, with what they can do folded under it: "${LIMIT.said("Duolingo", "readings", startsAgainInWords())}"`
+                : ""}
+              {reclaimLimits?.proofs
+                ? ` The limit of proofs is reached: Viky opens no new proof at Reclaim, and a person reads this before starting one, by the gift's own source: "${LIMIT.said("their university", "proofs", startsAgainInWords())}"`
+                : ""}{" "}
+              The limit Viky holds itself to goes by the readings that gave a proof and by the proofs that came back, not by
+              what was started or asked: what Reclaim counts is not published, and in September&apos;s cycle readings went
+              on giving their proof after the hundredth fetch was started, with no refusal for a quota: {SEPTEMBER_2026.proofs}{" "}
+              proofs given that we know of, for at least {SEPTEMBER_2026.started} fetches started.
+              {reclaimUse?.from === BEFORE_THE_JOURNAL.cycleFrom
+                ? ` Of this cycle's fetches, ${BEFORE_THE_JOURNAL.started} were started before the journal began and each gave a proof, counted on 3 Oct 2026 from the reading service's logs: two on 1 Oct, two on 2 Oct, one on 3 Oct.`
+                : ""}
+              {reclaimUse?.from === OUTSIDE_THE_JOURNAL.cycleFrom
+                ? ` ${OUTSIDE_THE_JOURNAL.started} more were asked on 12 Oct 2026 from a developer's machine, outside the journal and counted here: one attested read, without a gift, of each public source that had never passed a real one. ${OUTSIDE_THE_JOURNAL.proved} gave a proof, and one met a redirect.`
+                : ""}
+              {reclaimUse ? <span data-cycle-left> {readingsLeftInWords(reclaimUse)}</span> : null}{" "}
+              <span data-september-fault>
+                A fault of ours, found and corrected, in September&apos;s cycle: on 30 Sep 2026 the ratings of one Chess.com
+                gift answered 404, and the pass of every five minutes took a new proof of the profile at each round,{" "}
+                {LOST_ON_30_SEP_2026.fetches} fetches in five hours and {LOST_ON_30_SEP_2026.proofs} proofs lost. Corrected on
+                3 Oct 2026: a proof is claimed before it is paid for and a day has its ceilings, so the same fault now costs{" "}
+                {dailyCeilings().perGift} proofs in a day at most.
+              </span>{" "}
+              Since 3 Oct 2026 every fetch is written down as it leaves, proof or not, and a proof is claimed before it is
+              paid for: for one gift, once in {PROOF_EVERY_SECONDS.unseen / 3_600} hours after a look that failed or showed no
+              rating, once an hour in the gift&apos;s last day, and every {PROOF_EVERY_SECONDS.atTheTarget / 60} minutes at the
+              target until one settles it. The operator is told by email when{" "}
+              {RECLAIM_ALERT_LEFT.filter((mark) => mark > 0).join(", ")} and none are left of an allowance, the last with the days then waiting for a reading, and
+              each morning of the judging (from {utcDayInWords(JUDGING.from)} to {utcDayInWords(JUDGING.until)}) with what the
+              day before spent, by gift and by reason. What is not closed: a gift on Fitbit takes a proof for a
+              day that was not earned, a proof whose sending failed is taken again at the next reading, what a person shows has no ceiling of its own
+              for a gift, and a reading asked from a developer&apos;s machine reaches the same Reclaim application without
+              being written in this journal.
+            </p>
+          </Row>
+        </Rows>
       </Fold>
 
       <Fold id="risks" title="Risks and holes, written as they are">
-        <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
-          <li>
-            <strong>Duolingo&apos;s terms.</strong> The profile Viky reads is a public endpoint Duolingo does not
+        {/* Four groups, a line a point (the founder's preview of 12 Oct 2026): each point's whole text is one level down. */}
+        <RowGroup title="The sources&apos; terms" about="What each source&apos;s terms say, quoted, and what Viky reads from it.">
+          <Row title={<>Duolingo&apos;s terms</>}>
+            The profile Viky reads is a public endpoint Duolingo does not
             document, and Duolingo&apos;s terms say &quot;You may not use any data mining, robots, scraping, or similar
             data gathering or extraction methods&quot;. On the first two versions of the daily contract Viky reads a
             profile once a day for each gift made on it, a second time that day when the first shows a day to credit,
@@ -680,9 +751,9 @@ export default async function JudgesPage() {
             side. The day then stays open until its catch-up window closes, 30 hours after it ends, and goes back to
             the funder like a missed day: a failure of ours does not hold it longer. Only a pause of readings by the
             owner holds the open days, on the second and third versions of the daily contract and not on the first.
-          </li>
-          <li>
-            <strong>University portals&apos; terms.</strong> A proof of enrolment is shown by the person from their own
+          </Row>
+          <Row title={<>University portals&apos; terms</>}>
+            A proof of enrolment is shown by the person from their own
             student portal, in a verification tab where they sign in themselves. What each portal&apos;s terms of
             use say about a program reading its pages once a student has signed in is not read portal by portal:
             Reclaim, whose attestor proves the page, treats those terms as its own question and does not answer it
@@ -697,9 +768,9 @@ export default async function JudgesPage() {
             is lost and the miss written in the gift&apos;s journal. Whether a university has been read yet is said here
             and not in the flow (the founder, 26 Sep 2026):{" "}
             {portals ? `${portals.listed} universities listed, ${portals.read} read at least once.` : "the count could not be read right now."}
-          </li>
-          <li>
-            <strong>The world&apos;s universities, a provider per sense.</strong> The list is every university of
+          </Row>
+          <Row title={<>The world&apos;s universities, a provider per sense</>}>
+            The list is every university of
             Reclaim&apos;s directory whose student portal answered a plain request on 28 Sep 2026, wherever it is, placed in
             its country by the world universities list and, failing that, by its domain&apos;s country code. What reads a
             portal is a provider per sense: one for enrolment, one for the results page, each with its own domain, since a
@@ -714,9 +785,162 @@ export default async function JudgesPage() {
             {counts
               ? `${counts.listed} universities listed; ${counts.enrolment} with an enrolment provider, ${counts.results} with a results provider; ${counts.requested} ${counts.requested === 1 ? "provider" : "providers"} asked for and not built yet.`
               : "The counts could not be read right now."}
-          </li>
-          <li>
-            <strong>Providers read through a witness, no enclave.</strong> An AI provider carries no enclave
+          </Row>
+          <Row title={<>Exam results services&apos; terms</>}>
+            Two examination results are shown by the person from
+            their own account with the examining body, the way the TOEFL score is: Cambridge English&apos;s
+            Results Service for Candidates and the British Council&apos;s IELTS Test Taker Portal. Each provider is ours,
+            registered from a real candidate&apos;s session, and none exists yet; the definitions in docs/reclaim say
+            the page, the sign-in the candidate types in their own browser, and the fields. The terms read on 23 Sep
+            2026: Cambridge&apos;s website terms forbid scraping or storing the site&apos;s content on a server and
+            building a database from it; the British Council&apos;s forbid copying its content, misusing data on its
+            services and sharing a password, and name no automated access. Whether a candidate showing their own result
+            once falls under either of these is a question these lines do not answer: it is the founder&apos;s call
+            before each line opens, and nothing is shown until then.
+          </Row>
+          <Row title={<>Google Health&apos;s terms, and the one risk</>}>
+            Active minutes each day on Fitbit is connected by
+            the person once, on Google&apos;s own page: the legacy Fitbit Web API closes in September 2026, and the
+            line reads its successor, the Google Health API, which reads Fitbit trackers and Pixel Watches. Each morning the
+            keeper asks the daily roll-up of active minutes for yesterday through the attested fetch with their key as a
+            secret the attestor never sees, from wearables only, judges the moderate and vigorous minutes against the target,
+            and signs the verdict alone; the roll-up is dropped and no proof of it is kept. The Google Health API Developer
+            Terms and its Developer and User Data Policy (24 Mar 2026, read 23 Sep 2026) ask that the data serve the feature
+            the person asked for, reach a third party only to provide it and with their consent, be preceded by a disclosure
+            immediately before the consent, and be deleted on request: the consent screen in Viky&apos;s words, the yes or
+            no the funder learns, and the erase button that gives the key back first. The same erasing runs by itself
+            once a gift is over, finished, cancelled or ended by its person: the key given back, its row deleted, and
+            with it the account&apos;s id and the rows of the morning readings (<code>src/gift-end-erasure.ts</code>);
+            the journal of the days and the signed yes and stop are kept. The risk: the funder&apos;s daily yes
+            or no is itself one bit about the person given to a third party, under the consent they gave. The client is
+            published in production, so a connection does not lapse each week; past a hundred people, Google&apos;s app
+            verification and its third party security review (CASA) apply.
+          </Row>
+          <Row title={<>Strava: closed on 12 Oct 2026</>}>
+            <div data-strava-closed>
+Kilometres a day on Strava was built
+            the way Fitbit is read: connected by the person once, on Strava&apos;s own page, yesterday&apos;s activities
+            through the attested fetch with their key as a secret, the distances added, the verdict signed, the list
+            dropped. Its first real reading, gift 1002, was refused three times on 12 Oct 2026: Strava answered 403.
+            The size of that answer is the size of the refusal Strava gives an application whose owner holds no paid
+            subscription, which its developer program asks for since June 2026; the answer&apos;s body was not kept.
+            The founder does not take the subscription, so the line is closed: nobody can offer it, nobody is sent to
+            Strava&apos;s page, and nothing is read for it. Gift 1002 never started: its person can end it, and
+            otherwise the contract sends all of it back to the account that paid fourteen days after it was opened.
+            What stays written for the day the line opens again: Strava&apos;s API Agreement (read 23 Sep 2026) asks
+            that Strava Data serve the person who authorised it and nobody else, that it be neither aggregated across
+            people nor shown to others, and that it be deleted when they ask (the consent screen, the verdict-only
+            reading and the erase button that gives the key back first are those three, and the erasing runs by itself
+            once a gift is over, as for Fitbit); a new application is in single-player mode, so only its owner&apos;s
+            account could connect; and Strava&apos;s brand guidelines ask for &quot;Powered by Strava&quot; where Strava
+            data is shown, and Viky showed none, only a yes or a no.
+            </div>
+          </Row>
+          <Row title={<>edX&apos;s terms</>}>
+            An edX verified certificate is read from the public page edX publishes for
+            it, once per shared link and again at each reading. edX&apos;s terms (11.6, updated 3 Nov 2025) forbid
+            accessing its service through &quot;spiders, robots, crawlers, and data mining tools&quot; other than its
+            own. The risk is the one Duolingo&apos;s and Coursera&apos;s lines carry, written here rather than decided: a
+            person shares their own certificate, and Viky reads that one page.
+          </Row>
+          <Row title={<>Accredible&apos;s record</>}>
+            A credential issued on Accredible is read from the public record its
+            page is drawn from, once per shared link and again at each reading. Accredible&apos;s terms (April 2026)
+            are a contract with issuers and name no automated access; nothing about a reader is claimed. The funder names
+            the credential by its title and its issuer&apos;s website, because Accredible&apos;s course search is not open to a
+            reader: an issuer that names its credential like another&apos;s and lists another&apos;s website would pass, which
+            is written here rather than hidden.
+          </Row>
+          <Row title={<>CHSI&apos;s terms</>}>
+            Enrolment in a Chinese university is shown by the person from their own
+            CHSI report, in a verification tab, because the report&apos;s page can put an image captcha in front of
+            a server, and Viky does not answer captchas. CHSI&apos;s copyright statement forbids using its content and
+            services &quot;用于其他用途，包含但不限于商业行为&quot; without its consent, which Viky does not have. Its own pages
+            say the report is there for other organisations and people to check, free; whether that covers a gift is
+            the founder&apos;s call, written here.
+          </Row>
+          <Row title={<>MITx Online&apos;s terms</>}>
+            An MIT course certificate is read from the page MITx Online publishes
+            for it, once each time the person shares its link. Its terms forbid scraping or downloading its content
+            in bulk, and allow &quot;personal, noncommercial use&quot; of the site&apos;s content; Viky reads one certificate its
+            holder shares, for a gift, which is written here with the risk assumed as for edX. The line proves a course
+            passed on MITx Online, never a place at MIT, and Viky is not affiliated with MIT.
+          </Row>
+          <Row title={<>Breizh Chrono&apos;s terms</>}>
+            A marathon finished is read from the runner&apos;s own page on the
+            timing company&apos;s public results site, once each time the person asks after the race: the name
+            and the bib in its title, the official time in its cell. The site is run by Klikego, whose terms of use
+            (CGU of 26 Jun 2026) and legal notice claim the site&apos;s content and its database, forbid reproduction
+            without written consent, and count the use of robots among the reasons to close a member&apos;s account;
+            the same notice says results are published for everybody to consult, and that a runner can ask the
+            federation to be removed from them. Viky reads one runner&apos;s page per gift and keeps three fields, written
+            here with the risk assumed as for edX. The race&apos;s date is the register&apos;s; the bib entered before the
+            start ties the reading to the race, and the day the result is read is the day the gift is judged by. One
+            door stays open for the operator&apos;s accounts alone: a bib entered after the start, which is how a test
+            gift can run on the 2023 result. No proof of this line is shown on this page.
+          </Row>
+          <Row title={<>MikaTiming&apos;s results sites</>}>
+            The same line reads the marathons MikaTiming times (Chicago,
+            Frankfurt, Boston) from the runner&apos;s own page on each race&apos;s results site, found from the site&apos;s
+            search by bib: the name, the bib and the net finish time. Read on 26 Sep 2026: the sites&apos; legal notice
+            and general terms (mika:timing GmbH, Bergisch Gladbach) say nothing about reading a page and their privacy
+            statement concerns visitors&apos; data; their <code>robots.txt</code> tells every robot to stay out
+            (<code>Disallow: /</code>), and they answer 403 to a bare user agent. Viky reads one runner&apos;s page per
+            gift, at the person&apos;s own request, naming itself and its site in its user agent
+            (<code>Viky/1.0; +https://viky.cash</code>), and keeps three fields, written here with the risk assumed as
+            for edX. Open since goal 31 was signed on 26 Sep 2026.
+          </Row>
+          <Row title={<>The WCA&apos;s public API</>}>
+            A time set at a speedcubing competition is read from the World Cube
+            Association&apos;s public API: the competition&apos;s competitors list before the first day, the person&apos;s own
+            list of results after it, one row (the competition, the event, the round of their best single, the name
+            and the times as the WCA prints them). Read on 26 Sep 2026: the API asks for no key for public data, the
+            WCA&apos;s privacy statement says competition results are not personal data, its results export may be
+            re-published with a notice that the results are the WCA&apos;s, and its <code>robots.txt</code> keeps robots
+            out of its search only. The API answers 403 to a bare user agent; Viky names itself and its site, as
+            for MikaTiming. Open since goal 32 was signed on 26 Sep 2026.
+          </Row>
+          <Row title={<>Codeforces&apos; public API</>}>
+            A Codeforces rating is read every day from
+            <code>codeforces.com/api/user.info</code>, anonymous public data, one request every two seconds (the API
+            help, read 26 Sep 2026): the handle, the rating and the best rating ever, and once, when the person binds the
+            account with Viky&apos;s code, the last name of their profile. Its terms forbid commercial use of the site&apos;s
+            material and any use that harms it or impacts access; Viky reads one account&apos;s line a day, at the
+            person&apos;s request, naming itself. Codeforces polices itself: plagiarism is punished with a rating rollback
+            and a round that fails is made unrated. Open since goal 33 was signed on 26 Sep 2026.
+          </Row>
+          <Row title={<>race result&apos;s lists</>}>
+            The same marathon line reads the races race result times that Viky&apos;s
+            register keeps ({RACE_RESULT_KEPT.races} races in {RACE_RESULT_KEPT.countries} countries) from the event&apos;s own results
+            list, the bib&apos;s row alone: the name and the time at the columns the register fixed for that race, after
+            checking the list still names those columns as it did. Read on 26 Sep 2026: my race result&apos;s terms of
+            use say organisers publish results with the athlete&apos;s permission and nothing about reading a page; its
+            <code>robots.txt</code> keeps robots out of the list endpoint. Viky reads one row per gift, at the
+            person&apos;s request, naming itself, the risk assumed as for MikaTiming. Open since goal 34 was signed on
+            26 Sep 2026.
+          </Row>
+          <Row title={<>An incident, 26 Sep 2026: bursts are punished</>}>
+            Building the register of race result&apos;s races,
+            a script on a developer&apos;s machine asked race result four times a second; race result answered that
+            machine&apos;s address 429 &quot;too many requests&quot;, then 404 with a trap page, for hours, whatever the user
+            agent. Production does not read from that machine, and reads a race only when the person asks. Each press of
+            &quot;Read my result&quot; reads the platform plainly from Viky&apos;s own app servers (Vercel, Paris), once to
+            show the line and, if that works, once more just before the proof: four requests to race result in all (the
+            event&apos;s configuration and the bib&apos;s row, each time), three to MikaTiming (the search by bib twice, the
+            runner&apos;s page once). Those plain requests keep no pace; what bounds them is how often one person may ask,
+            per account and IP address: ten reads of the line and twenty proofs in ten minutes, counted in each app
+            server&apos;s memory. Only the attested reading goes through the reading service (on Railway, through
+            Reclaim&apos;s TEE client, so which address the platform sees for it is not verified), and since then that
+            service keeps a pace with race result and MikaTiming: at least three seconds between two readings of a
+            platform, four hundred a day, and after a 429, or race result&apos;s trap page, thirty minutes during which it
+            takes no new reading of that platform, and one already waiting its turn is put off too; a reading put off is
+            told to try again later, and nothing is counted for it. The pace is held in the service&apos;s memory: a
+            restart or a redeploy of the service forgets a pause and starts the day&apos;s count again.
+          </Row>
+        </RowGroup>
+        <RowGroup title="What a proof is worth" about="What a reading proves, and what it cannot.">
+          <Row title={<>Providers read through a witness, no enclave</>}>
+            An AI provider carries no enclave
             attestation. Viky verifies its proof the way it verifies its own readings: the claim must be signed by
             Viky&apos;s pinned witness and by nobody else, and must have read the provider&apos;s own domain. An AI provider
             names no request until Reclaim&apos;s agent writes one at the first real run, so it has no pattern until a
@@ -741,21 +965,9 @@ export default async function JudgesPage() {
                 ))}
               </ul>
             ) : null}
-          </li>
-          <li>
-            <strong>Exam results services&apos; terms.</strong> Two examination results are shown by the person from
-            their own account with the examining body, the way the TOEFL score is: Cambridge English&apos;s
-            Results Service for Candidates and the British Council&apos;s IELTS Test Taker Portal. Each provider is ours,
-            registered from a real candidate&apos;s session, and none exists yet; the definitions in docs/reclaim say
-            the page, the sign-in the candidate types in their own browser, and the fields. The terms read on 23 Sep
-            2026: Cambridge&apos;s website terms forbid scraping or storing the site&apos;s content on a server and
-            building a database from it; the British Council&apos;s forbid copying its content, misusing data on its
-            services and sharing a password, and name no automated access. Whether a candidate showing their own result
-            once falls under either of these is a question these lines do not answer: it is the founder&apos;s call
-            before each line opens, and nothing is shown until then.
-          </li>
-          <li>
-            <strong>What the number read is worth to anybody else.</strong> For a result the person shows from their
+          </Row>
+          <Row title={<>What the number read is worth to anybody else</>}>
+            For a result the person shows from their
             own account (an exam, the Study rail, a course), the number is seen once, on their own screen, and
             by nobody else: under the target nothing is relayed and they are told with the number; at or over
             it the attestation the contract receives carries the target as its value, which is the verdict. The
@@ -764,152 +976,15 @@ export default async function JudgesPage() {
             remains is the contract&apos;s record of the signed attestation. A number a source publishes (a rating, the
             XP a day is counted on, a score on a certificate page the person shares) is kept as read and written into
             the program, as before; the privacy page says which rule each condition is under.
-          </li>
-          <li>
-            <strong>Google Health&apos;s terms, and the one risk.</strong> Active minutes each day on Fitbit is connected by
-            the person once, on Google&apos;s own page: the legacy Fitbit Web API closes in September 2026, and the
-            line reads its successor, the Google Health API, which reads Fitbit trackers and Pixel Watches. Each morning the
-            keeper asks the daily roll-up of active minutes for yesterday through the attested fetch with their key as a
-            secret the attestor never sees, from wearables only, judges the moderate and vigorous minutes against the target,
-            and signs the verdict alone; the roll-up is dropped and no proof of it is kept. The Google Health API Developer
-            Terms and its Developer and User Data Policy (24 Mar 2026, read 23 Sep 2026) ask that the data serve the feature
-            the person asked for, reach a third party only to provide it and with their consent, be preceded by a disclosure
-            immediately before the consent, and be deleted on request: the consent screen in Viky&apos;s words, the yes or
-            no the funder learns, and the erase button that gives the key back first. The same erasing runs by itself
-            once a gift is over, finished, cancelled or ended by its person: the key given back, its row deleted, and
-            with it the account&apos;s id and the rows of the morning readings (<code>src/gift-end-erasure.ts</code>);
-            the journal of the days and the signed yes and stop are kept. The risk: the funder&apos;s daily yes
-            or no is itself one bit about the person given to a third party, under the consent they gave. The client is
-            published in production, so a connection does not lapse each week; past a hundred people, Google&apos;s app
-            verification and its third party security review (CASA) apply.
-          </li>
-          <li>
-            <strong data-strava-closed>Strava: closed on 12 Oct 2026.</strong> Kilometres a day on Strava was built
-            the way Fitbit is read: connected by the person once, on Strava&apos;s own page, yesterday&apos;s activities
-            through the attested fetch with their key as a secret, the distances added, the verdict signed, the list
-            dropped. Its first real reading, gift 1002, was refused three times on 12 Oct 2026: Strava answered 403.
-            The size of that answer is the size of the refusal Strava gives an application whose owner holds no paid
-            subscription, which its developer program asks for since June 2026; the answer&apos;s body was not kept.
-            The founder does not take the subscription, so the line is closed: nobody can offer it, nobody is sent to
-            Strava&apos;s page, and nothing is read for it. Gift 1002 never started: its person can end it, and
-            otherwise the contract sends all of it back to the account that paid fourteen days after it was opened.
-            What stays written for the day the line opens again: Strava&apos;s API Agreement (read 23 Sep 2026) asks
-            that Strava Data serve the person who authorised it and nobody else, that it be neither aggregated across
-            people nor shown to others, and that it be deleted when they ask (the consent screen, the verdict-only
-            reading and the erase button that gives the key back first are those three, and the erasing runs by itself
-            once a gift is over, as for Fitbit); a new application is in single-player mode, so only its owner&apos;s
-            account could connect; and Strava&apos;s brand guidelines ask for &quot;Powered by Strava&quot; where Strava
-            data is shown, and Viky showed none, only a yes or a no.
-          </li>
-          <li>
-            <strong>edX&apos;s terms.</strong> An edX verified certificate is read from the public page edX publishes for
-            it, once per shared link and again at each reading. edX&apos;s terms (11.6, updated 3 Nov 2025) forbid
-            accessing its service through &quot;spiders, robots, crawlers, and data mining tools&quot; other than its
-            own. The risk is the one Duolingo&apos;s and Coursera&apos;s lines carry, written here rather than decided: a
-            person shares their own certificate, and Viky reads that one page.
-          </li>
-          <li>
-            <strong>Accredible&apos;s record.</strong> A credential issued on Accredible is read from the public record its
-            page is drawn from, once per shared link and again at each reading. Accredible&apos;s terms (April 2026)
-            are a contract with issuers and name no automated access; nothing about a reader is claimed. The funder names
-            the credential by its title and its issuer&apos;s website, because Accredible&apos;s course search is not open to a
-            reader: an issuer that names its credential like another&apos;s and lists another&apos;s website would pass, which
-            is written here rather than hidden.
-          </li>
-          <li>
-            <strong>CHSI&apos;s terms.</strong> Enrolment in a Chinese university is shown by the person from their own
-            CHSI report, in a verification tab, because the report&apos;s page can put an image captcha in front of
-            a server, and Viky does not answer captchas. CHSI&apos;s copyright statement forbids using its content and
-            services &quot;用于其他用途，包含但不限于商业行为&quot; without its consent, which Viky does not have. Its own pages
-            say the report is there for other organisations and people to check, free; whether that covers a gift is
-            the founder&apos;s call, written here.
-          </li>
-          <li>
-            <strong>MITx Online&apos;s terms.</strong> An MIT course certificate is read from the page MITx Online publishes
-            for it, once each time the person shares its link. Its terms forbid scraping or downloading its content
-            in bulk, and allow &quot;personal, noncommercial use&quot; of the site&apos;s content; Viky reads one certificate its
-            holder shares, for a gift, which is written here with the risk assumed as for edX. The line proves a course
-            passed on MITx Online, never a place at MIT, and Viky is not affiliated with MIT.
-          </li>
-          <li>
-            <strong>Breizh Chrono&apos;s terms.</strong> A marathon finished is read from the runner&apos;s own page on the
-            timing company&apos;s public results site, once each time the person asks after the race: the name
-            and the bib in its title, the official time in its cell. The site is run by Klikego, whose terms of use
-            (CGU of 26 Jun 2026) and legal notice claim the site&apos;s content and its database, forbid reproduction
-            without written consent, and count the use of robots among the reasons to close a member&apos;s account;
-            the same notice says results are published for everybody to consult, and that a runner can ask the
-            federation to be removed from them. Viky reads one runner&apos;s page per gift and keeps three fields, written
-            here with the risk assumed as for edX. The race&apos;s date is the register&apos;s; the bib entered before the
-            start ties the reading to the race, and the day the result is read is the day the gift is judged by. One
-            door stays open for the operator&apos;s accounts alone: a bib entered after the start, which is how a test
-            gift can run on the 2023 result. No proof of this line is shown on this page.
-          </li>
-          <li>
-            <strong>MikaTiming&apos;s results sites.</strong> The same line reads the marathons MikaTiming times (Chicago,
-            Frankfurt, Boston) from the runner&apos;s own page on each race&apos;s results site, found from the site&apos;s
-            search by bib: the name, the bib and the net finish time. Read on 26 Sep 2026: the sites&apos; legal notice
-            and general terms (mika:timing GmbH, Bergisch Gladbach) say nothing about reading a page and their privacy
-            statement concerns visitors&apos; data; their <code>robots.txt</code> tells every robot to stay out
-            (<code>Disallow: /</code>), and they answer 403 to a bare user agent. Viky reads one runner&apos;s page per
-            gift, at the person&apos;s own request, naming itself and its site in its user agent
-            (<code>Viky/1.0; +https://viky.cash</code>), and keeps three fields, written here with the risk assumed as
-            for edX. Open since goal 31 was signed on 26 Sep 2026.
-          </li>
-          <li>
-            <strong>The WCA&apos;s public API.</strong> A time set at a speedcubing competition is read from the World Cube
-            Association&apos;s public API: the competition&apos;s competitors list before the first day, the person&apos;s own
-            list of results after it, one row (the competition, the event, the round of their best single, the name
-            and the times as the WCA prints them). Read on 26 Sep 2026: the API asks for no key for public data, the
-            WCA&apos;s privacy statement says competition results are not personal data, its results export may be
-            re-published with a notice that the results are the WCA&apos;s, and its <code>robots.txt</code> keeps robots
-            out of its search only. The API answers 403 to a bare user agent; Viky names itself and its site, as
-            for MikaTiming. Open since goal 32 was signed on 26 Sep 2026.
-          </li>
-          <li>
-            <strong>Codeforces&apos; public API.</strong> A Codeforces rating is read every day from
-            <code>codeforces.com/api/user.info</code>, anonymous public data, one request every two seconds (the API
-            help, read 26 Sep 2026): the handle, the rating and the best rating ever, and once, when the person binds the
-            account with Viky&apos;s code, the last name of their profile. Its terms forbid commercial use of the site&apos;s
-            material and any use that harms it or impacts access; Viky reads one account&apos;s line a day, at the
-            person&apos;s request, naming itself. Codeforces polices itself: plagiarism is punished with a rating rollback
-            and a round that fails is made unrated. Open since goal 33 was signed on 26 Sep 2026.
-          </li>
-          <li>
-            <strong>race result&apos;s lists.</strong> The same marathon line reads the races race result times that Viky&apos;s
-            register keeps ({RACE_RESULT_KEPT.races} races in {RACE_RESULT_KEPT.countries} countries) from the event&apos;s own results
-            list, the bib&apos;s row alone: the name and the time at the columns the register fixed for that race, after
-            checking the list still names those columns as it did. Read on 26 Sep 2026: my race result&apos;s terms of
-            use say organisers publish results with the athlete&apos;s permission and nothing about reading a page; its
-            <code>robots.txt</code> keeps robots out of the list endpoint. Viky reads one row per gift, at the
-            person&apos;s request, naming itself, the risk assumed as for MikaTiming. Open since goal 34 was signed on
-            26 Sep 2026.
-          </li>
-          <li>
-            <strong>An incident, 26 Sep 2026: bursts are punished.</strong> Building the register of race result&apos;s races,
-            a script on a developer&apos;s machine asked race result four times a second; race result answered that
-            machine&apos;s address 429 &quot;too many requests&quot;, then 404 with a trap page, for hours, whatever the user
-            agent. Production does not read from that machine, and reads a race only when the person asks. Each press of
-            &quot;Read my result&quot; reads the platform plainly from Viky&apos;s own app servers (Vercel, Paris), once to
-            show the line and, if that works, once more just before the proof: four requests to race result in all (the
-            event&apos;s configuration and the bib&apos;s row, each time), three to MikaTiming (the search by bib twice, the
-            runner&apos;s page once). Those plain requests keep no pace; what bounds them is how often one person may ask,
-            per account and IP address: ten reads of the line and twenty proofs in ten minutes, counted in each app
-            server&apos;s memory. Only the attested reading goes through the reading service (on Railway, through
-            Reclaim&apos;s TEE client, so which address the platform sees for it is not verified), and since then that
-            service keeps a pace with race result and MikaTiming: at least three seconds between two readings of a
-            platform, four hundred a day, and after a 429, or race result&apos;s trap page, thirty minutes during which it
-            takes no new reading of that platform, and one already waiting its turn is put off too; a reading put off is
-            told to try again later, and nothing is counted for it. The pace is held in the service&apos;s memory: a
-            restart or a redeploy of the service forgets a pause and starts the day&apos;s count again.
-          </li>
-          <li>
-            <strong>Coursera.</strong> Nothing published says a certificate was earned under supervision: Coursera
+          </Row>
+          <Row title={<>Coursera</>}>
+            Nothing published says a certificate was earned under supervision: Coursera
             verifies identity once per account, and says some programmes require it while others only check a name.
             The condition is open, and that is all it proves: a certificate with that course and that day, on the page
             the person shares.
-          </li>
-          <li>
-            <strong>The homonym.</strong> A gift is bound to an account on the source, not to a person. Two people can
+          </Row>
+          <Row title={<>The homonym</>}>
+            A gift is bound to an account on the source, not to a person. Two people can
             share a display name, and the funder can name the wrong account when they offer the gift. When the funder names
             the account, on Duolingo, Chess.com or Codeforces, that naming is the whole tie: no code is asked, so whoever
             opens the link is paid when that account gets there, and a recipient who gave the funder the name of an
@@ -917,69 +992,33 @@ export default async function JudgesPage() {
             asked only of an account the recipient names themselves; it proves that whoever put it there controls that
             account, not that they are the person the funder had in mind. A gift sent to the wrong account with the right
             name would count that account&apos;s work.
-          </li>
-          <li>
-            <strong>The milestone, two limits.</strong> A target reached before the account is connected pays nothing:
+          </Row>
+          <Row title={<>The milestone, two limits</>}>
+            A target reached before the account is connected pays nothing:
             the first reading is recorded as the starting point whatever it says, so the climb is measured from there.
             And a rating that drops back before the reading that would have paid it does not pay either, because the
             contract judges the reading, not the game: Viky looks at each climb every five minutes, when an outside
             scheduler calls its pass, and whenever the recipient asks from the gift&apos;s page, and a rating reached and
             lost between two readings never settles.
-          </li>
-          <li>
-            <strong>The relayer&apos;s one key, found by the audit of 27 Sep 2026.</strong> Every relayed step is sent by one
+          </Row>
+        </RowGroup>
+        <RowGroup title="Viky&apos;s own keys and steps" about="What our keys can do, and what happens when a step fails.">
+          <Row title={<>The relayer&apos;s one key, found by the audit of 27 Sep 2026</>}>
+            Every relayed step is sent by one
             key, and the servers that send them do not share a count of its transactions. Two steps sent at the same moment
             from two servers can take the same number: the network keeps one, the other is refused and its person is told
             it did not go through. Nothing moves twice, and the refused step can be sent again. Sharing that count between
             servers is not built.
-          </li>
-          <li>
-            <strong>A step whose confirmation runs out, found by the same audit.</strong> A claim, a day counted, a
+          </Row>
+          <Row title={<>A step whose confirmation runs out, found by the same audit</>}>
+            A claim, a day counted, a
             withdrawal or a proof is written in Viky&apos;s journal once the chain has made it final. When the wait for that
             runs out, the step may still land with no line in the journal until it is read again. The contract&apos;s own
             record is then the truth, and the commands on this page read it. A gift&apos;s creation and a judge credit are
             already read back from the chain in that case, and a send says it is being confirmed rather than that it failed.
-          </li>
-          <li>
-            <strong>A gift card or top-up whose invoice lapses, found by the same audit.</strong> Which status Bitrefill
-            gives an invoice whose time to pay has run out is not in its documentation, and it could not be read without an
-            account key. An order in that state is listed for an operator rather than guessed, and its money stays counted
-            as held for its person until it is settled.
-          </li>
-          <li>
-            <strong>The way out.</strong> Viky can say that the payout service reports the payment as completed. It can
-            never say the money arrived in a bank: the bank leg is outside anything Viky can read, and no screen claims
-            otherwise.
-          </li>
-          <li>
-            <strong>Mobile money.</strong> A payout to a mobile money number through Switch Labs. The person types the
-            amount in their own money, francs for instance, and Switch&apos;s quote for exactly that amount gives the
-            dollars it takes. Its ceilings are the gift cards&apos; rule: {MOBILE_CEILINGS_WORDS}, checked when the payout is
-            priced and again when it is sent, and said in place of the form when the day&apos;s is met. Switch refused
-            every quote to Viky&apos;s key until 2 Oct 2026, 23:23 UTC, and has answered them since.{" "}
-            {mobileOn
-              ? "Offered to everybody since 3 Oct 2026, by the founder's rule that a way whose code is complete is open at its deployment; the one setting that opens it also closes it, should Switch stop answering well. "
-              : null}
-            <UseLine use={mobileUse} name="mobile-money" />
-          </li>
-          <li>
-            <strong>The Bitrefill way out.</strong> What it is: Viky buys a good, a phone top-up of credit or data or a
-            gift card, for the person, with the person&apos;s own money. They sign their AUSD over to Viky&apos;s treasury on Monad, and the
-            treasury passes it to Relay (relay.link), which pays Bitrefill&apos;s invoice in USDC on Base: the person pays the
-            invoice and Relay&apos;s fee, shown with the price, and no float is used. A failure after the money arrived sends it back by
-            itself, when the order is next read and at the latest by the daily settling pass at 07:00 UTC. It is neither an
-            exchange nor a bank payment, which is to be read again the day Viky is a company.
-            It runs on Bitrefill&apos;s Personal API, whose documentation names the Business API for an app that sells
-            its products; its terms say customers are end users and a buyer for resale may be frozen until verified
-            as a company (section 18), and an Agent acts for the customer who pays (section 29). The founder chose the
-            Personal API for the pilot, the risk assumed and written here.
-            The pilot&apos;s limits, within the account&apos;s own: five orders and 500 USD a day for everybody together, top-ups
-            and gift cards alike, and 50 USD a person a day, checked when the price is given and again when the person pays. Open to everybody since its code was complete (the founder, 26 Sep 2026);
-            what is missing is said at the moment it is missing, and nothing is taken. Credit: {used(uses?.phone)} Mobile
-            data: {used(uses?.data)} A gift card: {used(uses?.gift_card)}
-          </li>
-          <li>
-            <strong>Our own key.</strong> A reading counts because Viky&apos;s evidence signer signed it. On the first
+          </Row>
+          <Row title={<>Our own key</>}>
+            A reading counts because Viky&apos;s evidence signer signed it. On the first
             version of the contracts so does the opening of a gift: that key is what tells the contract which account
             opened it. So whoever holds it, and the owner can put another key in its place, could open a gift still
             waiting for its recipient into an account of their own, sign readings for it and take it: the whole amount at
@@ -1002,8 +1041,48 @@ export default async function JudgesPage() {
               : null}{" "}
             It cannot change the terms a funder signed or take back what was already credited. The journal on this page
             is what makes a signature without a real reading behind it detectable, for the readings whose proof is kept.
-          </li>
-        </ul>
+          </Row>
+        </RowGroup>
+        <RowGroup title="The ways out" about="What Viky can say of money that left, and each way&apos;s ceiling.">
+          <Row title={<>A gift card or top-up whose invoice lapses, found by the same audit</>}>
+            Which status Bitrefill
+            gives an invoice whose time to pay has run out is not in its documentation, and it could not be read without an
+            account key. An order in that state is listed for an operator rather than guessed, and its money stays counted
+            as held for its person until it is settled.
+          </Row>
+          <Row title={<>The way out</>}>
+            Viky can say that the payout service reports the payment as completed. It can
+            never say the money arrived in a bank: the bank leg is outside anything Viky can read, and no screen claims
+            otherwise.
+          </Row>
+          <Row title={<>Mobile money</>}>
+            A payout to a mobile money number through Switch Labs. The person types the
+            amount in their own money, francs for instance, and Switch&apos;s quote for exactly that amount gives the
+            dollars it takes. Its ceilings are the gift cards&apos; rule: {MOBILE_CEILINGS_WORDS}, checked when the payout is
+            priced and again when it is sent, and said in place of the form when the day&apos;s is met. Switch refused
+            every quote to Viky&apos;s key until 2 Oct 2026, 23:23 UTC, and has answered them since.{" "}
+            {mobileOn
+              ? "Offered to everybody since 3 Oct 2026, by the founder's rule that a way whose code is complete is open at its deployment; the one setting that opens it also closes it, should Switch stop answering well. "
+              : null}
+            <UseLine use={mobileUse} name="mobile-money" />
+          </Row>
+          <Row title={<>The Bitrefill way out</>}>
+            What it is: Viky buys a good, a phone top-up of credit or data or a
+            gift card, for the person, with the person&apos;s own money. They sign their AUSD over to Viky&apos;s treasury on Monad, and the
+            treasury passes it to Relay (relay.link), which pays Bitrefill&apos;s invoice in USDC on Base: the person pays the
+            invoice and Relay&apos;s fee, shown with the price, and no float is used. A failure after the money arrived sends it back by
+            itself, when the order is next read and at the latest by the daily settling pass at 07:00 UTC. It is neither an
+            exchange nor a bank payment, which is to be read again the day Viky is a company.
+            It runs on Bitrefill&apos;s Personal API, whose documentation names the Business API for an app that sells
+            its products; its terms say customers are end users and a buyer for resale may be frozen until verified
+            as a company (section 18), and an Agent acts for the customer who pays (section 29). The founder chose the
+            Personal API for the pilot, the risk assumed and written here.
+            The pilot&apos;s limits, within the account&apos;s own: five orders and 500 USD a day for everybody together, top-ups
+            and gift cards alike, and 50 USD a person a day, checked when the price is given and again when the person pays. Open to everybody since its code was complete (the founder, 26 Sep 2026);
+            what is missing is said at the moment it is missing, and nothing is taken. Credit: {used(uses?.phone)} Mobile
+            data: {used(uses?.data)} A gift card: {used(uses?.gift_card)}
+          </Row>
+        </RowGroup>
       </Fold>
 
       <MilestoneJudges />

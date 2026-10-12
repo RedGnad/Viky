@@ -1,6 +1,6 @@
 import { dateOfDay } from "@/src/day-record";
 import { earlyGifts, EARLIER_HOST } from "@/src/judges-gifts";
-import { Fold } from "./Fold";
+import { Fold, Row, Rows } from "./Fold";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
@@ -18,13 +18,17 @@ export async function JudgesEarlyGifts() {
   if (gifts.length === 0) return null;
   return (
     <Fold id="first-gifts" title="The first two gifts, and why this app does not show them" space="md">
-      <p className={HELP}>
-        Gifts {gifts.map((gift) => gift.giftId).join(" and ")} were made and opened on {EARLIER_HOST}, before{" "}
-        viky.cash served the app. An account here is a passkey, and a passkey is bound to the hostname it was created
-        on, for ever and by design: the browser will not offer it to another host, and no server can move it. So that
-        account cannot sign in here, and this app cannot show you its gifts. Nothing was lost and nothing is hidden:
-        everything those gifts did is on the chain, and every figure below is read from it while this page is served.
-      </p>
+      <Rows>
+        <Row title="Where they were made, and why this app does not show them">
+          <p className={HELP}>
+            Gifts {gifts.map((gift) => gift.giftId).join(" and ")} were made and opened on {EARLIER_HOST}, before{" "}
+            viky.cash served the app. An account here is a passkey, and a passkey is bound to the hostname it was created
+            on, for ever and by design: the browser will not offer it to another host, and no server can move it. So that
+            account cannot sign in here, and this app cannot show you its gifts. Nothing was lost and nothing is hidden:
+            everything those gifts did is on the chain, and every figure below is read from it while this page is served.
+          </p>
+        </Row>
+      </Rows>
       {gifts.map((gift) => (
         <div key={gift.giftId} className="space-y-[var(--space-xs)] border-t border-[var(--divider)] pt-[var(--space-md)]">
           <h3 className="font-medium">
@@ -63,11 +67,15 @@ export async function JudgesEarlyGifts() {
           </dl>
         </div>
       ))}
-      <p className={MUTED}>
-        What this costs us, said plainly: those two gifts can never be read inside the app, on any device, because the
-        passkey that holds them answers only to {EARLIER_HOST}. Gifts made here are bound to viky.cash and stay
-        readable here.
-      </p>
+      <Rows>
+        <Row title="What this costs us">
+          <p className={MUTED}>
+            What this costs us, said plainly: those two gifts can never be read inside the app, on any device, because the
+            passkey that holds them answers only to {EARLIER_HOST}. Gifts made here are bound to viky.cash and stay
+            readable here.
+          </p>
+        </Row>
+      </Rows>
     </Fold>
   );
 }

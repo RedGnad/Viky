@@ -3,7 +3,7 @@ import { formatAusd, formatAusdExact } from "@/src/gift-reader";
 import { AUSD_ADDRESS, createMonadPublicClient } from "@/src/monad/chain";
 import { dateInWords } from "@/src/moments";
 import { giftEscrowV3Address } from "@/src/v2";
-import { Fold } from "./Fold";
+import { Fold, Row, Rows } from "./Fold";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
@@ -57,22 +57,28 @@ export async function JudgesIndex({ index }: Readonly<{ index: IndexRead | null 
   // Which contracts the deployment read follows is said from what it holds, never from a number written here.
   const third = followsThirdDailyContract(index);
   const thirdMissing = !third && giftEscrowV3Address() !== null;
+  // How many contracts the index and the token agree on, said on the line a judge reads before opening it.
+  const agreeing = [...held.entries()].filter(([contract, indexed]) => chain?.balances.get(contract) === indexed).length;
   return (
     <Fold id="index" title="The index of the contracts' events">
-      <p className={HELP}>
-        The contracts&apos; events are indexed with Envio HyperIndex, in the repository RedGnad/Viky-index, and read here
-        as this page is served. No movement of money depends on it: it is a second reading of the same events, set
-        beside the chain so that anybody can see whether the two agree. It follows the two gift contracts of each of
-        the first two versions, the earlier gift contract, {third ? "the daily contract of the third version, " : ""}the way out and
-        the anchor of agreements.
-        {thirdMissing ? (
-          <span data-index="third-missing">
-            {" "}
-            The deployment read here was made before the third daily contract and does not follow it: a daily gift made
-            since 3 Oct 2026 is not in it.
-          </span>
-        ) : null}
-      </p>
+      <Rows>
+        <Row title="What the index is, where it runs, and what it is not">
+          <p className={HELP}>
+            The contracts&apos; events are indexed with Envio HyperIndex, in the repository RedGnad/Viky-index, and read here
+            as this page is served. No movement of money depends on it: it is a second reading of the same events, set
+            beside the chain so that anybody can see whether the two agree. It follows the two gift contracts of each of
+            the first two versions, the earlier gift contract, {third ? "the daily contract of the third version, " : ""}the way out and
+            the anchor of agreements.
+            {thirdMissing ? (
+              <span data-index="third-missing">
+                {" "}
+                The deployment read here was made before the third daily contract and does not follow it: a daily gift made
+                since 3 Oct 2026 is not in it.
+              </span>
+            ) : null}
+          </p>
+        </Row>
+      </Rows>
       <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] [@media(min-width:600px)]:grid-cols-[14rem_1fr]">
         <dt className={MUTED}>Where the index stands</dt>
         <dd className={HELP} data-index="block">
@@ -92,35 +98,40 @@ export async function JudgesIndex({ index }: Readonly<{ index: IndexRead | null 
           {index.totals.consentKeysBound} {index.totals.consentKeysBound === 1 ? "account has" : "accounts have"} bound an agreement key,{" "}
           {index.totals.yesAnchored} yes and {index.totals.stopsAnchored} {index.totals.stopsAnchored === 1 ? "stop" : "stops"} are written down.
         </dd>
-        <dt className={MUTED}>The index beside the token</dt>
-        <dd className={HELP}>
-          {[...held.entries()].map(([contract, indexed]) => {
-            const onChain = chain?.balances.get(contract);
-            return (
-              <span key={contract} className="block [overflow-wrap:anywhere]" data-index-contract={contract}>
-                <a className="underline" href={`https://monadvision.com/address/${contract}`}>
-                  {contract}
-                </a>
-                : the index&apos;s events add up to {formatAusdExact(indexed)} still held
-                {onChain === undefined ? ", and what the token says it holds could not be read just now." : onChain === indexed ? `, and the token says it holds ${formatAusdExact(onChain)}: the same.` : `, and the token says it holds ${formatAusdExact(onChain)}: they differ.`}
-              </span>
-            );
-          })}
-          What a contract holds is what was put into its gifts, less what was taken out and what was sent back; the token&apos;s
-          figure is AUSD&apos;s own <code>balanceOf</code>.
-        </dd>
-        <dt className={MUTED}>Every gift, and the transaction that created it</dt>
-        <dd className={HELP}>
-          {index.gifts.map((gift) => (
-            <span key={`${gift.contract}-${gift.giftId}`} className="block">
-              Gift {gift.giftId}, {gift.kind}, {formatAusd(gift.amount)}, {gift.status}, made {dayOf(gift.createdAt)}:{" "}
-              <a className="underline" href={`https://monadvision.com/tx/${gift.createdInTransaction}`}>
-                {short(gift.createdInTransaction)}
-              </a>
-            </span>
-          ))}
-        </dd>
       </dl>
+      <Rows>
+        {/* Contract by contract: what the index says it holds beside what the token says, and how many agree. */}
+        <Row title="The index beside the token, contract by contract" meta={<span data-index="agree">{chain ? `${agreeing} of ${held.size} the same` : "the token not read"}</span>}>
+          <p className={HELP}>
+            {[...held.entries()].map(([contract, indexed]) => {
+              const onChain = chain?.balances.get(contract);
+              return (
+                <span key={contract} className="block [overflow-wrap:anywhere]" data-index-contract={contract}>
+                  <a className="underline" href={`https://monadvision.com/address/${contract}`}>
+                    {contract}
+                  </a>
+                  : the index&apos;s events add up to {formatAusdExact(indexed)} still held
+                  {onChain === undefined ? ", and what the token says it holds could not be read just now." : onChain === indexed ? `, and the token says it holds ${formatAusdExact(onChain)}: the same.` : `, and the token says it holds ${formatAusdExact(onChain)}: they differ.`}
+                </span>
+              );
+            })}
+            What a contract holds is what was put into its gifts, less what was taken out and what was sent back; the token&apos;s
+            figure is AUSD&apos;s own <code>balanceOf</code>.
+          </p>
+        </Row>
+        <Row title="Every gift, and the transaction that created it" meta={<span>{index.gifts.length} {index.gifts.length === 1 ? "gift" : "gifts"}</span>}>
+          <p className={HELP}>
+            {index.gifts.map((gift) => (
+              <span key={`${gift.contract}-${gift.giftId}`} className="block">
+                Gift {gift.giftId}, {gift.kind}, {formatAusd(gift.amount)}, {gift.status}, made {dayOf(gift.createdAt)}:{" "}
+                <a className="underline" href={`https://monadvision.com/tx/${gift.createdInTransaction}`}>
+                  {short(gift.createdInTransaction)}
+                </a>
+              </span>
+            ))}
+          </p>
+        </Row>
+      </Rows>
     </Fold>
   );
 }

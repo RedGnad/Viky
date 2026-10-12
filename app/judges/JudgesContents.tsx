@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 /** The sections of the judges page, in the order they stand, by the id of each and the words its link carries. */
 export const JUDGES_CONTENTS: ReadonlyArray<Readonly<{ id: string; says: string }>> = [
   { id: "try", says: "How to try it" },
+  { id: "universities", says: "Universities" },
   { id: "who", says: "Who has used Viky" },
   { id: "network", says: "Network and addresses" },
   { id: "verify", says: "Verify a credited day yourself" },

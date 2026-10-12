@@ -141,7 +141,7 @@ test("the conditions the README counts are the catalogue's, family by family", (
   }
   // The universities beyond the first are set up on request, in the words the judges page and the card say it.
   assert.ok(said.includes("(the first is read today; each other is set up within two days of a first gift)"));
-  assert.match(readFileSync("app/judges/JudgesMinute.tsx", "utf8"), /more: each set up within two days of a first gift\./);
+  assert.match(readFileSync("app/judges/JudgesUniversities.tsx", "utf8"), /more: each set up within two days of a first gift\./);
 });
 
 test("how money leaves is the register's six ways, and the word check is said in its own section", () => {

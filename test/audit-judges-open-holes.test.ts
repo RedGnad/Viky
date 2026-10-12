@@ -9,7 +9,7 @@ const page = readFileSync(new URL("../app/judges/page.tsx", import.meta.url), "u
 
 test("the judges page names the three holes left open, in its list of risks", () => {
   const risks = page.slice(page.indexOf("Risks and holes, written as they are"));
-  for (const hole of ["The relayer&apos;s one key, found by the audit of 27 Sep 2026.", "A step whose confirmation runs out, found by the same audit.", "A gift card or top-up whose invoice lapses, found by the same audit."]) {
+  for (const hole of ["<Row title={<>The relayer&apos;s one key, found by the audit of 27 Sep 2026</>}>", "<Row title={<>A step whose confirmation runs out, found by the same audit</>}>", "<Row title={<>A gift card or top-up whose invoice lapses, found by the same audit</>}>"]) {
     assert.ok(risks.includes(hole), hole);
   }
 });

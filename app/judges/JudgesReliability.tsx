@@ -1,5 +1,5 @@
 import { daysSince, heldDays, passesSince, readingTotals, refusalsByCode } from "@/src/pass-log";
-import { Fold } from "./Fold";
+import { Fold, Row, Rows } from "./Fold";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
@@ -69,12 +69,16 @@ export async function JudgesReliability() {
         {elapsed === 0 ? "today" : `${elapsed} ${elapsed === 1 ? "day" : "days"} ago`}. Passes before that day left no
         trace, so they are not counted here, and nothing has been filled in for them.
       </p>
-      <p className={MUTED}>
-        The hour, and not the minute, is what a run is held to here, because it is what the platform undertakes: on
-        this plan Vercel &quot;may invoke these cron jobs at any point within the specified hour to help distribute load
-        across all accounts&quot; (their documentation, read 19 September 2026). How long after its minute each pass
-        actually began is said below, so the promise being kept never hides the delay.
-      </p>
+      <Rows>
+        <Row title="Why the hour is held, and not the minute">
+          <p className={MUTED}>
+            The hour, and not the minute, is what a run is held to here, because it is what the platform undertakes: on
+            this plan Vercel &quot;may invoke these cron jobs at any point within the specified hour to help distribute load
+            across all accounts&quot; (their documentation, read 19 September 2026). How long after its minute each pass
+            actually began is said below, so the promise being kept never hides the delay.
+          </p>
+        </Row>
+      </Rows>
       <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] [@media(min-width:600px)]:grid-cols-[18rem_1fr]">
         {since.plans.map((plan) => (
           <div key={plan.plan} className="contents">

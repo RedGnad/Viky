@@ -15,9 +15,10 @@ const CONTRACTS = ["contracts/GiftEscrow.sol", "contracts/MilestoneGift.sol"] as
 /** The words a judge reads in the "Our own key" item, without the markup. */
 function ourOwnKey(): string {
   const page = readFileSync("app/judges/page.tsx", "utf8");
-  const start = page.indexOf("<strong>Our own key.</strong>");
+  // The item is a row of the fold of risks since 12 Oct 2026: its title is the row's line, its text the row's body.
+  const start = page.indexOf("<Row title={<>Our own key</>}>");
   assert.ok(start >= 0, "the judges page still has an item on our own key");
-  const end = page.indexOf("</li>", start);
+  const end = page.indexOf("</Row>", start);
   assert.ok(end > start);
   return page
     .slice(start, end)

@@ -39,11 +39,13 @@ for (const size of SIZES) {
       // none): either way the block leads to the check of a credited day.
       await expect(page.locator('[data-minute="command"]')).toContainText(/cast call 0x[0-9a-fA-F]{40} "owner\(\)\(address\)"|No gift contract is set on this deployment/);
       await expect(page.locator('[data-minute="command"]').getByRole("link", { name: "verify a credited day yourself" })).toHaveAttribute("href", "#verify");
-      const risks = page.locator("#risks details");
+      // The fold itself: its rows are folds too since 12 Oct 2026, one level down.
+      const risks = page.locator("#risks > details");
       await expect(risks).not.toHaveAttribute("open", "");
       await page.getByRole("navigation", { name: "On this page" }).getByRole("link", { name: "Risks and holes" }).click();
       await expect(risks).toHaveAttribute("open", "");
-      await expect(page.getByText("Duolingo's terms.")).toBeVisible();
+      // What the fold holds is there: its first row, by the line that names it.
+      await expect(page.locator("#risks details.judges-row > summary").first()).toHaveText("Duolingo's terms");
       // Nothing is wider than the screen, folded or opened.
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
 

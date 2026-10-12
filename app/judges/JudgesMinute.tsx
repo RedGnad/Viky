@@ -9,6 +9,7 @@ import { countInWords } from "@/src/university-choice";
 import { CopyLine } from "../kit/CopyLine";
 import { UniversityPath } from "../kit/UniversityPath";
 import { META, TITLE } from "../components/ui";
+import { Row, Rows } from "./Fold";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
@@ -42,17 +43,11 @@ export function JudgesMinute({
   index,
   credited,
   contracts,
-  moreUniversities,
-  readyOnReclaim,
 }: Readonly<{
   index: IndexRead | null;
   /** The accounts the judge code credited, or nothing when its journal could not be read: no count is then given. */
   credited: ReadonlySet<string> | null;
   contracts: Readonly<{ daily: string | null; milestone: string | null; anchor: string | null; version: 1 | 2 | 3 }>;
-  /** How many universities are listed beyond the ones a student can show from today, or nothing when not counted. */
-  moreUniversities: number | null;
-  /** The universities ready on a check approved by Reclaim, each by the name the directory's entry gives its line. */
-  readyOnReclaim: readonly string[];
 }>) {
   const usage = index && credited ? usageOf(index.gifts, founderAccounts(operatorAccounts()), credited) : null;
   const others = usage ? usage.gifts - usage.fromJudgeCredit : 0;
@@ -62,89 +57,50 @@ export function JudgesMinute({
       <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] [@media(min-width:600px)]:grid-cols-[10rem_1fr]">
         <dt className={MUTED}>What it is</dt>
         <dd className={HELP}>
-          A conditional gift on Monad. Someone puts money behind another person&apos;s goal: it is allocated in that
-          person&apos;s name from the first day, becomes theirs as a source that is not Viky says the thing was done, and
-          what is not earned goes back to the funder by itself. Nobody profits from a missed day.
+          A conditional gift on Monad. Money is put in someone&apos;s name and becomes theirs as a source that is not Viky
+          says the thing was done. What is not earned goes back by itself.
         </dd>
         <dt className={MUTED}>Who it is for</dt>
         <dd className={HELP}>
-          The person who pays for somebody else&apos;s effort from a distance and cannot check it themselves: a parent
-          paying for a year of studies in another city or another country, a relative backing a language, a certificate, a
-          race.
+          The person who pays for someone else&apos;s effort from a distance and cannot check it: a year of studies, a
+          language, a certificate, a race.
         </dd>
         <dt className={MUTED}>Who has used it</dt>
         <dd className={HELP} data-minute="use">
           {usage ? (
             <>
-              {count(usage.gifts, "gift", "gifts")} made, {formatAusd(usage.funded)} put into them
-              {/* A gift paid from a judge credit is a try of this page's own path: said, and counted apart. */}
-              {usage.fromJudgeCredit > 0 ? (
-                <span data-minute="judge-credit">
-                  . {usage.fromJudgeCredit} {usage.fromJudgeCredit === 1 ? "was" : "were"} paid from a judge credit and{" "}
-                  {usage.fromJudgeCredit === 1 ? "is" : "are"} counted apart. {others === 1 ? "The other was" : `The ${others} others were`} funded by{" "}
-                </span>
-              ) : (
-                ": funded by "
-              )}
-              {/* Each count with its own share that is not the founder's (the founder's words, 10 Oct 2026). */}
-              {count(usage.funders.all, "account", "accounts")}, {usage.funders.all - usage.funders.founders} of them not the
-              founder&apos;s, and opened by {usage.recipients.all}, {usage.recipients.all - usage.recipients.founders} of them not
-              his. {formatAusd(usage.earned)} earned, {formatAusd(usage.sentBack)} gone back. Counted from the index as this page
-              is served:{" "}
+              <strong>{count(usage.gifts, "gift", "gifts")}</strong>, <strong>{formatAusd(usage.funded)}</strong> put into them. Outside the
+              founder&apos;s own tries: {count(usage.funders.all - usage.funders.founders, "account", "accounts")} funded a gift and{" "}
+              {usage.recipients.all - usage.recipients.founders} opened one.{" "}
             </>
           ) : index ? (
-            "The journal of judge credits could not be read just now, so no count is given here: "
+            "The journal of judge credits could not be read just now, so no count is given here. "
           ) : (
-            "The index of the contracts' events could not be read just now, so no count is given here: "
+            "The index of the contracts' events could not be read just now, so no count is given here. "
           )}
           <a className="underline" href="#who">
-            who has used Viky
+            Who has used Viky
           </a>
           .
         </dd>
-        {/* The universities (the founder's mockup of 11 Oct 2026): the path of a first gift and the path of every gift
-            after it, the drawing a gift's own card carries (app/kit/UniversityPath.tsx), each over the real pass that ran
-            it; then what is ready on a check of Reclaim's alone, and how many more. */}
-        <dt className={MUTED}>Universities</dt>
-        <dd className={HELP} data-minute="universities">
-          <span className="block">A university is set up once, by its first gift.</span>
-          <span className="block">Its first proof is read by hand. Viky then fixes the rule that reads its page, and every later proof is paid on sign-in.</span>
-          <div className="judges-paths">
-            <div data-toulouse="first">
-              <p className={META}>The first gift</p>
-              <UniversityPath provider="none" results={false} yours={false} label="The first gift at a university, stop by stop" />
-              <p>
-                Toulouse, {TOULOUSE_PASSES.first.day}: a real student showed their enrolment, and{" "}
-                <a className="underline" href={`https://monadvision.com/tx/${TOULOUSE_PASSES.first.paidTx}`}>
-                  the gift paid
-                </a>{" "}
-                once the proof had been read by hand.
-              </p>
-            </div>
-            <div data-toulouse="on-the-fixed-rule">
-              <p className={META}>Every gift after</p>
-              <UniversityPath provider="seconds" results={false} yours={false} label="Every gift after at that university, stop by stop" />
-              <p>
-                Toulouse, {TOULOUSE_PASSES.onTheFixedRule.day}: a student showed their enrolment, and{" "}
-                <a className="underline" href={`https://monadvision.com/tx/${TOULOUSE_PASSES.onTheFixedRule.paidTx}`}>
-                  the gift paid
-                </a>{" "}
-                {TOULOUSE_PASSES.onTheFixedRule.secondsFromSignIn} seconds after they signed in to their university&apos;s portal, with no review.
-              </p>
-            </div>
-          </div>
-          {/* Nothing where neither could be read: no empty line is left under the paths. */}
-          {readyOnReclaim.length > 0 || (moreUniversities !== null && moreUniversities > 0) ? (
-            <p>
-              {/* A university ready on Reclaim's own check, from its row as it stands (src/university-ready.ts). */}
-              {readyOnReclaim.map((name) => (
-                <span key={name} data-ready-on-reclaim="">
-                  {name}: ready today, on a check approved by Reclaim.{" "}
-                </span>
-              ))}
-              {moreUniversities !== null && moreUniversities > 0 ? <span>{countInWords(moreUniversities)} more: each set up within two days of a first gift.</span> : null}
-            </p>
-          ) : null}
+        {/* The one pass the page can point at: a real student, paid on sign-in (src/judges-first-use.ts). */}
+        <dt className={MUTED}>Proven</dt>
+        <dd className={HELP} data-minute="proven">
+          A student showed their enrolment from their university&apos;s portal and the gift paid{" "}
+          <strong>{TOULOUSE_PASSES.onTheFixedRule.secondsFromSignIn} seconds</strong> after they signed in, with no review (Toulouse,{" "}
+          {TOULOUSE_PASSES.onTheFixedRule.day}).{" "}
+          <a className="underline" href="#universities">
+            Universities
+          </a>
+          .
+        </dd>
+        <dt className={MUTED}>Why Monad</dt>
+        <dd className={HELP} data-minute="monad">
+          Neither person holds MON or reads a fee. A step is final in under a second. One signature funds a gift.{" "}
+          <a className="underline" href="#agora">
+            In full
+          </a>
+          .
         </dd>
         <dt className={MUTED}>Where it runs</dt>
         <dd className={HELP} data-minute="addresses">
@@ -174,28 +130,6 @@ export function JudgesMinute({
           </a>
           .
         </dd>
-        <dt className={MUTED}>Why Monad</dt>
-        <dd className={HELP} data-minute="monad">
-          <span className="block">
-            Neither person holds MON or reads a fee: Viky&apos;s relayer pays every step, {monWords(creditedDayMon())} for a
-            credited day, about {dollarsOf(creditedDayMon())} ({RELAYER_FEES.readAt}).
-          </span>
-          <span className="block">
-            A step is final {FINALITY_GAP.fewestBlocks} or {FINALITY_GAP.mostBlocks} blocks after its own, at a block every{" "}
-            {BLOCK_TIME.seconds} s (measured {BLOCK_TIME.readOn}).
-          </span>
-          <span className="block">
-            One signature funds a gift: AUSD is on Monad with EIP-3009, so the funder&apos;s signature is both the payment
-            and the acceptance of the gift&apos;s exact terms.
-          </span>
-          <span className="block">
-            In full, with what a gift costs:{" "}
-            <a className="underline" href="#agora">
-              AUSD, Agora&apos;s dollar
-            </a>
-            .
-          </span>
-        </dd>
         <dt className={MUTED}>One command</dt>
         <dd className={HELP} data-minute="command">
           {contracts.daily ? (
@@ -215,6 +149,71 @@ export function JudgesMinute({
           .
         </dd>
       </dl>
+      {/* The same four answers at length, as this block gave them until 12 Oct 2026: one level down, nothing removed. */}
+      <Rows>
+        <Row title="The same, at length">
+          <p data-minute-at-length="what">
+            A conditional gift on Monad. Someone puts money behind another person&apos;s goal: it is allocated in that
+            person&apos;s name from the first day, becomes theirs as a source that is not Viky says the thing was done, and
+            what is not earned goes back to the funder by itself. Nobody profits from a missed day.
+          </p>
+          <p data-minute-at-length="who">
+            The person who pays for somebody else&apos;s effort from a distance and cannot check it themselves: a parent
+            paying for a year of studies in another city or another country, a relative backing a language, a certificate, a
+            race.
+          </p>
+          <p data-minute-at-length="use">
+            {usage ? (
+              <>
+                {count(usage.gifts, "gift", "gifts")} made, {formatAusd(usage.funded)} put into them
+                {/* A gift paid from a judge credit is a try of this page's own path: said, and counted apart. */}
+                {usage.fromJudgeCredit > 0 ? (
+                  <span data-minute="judge-credit">
+                    . {usage.fromJudgeCredit} {usage.fromJudgeCredit === 1 ? "was" : "were"} paid from a judge credit and{" "}
+                    {usage.fromJudgeCredit === 1 ? "is" : "are"} counted apart. {others === 1 ? "The other was" : `The ${others} others were`} funded by{" "}
+                  </span>
+                ) : (
+                  ": funded by "
+                )}
+                {/* Each count with its own share that is not the founder's (the founder's words, 10 Oct 2026). */}
+                {count(usage.funders.all, "account", "accounts")}, {usage.funders.all - usage.funders.founders} of them not the
+                founder&apos;s, and opened by {usage.recipients.all}, {usage.recipients.all - usage.recipients.founders} of them not
+                his. {formatAusd(usage.earned)} earned, {formatAusd(usage.sentBack)} gone back. Counted from the index as this page
+                is served:{" "}
+              </>
+            ) : index ? (
+              "The journal of judge credits could not be read just now, so no count is given here: "
+            ) : (
+              "The index of the contracts' events could not be read just now, so no count is given here: "
+            )}
+            <a className="underline" href="#who">
+              who has used Viky
+            </a>
+            .
+          </p>
+          <div data-minute-at-length="monad">
+            <span className="block">
+              Neither person holds MON or reads a fee: Viky&apos;s relayer pays every step, {monWords(creditedDayMon())} for a
+              credited day, about {dollarsOf(creditedDayMon())} ({RELAYER_FEES.readAt}).
+            </span>
+            <span className="block">
+              A step is final {FINALITY_GAP.fewestBlocks} or {FINALITY_GAP.mostBlocks} blocks after its own, at a block every{" "}
+              {BLOCK_TIME.seconds} s (measured {BLOCK_TIME.readOn}).
+            </span>
+            <span className="block">
+              One signature funds a gift: AUSD is on Monad with EIP-3009, so the funder&apos;s signature is both the payment
+              and the acceptance of the gift&apos;s exact terms.
+            </span>
+            <span className="block">
+              In full, with what a gift costs:{" "}
+              <a className="underline" href="#agora">
+                AUSD, Agora&apos;s dollar
+              </a>
+              .
+            </span>
+          </div>
+        </Row>
+      </Rows>
     </section>
   );
 }

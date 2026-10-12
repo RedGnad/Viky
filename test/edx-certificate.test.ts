@@ -88,5 +88,5 @@ test("the line: read for them, School & studies, goal 25, open, the fact rule, i
   assert.ok(MILESTONE_GOALS.some((goal) => goal.goalType === 25 && goal.providerId === edxProviderId()));
   assert.equal(attestedSource("edx-certificate"), EDX_CERTIFICATE);
   assert.ok(EDX_LINE.name.length <= 30);
-  assert.ok(readFileSync("app/judges/page.tsx", "utf8").includes("edX&apos;s terms."));
+  assert.ok(readFileSync("app/judges/page.tsx", "utf8").includes("<Row title={<>edX&apos;s terms</>}>"));
 });

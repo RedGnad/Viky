@@ -58,7 +58,7 @@ test("the pages say it: closed with its reason, never waiting for an answer, and
   const list = readFileSync("app/judges/JudgesConditions.tsx", "utf8");
   assert.match(list, /condition\.state === "closed" && condition\.beforeItOpens \? `: \$\{condition\.beforeItOpens\.replace\(\/\\\.\$\/, ""\)\}` : ""/);
   const judges = readFileSync("app/judges/page.tsx", "utf8");
-  assert.match(judges, /<strong data-strava-closed>Strava: closed on 12 Oct 2026\.<\/strong>/);
+  assert.match(judges, /<Row title=\{<>Strava: closed on 12 Oct 2026<\/>\}>\s+<div data-strava-closed>/);
   assert.doesNotMatch(judges, /Strava or Fitbit/, "no sentence reads Strava in the present any more");
   assert.equal((judges.match(/Strava was\s+read the same way, and is closed\./g) ?? []).length, 2);
   // The README counts what is offered.
