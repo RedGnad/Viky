@@ -1,3 +1,4 @@
+import { NO_ANSWER_AFTER_SENDING } from "./generic-failure";
 import { PILOT_CAP_SENTENCE } from "./money";
 /**
  * Every sentence a person reads, in one place.
@@ -2469,6 +2470,8 @@ export const CASH_OUT = {
     underWay: "You already have a payout waiting to finish. Give it a few minutes, then try again.",
     notSent: (name: string) => `${name} did not receive it and nothing left your account. Try again.`,
     other: "Viky could not finish this, and nothing was taken. Your money is where it was.",
+    /** The send left and no answer came back: neither done nor untouched is known, so neither is said (12 Oct 2026). */
+    noAnswer: NO_ANSWER_AFTER_SENDING,
   },
 } as const;
 

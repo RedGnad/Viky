@@ -10,6 +10,7 @@ import {
   type WalletClient,
 } from "viem";
 import { isNative, type Coin } from "../coins";
+import { NoAnswer } from "./api";
 import { addMonadGasBuffer } from "../monad-gas";
 import { AUSD_ADDRESS, monadChain, monadTransport, waitForFinality } from "../monad/chain";
 
@@ -107,7 +108,14 @@ export async function sendMon(account: LocalAccount, to: Hex, amount: bigint): P
     maxFeePerGas: fees.maxFeePerGas,
     maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
   });
-  const receipt = await waitForFinality(publicClient, hash);
+  // The transfer is out. A wait that fails says nothing of it either way, so it is said as no answer, never as a
+  // failure a screen would read as "nothing was taken" (the founder, 12 Oct 2026).
+  let receipt;
+  try {
+    receipt = await waitForFinality(publicClient, hash);
+  } catch {
+    throw new NoAnswer();
+  }
   if (receipt.status !== "success") throw new Error("The transfer was included but did not succeed");
   return { hash, fee };
 }

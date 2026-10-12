@@ -97,7 +97,7 @@ test("the smallest amount Viky sends is said under the field before the press, w
   assert.match(read("app/api/send/route.ts"), /assertNotTooSmall\("send", value, held\);/);
   const screen = read("app/components/CashOut.tsx");
   assert.match(screen, /if \(answer\.sendsAtLeast !== undefined\) least = BigInt\(answer\.sendsAtLeast\);/);
-  assert.match(screen, /const ownTooSmall = ownSending\.units !== undefined && sendsAtLeast !== null && tooSmallToRelay\(ownSending\.units, held\(ownCoin\), sendsAtLeast\);/);
+  assert.match(screen, /const ownTooSmall = ownLeaving !== undefined && sendsAtLeast !== null && tooSmallToRelay\(ownLeaving, held\(ownCoin\), sendsAtLeast\);/);
   // The sentence that exists already, and the press held back while it stands.
   assert.match(screen, /data-too-small-to-send="">\s+\{RELAY_CEILING\.tooSmallToSend\(formatAusd\(sendsAtLeast\)\)\}/);
   assert.match(screen, /ownSending\.units === undefined \|\| ownTooSmall\} className=\{PRIMARY_BUTTON\}/);

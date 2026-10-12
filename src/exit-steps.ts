@@ -75,6 +75,19 @@ export function heldForWithdrawal(open: Readonly<{ coin: string; atLeast: bigint
   return !!open && open.coin.toLowerCase() === coin.toLowerCase() && open.atLeast > 0n && held >= open.atLeast;
 }
 
+/**
+ * What leaves when somebody sends to another account of their own (the founder, 12 Oct 2026): the amount typed, or the
+ * whole balance, fractions of a cent included, when the amount typed is the balance as the screen shows it. A screen
+ * shows a balance to the cent, rounded down, and proposes it; what a gift pays is often not a whole number of cents
+ * (a seventh of a dollar is $0.142857). Sending "everything" used to leave the fraction behind, where nothing could
+ * ever move it: under the smallest amount Viky sends, the route takes the whole balance and nothing else. One rule,
+ * above that amount as under it.
+ */
+export function leavingForOwnSend(typed: bigint, held: bigint, decimals: number): bigint {
+  const cent = 10n ** BigInt(decimals - 2);
+  return typed === (held / cent) * cent ? held : typed;
+}
+
 export type ChangeAmount = Readonly<{ units: bigint; refusal?: undefined } | { units?: undefined; refusal: string }>;
 
 /** The two-decimal dollar amount to get ready, read from the text, against what a gift holds. */

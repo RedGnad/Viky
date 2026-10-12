@@ -16,7 +16,7 @@ import { isVikyContract } from "@/src/viky-contracts";
 import { AUSD, coinAt, COINS, isNative, MON, USDC, type Coin } from "@/src/coins";
 import { rateDateInWords, spendMoney, spokenAmount, whenInWords, type LedAmount } from "@/src/display-currency";
 import { exitAmount, type ExitAmount } from "@/src/exit-amount";
-import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, heldForWithdrawal, netOfEverything, readyFor, smallestOnTheCard, toTheCent, twoDecimalsDown, type Ready } from "@/src/exit-steps";
+import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, heldForWithdrawal, leavingForOwnSend, netOfEverything, readyFor, smallestOnTheCard, toTheCent, twoDecimalsDown, type Ready } from "@/src/exit-steps";
 import { chainCoinToChange, USDC_ARRIVAL_FLOOR } from "@/src/funding-step";
 import { usdcRouterAddress } from "@/src/usdc-router";
 import { formatAusd } from "@/src/gift-reader";
@@ -98,6 +98,9 @@ function refusalText(error: unknown, way: WayOut | null): string {
     // These carry the figures or the fact the route measured, so its sentence is the true one.
     if (routeSaysIt(error.code)) return error.message;
     switch (error.code) {
+      case "NO_ANSWER":
+        // The send left and no answer of the route came back: whether it moved is not known, and that is what is said.
+        return W.failures.noAnswer;
       case "NOT_CONFIGURED":
         return W.failures.notConfigured;
       case "RATE_MOVED":
@@ -607,6 +610,8 @@ export function CashOut() {
       }
       setStage("confirm");
       setProblem({ where: "send", text: refusalText(error, chosen), code: error instanceof ApiError ? error.code : undefined });
+      // No answer came back: what the account holds is read again, so the figure they are told to check is a fresh one.
+      if (error instanceof ApiError && error.code === "NO_ANSWER") await refresh().catch(() => undefined);
     } finally {
       setBusy(false);
     }
@@ -618,9 +623,12 @@ export function CashOut() {
   const ownMax = twoDecimalsDown(held(ownCoin), ownCoin.decimals);
   const ownSending = dollarsToChange(ownAmount, held(ownCoin), W.refusals);
   const ownNumber = ownSending.units === undefined ? "" : twoDecimalsDown(ownSending.units, ownCoin.decimals);
+  // What leaves: the amount typed, or the whole balance when the amount typed is the balance as this screen shows it,
+  // to the cent (src/exit-steps.ts). The fraction of a cent goes with it, so "everything" is everything.
+  const ownLeaving = ownSending.units === undefined ? undefined : leavingForOwnSend(ownSending.units, held(ownCoin), ownCoin.decimals);
   // Under the smallest amount Viky sends, unless it is everything the account holds: the send route's own rule
   // (src/relay-ceiling.ts), said under the field before the press, in the route's own sentence (12 Oct 2026).
-  const ownTooSmall = ownSending.units !== undefined && sendsAtLeast !== null && tooSmallToRelay(ownSending.units, held(ownCoin), sendsAtLeast);
+  const ownTooSmall = ownLeaving !== undefined && sendsAtLeast !== null && tooSmallToRelay(ownLeaving, held(ownCoin), sendsAtLeast);
   const ownCodeProblem = (): string | null => {
     const typed = ownCode.trim();
     if (typed === "") return null;
@@ -630,7 +638,7 @@ export function CashOut() {
     return null;
   };
   const sendOwn = async () => {
-    if (ownSending.units === undefined) return;
+    if (ownSending.units === undefined || ownLeaving === undefined) return;
     let account;
     try {
       account = await ensureSigner();
@@ -638,7 +646,7 @@ export function CashOut() {
       closeSession();
       return;
     }
-    const leaving = ownSending.units;
+    const leaving = ownLeaving;
     setBusy(true);
     setProblem(null);
     setStage("ownSending");
@@ -655,6 +663,8 @@ export function CashOut() {
       }
       setStage("ownConfirm");
       setProblem({ where: "own", text: refusalText(error, null) });
+      // No answer came back: what the account holds is read again, so the figure they are told to check is a fresh one.
+      if (error instanceof ApiError && error.code === "NO_ANSWER") await refresh().catch(() => undefined);
     } finally {
       setBusy(false);
     }

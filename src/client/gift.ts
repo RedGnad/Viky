@@ -12,7 +12,7 @@ import { AUSD, movesOnASignature, type Coin } from "../coins";
 import { NO_CONTACT_HASH } from "../contact-hash";
 import type { EarnedInGift } from "../earned-shape";
 import { fundingNonce, giftSalt, withdrawIntentTypedData, type GiftParams } from "../gift-terms";
-import { ApiError, getJson, postJson } from "./api";
+import { ApiError, getJson, postJson, postJsonThatMoves } from "./api";
 import { isMilestoneGiftId, milestoneWithdrawTypedData } from "../milestone-protocol";
 import type { MilestoneStatus } from "../milestone-view";
 import { fundingNonceOn, withdrawTypedDataV2 } from "../v2-protocol";
@@ -599,8 +599,10 @@ export async function sendOwnMoney(input: { account: LocalAccount; to: Hex; amou
     value: input.amount,
     nonce: randomSalt(),
   });
+  // A signature refused stops here, before anything is asked of Viky: nothing can have moved.
   const signature = await input.account.signTypedData(transferAuthorizationTypedData(message, coin));
-  return postJson("/api/send", {
+  // From here the request is out: no answer of the route is said as that, never as "nothing was taken" (12 Oct 2026).
+  return postJsonThatMoves("/api/send", {
     coin: coin.address,
     to: message.to,
     value: message.value.toString(),

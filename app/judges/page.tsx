@@ -29,6 +29,7 @@ import { usesDelivered } from "@/src/phone-order-store";
 import { consentAnchorAddress, giftEscrowV2Address, giftEscrowV3Address, milestoneGiftV2Address } from "@/src/v2";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, PUBLIC_RPC_URL } from "@/src/monad/chain";
 import { indexToShow } from "@/src/index-kept";
+import { treasuryAddress } from "@/src/phone-treasury";
 import { MOBILE_CEILINGS, mobileMoneyOn } from "@/src/mobile-money";
 import { JudgesAgora } from "./JudgesAgora";
 import { JudgesConditions } from "./JudgesConditions";
@@ -150,6 +151,16 @@ export default async function JudgesPage() {
   const reclaimUse = await cycleUse().catch(() => null);
   const reclaimLimits = reclaimUse ? limitsOf(reclaimUse) : null;
   // The judge credit's amount, said on the page; its code is never read here (D291).
+  // Viky's treasury, by its address (the founder, 12 Oct 2026): the README's gift card is "sent to Viky's treasury",
+  // and a judge checks that transfer against this. The address alone, from the deployment's setting, never a key;
+  // nothing where it is not set.
+  const treasury = (() => {
+    try {
+      return treasuryAddress();
+    } catch {
+      return null;
+    }
+  })();
   const judgeCredit = judgeCreditConfig();
   // How many were given and how many the ceiling still allows, counted from the journal at each reading of the page.
   const judgeStanding = judgeCredit ? await judgeCreditsStanding(judgeCredit).catch(() => null) : null;
@@ -1075,7 +1086,18 @@ export default async function JudgesPage() {
           </Row>
           <Row title={<>The Bitrefill way out</>}>
             What it is: Viky buys a good, a phone top-up of credit or data or a
-            gift card, for the person, with the person&apos;s own money. They sign their AUSD over to Viky&apos;s treasury on Monad, and the
+            gift card, for the person, with the person&apos;s own money. They sign their AUSD over to Viky&apos;s treasury on Monad
+            {treasury ? (
+              <>
+                {" "}
+                (
+                <a className="underline [overflow-wrap:anywhere]" href={`https://monadvision.com/address/${treasury}`} data-treasury="">
+                  {treasury}
+                </a>
+                )
+              </>
+            ) : null}
+            , and the
             treasury passes it to Relay (relay.link), which pays Bitrefill&apos;s invoice in USDC on Base: the person pays the
             invoice and Relay&apos;s fee, shown with the price, and no float is used. A failure after the money arrived sends it back by
             itself, when the order is next read and at the latest by the daily settling pass at 07:00 UTC. It is neither an

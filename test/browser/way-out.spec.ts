@@ -553,5 +553,52 @@ test.describe("a send to another account says the route's own refusal, and the s
       expect(asked).toBe(REFUSALS.length);
       await device.context.close();
     });
+
+    test(`everything is everything: a balance with a fraction of a cent leaves whole, and a send with no answer says so (${size.name})`, async ({ browser, baseURL }) => {
+      const device = await profile(browser, baseURL, size.viewport);
+      const { page } = device;
+      // Three days of a dollar over seven, as a gift pays them: $0.428571, shown and proposed as 0.42.
+      await person(device, { ausd: 428_571n, usdc: 0n, mon: 0n }, FRANCE);
+      const NO_ANSWER = "Viky got no answer. Check your balance in a minute before sending again.";
+      const asked: Array<{ value?: string }> = [];
+      await page.route("**/api/send", (route) => {
+        asked.push(JSON.parse(route.request().postData() ?? "{}") as { value?: string });
+        // The connection drops on the first; a gateway answers in the route's place on the second; then the route does.
+        if (asked.length === 1) return route.abort("connectionreset");
+        if (asked.length === 2) return route.fulfill({ status: 504, contentType: "text/html", body: "<html>504 Gateway Timeout</html>" });
+        return route.fulfill(json({ sent: true, reference: "S-428", sentAtMs: Date.now() }));
+      });
+      await page.goto("/cash-out");
+      await page.getByRole("button", { name: "Send to another Viky account of mine", exact: true }).click();
+      const card = page.locator("section", { has: page.getByRole("heading", { name: "Send to another Viky account of mine" }) });
+      await card.getByLabel("Paste that account's code").fill(OTHER);
+      await expect(card.getByLabel("How much to send")).toHaveValue("0.42");
+      // The field holds everything, so nothing says to send everything, and the press is open.
+      await expect(card.locator("[data-too-small-to-send]")).toHaveCount(0);
+      const go = card.getByRole("button", { name: "Send $0.42", exact: true });
+      await expect(go).toBeEnabled();
+      await shot(page, size.name, "10-everything-under-a-dollar");
+      for (const at of [0, 1]) {
+        await go.click();
+        await card.getByRole("button", { name: "Send", exact: true }).click();
+        // No answer came back: said as that, and never that nothing was taken.
+        await expect(card.getByRole("alert")).toHaveText(NO_ANSWER);
+        await expect(page.getByText(/nothing was taken/i)).toHaveCount(0);
+        if (at === 0) {
+          await shot(page, size.name, "10-no-answer");
+          await page.emulateMedia({ colorScheme: "dark" });
+          await shot(page, size.name, "10-no-answer-night");
+          await page.emulateMedia({ colorScheme: "light" });
+        }
+        await card.getByRole("button", { name: "Not now", exact: true }).click();
+      }
+      await go.click();
+      await card.getByRole("button", { name: "Send", exact: true }).click();
+      await expect(card).toContainText("Sent $0.42 to your other account on");
+      await expect(card).toContainText("Reference: S-428.");
+      // Each time the whole balance was asked to move, the fraction of a cent with it.
+      expect(asked.map((one) => one.value)).toEqual(["428571", "428571", "428571"]);
+      await device.context.close();
+    });
   }
 });

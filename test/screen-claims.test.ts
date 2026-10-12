@@ -10,6 +10,7 @@ import { exampleGift } from "../app/kit/example-gift.js";
 import { amountsInWords } from "../app/kit/GiftCard.js";
 import { eyebrowOf, titleOf } from "../src/gift-live.js";
 import { CASH_OUT, GIFT_CARD } from "../src/sentences";
+import { leavingForOwnSend } from "../src/exit-steps";
 
 /**
  * Tests for the sentences the screens show about money and about the state of a gift
@@ -148,7 +149,7 @@ test("a payment that outlasts the session is used where it sits, and the waiting
   assert.match(give, /forgetPendingGift\(\)/);
 });
 
-test("the amount written before sending all of it is exactly the amount that leaves", () => {
+test("the amount written before a send to a payout service is exactly the amount that leaves, and everything typed to one's own account moves everything", () => {
   // The defect of 15 Sep: the balance read to the cent while the signature moved all six decimals.
   assert.equal(formatAusdExact(28_564_213n), "$28.564213");
   assert.equal(formatAusdExact(28_560_000n), "$28.56");
@@ -167,7 +168,16 @@ test("the amount written before sending all of it is exactly the amount that lea
   assert.match(cashOut, /sendMon\(account, to, leaving\)/);
   // To another account of the person's own, the amount typed leaves, read to the last decimal that coin has.
   assert.match(cashOut, /dollarsToChange\(ownAmount, held\(ownCoin\), W\.refusals\)/, "two decimals, as on step 1 (flows W13)");
-  assert.match(cashOut, /const leaving = ownSending\.units;/);
+  // With one case apart since 12 Oct 2026, by the founder's rule of that day: when the amount typed is the balance as
+  // the screen shows it, to the cent, the whole balance leaves, the fraction of a cent with it. That reverses, for
+  // this one send, what the defect of 15 Sep had settled: the figure written is then up to a cent under what moves
+  // ("Send $0.42" moves $0.428571). It was chosen knowingly: under the smallest amount Viky sends the route takes
+  // the whole balance and nothing else, so a balance with a fraction could never leave at all. A send to a payout
+  // service keeps the rule of 15 Sep whole, above: its order is for an exact number.
+  assert.match(cashOut, /const ownLeaving = ownSending\.units === undefined \? undefined : leavingForOwnSend\(ownSending\.units, held\(ownCoin\), ownCoin\.decimals\);/);
+  assert.match(cashOut, /const leaving = ownLeaving;/);
+  assert.equal(leavingForOwnSend(420_000n, 428_571n, 6), 428_571n, "everything typed, everything leaves");
+  assert.equal(leavingForOwnSend(400_000n, 428_571n, 6), 400_000n, "anything else leaves as typed");
 });
 
 /**

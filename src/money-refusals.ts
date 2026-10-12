@@ -49,7 +49,7 @@ export const SAID_BY_THE_ROUTE: ReadonlySet<string> = new Set([
 ]);
 
 /** The screen says these in words of its own, which name the step it was on (app/components/CashOut.tsx). */
-export const SAID_BY_THE_SCREEN: ReadonlySet<string> = new Set(["NOT_CONFIGURED", "RATE_MOVED", "QUOTE_STALE", "QUOTE_EXPIRED", "ALREADY_UNDER_WAY", "REFUSED", "FAILED", "SIGN_IN_REQUIRED"]);
+export const SAID_BY_THE_SCREEN: ReadonlySet<string> = new Set(["NOT_CONFIGURED", "RATE_MOVED", "QUOTE_STALE", "QUOTE_EXPIRED", "ALREADY_UNDER_WAY", "REFUSED", "FAILED", "SIGN_IN_REQUIRED", "NO_ANSWER"]);
 
 /**
  * These carry no sentence of their own: "Please try again", or a word written for a program. The screen's last
