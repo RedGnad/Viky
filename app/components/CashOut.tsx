@@ -278,6 +278,25 @@ export function CashOut() {
       .catch(() => {});
   }, [refresh]);
 
+  /**
+   * What the account holds, read again once money has moved and its route has said so (the founder, 13 Oct 2026). It
+   * never throws. This read stood inside the try of the movement itself, so when it failed the screen said "nothing
+   * was taken" of a send that was confirmed, or that a gift's part was "still in the gift" once it was in the account.
+   * A read that fails is made again every few seconds until one answers, and nothing is said of it: the figures on
+   * the screen are the old ones until then, and no sentence about the movement depends on them.
+   */
+  const [unread, setUnread] = useState(false);
+  const readAfterMoving = async (): Promise<Record<string, bigint> | undefined> => {
+    const now = await refresh().catch(() => undefined);
+    setUnread(now === undefined);
+    return now;
+  };
+  useEffect(() => {
+    if (!unread) return;
+    const timer = setInterval(() => void refresh().then(() => setUnread(false), () => undefined), 4_000);
+    return () => clearInterval(timer);
+  }, [unread, refresh]);
+
   const held = (coin: Coin): bigint => holdings?.[coin.symbol] ?? 0n;
   const ausd = held(AUSD);
   /** What the gifts hold for this account (D208): taken into it first, so it counts in every figure it will change. */
@@ -420,7 +439,6 @@ export function CashOut() {
         const conversion = await fundingQuote(arrivedCoin);
         await sendWithExplicitGas(account, { to: conversion.to, data: conversion.data, value: BigInt(conversion.value) });
       }
-      return await refresh();
     } catch (error) {
       if (sessionClosed(error)) closeSession();
       // The route's own sentence when it has one (the count of actions, too many attempts, a rate too low); the
@@ -428,10 +446,16 @@ export function CashOut() {
       else setProblem({ where: "gather", text: error instanceof ApiError && routeSaysIt(error.code) ? error.message : readying ? W.notReadied : W.gatherFailed, code: error instanceof ApiError ? error.code : undefined });
       await refresh().catch(() => undefined);
       setStage("base");
-      return undefined;
-    } finally {
       setBusy(false);
+      return undefined;
     }
+    // Everything asked for has moved, and each route said so. The step that follows is drawn from what the account
+    // holds now, so that is read here, a second time when the first read fails; a read that still fails leads back to
+    // the first screen, which reads until it answers, and says nothing of money that has moved as it should.
+    const now = (await readAfterMoving()) ?? (await readAfterMoving());
+    if (!now) setStage("base");
+    setBusy(false);
+    return now;
   };
 
   const start = async (way: WayOut) => {
@@ -527,9 +551,11 @@ export function CashOut() {
     setStage("getting");
     try {
       await takeTheWayOut({ account, ticket: quote.ticket });
-      await refresh();
+      // Changed, and the route said so: the next step opens at once. What is ready is drawn from the balances, read
+      // after that by a read that cannot fail this step; until it answers, the step says "One moment".
       setQuote(null);
       setStage("ready");
+      await readAfterMoving();
     } catch (error) {
       if (sessionClosed(error)) {
         closeSession();
@@ -649,8 +675,9 @@ export function CashOut() {
       const said = amountOf(chosen, ready);
       setSent({ amount: said.lead, exact: said.exact, name: chosen.name, when: whenInWords(atMs), reference, cost });
       setDeposit("");
-      await refresh();
+      // Sent, and said at once: the balances are read after it, by a read whose failure says nothing of the send.
       setStage("sent");
+      await readAfterMoving();
     } catch (error) {
       if (sessionClosed(error)) {
         closeSession();
@@ -712,8 +739,9 @@ export function CashOut() {
       setKeptSend(null);
       setSent({ amount: said, name: "", when: whenInWords(result.sentAtMs), reference: result.reference });
       setOwnCode("");
-      await refresh();
+      // Sent, and said at once: the balances are read after it, by a read whose failure says nothing of the send.
       setStage("ownSent");
+      await readAfterMoving();
     } catch (error) {
       if (sessionClosed(error)) {
         closeSession();

@@ -666,6 +666,46 @@ test.describe("a send to another account says the route's own refusal, and the s
       await device.context.close();
     });
 
+    test(`a send the route confirmed is said as sent even when the balance cannot be read after it (${size.name})`, async ({ browser, baseURL }) => {
+      // The founder, 13 Oct 2026: the read of the balances stood in the same try as the send, so when it failed the
+      // screen said "Viky could not finish this, and nothing was taken." of a send that was confirmed.
+      const device = await profile(browser, baseURL, size.viewport);
+      const { page, context } = device;
+      const holds = { ausd: 5_000_000n, usdc: 0n, mon: 0n };
+      await person(device, holds, FRANCE);
+      // Asked before the chain's own stand-in: while it is down, no call to the chain is answered.
+      let chainDown = false;
+      await context.route(
+        (url) => url.hostname !== "localhost" && url.hostname !== "127.0.0.1",
+        (route) => (chainDown ? route.abort("connectionreset") : route.fallback()),
+      );
+      await page.route("**/api/send", (route) => {
+        holds.ausd -= 2_000_000n;
+        chainDown = true;
+        return route.fulfill(json({ sent: true, reference: "S-200", sentAtMs: Date.now() }));
+      });
+      await page.goto("/cash-out");
+      await page.getByRole("button", { name: "Send to another Viky account of mine", exact: true }).click();
+      const card = page.locator("section", { has: page.getByRole("heading", { name: "Send to another Viky account of mine" }) });
+      await card.getByLabel("Paste that account's code").fill(OTHER);
+      await card.getByLabel("How much to send").fill("2.00");
+      await card.getByRole("button", { name: "Send $2.00", exact: true }).click();
+      await card.getByRole("button", { name: "Send", exact: true }).click();
+      // Said as sent, with its reference, whatever the read that follows does.
+      await expect(card).toContainText("Sent $2.00 to your other account on");
+      await expect(card).toContainText("Reference: S-200.");
+      await expect(page.getByText(/nothing was taken|could not finish|no answer/i)).toHaveCount(0);
+      await shot(page, size.name, "13-sent-while-the-balance-is-unread");
+      await page.emulateMedia({ colorScheme: "dark" });
+      await shot(page, size.name, "13-sent-while-the-balance-is-unread-night");
+      await page.emulateMedia({ colorScheme: "light" });
+      // The read is made again until it answers: the figure above is then what the account holds.
+      chainDown = false;
+      await expect(page.locator("main")).toContainText("$3.00", { timeout: 20_000 });
+      await expect(card).toContainText("Reference: S-200.");
+      await device.context.close();
+    });
+
     test(`a send to the bank service whose answer was lost and that left is said as sent, never a wait with no end (${size.name})`, async ({ browser, baseURL }) => {
       const device = await profile(browser, baseURL, size.viewport);
       const { page } = device;
