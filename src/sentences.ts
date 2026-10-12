@@ -1901,7 +1901,14 @@ export const UNIVERSITY_CHOICE = {
   /** Read aloud while the list is read; the eye sees empty lines instead of a sentence (the founder, 29 Sep 2026). */
   reading: "Reading the list",
   unreadable: "The list could not be read right now. Close this and try again in a moment.",
-  nothing: "No university by that name in the list yet.",
+  /**
+   * Under a search that found nothing (the founder, 13 Oct 2026): what is true in every case, and what to try. Every
+   * word typed must be in the name, so one word fewer or another finds more; within one country the sentence names it
+   * and the other place to look. A link to the page a student adds a university from stood here ("Ask for it", 10 Oct
+   * 2026): that page opens on "Offer the gift anyway.", and no gift can be offered on a university the list lacks.
+   */
+  nothing: "No university by those words. Try another word of its name.",
+  nothingIn: (country: string) => `No university by those words in ${country}. Try another word of its name, or all countries.`,
   /**
    * The mark on the line of a university whose students can show their page today, for what the gift asks. Such a
    * university comes first in the list; the others carry nothing, no "on request" and no "more".
@@ -1930,8 +1937,6 @@ export const UNIVERSITY_CHOICE = {
    */
   firstProof: "First student from this university: the next ones skip the small stop. The money waits in their name meanwhile.",
   waitsMeanwhile: "The money waits in their name meanwhile.",
-  /** Under a search that found nothing, and nowhere else: the way to the page where a university is asked for. */
-  askForIt: "Ask for it",
 } as const;
 
 export const SHOW_PROOF = {

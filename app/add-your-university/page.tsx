@@ -14,6 +14,9 @@ export const metadata: Metadata = { title: W.title };
  *
  * Since 9 Oct 2026 the page opens on three lines for somebody who is paying, whom nobody sent: they have nothing to
  * do. The student's procedure is under a fold named by whom it is for.
+ *
+ * No screen of the app leads here since 13 Oct 2026: the link under an empty search of the university list is gone,
+ * because nobody can offer a gift on a university the list does not hold. The page is reached by a link somebody sends.
  */
 export default function Page() {
   return (

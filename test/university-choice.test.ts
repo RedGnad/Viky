@@ -200,17 +200,21 @@ test("the chooser lists names alone, says nothing about checking, and a search t
   assert.doesNotMatch(chooser, /W\.reading\}<\/p>|Reading the/, "no sentence while the list is read: empty lines hold its place");
   // Nothing about checking in the chooser: that is said folded on the gift's page, where the proof is shown.
   assert.doesNotMatch(chooser, /<details|<summary|navigator\.share|clipboard/);
-  assert.deepEqual(Object.keys(UNIVERSITY_CHOICE).sort(), ["askForIt", "change", "country", "everywhere", "firstGift", "firstProof", "inCountry", "list", "nothing", "path", "reading", "ready", "readyInTwoDays", "search", "unreadable", "waitsMeanwhile"]);
+  assert.deepEqual(Object.keys(UNIVERSITY_CHOICE).sort(), ["change", "country", "everywhere", "firstGift", "firstProof", "inCountry", "list", "nothing", "nothingIn", "path", "reading", "ready", "readyInTwoDays", "search", "unreadable", "waitsMeanwhile"]);
   // The mark's words, as the founder drew them on the mockup of 10 Oct 2026.
   assert.equal(UNIVERSITY_CHOICE.ready, "Ready today");
   assert.doesNotMatch(JSON.stringify([...Object.values(UNIVERSITY_CHOICE).filter((v) => typeof v === "string"), UNIVERSITY_CHOICE.search("1")]), /unverified|password|proof|checked|connected|tested/i);
-  // Under a search that found nothing, and nowhere else (the founder, 10 Oct 2026): the sentence that says so, and
-  // a small button to the page a university is asked from. It stood at the foot of every list as "Yours isn't here?
-  // Add your university", which a payer read as theirs to do.
-  assert.equal(`${UNIVERSITY_CHOICE.nothing} ${UNIVERSITY_CHOICE.askForIt}`, "No university by that name in the list yet. Ask for it");
-  assert.match(chooser, /\{listed\.length === 0 \? \(\n\s+<>\n\s+<p className=\{HELP\}>\{W\.nothing\}<\/p>\n\s+<Link href="\/add-your-university" className=\{`\$\{SMALL_BUTTON\} self-start no-underline`\}>\n\s+\{W\.askForIt\}/);
-  assert.equal(chooser.split("/add-your-university").length, 2, "one way to that page, under an empty search");
-  assert.ok(existsSync("app/add-your-university/page.tsx"), "the page the link opens");
+  // Under a search that found nothing: the sentence that says so and what to try, and no link (the founder, 13 Oct
+  // 2026). This reverses his word of 10 Oct 2026, which put a small button there, "Ask for it", to the page a
+  // university is asked from: that page opens on "Offer the gift anyway.", and the route refuses any university the
+  // list does not hold, so the gift could not be offered. Before that it stood at the foot of every list as "Yours
+  // isn't here? Add your university", which a payer read as theirs to do.
+  assert.equal(UNIVERSITY_CHOICE.nothing, "No university by those words. Try another word of its name.");
+  assert.equal(UNIVERSITY_CHOICE.nothingIn("Senegal"), "No university by those words in Senegal. Try another word of its name, or all countries.");
+  assert.match(chooser, /\{listed\.length === 0 \? \(\n\s+<p className=\{HELP\} data-nothing-found="">\n\s+\{country \? W\.nothingIn\(countryInWords\(country\) \?\? country\) : W\.nothing\}\n\s+<\/p>\n\s+\) : null\}/);
+  assert.doesNotMatch(chooser, /add-your-university|<Link|next\/link/, "no way to that page from the list");
+  assert.ok(!("askForIt" in UNIVERSITY_CHOICE));
+  assert.ok(existsSync("app/add-your-university/page.tsx"), "the page stands, reached by a link somebody sends");
   // The page opens on three lines for somebody who is paying (the founder's words, 9 Oct 2026): it opened on a
   // student's procedure, which a payer read as theirs to do. The procedure is under a fold named by whom it is for.
   const page = readFileSync("app/add-your-university/page.tsx", "utf8");
