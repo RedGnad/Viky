@@ -1,5 +1,8 @@
-// The README is read by judges who have a minute (the founder, 5 Oct 2026): what verifies Viky stands on its first
-// screen, the long sections are in docs/ behind a link, and the declarations sit at its foot. The event's rules ask
+// The README is read by judges who have little time (the founder, 5 and 12 Oct 2026): what verifies Viky stands on its
+// first screen, no section is a block of text, and the long ones (the two people, the path forward, the declarations)
+// are in docs/, each behind three lines and a link. The declarations the rules ask of the README itself stand in those
+// three lines, in the open, and the pre-existing code is listed file by file in a folded block under them: the rules
+// say "identified in the README". What has run with real money opens on a table, a row a fact. The event's rules ask
 // things of it by name (version 3.0 of 3 Sep 2026, section 4.1): setup and deployment instructions, the attribution
 // of external code, the pre-existing code identified, the AI tools declared, a description, an architecture overview,
 // the stack, and what the project takes from Monad with its addresses. This holds each of them in place, and holds
@@ -17,15 +20,30 @@ import { EXAMPLE_FOR_JUDGES_TX } from "../src/proof-journal";
 import { EXIT_ROUTER, GIFT_ESCROW, USDC_ROUTER } from "../src/viky-contracts";
 
 const README = readFileSync("README.md", "utf8");
-const DOCS = { contracts: "docs/CONTRACTS.md", verification: "docs/VERIFICATION.md", pages: "docs/PAGES-AND-ROUTES.md", indexer: "docs/INDEXER.md" } as const;
+const DOCS = {
+  contracts: "docs/CONTRACTS.md",
+  verification: "docs/VERIFICATION.md",
+  pages: "docs/PAGES-AND-ROUTES.md",
+  indexer: "docs/INDEXER.md",
+  people: "docs/THE-TWO-PEOPLE.md",
+  path: "docs/PATH-FORWARD.md",
+  declarations: "docs/DECLARATIONS.md",
+} as const;
 const doc = (name: keyof typeof DOCS) => readFileSync(DOCS[name], "utf8");
-/** Everything a reader of the repository is told: the README and the four documents it links to. */
+/** Everything a reader of the repository is told: the README and the seven documents it links to. */
 const EVERYTHING = [README, ...Object.keys(DOCS).map((name) => doc(name as keyof typeof DOCS))].join("\n");
 
-/** A section of the README: under a heading, to the next heading of its rank or higher, or inside a fold at its foot. */
+/** A part of the declarations, which left the README's foot for docs/DECLARATIONS.md on 12 Oct 2026: under its heading, to the next. */
+function declared(title: string): string {
+  const text = doc("declarations");
+  const from = text.indexOf(`\n## ${title}\n`);
+  assert.ok(from >= 0, `the declarations have a part "${title}"`);
+  const next = text.indexOf("\n## ", from + 1);
+  return text.slice(from, next < 0 ? undefined : next);
+}
+
+/** A section of the README: under a heading, to the next heading of its rank or higher. */
 function section(title: string): string {
-  const fold = README.indexOf(`<summary><b>${title}</b></summary>`);
-  if (fold >= 0) return README.slice(fold, README.indexOf("</details>", fold));
   const found = new RegExp(`^(#{2,3}) ${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "m").exec(README);
   assert.ok(found, `the README has a section "${title}"`);
   const rest = README.slice(found.index + found[0].length);
@@ -116,16 +134,19 @@ test("what the rules ask of a README is all there (section 4.1), and the licence
   // reads (the founder, 8 Oct 2026; the audit of 9 Oct found two in this file).
   const fresh = section("What is new");
   assert.match(fresh, /Beeminder, StickK, Forfeit/);
-  assert.doesNotMatch(README, /Two things Viky does not claim|What is not claimed/);
+  assert.doesNotMatch(EVERYTHING, /Two things Viky does not claim|What is not claimed/);
   // The table's right column says what Viky does, in every row: beside the effect that stops with the money, a gift's
   // own length and the funder's next choice.
-  assert.doesNotMatch(README, /does not claim/);
-  assert.match(README, /\| A gift covers a set number of days\. After it, the funder chooses whether to offer another\. \|/);
+  assert.doesNotMatch(EVERYTHING, /does not claim/);
+  assert.match(doc("people"), /\| A gift covers a set number of days\. After it, the funder chooses whether to offer another\. \|/);
   // Members, and no segment by age: "adults" is a rule of the product, never a pitch.
-  assert.match(README, /A club officer, to members and the relatives who back them/);
-  assert.doesNotMatch(README, /adult members/);
-  // Architecture and stack.
-  assert.match(section("Architecture"), /```mermaid\nflowchart LR/);
+  assert.match(doc("path"), /A club officer, to members and the relatives who back them/);
+  assert.doesNotMatch(EVERYTHING, /adult members/);
+  // Architecture and stack: the diagram is in the README itself (the founder, 12 Oct 2026: it reads in ten seconds),
+  // over the three lines that say it, and the long texts are the documents it links to.
+  assert.match(section("Architecture"), /^## Architecture\n\n```mermaid\nflowchart LR/);
+  assert.match(section("Architecture"), /the evidence signer attests what was read, the relayer submits it,\nand the contract moves the money/);
+  assert.ok(!existsSync("docs/ARCHITECTURE.md"), "the diagram has one home");
   assert.match(section("Stack"), /Next\.js 16/);
   // Setup instructions a third party can follow from nothing, and deployment instructions.
   const run = section("Run");
@@ -141,64 +162,135 @@ test("what the rules ask of a README is all there (section 4.1), and the licence
   // Monad: what the project takes from it, the addresses, and transactions.
   assert.match(section("Why Monad"), /Only what was measured, or what Monad's own documentation states\./);
   assert.match(FIRST_SCREEN, /\| On Monad mainnet \(chain 143\) \|/);
-  // The pre-existing code identified, the AI tools declared, and the external code and libraries attributed.
-  assert.match(section("AI tools"), /Claude Code \(Anthropic\)/);
-  assert.match(section("Pre-existing code"), /Lock-in is an earlier project by the same author/);
-  assert.match(section("Pre-existing code"), /monad-developers\/next-serwist-privy-embedded-wallet/);
-  assert.match(section("Third-party licences"), /`gsap` and its `ScrollTrigger` are not under a free licence/);
-  // The licence.
-  assert.match(section("License"), /\[MIT\]\(LICENSE\)/);
+  // The pre-existing code identified and the AI tools declared, in the README itself and in the open (the rules ask
+  // both of the README by name): the tool, where the ported code came from and how much of it, the template.
+  const stated = section("Declarations, environment and licences");
+  assert.match(stated, /- \*\*AI tools\.\*\* Viky was built with an AI coding tool, Claude Code \(Anthropic\)/);
+  assert.match(stated, /- \*\*Pre-existing code\.\*\* The verification plumbing was ported from Lock-in, an earlier project by the same author/);
+  assert.match(stated, /`monad-developers\/next-serwist-privy-embedded-wallet`/);
+  // Its figures are the ones the full declaration counts.
+  assert.match(stated, /\(37 files, about 7,200 of the 109,700 lines\)/);
+  assert.match(declared("Pre-existing code"), /That is 37 files and about 7,200 of the 109,700 lines of code and tests/);
+  // The licence, and where a vulnerability is reported.
+  assert.match(stated, /- \*\*Licence\.\*\* \[MIT\]\(LICENSE\)\./);
   assert.match(readFileSync("LICENSE", "utf8"), /^MIT License/);
-  assert.match(section("Security"), /\[SECURITY\.md\]\(SECURITY\.md\)/);
-  // The order: the short sections, then how to run it, then the declarations folded at the foot.
-  const order = ["## What Viky is built on", "## Who it is for, and the problem", "## What we know about the two people", "## What is new", "## No word of crypto", "## Seventeen conditions, four families", "## Why Monad", "## What has run with real money", "## Path forward: how the next hundred find Viky", "## Architecture", "## Stack", "## Run", "### Deploy", "## Test", "<summary><b>AI tools</b></summary>", "<summary><b>Pre-existing code</b></summary>", "<summary><b>Environment</b></summary>", "<summary><b>Third-party licences</b></summary>", "<summary><b>Security</b></summary>", "<summary><b>License</b></summary>"].map((mark) => README.indexOf(mark));
+  assert.match(stated, /\[SECURITY\.md\]\(SECURITY\.md\)/);
+  assert.match(stated, /\]\(docs\/DECLARATIONS\.md\)\.\n$/);
+  // Each in full, one link away, with the external code and libraries attributed.
+  assert.match(declared("AI tools"), /Claude Code \(Anthropic\)/);
+  assert.match(declared("Pre-existing code"), /Lock-in is an earlier project by the same author/);
+  assert.match(declared("Pre-existing code"), /monad-developers\/next-serwist-privy-embedded-wallet/);
+  assert.match(declared("Third-party licences"), /`gsap` and its `ScrollTrigger` are not under a free licence/);
+  assert.match(declared("License"), /\[MIT\]\(\.\.\/LICENSE\)/);
+  assert.match(declared("Security"), /\[SECURITY\.md\]\(\.\.\/SECURITY\.md\)/);
+  assert.match(doc("declarations"), /This repository carries the project's whole history since 10 Sep 2026\./);
+  // The order: the short sections, then how to run it, then the declarations at the foot.
+  const order = ["## What Viky is built on", "## Who it is for, and the problem", "## What we know about the two people", "## What is new", "## No word of crypto", "## Seventeen conditions, three ways of reading", "## Why Monad", "## What has run with real money", "## Path forward: how the next hundred find Viky", "## Architecture", "## Stack", "## Run", "### Deploy", "## Test", "## Declarations, environment and licences"].map((mark) => README.indexOf(mark));
   assert.ok(order.every((found) => found >= 0), "every section is there");
   assert.deepEqual(order, [...order].sort((left, right) => left - right));
-  assert.equal(README.match(/<details>/g)?.length, 6);
-  assert.equal(README.match(/<\/details>/g)?.length, 6);
+  // Two folded blocks, each one level under what its section opens on: the step by step of what has run, and the
+  // pre-existing code file by file.
+  assert.deepEqual([...README.matchAll(/<details>\n<summary><b>([^<]+)<\/b><\/summary>/g)].map((found) => found[1]), ["Each of them step by step, with its transactions", "The pre-existing code, file by file"]);
+  assert.equal(README.match(/<\/details>/g)?.length, 2);
+  assert.deepEqual([...doc("declarations").matchAll(/^## (.+)$/gm)].map((found) => found[1]), ["AI tools", "Pre-existing code", "Environment", "Third-party licences", "Security", "License"]);
 });
 
-test("what has run with real money is only what has a transaction, each with its link", () => {
+test("a long section is three lines and a link here, and whole in its document (the founder, 12 Oct 2026)", () => {
+  const moved = { "What we know about the two people": "people", "Path forward: how the next hundred find Viky": "path" } as const;
+  for (const [title, name] of Object.entries(moved)) {
+    const lines = section(title).split("\n").slice(1).join("\n").trim().split("\n\n");
+    assert.equal(lines.length, 2, `${title}: a paragraph and a link`);
+    assert.ok(lines[0]!.split("\n").length <= 3, `${title}: three lines at most`);
+    assert.ok(lines[1]!.includes(`](${DOCS[name]})`), `${title} sends to ${DOCS[name]}`);
+    assert.ok(doc(name).startsWith(`# ${title}\n`), `${DOCS[name]} carries the section's own title`);
+  }
+  // The declarations: three lines, each a thing the rules ask of the README, then the folded list, then the link.
+  const stated = section("Declarations, environment and licences");
+  const open = stated.slice(0, stated.indexOf("<details>"));
+  assert.equal(open.split("\n").filter((line) => line.startsWith("- **")).length, 3);
+  assert.ok(stated.indexOf("</details>") < stated.indexOf("](docs/DECLARATIONS.md)"));
+  // No section is a block of text: what a section says in the open, outside its tables, its commands and its folded
+  // block, stays short. The longest is "Run", which is setup instructions and does not move.
+  for (const part of README.split(/\n(?=## )/).slice(1)) {
+    const title = part.split("\n")[0]!;
+    const said = part.replace(/<details>[\s\S]*?<\/details>/g, "").replace(/```[\s\S]*?```/g, "").split("\n").filter((line) => !line.startsWith("|")).join("\n");
+    const words = said.split(/\s+/).filter(Boolean).length;
+    assert.ok(words <= 340, `${title}: ${words} words in the open`);
+  }
+});
+
+test("what has run with real money opens on a table, a row a fact, and its step by step is one level down", () => {
   const ran = section("What has run with real money");
-  const links = [...ran.matchAll(/\[`0x[0-9a-f]{4}…[0-9a-f]{4}`\]\(https:\/\/monadvision\.com\/tx\/(0x[0-9a-f]{64})\)/g)].map((found) => found[1]);
+  const linksOf = (said: string) => [...said.matchAll(/\[`0x[0-9a-f]{4}…[0-9a-f]{4}`\]\(https:\/\/monadvision\.com\/tx\/(0x[0-9a-f]{64})\)/g)].map((found) => found[1]);
+  const fold = ran.slice(ran.indexOf("<details>"), ran.indexOf("</details>"));
+  assert.match(fold, /^<details>\n<summary><b>Each of them step by step, with its transactions<\/b><\/summary>\n\n- \*\*A day credited on a proof\.\*\*/);
+  // The table (the founder, 12 Oct 2026): what happened, the date, the amount, the transaction; five facts.
+  const rows = ran.slice(0, ran.indexOf("<details>")).split("\n").filter((line) => line.startsWith("| ")).map((line) => line.slice(2, -2).split(" | "));
+  assert.deepEqual(rows[0], ["What happened", "Date", "Amount", "Transaction"]);
+  assert.equal(rows.length, 6);
+  const facts = rows.slice(1);
+  for (const fact of facts) {
+    assert.equal(fact.length, 4, fact[0]);
+    assert.match(fact[0]!, /^\*\*[A-Z]/, "what happened, its first words in bold");
+    assert.match(fact[1]!, /\d{1,2} (Sep|Oct) 2026$/);
+    assert.match(fact[2]!, /^\d+\.\d+ AUSD/);
+    assert.equal(linksOf(fact[3]!).length, 1, "one transaction a row");
+  }
+  // The gift between two people comes first, with the transaction that paid it; then the same student's next gift.
+  assert.deepEqual(facts[0]!.slice(1, 3), ["7 Oct 2026", "8.98 AUSD"]);
+  assert.match(facts[0]![0]!, /^\*\*A gift between two people who are not the author\*\*, paid on the proof a student showed from their university's portal, at Toulouse\./);
+  assert.deepEqual(linksOf(facts[0]![3]!), ["0x9c5508e83b0dd20668bb6a8c683faa047820734d6938387f8b6f516c3467c4fd"]);
+  assert.deepEqual(facts[1]!.slice(1, 3), ["9 Oct 2026", "5.02 AUSD"]);
+  assert.match(facts[1]![0]!, /paid 20 seconds after they signed in\*\* to that portal, on the rule fixed ahead of the pass, with no review\./);
+  assert.deepEqual(linksOf(facts[1]![3]!), ["0xd950295c4c3d51480496003fd6547b0fc6c3546ac0c5747d377e6259cd3277e2"]);
+  // The author's own gift is said his, and its figures are the step by step's: 0.187 and 5.423 make 5.61.
+  assert.match(facts[2]![0]!, /made by the author between two of his own accounts: one day credited, 0\.187 AUSD, and the 29 others, 5\.423 AUSD, back to the funder\./);
+  assert.equal(facts[2]![2], "5.61 AUSD");
+  assert.equal(facts[3]![2], "7.914524 AUSD");
+  // The credited day: one day of gift 2, 1.00 AUSD over seven days, as the contract holds it (read on 12 Oct 2026).
+  assert.equal(facts[4]![2], "0.142857 AUSD, one day of a 1.00 AUSD gift");
+  assert.equal(Math.floor(1_000_000 / 7), 142_857);
+  // Every transaction of the table is one of the step by step's twelve, and none is said twice there.
+  const links = linksOf(fold);
   assert.equal(links.length, 12);
   assert.equal(new Set(links).size, 12, "twelve transactions, none said twice");
+  for (const fact of facts) assert.ok(links.includes(linksOf(fact[3]!)[0]!), fact[0]);
   // Every item of the lists carries one: nothing is said to have run on words alone.
-  const items = ran.split("\n").filter((line) => /^\s*(- \*\*|\d\. )/.test(line));
+  const items = fold.split("\n").filter((line) => /^\s*(- \*\*|\d\. )/.test(line));
   assert.equal(items.length, 14, "five things, one of them in six steps and one in three");
-  const text = ran.replace(/\n\s+/g, " ");
+  const text = fold.replace(/\n\s+/g, " ");
   for (const step of text.split(/(?=\s\d\. )/).slice(1)) assert.match(step, /monadvision\.com\/tx\/0x[0-9a-f]{64}/, step.slice(0, 60));
   // The gift that ran end to end is said for what it is: the author's own, between two of his accounts.
-  assert.match(ran, /made by the\s+author between two of his own accounts/);
+  assert.match(fold, /made by the\s+author between two of his own accounts/);
   // The first gift between two people who are not the author: said with its three transactions, with the review that
   // came before the money, and with what its proof read and no more (7 Oct 2026).
-  assert.match(ran, /\*\*The first pass, two days before: a gift between two people who are not the author, paid on a proof from a\s+university's portal\.\*\*/);
+  assert.match(fold, /\*\*The first pass, two days before: a gift between two people who are not the author, paid on a proof from a\s+university's portal\.\*\*/);
   // Over it, the day's fact (the founder, 9 Oct 2026): the same account, on the rule fixed ahead, paid with no review.
-  assert.match(ran, /\*\*Toulouse, 9 Oct 2026: a student showed their enrolment, and the gift paid 20 seconds after they signed in to\s+their university's portal, with no review\.\*\*/);
-  assert.ok(links.includes("0xd950295c4c3d51480496003fd6547b0fc6c3546ac0c5747d377e6259cd3277e2"));
-  assert.ok(ran.indexOf("Toulouse, 9 Oct 2026") < ran.indexOf("The first pass, two days before"));
-  assert.match(ran, /created and funded by a third party, in a student's name/);
-  assert.match(ran, /it was held, and nothing moved until the\s+operator had read what it had read/);
-  assert.match(ran, /What that proof read is narrow, and is said as it is: signed in to his own file, the answer to one click carried the\s+academic year 2026-2027\./);
-  assert.match(ran, /it names no person, no number and\s+no faculty/);
-  assert.ok(links.includes("0x9c5508e83b0dd20668bb6a8c683faa047820734d6938387f8b6f516c3467c4fd"));
+  assert.match(fold, /\*\*Toulouse, 9 Oct 2026: a student showed their enrolment, and the gift paid 20 seconds after they signed in to\s+their university's portal, with no review\.\*\*/);
+  assert.ok(fold.indexOf("Toulouse, 9 Oct 2026") < fold.indexOf("The first pass, two days before"));
+  assert.match(fold, /created and funded by a third party, in a student's name/);
+  assert.match(fold, /it was held, and nothing moved until the\s+operator had read what it had read/);
+  assert.match(fold, /What that proof read is narrow, and is said as it is: signed in to his own file, the answer to one click carried the\s+academic year 2026-2027\./);
+  assert.match(fold, /it names no person, no number and\s+no faculty/);
   assert.match(readFileSync(DOCS.contracts, "utf8"), /gift 1000006, 8\.98 AUSD between two people who are not the author/);
-  // And what has not run is said.
-  assert.match(ran, /What has not run on the third daily contract yet: a missed day going back, and a gift reaching its last day\./);
-  // The day `pnpm verify:day` checks is the first of them, the one Why Monad gives the fee of.
+  // And what has not run is said, in the open.
+  assert.match(ran.slice(0, ran.indexOf("<details>")), /What has not run on the third daily contract yet: a missed day going back, and a gift reaching its last day\./);
+  // The day `pnpm verify:day` checks is the first of the step by step, the one Why Monad gives the fee of.
   assert.ok(links[0] === "0x55f9eafa857ee9897be5a7e092e055a3c75d2003d11a087dd9a0244e64726fab" && section("Why Monad").includes(links[0]));
   // The amounts add up: what was funded is what went back and what was withdrawn.
-  assert.match(ran, /funded with 5\.61 AUSD/);
-  assert.match(ran, /5\.423 AUSD/);
-  assert.match(ran, /the 0\.187 AUSD it earned withdrawn/);
+  assert.match(fold, /funded with 5\.61 AUSD/);
+  assert.match(fold, /5\.423 AUSD/);
+  assert.match(fold, /the 0\.187 AUSD it earned withdrawn/);
   assert.equal(5_423_000 + 187_000, 5_610_000);
   // The judges page is said for what it is.
   assert.match(ran, /\[viky\.cash\/judges\]\(https:\/\/viky\.cash\/judges\) is the one page for verifying Viky/);
 });
 
 test("the two people and the path forward say of the product what the code does", () => {
-  const people = section("What we know about the two people").replace(/\s+/g, " ");
-  const path = section("Path forward: how the next hundred find Viky").replace(/\s+/g, " ");
+  const people = doc("people").replace(/\s+/g, " ");
+  const path = doc("path").replace(/\s+/g, " ");
+  // The three lines the README keeps of them say the same, shorter.
+  assert.match(section("What we know about the two people").replace(/\s+/g, " "), /the whole amount is in their name from the first minute, the funder sees yes or no for a day or the number a goal has and nothing else that was read, and the recipient agrees with a signature of their own and can stop being read\./);
   // What the funder sees is what the agreement says they see (src/consent-terms.ts): yes or no for a day, and the
   // figure read for a goal that has one. "Never the detail" was said of both, and a rating is a detail.
   assert.equal(consentTermsFor("duolingo-daily")?.things, 1);
@@ -239,24 +331,32 @@ test("every link of the README and of docs/ leads to a file of the tree, and to 
       }
     }
   }
-  // The four documents the README sends to.
+  // The seven documents the README sends to.
   for (const path of Object.values(DOCS)) assert.ok(README.includes(`](${path}`), `the README links to ${path}`);
 });
 
 test("the README discloses the AI tools used, as the rules ask", () => {
-  const tools = section("AI tools");
+  assert.match(section("Declarations, environment and licences"), /an AI coding tool, Claude Code \(Anthropic\): it wrote most of the code, the tests\n  and the documentation from the author's written briefs, and the author directed all of it\./);
+  const tools = declared("AI tools");
   assert.match(tools, /AI coding tool/);
   assert.match(tools, /Claude Code \(Anthropic\)/, "the tool is named");
   assert.match(tools, /The author directed all of it/, "and who decides is said");
 });
 
-test("the README identifies the pre-existing code, file by file, and every file it names is in the tree", () => {
-  const before = section("Pre-existing code");
+test("the pre-existing code is identified in the README and named file by file one link away, and every file named is in the tree", () => {
+  const before = declared("Pre-existing code");
   assert.match(before, /Lock-in is an earlier project by the same author, in a private repository/);
   assert.match(before, /monad-developers\/next-serwist-privy-embedded-wallet/, "the template is named");
   assert.match(before, /Everything else was written between 10 Sep 2026 and the submission\./);
-  const named = [...before.matchAll(/`((?:src|app|contracts|scripts|test)\/[^`]+\.(?:ts|sol))`/g)].map((found) => found[1]);
+  const filesOf = (said: string) => [...said.matchAll(/`((?:src|app|contracts|scripts|test)\/[^`]+\.(?:ts|sol))`/g)].map((found) => found[1]);
+  const named = filesOf(before);
   assert.ok(named.length >= 37, `${named.length} files named`);
+  // The same list stands in the README itself, in a folded block under the three lines (the founder, 12 Oct 2026: the
+  // rules say "identified in the README"): the same files, in the same words.
+  const stated = section("Declarations, environment and licences");
+  const folded = stated.slice(stated.indexOf("<summary><b>The pre-existing code, file by file</b></summary>"), stated.indexOf("</details>"));
+  assert.deepEqual(filesOf(folded), named);
+  for (const also of ["`foundry.toml` and `remappings.txt`", "`.github/workflows/ci.yml`", "That is 37 files and about 7,200 of the 109,700 lines of code and tests", "monad-developers/next-serwist-privy-embedded-wallet", "Everything else was written between 10 Sep 2026 and the submission."]) assert.ok(folded.includes(also), also);
   for (const file of named) assert.ok(existsSync(file), `${file} exists`);
   // Every file that says it was ported from Lock-in is named here.
   for (const file of ["src/account-auth-server.ts", "src/api-guard.ts", "src/rate-limit.ts", "src/proof-session-store.ts", "src/reclaim-onchain.ts", "src/reclaim-proof-set.ts", "src/reclaim-channel.ts", "src/duolingo-proof-policy.ts", "src/duolingo-profile.ts", "src/gift-attestation.ts", "src/reclaim-abi.ts", "src/reclaim-types.ts", "contracts/verifiers/VikyReclaimVerifier.sol", "contracts/verifiers/VikyStravaReclaimVerifier.sol", "contracts/verifiers/VikyProofTypes.sol"]) {
@@ -334,7 +434,7 @@ test("the pages and the route groups the documentation lists are the ones under 
   // The passes are the crons vercel.json sets.
   const crons = (JSON.parse(readFileSync("vercel.json", "utf8")) as { crons: Array<{ path: string; schedule: string }> }).crons;
   assert.deepEqual(crons.map((cron) => `${cron.path} ${cron.schedule}`), ["/api/cron/daily 30 0 * * *", "/api/cron/recount 30 3 * * *", "/api/cron/settle 0 7 * * *", "/api/cron/watch 0 2 * * *"]);
-  const environment = section("Environment");
+  const environment = declared("Environment");
   assert.match(environment, /`\/api\/cron\/daily` at 00:30 UTC and `\/api\/cron\/settle` at 07:00 UTC/);
   assert.match(environment, /`\/api\/cron\/watch` at 02:00 UTC/);
   assert.match(environment, /`\/api\/cron\/recount` at 03:30 UTC/);
@@ -351,13 +451,14 @@ test(".env.example names every variable with no value, and each one is read some
   for (const [, name, value] of names) assert.equal(value, "", `${name} carries no value`);
   const read = ["src", "app", "scripts"].flatMap((folder) => readdirSync(folder, { recursive: true, withFileTypes: true }).filter((entry) => entry.isFile() && /\.(ts|tsx)$/.test(entry.name)).map((entry) => readFileSync(`${entry.parentPath}/${entry.name}`, "utf8"))).join("\n");
   for (const [, name] of names) assert.ok(read.includes(name), `${name} is read by the code`);
-  assert.match(section("Environment"), /\[`\.env\.example`\]\(\.env\.example\)/);
+  assert.match(declared("Environment"), /\[`\.env\.example`\]\(\.\.\/\.env\.example\)/);
+  assert.match(section("Run"), /\[Environment\]\(docs\/DECLARATIONS\.md#environment\) says what each group opens\./);
   // The variables the Run and Deploy sections name are in it.
   for (const name of ["SESSION_SIGNING_SECRET", "DATABASE_URL", "ZKFETCH_WORKER_URL", "ZKFETCH_WORKER_SECRET"]) assert.ok(names.some(([, found]) => found === name) && README.includes(`\`${name}\``), name);
 });
 
 test("the licences of what the worker calls are said beside MIT", () => {
-  const licences = section("Third-party licences");
+  const licences = declared("Third-party licences");
   assert.match(licences, /`@reclaimprotocol\/zk-fetch` and `@reclaimprotocol\/attestor-core` are under AGPL-3\.0/);
   assert.match(licences, /`snarkjs`[^]*GPL-3\.0/);
   const manifest = JSON.parse(readFileSync("package.json", "utf8")) as { dependencies: Record<string, string> };
@@ -373,7 +474,8 @@ test("the Foundry version named is the one the CI installs, and nothing is said 
 });
 
 test("the README says the passes that run, what the word check reads, and what came with the port (the audit of 8 Oct 2026)", () => {
-  const text = readFileSync("README.md", "utf8");
+  // The README and the documents its long sections moved to on 12 Oct 2026.
+  const text = EVERYTHING;
   // The passes: Vercel's own schedule, and the one a scheduler outside it calls, which pays a day the day it is done.
   assert.doesNotMatch(text, /Two passes a day/);
   assert.match(text, /CRON\[Passes: 00:30, 03:30 and 07:00 UTC, and one called every five minutes\]/);
@@ -402,7 +504,7 @@ test("the README says the passes that run, what the word check reads, and what c
 });
 
 test("the README's measured figures are src/measured.ts's own, and the documents say what the audit of 9 Oct 2026 found late", () => {
-  const readme = readFileSync("README.md", "utf8").replace(/\s+/g, " ");
+  const readme = EVERYTHING.replace(/\s+/g, " ");
   const average = (Number(RELAYER_FEES.totalMon) / RELAYER_FEES.transactions).toFixed(4);
   assert.ok(readme.includes(`Read from the chain on ${RELAYER_FEES.readAt.replace(", ", " at ")} with \`${RELAYER_FEES.command}\`: ${RELAYER_FEES.transactions} transactions sent since the first one, ${RELAYER_FEES.totalMon} MON of fees in all, ${average} MON a transaction on average.`));
   assert.ok(readme.includes(`A block every ${BLOCK_TIME.seconds * 1_000} ms, measured over ${BLOCK_TIME.blocks.toLocaleString("en-US")} blocks on ${BLOCK_TIME.readOn}`));
@@ -435,5 +537,5 @@ test("the day `pnpm verify:day` checks is named by the transaction the site publ
   // The gift's number and its contract are the ones the chain gives that transaction, and no trace of the other day is left.
   assert.equal(GIFT_ESCROW.slice(0, 6) + "…" + GIFT_ESCROW.slice(-4), "0x995A…e233");
   assert.doesNotMatch(README, /0x5aa6|Gift 1, the day of 12 Sep 2026/);
-  assert.equal(README.split(EXAMPLE_FOR_JUDGES_TX).length - 1, 3, "and the note on its gas limit: the same transaction, three times");
+  assert.equal(README.split(EXAMPLE_FOR_JUDGES_TX).length - 1, 4, "with the table of what has run and the note on its gas limit: the same transaction, four times");
 });

@@ -63,7 +63,7 @@ test("the pages say it: closed with its reason, never waiting for an answer, and
   assert.equal((judges.match(/Strava was\s+read the same way, and is closed\./g) ?? []).length, 2);
   // The README counts what is offered.
   const readme = readFileSync("README.md", "utf8");
-  assert.match(readme, /^## Seventeen conditions, four families$/m);
+  assert.match(readme, /^## Seventeen conditions, three ways of reading$/m);
   assert.doesNotMatch(readme, /Eighteen conditions/);
   assert.match(readme, /An eighteenth, daily kilometres on Strava, is built\s+and closed since 12 Oct 2026: Strava's developer program asks for a paid subscription\./);
 });

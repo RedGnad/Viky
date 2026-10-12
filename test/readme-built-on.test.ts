@@ -7,7 +7,9 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import { AGORA_TESTNET_RUN, testnetTransactionUrl } from "../src/agora-testnet";
-import { FAMILIES, liveConditions } from "../src/conditions";
+import { CONDITIONS, liveConditions } from "../src/conditions";
+import { TOULOUSE_PASSES } from "../src/judges-first-use";
+import { READ_WITHOUT_A_GIFT, waysOfReading } from "../src/judges-ways";
 import { providerWords } from "../src/judges-chain";
 import { ARRIVAL, BLOCK_TIME, creditedDayMon, dollarsOf, FINALITY_GAP, monWords } from "../src/measured";
 import { providersAskedFirst, PUBLIC_RPC_URL, rpcProviderOf } from "../src/monad/chain";
@@ -106,41 +108,40 @@ test("no card service is called licensed in the sentence that covers them all", 
   assert.match(page, /href="https:\/\/rampnetwork\.com\/licenses-and-registrations"/);
 });
 
-test("the conditions the README counts are the catalogue's, family by family", () => {
+test("the conditions the README counts are the catalogue's, by the three ways of reading (the founder, 12 Oct 2026)", () => {
   const live = liveConditions();
-  const heading = `${NUMBER_WORDS[live.length]![0]!.toUpperCase()}${NUMBER_WORDS[live.length]!.slice(1)} conditions, ${NUMBER_WORDS[FAMILIES.length]} families`;
-  const said = section(heading);
-  // Each family by the title the product gives it, in the product's order.
-  const places = FAMILIES.map((family) => said.indexOf(`${family.title}:`));
-  assert.ok(places.every((place) => place >= 0), "every family is named by its title");
-  assert.deepEqual(places, [...places].sort((left, right) => left - right));
-  // Each condition offered today is in its family's sentence, by the words below; one added to the catalogue fails here.
-  const words: Record<string, string> = {
-    "duolingo-daily": "a Duolingo lesson each day",
-    "codeforces-rating": "a Codeforces rating",
-    "credly-badge": "a Credly or Accredible credential",
-    "accredible-credential": "a Credly or Accredible credential",
-    "university-enrollment-shown": "enrolled, the year passed or a grade reached at any of 11,000 universities",
-    "university-year-passed-shown": "enrolled, the year passed or a grade reached at any of 11,000 universities",
-    "university-grade-shown": "enrolled, the year passed or a grade reached at any of 11,000 universities",
-    "toefl-mybest-shown": "a TOEFL or Duolingo English Test score",
-    "duolingo-english-test": "a TOEFL or Duolingo English Test score",
-    "edx-certificate": "an edX, MIT or Coursera certificate",
-    "mitx-online-certificate": "an edX, MIT or Coursera certificate",
-    "coursera-certificate": "an edX, MIT or Coursera certificate",
-    "chess-rating": "a Chess.com rating or puzzle record",
-    "chess-tactics": "a Chess.com rating or puzzle record",
-    "wca-time": "a cube time at a WCA competition",
-    "fitbit-daily": "daily active minutes on Fitbit",
-    "marathon-finish": "a race finish read on the timing company's results page",
-  };
-  assert.deepEqual(live.map((condition) => condition.id).sort(), Object.keys(words).sort());
-  for (const [at, family] of FAMILIES.entries()) {
-    const sentence = said.slice(places[at]!, at + 1 < places.length ? places[at + 1]! : undefined);
-    for (const condition of live.filter((one) => one.family === family.id)) assert.ok(sentence.includes(words[condition.id]!), `${condition.id} under ${family.title}`);
-  }
+  const ways = waysOfReading();
+  const capital = (count: number) => `${NUMBER_WORDS[count]![0]!.toUpperCase()}${NUMBER_WORDS[count]!.slice(1)}`;
+  const heading = `${capital(live.length)} conditions, ${NUMBER_WORDS[ways.length]} ways of reading`;
+  const from = README.indexOf(`\n## ${heading}\n`);
+  assert.ok(from >= 0, heading);
+  const said = README.slice(from, README.indexOf("\n## ", from + 1));
+  // The table the judges page opens "What each condition proves" on: a row a way, by the register's own title, in its order.
+  const rows = said.split("\n").filter((line) => line.startsWith("| ")).map((line) => line.slice(2, -2).split(" | "));
+  assert.deepEqual(rows[0], ["How it is read", "Conditions", `Where it stands on ${READ_WITHOUT_A_GIFT.on}`]);
+  assert.deepEqual(rows.slice(1).map((row) => row[0]), ways.map((way) => way.title));
+  const [page, shown, connected] = rows.slice(1) as [string[], string[], string[]];
+  const held = (nature: string) => live.filter((condition) => condition.nature === nature);
+  // Each row counts the conditions offered today, from the register, and names them in the register's own line.
+  assert.equal(page[1], `${capital(held("read").length)}. ${ways[0]!.what}`);
+  assert.equal(shown[1], `${capital(held("shown").length)}. ${ways[1]!.what} Any of 11,000 universities (the first is read today; each other is set up within two days of a first gift).`);
+  assert.equal(connected[1], `${capital(held("connected").length)}. Active minutes on Fitbit.`);
+  assert.deepEqual(held("connected").map((condition) => condition.id), ["fitbit-daily"]);
+  assert.equal(held("read").length + held("shown").length + held("connected").length, live.length);
+  // Where each stands, dated: two lines paid and the others read without a gift, which the register lists.
+  assert.equal(page[2], `Paid with real money: Duolingo and the Chess.com rating. Each of the ${NUMBER_WORDS[READ_WITHOUT_A_GIFT.conditions.length]} others had its real page read under attestation that day, with no gift yet.`);
+  assert.equal(READ_WITHOUT_A_GIFT.conditions.length + 2, held("read").length);
+  assert.ok(!READ_WITHOUT_A_GIFT.conditions.includes("duolingo-daily") && !READ_WITHOUT_A_GIFT.conditions.includes("chess-rating"));
+  // The two passes at Toulouse are the ones "What has run with real money" gives the transactions of.
+  assert.equal(shown[2], `Paid with real money: enrolment, at Toulouse on ${TOULOUSE_PASSES.first.day.replace(" Oct 2026", "")} and ${TOULOUSE_PASSES.onTheFixedRule.day}. Nobody has shown one of the ${NUMBER_WORDS[held("shown").length - 1]} others yet.`);
+  // The line its source closed is said closed, with the register's own reason, and is not counted.
+  const strava = CONDITIONS.find((condition) => condition.id === "strava-daily");
+  assert.ok(strava && !strava.live && strava.state === "closed");
+  assert.equal(connected[2], `Built, read on no real account yet. An ${NUMBER_WORDS[live.length + 1]}th, daily kilometres on Strava, is built and closed since 12 Oct 2026: ${strava.beforeItOpens}`);
+  // The counts themselves are the judges page's, read as it is served: the README gives none that could go stale.
+  assert.match(said, /What each one proves is on the \[judges page\]\(https:\/\/viky\.cash\/judges\), condition by condition, with its count of\nreal proofs as the page is served\./);
+  assert.doesNotMatch(said, /\d+ real proofs?/);
   // The universities beyond the first are set up on request, in the words the judges page and the card say it.
-  assert.ok(said.includes("(the first is read today; each other is set up within two days of a first gift)"));
   assert.match(readFileSync("app/judges/JudgesUniversities.tsx", "utf8"), /more: each set up within two days of a first gift\./);
 });
 
@@ -158,19 +159,19 @@ test("how money leaves is the register's six ways, and the word check is said in
   assert.match(sentences, /\$\{coin\}, the one marked \$\{network\}/);
   for (const file of ["src/consumer-words.ts", "scripts/check-consumer-words.ts", "test/browser/screens.spec.ts"]) assert.ok(words.includes(`\`${file}\``) && existsSync(file), file);
   // The plan's own paragraph keeps the half about an association, and sends to the section for the check.
-  const path = section("Path forward: how the next hundred find Viky");
-  assert.ok(path.includes('An association that declines because "it is crypto": a word leaked onto a screen, which the check under [No word of crypto](#no-word-of-crypto) reads for at every change.'));
+  const path = flat(readFileSync("docs/PATH-FORWARD.md", "utf8"));
+  assert.ok(path.includes('An association that declines because "it is crypto": a word leaked onto a screen, which the check under [No word of crypto](../README.md#no-word-of-crypto) reads for at every change.'));
   assert.doesNotMatch(path, /A check looks for seven/);
 });
 
 test("the two sentences that stood as notes are written, dated, and the studies are said in one sentence", () => {
-  const people = section("What we know about the two people");
+  const people = flat(readFileSync("docs/THE-TWO-PEOPLE.md", "utf8"));
   assert.ok(people.includes("By 10 Oct 2026, four people outside the team had used Viky: two funded a gift, three opened one, and one who earned a gift used that money to offer one in turn."));
   assert.doesNotMatch(README, /\[N\] people outside the team/);
   // The studies are said as what they are for, in one sentence, with nothing after it (the founder, 10 Oct 2026).
   assert.ok(people.includes("These studies are why the design is what it is. **What using it with people showed us.**"));
   assert.doesNotMatch(README, /These studies have their limits|not proof that Viky works/);
-  const path = section("Path forward: how the next hundred find Viky");
+  const path = flat(readFileSync("docs/PATH-FORWARD.md", "utf8"));
   assert.ok(path.includes("The student channel is open. On 7 Oct 2026 a student in Toulouse showed his enrolment from his university's own portal and the gift paid. On 9 Oct 2026 a second gift paid 20 seconds after he signed in to that portal, with nobody reviewing it."));
   assert.doesNotMatch(README, /The student channel opens once/);
   // Both passes are the ones "What has run with real money" gives the transactions of.
