@@ -48,8 +48,12 @@ export const SAID_BY_THE_ROUTE: ReadonlySet<string> = new Set([
   "NOT_FINAL_YET",
 ]);
 
-/** The screen says these in words of its own, which name the step it was on (app/components/CashOut.tsx). */
-export const SAID_BY_THE_SCREEN: ReadonlySet<string> = new Set(["NOT_CONFIGURED", "RATE_MOVED", "QUOTE_STALE", "QUOTE_EXPIRED", "ALREADY_UNDER_WAY", "REFUSED", "FAILED", "SIGN_IN_REQUIRED", "NO_ANSWER"]);
+/**
+ * The screen says these in words of its own, which name the step it was on (app/components/CashOut.tsx).
+ * `ALREADY_SENT` is the send route's answer to an authorization the coin has taken already: the screen says the send
+ * in the confirmation's place, as it does when the balance read again shows it (13 Oct 2026).
+ */
+export const SAID_BY_THE_SCREEN: ReadonlySet<string> = new Set(["NOT_CONFIGURED", "RATE_MOVED", "QUOTE_STALE", "QUOTE_EXPIRED", "ALREADY_UNDER_WAY", "REFUSED", "FAILED", "SIGN_IN_REQUIRED", "NO_ANSWER", "ALREADY_SENT"]);
 
 /**
  * These carry no sentence of their own: "Please try again", or a word written for a program. The screen's last

@@ -2450,6 +2450,12 @@ export const CASH_OUT = {
   sending: (amount: string, name: string) => `Sending ${amount} to ${name}`,
 
   sent: (amount: string, name: string, when: string, reference: string) => `Sent ${amount} to ${name} on ${when}. Reference: ${reference}.`,
+  /**
+   * A send whose answer was lost, and that the account's own balance read again, or the coin's own record of what was
+   * signed, shows as gone (the founder, 13 Oct 2026). Said in the confirmation's place, with nothing left to press a
+   * second time. No day and no reference: the lost answer carried both.
+   */
+  sentUnheard: (amount: string, name: string) => `Sent ${amount} to ${name}. No answer came back, so there is no reference to show.`,
   sentPays: (name: string, pays: string, bank: boolean) => (bank ? `${name} pays your bank ${pays}.` : `${name} pays ${pays}.`),
   pasteFirst: (name: string) => `Paste the code from ${name} to send it.`,
   /** In dollars, with "about" (the audit of 1 Oct 2026): it used to be said in the coin it was paid in. */
@@ -2470,6 +2476,8 @@ export const CASH_OUT = {
     pasteFirst: "Paste that account's code to send it.",
     confirm: (amount: string) => `Send $${amount} to your other account. This cannot be undone.`,
     sent: (amount: string, when: string, reference: string) => `Sent $${amount} to your other account on ${when}. Reference: ${reference}.`,
+    /** The same send, when its answer was lost and the balance or the coin shows it left (13 Oct 2026). */
+    sentUnheard: (amount: string) => `Sent $${amount} to your other account. No answer came back, so there is no reference to show.`,
     send: (amount: string) => `Send $${amount}`,
     refusals: {
       shape: "That is not a Viky code. It starts with 0x and is 42 characters long.",

@@ -586,6 +586,19 @@ export async function takeFromGifts(account: LocalAccount, gifts: readonly Earne
  * reserve cannot make a contract call at all (D53).
  */
 export async function sendOwnMoney(input: { account: LocalAccount; to: Hex; amount: bigint; coin?: Coin }): Promise<{ sent: boolean; reference: string; sentAtMs: number }> {
+  return sendSigned(await signOwnSend(input));
+}
+
+/** A send as its owner signed it: the coin, and the six fields the coin's own contract checks. */
+export type SignedSend = Readonly<{ coin: Hex; to: Hex; value: string; validAfter: string; validBefore: string; nonce: Hex; signature: Hex }>;
+
+/**
+ * The first half of a send: the person's signature, and nothing asked of Viky. Apart from the second since 13 Oct 2026,
+ * so a screen can keep what was signed while its confirmation stands and send the same thing again: the coin's
+ * contract takes an authorization once, by its number, so a second pass of the same one moves nothing. A new signature
+ * at every press had a new number each time, and two presses after a lost answer could send twice.
+ */
+export async function signOwnSend(input: { account: LocalAccount; to: Hex; amount: bigint; coin?: Coin }): Promise<SignedSend> {
   // Defaults to what a gift holds. Since the way out exists an account can hold a second stablecoin too, and
   // each one is signed under its own domain: a signature made under the wrong name or version is simply
   // refused by the token, so the coin decides the domain rather than a constant (D77).
@@ -601,14 +614,19 @@ export async function sendOwnMoney(input: { account: LocalAccount; to: Hex; amou
   });
   // A signature refused stops here, before anything is asked of Viky: nothing can have moved.
   const signature = await input.account.signTypedData(transferAuthorizationTypedData(message, coin));
+  return { coin: coin.address, to: message.to, value: message.value.toString(), validAfter: message.validAfter.toString(), validBefore: message.validBefore.toString(), nonce: message.nonce, signature };
+}
+
+/** The second half: what was signed, asked of Viky as it is. It can be asked again; the coin's contract takes it once. */
+export async function sendSigned(signed: SignedSend): Promise<{ sent: boolean; reference: string; sentAtMs: number }> {
   // From here the request is out: no answer of the route is said as that, never as "nothing was taken" (12 Oct 2026).
   return postJsonThatMoves("/api/send", {
-    coin: coin.address,
-    to: message.to,
-    value: message.value.toString(),
-    validAfter: message.validAfter.toString(),
-    validBefore: message.validBefore.toString(),
-    nonce: message.nonce,
-    signature,
+    coin: signed.coin,
+    to: signed.to,
+    value: signed.value,
+    validAfter: signed.validAfter,
+    validBefore: signed.validBefore,
+    nonce: signed.nonce,
+    signature: signed.signature,
   });
 }

@@ -88,6 +88,15 @@ export function leavingForOwnSend(typed: bigint, held: bigint, decimals: number)
   return typed === (held / cent) * cent ? held : typed;
 }
 
+/**
+ * Whether a send whose answer was lost has left all the same, by the account's own balance read again (the founder,
+ * 13 Oct 2026): the coin holds at least that much less than before the press. Nothing is concluded from a balance that
+ * could not be read, nor from one that has not moved, which says only that nothing is known yet.
+ */
+export function leftAllTheSame(heldBefore: bigint, heldNow: bigint | undefined, leaving: bigint): boolean {
+  return heldNow !== undefined && leaving > 0n && heldBefore - heldNow >= leaving;
+}
+
 export type ChangeAmount = Readonly<{ units: bigint; refusal?: undefined } | { units?: undefined; refusal: string }>;
 
 /** The two-decimal dollar amount to get ready, read from the text, against what a gift holds. */
