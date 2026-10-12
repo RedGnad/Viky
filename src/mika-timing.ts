@@ -9,6 +9,11 @@ import { MIKA_TIMING_RUNNER } from "./attested-sources";
  * takes (src/attested-sources.ts). The search answers the lettered twin of a bib too ("903166" and "F12345", the women's
  * bibs at Frankfurt): the row taken is the one whose bib is exactly the one bound and whose event is the race's.
  * Server only, nothing fetched here: the fetching sits in src/marathon-reading.ts with the rest.
+ *
+ * The site of a race just run is written another way (Chicago 2026 on 12 Oct 2026, the day after, under "Unofficial
+ * Race Results"): a row's class carries no event, the link to the runner's page names it without its mark
+ * (`event=MAR`, where the pages of a year before say `MAR_9TGG96381A5`), and the runner's page gives its own address
+ * with no event in it. Every reading of that race answered "No runner answers to that bib". Both ways are read.
  */
 
 export type MikaRow = Readonly<{ code: string; bib: string; idp: string }>;
@@ -22,7 +27,8 @@ export function mikaSearchUrl(host: string, year: string, bib: string): string {
 export function mikaRowsOf(page: string): readonly MikaRow[] {
   const rows: MikaRow[] = [];
   for (const row of page.matchAll(/<li class="([^"]*)list-group-item row"[^>]*>([\s\S]*?)<\/li>/g)) {
-    const code = /event-([A-Za-z0-9_]+)/.exec(row[1])?.[1];
+    // The event, in the row's class, or else in the row's link to the runner's page (never in `search_event=`).
+    const code = /event-([A-Za-z0-9_]+)/.exec(row[1])?.[1] ?? /[?&;]event=([A-Za-z0-9_]+)/.exec(row[2])?.[1];
     const bib = /list-label">(?:Bib Number|BIB|Start no\.?)<\/div>\s*([A-Z]{0,2}\d{1,6})\s*<\/div>/.exec(row[2])?.[1];
     const idp = /idp=([A-Z0-9]+)/.exec(row[2])?.[1];
     if (code && bib && idp) rows.push({ code, bib, idp });
@@ -30,9 +36,12 @@ export function mikaRowsOf(page: string): readonly MikaRow[] {
   return rows;
 }
 
-/** Whether a row's event is the race's heat: the code starts with the heat when the heat ends with "_", and is it otherwise. */
+/**
+ * Whether a row's event is the race's heat: the code starts with the heat when the heat ends with "_", or is the heat
+ * without that mark, as the site of a race just run writes it ("MAR" for "MAR_"); and is the heat itself otherwise.
+ */
 export function mikaEventMatches(code: string, heat: string): boolean {
-  return heat.endsWith("_") ? code.startsWith(heat) : code === heat;
+  return heat.endsWith("_") ? code.startsWith(heat) || code === heat.slice(0, -1) : code === heat;
 }
 
 /** The runner's id for the bib bound, in the race's event, or nothing when no row is that bib in that event. */

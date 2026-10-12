@@ -405,6 +405,50 @@ test("MikaTiming: a plain read finds the runner then reads their page; the year,
   await assert.rejects(readMarathonResult("frankfurt.r.mikatiming.de/2031|L_|903166", pages("")), refused("UNKNOWN_RACE"));
 });
 
+/**
+ * The site of a race just run, as Chicago's answered on 12 Oct 2026, the day after the race, under "Unofficial Race
+ * Results": no event in a row's class, the heat without its mark in the row's link, and no event in the page's own
+ * address. Every reading of that race answered "No runner answers to that bib". The pages below are those, trimmed to
+ * what is read, with an invented runner: the name, the time, the site's own id, and a bib no race gives.
+ */
+const MIKA_SEARCH_JUST_RUN = `<ul class="list-group list-group-multicolumn"><li class=" list-group row list-group-item list-group-header "><div>Place</div></li>
+<li class=" list-active list-group-item row"> <div class="row"> <h4 class=" list-field type-fullname"><a href="?content=detail&amp;fpid=search&amp;pid=search&amp;idp=2EFG9638ZZZZ41&amp;lang=EN_CAP&amp;event=MAR&amp;search%5Bstart_no%5D=900041&amp;search_event=">Exemple, Mona</a></h4> </div>
+<div class=" list-field type-field" style="width: 45px"><div class="visible-xs-block visible-sm-block list-label">BIB</div>900041</div> </li></ul>`;
+function mikaDetailPageJustRun(runner: string, bib: string, official: string, year = "2026", idp = "2EFG9638ZZZZ41"): string {
+  return `<meta property="og:url" content="https://results.chicagomarathon.com/${year}/?content=detail&amp;idp=${idp}" />
+<table class="table table-condensed"> <tbody> <tr class=" f-__fullname" > <th class="desc" >Name</th> <td class="f-__fullname last">${runner}</td> </tr>
+<tr class="list-highlight f-start_no_text" > <th class="desc" >Bib Number</th> <td class="f-start_no_text last">${bib}</td> </tr>
+<tr class="list-highlight f-time_finish_netto" > <th class="desc" >Time Total</th> <td class="f-time_finish_netto last">${official}</td> </tr> </tbody> </table>`;
+}
+const CHICAGO = "results.chicagomarathon.com/2026|MAR_|900041";
+
+test("MikaTiming: the site of a race just run is read too, its event in the row's link and none in the page's own address", async () => {
+  const rows = mikaRowsOf(MIKA_SEARCH_JUST_RUN);
+  assert.deepEqual(rows, [{ code: "MAR", bib: "900041", idp: "2EFG9638ZZZZ41" }]);
+  assert.equal(mikaRunnerIdOf(rows, "MAR_", "900041"), "2EFG9638ZZZZ41");
+  // The heat without its mark is the heat; nothing shorter, nothing longer, and never another heat's.
+  assert.ok(mikaEventMatches("MAR", "MAR_") && mikaEventMatches("L", "L_") && !mikaEventMatches("MA", "MAR_") && !mikaEventMatches("MARX", "MAR_") && !mikaEventMatches("S", "L_"));
+  // Where the class carries the event it is still the one read: a row of a year before is read as it was.
+  assert.equal(mikaRowsOf(MIKA_SEARCH)[0].code, "L_HCH3BKLB3B8");
+  // `search_event=` is the search's own field, never the row's event: a row with no other is no row.
+  assert.deepEqual(mikaRowsOf(MIKA_SEARCH_JUST_RUN.replace("&amp;event=MAR", "")), []);
+
+  const detail = mikaDetailPageJustRun("Exemple, Mona", "900041", "02:52:40");
+  assert.deepEqual(mikaValuesOf(detail), { runner: "Exemple, Mona", bib: "900041", official: "02:52:40", year: "2026", idp: "2EFG9638ZZZZ41" });
+  const pages = (page: string) => async (url: string) => new Response(url.includes("pid=search") ? MIKA_SEARCH_JUST_RUN : page, { status: 200 });
+  const read = await readMarathonResult(CHICAGO, pages(detail));
+  assert.equal(read.runner, "Exemple Mona");
+  assert.equal(read.finishSeconds, 2 * 3600 + 52 * 60 + 40);
+  assert.equal(await mikaRunnerAccount(CHICAGO, pages("")), "results.chicagomarathon.com/2026|2EFG9638ZZZZ41|900041");
+  // The page's year is still the race's: a site answering last year's pages, in either shape, has no result yet.
+  await assert.rejects(readMarathonResult(CHICAGO, pages(mikaDetailPageJustRun("Exemple, Mona", "900041", "02:52:40", "2025"))), refused("NO_RESULT"));
+  await assert.rejects(readMarathonResult(CHICAGO, pages(mikaDetailPageJustRun("Someone, Else", "900042", "02:52:40"))), refused("ANOTHER_BIB"));
+  // One pattern reads both addresses, and it still asks for the year and the id.
+  const address = MIKA_TIMING_RUNNER.matches[3].value;
+  assert.ok(address.includes("(?:event=[A-Za-z0-9_]+&amp;)?") && address.includes("(?<year>20\\d\\d)") && address.includes("idp=(?<idp>[A-Z0-9]+)"));
+  assert.match(mikaDetailPage("Dr. Example, Ada Lin (SUI)", "903166", "03:38:26"), new RegExp(address), "and the address of a year before");
+});
+
 test("MikaTiming: its own goal and provider, one line for both timing companies, and nothing offered until goal 31 is signed", (t) => {
   assert.equal(MIKA_TIMING_GOAL_TYPE, 31);
   assert.equal(marathonGoalTypeOf("mika-timing"), 31);

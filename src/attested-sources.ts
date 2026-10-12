@@ -410,7 +410,9 @@ export const MIKA_TIMING_RUNNER: AttestedSource = {
     { type: "regex", value: '<td class="f-__fullname last">(?<runner>[^<]+)</td>' },
     { type: "regex", value: '<td class="f-start_no(?:_text)? last">(?<bib>[A-Z]{0,2}\\d{1,6})</td>' },
     { type: "regex", value: '<td class="f-time_finish_netto last">(?<official>\\d{1,2}:\\d{2}:\\d{2})</td>' },
-    { type: "regex", value: 'property="og:url" content="https://[a-z0-9.-]+/(?<year>20\\d\\d)/\\?content=detail&amp;event=[A-Za-z0-9_]+&amp;(?:event_main_group=\\d+&amp;)?idp=(?<idp>[A-Z0-9]+)' },
+    // The page's own address, for its year and its id. The event stands in it on a site whose results are final,
+    // and not on the site of a race just run (Chicago 2026, 12 Oct 2026): it is read with it or without.
+    { type: "regex", value: 'property="og:url" content="https://[a-z0-9.-]+/(?<year>20\\d\\d)/\\?content=detail&amp;(?:event=[A-Za-z0-9_]+&amp;)?(?:event_main_group=\\d+&amp;)?idp=(?<idp>[A-Z0-9]+)' },
   ],
 };
 
