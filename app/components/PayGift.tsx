@@ -142,6 +142,11 @@ export function PayGift() {
   const asked = params.get("step");
   // Whether the pay press already opened the partner's page (D296): only when that page arrives filled in.
   const [partnerOpened, setPartnerOpened] = useState(params.get("opened") === "1" || params.get("card") === "1");
+  // The pay press was made with the account holding the whole gift (app/kit/offer/PaySheet.tsx), and whether this wait
+  // has looked at the account once since (12 Oct 2026). Before its first look the wait knew nothing and said "Waiting
+  // for your payment", with a card to pay by, for half a second, to somebody who had just paid from their account.
+  const [heldAtThePress] = useState(params.get("held") === "1");
+  const [looked, setLooked] = useState(false);
   const step: Step = ALL_STEPS.includes(asked as Step) ? (asked as Step) : "pay";
 
   // The gift is read from the same store the card writes (src/card-draft.ts): one gift, in one place, on the device.
@@ -518,6 +523,8 @@ export function PayGift() {
         const read = await refresh();
         // The account was read while the screen moved on: the look that follows it is the one that acts.
         if (!read || !live) return;
+        // From here the wait says what the account holds; what the pay press knew stood until now.
+        setLooked(true);
         const inGifts = totalEarned(earned ?? []);
         const next = nextFundingStep({ held: read.held, arriving: read.arriving, arrivingUsdc: read.usdc, inGifts, wanted, failedAtMs: failedAtMs.current, nowMs: Date.now() });
         if (next.do === "takeFromGifts") {
@@ -643,7 +650,9 @@ export function PayGift() {
           return;
         }
       } catch {
-        // A read that failed is read again at the next look; nothing was moved.
+        // A read that failed is read again at the next look; nothing was moved. The screen stops saying what the pay
+        // press knew: it shows the account as not read.
+        setLooked(true);
       }
     };
     void look();
@@ -747,7 +756,10 @@ export function PayGift() {
   // Paying: the wait, the payment arriving, the gift being made.
   if (step === "paying" && address) {
     const held = balance ?? 0n;
-    if (phase === "taking" || phase === "converting" || phase === "giving") {
+    // The first image after a press that paid from the account: the gift is being made, as the press said, until the
+    // first look has read the account. Only for a payment this device started, which is the only one the wait makes.
+    const madeFromTheAccount = phase === "waiting" && heldAtThePress && !looked && !problem && Boolean(startedHere());
+    if (phase === "taking" || phase === "converting" || phase === "giving" || madeFromTheAccount) {
       return (
         <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows>
           {/* The whole screen while a gift is being made (the mockup paying.html): the ring, what is being done,

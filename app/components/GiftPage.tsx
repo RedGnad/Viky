@@ -266,9 +266,13 @@ const onHashChange = (changed: () => void) => {
  * The secret after the `#` of the link this page was opened by, or nothing (the review of 2 Oct 2026, R-01). It opens
  * a gift of the second version, and it is read here and nowhere else: a browser sends what follows a `#` to no server,
  * so the page as the server renders it has none, and it is known once the browser has the page.
+ *
+ * Not read yet is not the same as absent (12 Oct 2026). The page as the server renders it answered "no secret", so
+ * everybody who opened a link read "This link is missing its key" under a greyed button until the browser took the
+ * page over. It answers `undefined` there now: nothing is said of a key before the link was read.
  */
-function useOpeningSecret(): string | null {
-  return useSyncExternalStore(onHashChange, () => openingSecretOf(window.location.hash), () => null);
+function useOpeningSecret(): string | null | undefined {
+  return useSyncExternalStore(onHashChange, () => openingSecretOf(window.location.hash), () => undefined);
 }
 
 function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, reach }: Readonly<{ status: GiftStatus | MilestoneStatus; linkKey: string | null; reload: () => Promise<void>; refresh: () => Promise<void>; openProof: OpenShown | null; /** Brought back by the verification page with a proof made. */ cameBackShown: boolean; /** A reach this page is seeing happen (useReachOnItsPage). */ reach: Reach }>) {
@@ -803,10 +807,11 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
         return (
           <>
             {/* The same button as before the account, in the same state: a press made signed out goes on here. */}
-            <Button doing={busy === "opening" || comingIn ? W.opening : null} step={step} waiting={(working && busy !== "opening") || !openingKey} onPress={() => void open()} data-open-my-gift="">
+            {/* A link not read yet (`undefined`) is no missing key: the button stands as it will, and nothing is refused. */}
+            <Button doing={busy === "opening" || comingIn ? W.opening : null} step={step} waiting={(working && busy !== "opening") || openingKey === null} onPress={() => void open()} data-open-my-gift="">
               {W.openMyGift}
             </Button>
-            {openingKey ? answerAt("open") : <FieldRefusal id="gift-no-key">{W.missingKey}</FieldRefusal>}
+            {openingKey ? answerAt("open") : openingKey === null ? <FieldRefusal id="gift-no-key">{W.missingKey}</FieldRefusal> : null}
           </>
         );
       case "connect":

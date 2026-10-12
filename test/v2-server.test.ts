@@ -286,7 +286,7 @@ test("the link's secret is after its #: what the server is sent names the reader
   assert.match(readFileSync("src/milestone-routes.ts", "utf8"), /const holdsTheLink = holdsTheLinkOf\(record, reader\.linkKey\);/);
   assert.match(readFileSync("src/gift-preview.ts", "utf8"), /const holds = !isTheOpeningSecret\(record, linkKey\) && holdsGiftLink\(record, linkKey\);/);
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
-  assert.match(page, /useSyncExternalStore\(onHashChange, \(\) => openingSecretOf\(window\.location\.hash\), \(\) => null\)/);
+  assert.match(page, /useSyncExternalStore\(onHashChange, \(\) => openingSecretOf\(window\.location\.hash\), \(\) => undefined\)/);
   assert.match(page, /const linkOpened = opensByItsLink\(status\.version\);\n\s*const openingKey = linkOpened \? openingSecret : linkKey;/);
   // No request the browser's code makes carries the secret: it is given to the key that signs, and to nothing else.
   const client = readFileSync("src/client/v2.ts", "utf8");

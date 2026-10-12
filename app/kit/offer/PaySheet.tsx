@@ -205,6 +205,9 @@ export function PaySheet({
   // "From your Viky money": everything the account can pay with, one figure, the one Home says.
   const inAccount = heldForTheLines(Boolean(address), held);
   const enough = pays === "account";
+  // The account's own dollars cover the whole gift, with nothing to take from a gift or to change first: the wait is
+  // told so by this press, and its first image is the gift being made (app/components/PayGift.tsx, 12 Oct 2026).
+  const heldCovers = enough && held.state === "read" && units !== undefined && held.parts.ausd >= units;
   const short = units === undefined || units <= inAccount ? 0n : units - inAccount;
   // One money on the whole sheet, the one the gift was typed in (the mockup of 3 Oct 2026); dollars when no rate is read.
   const code = money.rates && perEuro(money.currency, money.rates) !== undefined ? money.currency : "USD";
@@ -311,7 +314,7 @@ export function PaySheet({
       if (!enough && wayInFillsIn(way)) {
         window.open(wayInPage(way, { account, euros: offer.euros, ask }), "_blank", "noopener,noreferrer");
         router.push("/fund?step=paying&opened=1");
-      } else router.push("/fund?step=paying");
+      } else router.push(heldCovers ? "/fund?step=paying&held=1" : "/fund?step=paying");
       // Still busy on purpose: the sheet stands as it is until the wait has replaced the page.
     } catch {
       onMaking(false);

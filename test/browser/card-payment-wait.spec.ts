@@ -21,6 +21,19 @@ const sheet = (page: Page) => page.locator("dialog.sheet[open]").last();
 const card = (page: Page) => page.locator('section[aria-labelledby="offer-card"]');
 const NOT_ANSWERED = "The check did not answer. Your payment is not lost, and the wait goes on.";
 const NEVER_AFTER_A_PAYMENT = /Something went wrong|Nothing was changed|nothing was changed|nothing was taken/;
+/**
+ * Watches the wait at every image, from the press on (12 Oct 2026): whether it ever asked for a payment. A press made
+ * with the account holding the whole gift landed on "Waiting for your payment" and "Pay by card" for half a second,
+ * before the account was read, and then on the gift being made. Given to the page as text, never as a function.
+ */
+const WATCH_THE_WAIT = `(() => {
+  window.__waitAsked = false;
+  const look = () => {
+    if (location.search.includes("step=paying") && /Waiting for your|Pay by card/.test(document.querySelector("main")?.innerText ?? "")) window.__waitAsked = true;
+    requestAnimationFrame(look);
+  };
+  requestAnimationFrame(look);
+})()`;
 
 test.describe("the gift being made: a creation that does not answer keeps the screen and is asked again", () => {
   test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each case opens its own window");
@@ -49,11 +62,18 @@ test.describe("the gift being made: a creation that does not answer keeps the sc
       await card(page).getByLabel("Their first name").fill("Boo");
       await card(page).getByLabel("how much").fill("19");
       await card(page).locator("[data-card-action]").click();
+      await page.evaluate(WATCH_THE_WAIT);
       await sheet(page).getByRole("button", { name: "Put €19.00 in Boo's name" }).click();
       await page.waitForURL(/\/fund\?step=paying/, { timeout: 60_000 });
 
       const reached = await expect.poll(() => sent.length, { timeout: 25_000 }).toBeGreaterThan(0).then(() => true, () => false);
       needsAContract(reached);
+
+      // The account held the whole gift at the press: the wait says the gift is being made, and at no image since the
+      // press did it ask for a payment that had just been made, or offer a card. Held where the making goes on, on a
+      // build that names a contract: on any other the making stops at once, and this test with it.
+      expect(await page.evaluate("window.__waitAsked"), "the wait was watched from the press on, and never asked for a payment").toBe(false);
+      await expect(page.getByText("Putting €19.00 in Boo's name.", { exact: true })).toBeVisible();
 
       // Not answered: the screen that makes the gift stays, and says what is known. No failure, nothing to press.
       const asksAgain = page.locator("[data-asks-again]");
