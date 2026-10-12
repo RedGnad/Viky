@@ -371,7 +371,7 @@ test("which gifts are read as the day goes: on the third contract, on a source t
     assert.equal(readAsTheDayGoes({ giftId: "7", escrow: V2, goalType: GOAL_TYPE_DUOLINGO_XP }), false, "on the second, a reading never pays its own day");
     assert.equal(readAsTheDayGoes({ giftId: "7", escrow: V1, goalType: GOAL_TYPE_DUOLINGO_XP }), false);
     assert.equal(readAsTheDayGoes({ giftId: "7", escrow: null, goalType: GOAL_TYPE_DUOLINGO_XP }), false, "a record without its contract is read by nobody");
-    // A connected source has no plain look: its gifts are read by the nightly pass alone, on every version.
+    // A connected source has no look that judges the day: its gifts are read by the nightly pass alone, on every version.
     const route = readFileSync("src/daily-count.ts", "utf8");
     assert.match(route, /return paysTheSameDay\(versionOfGift\(record\)\) && conditionOfGoal\(record\.goalType\)\?\.nature !== "connected";/);
     assert.match(route, /if \(condition\?\.nature === "connected" && input\.lookOnly\) return \{ kind: "already", giftId: input\.giftId, reason: "read_recently" \};/);

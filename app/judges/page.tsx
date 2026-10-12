@@ -1,7 +1,7 @@
-import { BEFORE_THE_JOURNAL, cycleInWords, cycleUse, dailyCeilings, JUDGING, leftOf, limitsOf, LOST_ON_30_SEP_2026, RECLAIM_ALERT_LEFT, RECLAIM_ALLOWANCE, SEPTEMBER_2026, startsAgainInWords, utcDayInWords, type CycleUse } from "@/src/attested-calls";
+import { BEFORE_THE_JOURNAL, OUTSIDE_THE_JOURNAL, cycleInWords, cycleUse, dailyCeilings, JUDGING, leftOf, limitsOf, LOST_ON_30_SEP_2026, RECLAIM_ALERT_LEFT, RECLAIM_ALLOWANCE, SEPTEMBER_2026, startsAgainInWords, utcDayInWords, type CycleUse } from "@/src/attested-calls";
 import { formatEther } from "viem";
 import { RACE_RESULT_RACES } from "@/src/race-result-races";
-import { LIMIT } from "@/src/sentences";
+import { GIFT_PAGE, LIMIT } from "@/src/sentences";
 import { PROOF_EVERY_SECONDS } from "@/src/milestone-reading";
 import { formatAusd } from "@/src/gift-reader";
 import { creditedByTheJudgeCode, JUDGE_CREDIT_ENDS, judgeCreditConfig, judgeCreditsStanding, standingInWords } from "@/src/judge-credit";
@@ -329,8 +329,12 @@ export default async function JudgesPage() {
                 Read &quot;Your agreement key&quot; at the foot of this page: the public half of that Ed25519 key, from this
                 page&apos;s memory.
               </li>
-              <li>
-                Open a gift made for you and press Agree on the line under its card: that yes is signed by this key.
+              {/* A new gift has no key named Agree: the yes is signed by the press that asks for the first reading
+                  (app/components/GiftPage.tsx, `start`). The gesture names that press by the words its key carries. */}
+              <li data-gesture-yes>
+                Open a gift made for you and press the key that starts its first reading, &quot;{GIFT_PAGE.startCounting}&quot;
+                or &quot;{GIFT_PAGE.iAddedIt}&quot; on a daily gift: that press signs your yes with this key, before anything is
+                read.
               </li>
               <li>On a second device, sign in with the same passkey.</li>
               <li>Read &quot;Your agreement key&quot; there: it is the same key.</li>
@@ -603,7 +607,9 @@ export default async function JudgesPage() {
           before its proof, and a climb at its target is given three proofs a day at most. Connecting the account is one more, and a connection by code takes it only once a plain look
           has found the code in the name; a count the person asks for looks first in the same way. No daily ceiling bounds
           those asks, only ten in ten minutes from one IP address, counted in each app server&apos;s memory. A gift on
-          Strava or Fitbit has no plain look yet: it is read attested each morning that has a day to credit, earned or not. A climb
+          Strava or Fitbit is asked plainly first, with the person&apos;s key, and no proof is taken from a source that
+          refuses or does not answer; that look does not judge the day, so it is read attested each morning that has a
+          day to credit, earned or not. A climb
           is looked at plainly, not through Reclaim, in both of the day&apos;s passes and at each ask, and read attested
           only to connect the account or when that look does not show it below its target. Private sources keep the
           user-proof path through the Reclaim verifier app.
@@ -630,6 +636,9 @@ export default async function JudgesPage() {
           {reclaimUse?.from === BEFORE_THE_JOURNAL.cycleFrom
             ? ` Of this cycle's fetches, ${BEFORE_THE_JOURNAL.started} were started before the journal began and each gave a proof, counted on 3 Oct 2026 from the reading service's logs: two on 1 Oct, two on 2 Oct, one on 3 Oct.`
             : ""}
+          {reclaimUse?.from === OUTSIDE_THE_JOURNAL.cycleFrom
+            ? ` ${OUTSIDE_THE_JOURNAL.started} more were asked on 12 Oct 2026 from a developer's machine, outside the journal and counted here: one attested read, without a gift, of each public source that had never passed a real one. ${OUTSIDE_THE_JOURNAL.proved} gave a proof, and one met a redirect.`
+            : ""}
           {reclaimUse ? <span data-cycle-left> {readingsLeftInWords(reclaimUse)}</span> : null}{" "}
           <span data-september-fault>
             A fault of ours, found and corrected, in September&apos;s cycle: on 30 Sep 2026 the ratings of one Chess.com
@@ -644,8 +653,8 @@ export default async function JudgesPage() {
           target until one settles it. The operator is told by email when{" "}
           {RECLAIM_ALERT_LEFT.filter((mark) => mark > 0).join(", ")} and none are left of an allowance, the last with the days then waiting for a reading, and
           each morning of the judging (from {utcDayInWords(JUDGING.from)} to {utcDayInWords(JUDGING.until)}) with what the
-          day before spent, by gift and by reason. What is not closed: a gift on Strava or Fitbit has no plain look, a
-          proof whose sending failed is taken again at the next reading, what a person shows has no ceiling of its own
+          day before spent, by gift and by reason. What is not closed: a gift on Strava or Fitbit takes a proof for a
+          day that was not earned, a proof whose sending failed is taken again at the next reading, what a person shows has no ceiling of its own
           for a gift, and a reading asked from a developer&apos;s machine reaches the same Reclaim application without
           being written in this journal.
         </p>

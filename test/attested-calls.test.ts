@@ -12,6 +12,7 @@ import {
   allowanceAlert,
   allowanceAlertsDue,
   BEFORE_THE_JOURNAL,
+  OUTSIDE_THE_JOURNAL,
   configureAttestedCalls,
   countedFetch,
   cycleInWords,
@@ -159,6 +160,24 @@ test("what was spent before the journal began counts for October 2026's cycle, a
   assert.deepEqual(LOST_ON_30_SEP_2026, { fetches: 114, proofs: 57 });
   assert.equal(35 + 6 + LOST_ON_30_SEP_2026.proofs, SEPTEMBER_2026.proofs, "the daily readings kept, the proofs of 28 Sep, and those of 30 Sep");
   assert.equal(SEPTEMBER_2026.proofs + 1 + (LOST_ON_30_SEP_2026.fetches - LOST_ON_30_SEP_2026.proofs), SEPTEMBER_2026.started, "and the fetches that gave none: one on 28 Sep, 57 on 30 Sep");
+});
+
+test("the readings of 12 Oct 2026 made outside the journal are counted with their cycle, from the minute they were made", async () => {
+  // One attested read of each public source that had never passed a real one, without a gift, on the founder's word:
+  // fourteen fetches asked of production's reading service from a developer's machine, thirteen of them a proof.
+  assert.deepEqual(OUTSIDE_THE_JOURNAL, { cycleFrom: "2026-10-01T00:00:00.000Z", at: "2026-10-12T09:03:00.000Z", started: 14, proved: 13 });
+  const before = await cycleUse(Date.parse("2026-10-12T09:02:59Z"), {});
+  const after = await cycleUse(Date.parse("2026-10-12T09:03:00Z"), {});
+  assert.equal(after.fetches.started - before.fetches.started, 14);
+  assert.equal(after.fetches.proved - before.fetches.proved, 13);
+  assert.deepEqual(after.verifications, before.verifications, "nothing was asked of a person");
+  // The cycle that follows starts from nothing.
+  const journal = await cycleUse(Date.parse("2026-11-01T08:00:00Z"), {});
+  assert.deepEqual({ started: journal.fetches.started, proved: journal.fetches.proved }, { started: 0, proved: 0 });
+  // The judges page says them, for that cycle alone, beside the count they are in.
+  const page = readFileSync("app/judges/page.tsx", "utf8");
+  assert.match(page, /\{reclaimUse\?\.from === OUTSIDE_THE_JOURNAL\.cycleFrom\s+\? ` \$\{OUTSIDE_THE_JOURNAL\.started\} more were asked on 12 Oct 2026 from a developer's machine, outside the journal and counted here: one attested read, without a gift, of each public source that had never passed a real one\. \$\{OUTSIDE_THE_JOURNAL\.proved\} gave a proof, and one met a redirect\.`\s+: ""\}/);
+  assert.equal(OUTSIDE_THE_JOURNAL.started - OUTSIDE_THE_JOURNAL.proved, 1, "one met a redirect");
 });
 
 test("the limit goes by the readings that gave a proof and by the proofs that came back", async () => {

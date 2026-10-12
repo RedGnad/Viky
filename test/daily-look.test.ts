@@ -181,7 +181,7 @@ test("the two readings look before they pay, and the live look is the plain prof
   assert.ok(checkIn.indexOf("await lookBeforeCount(") < checkIn.indexOf("await deps.course("), "and before the attested course");
   // The attested name still decides: the look only keeps a proof from being wasted.
   assert.match(checkIn, /!displayNameHasCode\(read\.displayName, record\.bindingCode \?\? ""\)\) return codeNotInName\(read\.displayName\)/);
-  // A connected source has no plain look yet: it is spared the mornings that have no day to credit, by its own rule
+  // A connected source has no look that judges the day: it is spared the mornings that have no day to credit, by its own rule
   // on every version, since its page is yesterday's (test/connected-day-read-once.test.ts).
   const connected = readFileSync("src/connected-checkin.ts", "utf8");
   assert.ok(connected.indexOf("noDayForYesterdaysPage(onChain, now)") > 0 && connected.indexOf("noDayForYesterdaysPage(onChain, now)") < connected.indexOf("await attestedRead("));

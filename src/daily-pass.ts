@@ -74,6 +74,9 @@ const OURS_TO_FIX: ReadonlySet<string> = new Set([
   // A connected source that did not answer the token refresh (src/strava.ts, src/fitbit.ts): an outage of theirs or
   // a limit we met, not a connection the person took back.
   "REFRESH_UNAVAILABLE",
+  // A connected source that refused the reading itself (src/connected-checkin.ts): it refuses Viky's application or
+  // its key, and the person has no page there that they could have hidden.
+  "SOURCE_REFUSED",
   // The month's limit of attested readings is reached (src/attested-calls.ts): no reading was taken, so nothing is
   // settled against it, and the person reads why on the gift's page.
   "LIMIT_REACHED",

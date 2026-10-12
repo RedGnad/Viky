@@ -128,6 +128,17 @@ export const MORNING_SUMMARY_HOUR_UTC = 6;
 export const BEFORE_THE_JOURNAL = { cycleFrom: "2026-10-01T00:00:00.000Z", started: 5, proved: 5, asked: 0, shown: 0 } as const;
 
 /**
+ * Readings of the cycle of October 2026 that the journal does not hold: on 12 Oct 2026, on the founder's word, one
+ * attested read of each public source that had never passed a real one, without a gift, asked from a developer's
+ * machine of production's own reading service (Codeforces, the Chess.com puzzles rating, the WCA, the Duolingo English
+ * Test, Coursera, edX, MITx Online, Credly's two pages, Accredible, Breizh Chrono, race result and MikaTiming).
+ * Fourteen fetches, thirteen of them a proof: the fourteenth met a redirect, a race's page MikaTiming had moved to its
+ * archive. They reach the same Reclaim application and the same allowance, so they are counted with that cycle, from
+ * the minute the last of them was made.
+ */
+export const OUTSIDE_THE_JOURNAL = { cycleFrom: "2026-10-01T00:00:00.000Z", at: "2026-10-12T09:03:00.000Z", started: 14, proved: 13 } as const;
+
+/**
  * The cycle before, September 2026, as far as it is known: 98 proofs given (35 daily readings kept with their proof
  * from 11 to 24 Sep, 6 on 28 Sep, 57 on 30 Sep) and at least 156 fetches started (those, and the 58 that gave no
  * proof: one on 28 Sep, 57 on 30 Sep). A floor: a fetch that failed before the reading service's logs begin, on 28 Sep
@@ -202,11 +213,12 @@ export async function cycleUse(nowMs: number = Date.now(), env: Environment = pr
       FROM viky_attested_calls
      WHERE at >= ${from.toISOString()} AND at < ${until.toISOString()}`;
   const before = from.toISOString() === BEFORE_THE_JOURNAL.cycleFrom ? BEFORE_THE_JOURNAL : { started: 0, proved: 0, asked: 0, shown: 0 };
+  const outside = from.toISOString() === OUTSIDE_THE_JOURNAL.cycleFrom && nowMs >= Date.parse(OUTSIDE_THE_JOURNAL.at) ? OUTSIDE_THE_JOURNAL : { started: 0, proved: 0 };
   const allowed = reclaimAllowance(env);
   return {
     from: from.toISOString(),
     until: until.toISOString(),
-    fetches: { started: Number(counted?.started ?? 0) + before.started, proved: Number(counted?.proved ?? 0) + before.proved, allowed: allowed.fetches },
+    fetches: { started: Number(counted?.started ?? 0) + before.started + outside.started, proved: Number(counted?.proved ?? 0) + before.proved + outside.proved, allowed: allowed.fetches },
     verifications: {
       asked: Number(counted?.asked ?? 0) + before.asked,
       shown: Number(counted?.shown ?? 0) + before.shown,

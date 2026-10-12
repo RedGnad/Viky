@@ -1,10 +1,11 @@
-import { readingFor, startsAgainInWords } from "./attested-calls";
+import { readingFor, startsAgainInWords, tellOnceToday, type Alert } from "./attested-calls";
 import { CEILING, LIMIT } from "./sentences";
 import { getAddress, type Hex } from "viem";
 import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
 import { attestedRead, AttestedReadError, reclaimAttestedReadDeps, type AttestedReadDeps } from "./attested-read";
 import { attestedSource, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES } from "./attested-sources";
 import { conditionById, conditionOfGoal } from "./conditions";
+import { lookAtConnectedSource, type ConnectedLook } from "./connected-look";
 import { noDayForYesterdaysPage } from "./daily-look";
 import { openSecret, sealSecret, vaultConfigured } from "./connect-vault";
 import { eraseConnection, loadConnection, saveRefreshedTokens, type Connection } from "./connection-store";
@@ -41,9 +42,35 @@ import { distanceOfDay, refreshStravaTokens, stravaConfigured, stravaDayMet, STR
  *
  * Each source is one line below: what it is called, which page, how a day is judged, how a key is refreshed. The
  * reading itself is the same for all of them. Every refusal is typed. Ours to fix (the worker, the attestor, a
- * configuration) hold the day open, as for every daily gift; the person's to fix (no connection, a key the source no
- * longer honours) do not, and the screen says so.
+ * configuration, a source that refuses Viky) hold the day open, as for every daily gift; the person's to fix (no
+ * connection, a key the source no longer honours) do not, and the screen says so.
+ *
+ * The source is asked plainly first, with the person's key (src/connected-look.ts, 12 Oct 2026): a proof is asked
+ * only of a source that serves the page. The look judges nothing of the day, which is read from the proof alone.
  */
+
+/**
+ * A connected source that refuses the reading itself (403). The person has no page here that they could have taken
+ * private: the refusal is about Viky's application or its key at the source, so it is ours to fix, the pass holds the
+ * gift (src/daily-pass.ts), and the sentence says so. Gift 1002's first reading read "That page is not public any
+ * more", the sentence of a public certificate, which blamed the person for hiding a page they do not have.
+ */
+export const SOURCE_REFUSED = "SOURCE_REFUSED";
+export function sourceRefusedSentence(name: string): string {
+  return `${name} refused Viky's reading. It is ours to fix: try again later.`;
+}
+
+/** What the operator is written when a connected source refuses a reading: the source's own words, once in a day. */
+export function sourceRefusedAlert(line: Pick<ConnectedLine, "name">, giftId: string, look: Extract<ConnectedLook, { kind: "refused" }>): Alert {
+  return {
+    subject: `${line.name} refuses Viky's readings`,
+    text: [
+      `${line.name} answered ${look.status} to the reading of gift ${giftId}, asked plainly with the person's key, before any proof.`,
+      `What it said: ${look.said || "nothing"}`,
+      "No attested reading was asked and nothing was counted.",
+    ].join("\n"),
+  };
+}
 
 /** The keys of a connection, opened for one reading, whichever source they are from. */
 export type ConnectedTokens = Readonly<{ accessToken: string; refreshToken: string; expiresAt: number; externalId: string; scope: string }>;
@@ -122,11 +149,17 @@ export type ConnectedCheckInDeps = {
   leave?: (giftId: string, fundedAt: number) => Promise<ReadingLeave>;
   /** The gift as its contract holds it; the chain's own answer when absent (src/gift-reader.ts). */
   gift?: typeof readGift;
+  /** The source asked plainly before the proof (src/connected-look.ts); a test that omits it asks nothing and reads. */
+  look?: typeof lookAtConnectedSource;
+  /** Tells the operator, once in a day for a source; a test that omits it tells nobody. */
+  tell?: (name: string, alert: () => Alert) => Promise<void>;
 };
 
 const defaultDeps: ConnectedCheckInDeps = {
   now: () => Math.floor(Date.now() / 1_000),
   leave: readingLeave,
+  look: lookAtConnectedSource,
+  tell: (name, alert) => tellOnceToday(name, alert),
   read: async () => reclaimAttestedReadDeps(),
   refresh: (line, tokens, nowSeconds) => line.refresh(tokens, nowSeconds),
   // The source must be in the shared list the reading service runs (the founder's redeploy, OPERATIONS step 3):
@@ -234,10 +267,22 @@ async function readConnected(input: { giftId: string; purpose: PublicCheckInPurp
     // A day's ceiling of readings (src/attested-calls.ts). The screen says when it resumes, in the reader's own clock.
     CEILING_REACHED: CEILING.reading(null),
   };
+  // Asked plainly first, with the person's key: a source that refuses, or does not serve the page, is asked for no
+  // proof. What it answered is a line in the logs either way, and a refusal is written to the operator.
+  const source = attestedSource(line.sourceId);
+  const seen = deps.look && source ? await deps.look(source, dayName, tokens.accessToken) : null;
+  if (seen && seen.kind !== "open") console.warn(JSON.stringify({ at: new Date(now * 1_000).toISOString(), connectedSource: line.service, gift: giftId, look: seen.kind, status: seen.status, said: seen.said }));
+  if (seen?.kind === "refused") {
+    await deps.tell?.(`source-refused:${line.service}`, () => sourceRefusedAlert(line, giftId, seen));
+    return refusal(giftId, SOURCE_REFUSED, sourceRefusedSentence(line.name));
+  }
+  if (seen?.kind === "unseen") return refusal(giftId, "FETCH_FAILED", messages.FETCH_FAILED);
   let reading: Awaited<ReturnType<typeof attestedRead>>;
   try {
     reading = await attestedRead(line.sourceId, dayName, await deps.read(), tokens.accessToken);
   } catch (error) {
+    // The same refusal met through the attested fetch, when the look was not taken or the source changed its mind.
+    if (error instanceof AttestedReadError && error.code === "REFUSED") return refusal(giftId, SOURCE_REFUSED, sourceRefusedSentence(line.name));
     if (error instanceof AttestedReadError) return refusal(giftId, error.code, messages[error.code] ?? error.message);
     throw error;
   }
