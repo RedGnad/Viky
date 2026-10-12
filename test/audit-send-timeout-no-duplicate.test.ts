@@ -5,6 +5,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { routeSaysIt } from "../src/money-refusals";
 
 const route = readFileSync(new URL("../app/api/send/route.ts", import.meta.url), "utf8");
 const screen = readFileSync(new URL("../app/components/CashOut.tsx", import.meta.url), "utf8");
@@ -20,7 +21,9 @@ test("once the send is out, a failed wait is SENT_UNCONFIRMED, never a failure t
 });
 
 test("the way out shows the route's own sentence for an unconfirmed send", () => {
-  const branch = screen.slice(screen.indexOf('case "SENT_UNCONFIRMED":'));
-  assert.ok(screen.includes('case "SENT_UNCONFIRMED":'));
-  assert.ok(branch.indexOf("return error.message;") < branch.indexOf("return W.failures"), "it falls to the route's sentence");
+  // Since 12 Oct 2026 the codes whose sentence is the route's are a list (src/money-refusals.ts), asked before the
+  // screen's own branches: an unconfirmed send is on it, and never reaches a sentence that says nothing was taken.
+  assert.equal(routeSaysIt("SENT_UNCONFIRMED"), true);
+  const asked = screen.indexOf("if (routeSaysIt(error.code)) return error.message;");
+  assert.ok(asked > 0 && asked < screen.indexOf("return W.failures"), "it falls to the route's sentence");
 });

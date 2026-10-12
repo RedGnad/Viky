@@ -61,7 +61,9 @@ async function unwrap<T>(response: Response): Promise<T> {
     const failure = (data ?? {}) as { error?: string; code?: string; detail?: string };
     throw new ApiError({
       status: response.status,
-      code: failure.code ?? (response.status === 401 ? "SIGN_IN_REQUIRED" : "FAILED"),
+      // A route that refuses for too many attempts says so in a sentence and, on most of them, with no code: it is
+      // named here, so that no screen takes it for a failure and says something else in its place (12 Oct 2026).
+      code: failure.code ?? (response.status === 401 ? "SIGN_IN_REQUIRED" : response.status === 429 ? "RATE_LIMITED" : "FAILED"),
       message: failure.error ?? GENERIC_FAILURE,
       detail: failure.detail,
     });

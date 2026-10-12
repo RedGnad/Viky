@@ -126,7 +126,8 @@ once a year.
 Strava opens on request, within two days of a first gift: its developer program is a paid subscription, taken when a
 gift asks for it, and serves ten athletes before its review, up to 9,999 after it.
 
-At a university, any of 11,000 (the first is read today; each other is set up within two days of a first gift).
+The university conditions work at any of 11,000 universities: the first is read today, each other is set up within two
+days of a first gift.
 
 Live counts and what each one proves: [the judges page](https://viky.cash/judges).
 
@@ -162,6 +163,7 @@ index, and the testers' figures come with the submission.
 | **The same student's next gift, paid 20 seconds after they signed in** to that portal, on the rule fixed ahead of the pass, with no review. | 9 Oct 2026 | 5.02 AUSD | [`0xd950…77e2`](https://monadvision.com/tx/0xd950295c4c3d51480496003fd6547b0fc6c3546ac0c5747d377e6259cd3277e2) |
 | **A daily gift from its funding to its end, on the contract in service**, made by the author between two of his own accounts: one day credited, 0.187 AUSD, and the 29 others, 5.423 AUSD, back to the funder. | 3 and 4 Oct 2026 | 5.61 AUSD | [`0xa6db…de72`](https://monadvision.com/tx/0xa6db35d9f3716d238c7f55770a8853612fab90a19e059c14706959f0dbafde72) |
 | **A card payment converted**: the USDC a card service delivered to the funder's own account, changed into AUSD on one signature. | 3 Oct 2026 | 7.914524 AUSD | [`0x533e…1616`](https://monadvision.com/tx/0x533ec0746493e0670029b917887b8e15376380a4a9c7bb82706b2de910ed1616) |
+| **A gift card bought with the account's own dollars**, by the author from his own account: the AUSD sent to Viky's treasury on one signature. | 12 Oct 2026 | 11.769118 AUSD | [`0x346c…21ae`](https://monadvision.com/tx/0x346cef5586d129fbe16b405140a443aef943954a30a920db60959186623321ae) |
 | **A day credited on a proof**: the day the command of the first screen checks again. | 12 Sep 2026 | 0.142857 AUSD, one day of a 1.00 AUSD gift | [`0x55f9…6fab`](https://monadvision.com/tx/0x55f9eafa857ee9897be5a7e092e055a3c75d2003d11a087dd9a0244e64726fab) |
 
 What has not run on the third daily contract yet: a missed day going back, and a gift reaching its last day.
@@ -184,6 +186,9 @@ What has not run on the third daily contract yet: a missed day going back, and a
   6. 03:44: the 0.187 AUSD it earned withdrawn ([`0xf2d4…cf10`](https://monadvision.com/tx/0xf2d4cdb9393dc0e4507a6f282991edccdf93ecd60e18323cd33e1e5f8b59cf10)). The contract holds nothing of it.
 - **A card payment converted.** 3 Oct 2026: the USDC a card service delivered to the funder's own account, changed
   into 7.914524 AUSD on one signature ([`0x533e…1616`](https://monadvision.com/tx/0x533ec0746493e0670029b917887b8e15376380a4a9c7bb82706b2de910ed1616)).
+- **A gift card bought with the account's own dollars.** 12 Oct 2026, 14:06 UTC: the author, from his own account, sent
+  11.769118 AUSD to Viky's treasury on one signature, which the relayer submitted
+  ([`0x346c…21ae`](https://monadvision.com/tx/0x346cef5586d129fbe16b405140a443aef943954a30a920db60959186623321ae)).
 - **Toulouse, 9 Oct 2026: a student showed their enrolment, and the gift paid 20 seconds after they signed in to
   their university's portal, with no review.**
   Gift 1000008 on the second `MilestoneGift`, 5.02 AUSD for staying enrolled, made out to the same account as the

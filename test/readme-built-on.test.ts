@@ -146,7 +146,7 @@ test("the conditions the README counts are the catalogue's: one sentence of four
   assert.equal(rows.filter((row) => row[3] === "Read on its real page").length, 10);
   // Under the table: what Strava's request is, in the founder's sentence, and the universities beyond the first.
   assert.ok(said.replace(/\s+/g, " ").includes(OPENS_ON_REQUEST["strava-daily"]!));
-  assert.ok(said.includes("At a university, any of 11,000 (the first is read today; each other is set up within two days of a first gift)."));
+  assert.ok(said.includes("The university conditions work at any of 11,000 universities: the first is read today, each other is set up within two\ndays of a first gift."));
   assert.match(readFileSync("app/judges/JudgesUniversities.tsx", "utf8"), /more: each set up within two days of a first gift\./);
   // The counts themselves are the judges page's, read as it is served: the README gives none that could go stale.
   assert.ok(said.includes("Live counts and what each one proves: [the judges page](https://viky.cash/judges)."));

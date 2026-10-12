@@ -17,6 +17,7 @@ import { toFunctionSelector } from "viem";
 import { consentTermsFor } from "../src/consent-terms";
 import { HOME } from "../src/sentences";
 import { EXAMPLE_FOR_JUDGES_TX } from "../src/proof-journal";
+import { FOUNDER_TEST_ACCOUNTS } from "../src/pilot-accounts";
 import { EXIT_ROUTER, GIFT_ESCROW, USDC_ROUTER } from "../src/viky-contracts";
 
 const README = readFileSync("README.md", "utf8");
@@ -227,7 +228,7 @@ test("what has run with real money opens on a table, a row a fact, and its step 
   // The table (the founder, 12 Oct 2026): what happened, the date, the amount, the transaction; five facts.
   const rows = ran.slice(0, ran.indexOf("<details>")).split("\n").filter((line) => line.startsWith("| ")).map((line) => line.slice(2, -2).split(" | "));
   assert.deepEqual(rows[0], ["What happened", "Date", "Amount", "Transaction"]);
-  assert.equal(rows.length, 6);
+  assert.equal(rows.length, 7);
   const facts = rows.slice(1);
   for (const fact of facts) {
     assert.equal(fact.length, 4, fact[0]);
@@ -247,17 +248,25 @@ test("what has run with real money opens on a table, a row a fact, and its step 
   assert.match(facts[2]![0]!, /made by the author between two of his own accounts: one day credited, 0\.187 AUSD, and the 29 others, 5\.423 AUSD, back to the funder\./);
   assert.equal(facts[2]![2], "5.61 AUSD");
   assert.equal(facts[3]![2], "7.914524 AUSD");
+  // A gift card bought by the author from his own account (the founder, 12 Oct 2026): the AUSD his account sent to
+  // Viky's treasury, read on the chain and not on the order, which carries the card's code. One transfer of AUSD came
+  // into the treasury that day: 11.769118, at 14:06:20 UTC, submitted by the relayer on his signature.
+  assert.match(facts[4]![0]!, /^\*\*A gift card bought with the account's own dollars\*\*, by the author from his own account: the AUSD sent to Viky's treasury on one signature\.$/);
+  assert.deepEqual(facts[4]!.slice(1, 3), ["12 Oct 2026", "11.769118 AUSD"]);
+  assert.deepEqual(linksOf(facts[4]![3]!), ["0x346cef5586d129fbe16b405140a443aef943954a30a920db60959186623321ae"]);
+  // The account that paid is one of the founder's own, as the row says.
+  assert.ok(FOUNDER_TEST_ACCOUNTS.includes("0xb12e0c72209bd4becfdafa96a8f3e7ebc93b8376"));
   // The credited day: one day of gift 2, 1.00 AUSD over seven days, as the contract holds it (read on 12 Oct 2026).
-  assert.equal(facts[4]![2], "0.142857 AUSD, one day of a 1.00 AUSD gift");
+  assert.equal(facts[5]![2], "0.142857 AUSD, one day of a 1.00 AUSD gift");
   assert.equal(Math.floor(1_000_000 / 7), 142_857);
-  // Every transaction of the table is one of the step by step's twelve, and none is said twice there.
+  // Every transaction of the table is one of the step by step's thirteen, and none is said twice there.
   const links = linksOf(fold);
-  assert.equal(links.length, 12);
-  assert.equal(new Set(links).size, 12, "twelve transactions, none said twice");
+  assert.equal(links.length, 13);
+  assert.equal(new Set(links).size, 13, "thirteen transactions, none said twice");
   for (const fact of facts) assert.ok(links.includes(linksOf(fact[3]!)[0]!), fact[0]);
   // Every item of the lists carries one: nothing is said to have run on words alone.
   const items = fold.split("\n").filter((line) => /^\s*(- \*\*|\d\. )/.test(line));
-  assert.equal(items.length, 14, "five things, one of them in six steps and one in three");
+  assert.equal(items.length, 15, "six things, one of them in six steps and one in three");
   const text = fold.replace(/\n\s+/g, " ");
   for (const step of text.split(/(?=\s\d\. )/).slice(1)) assert.match(step, /monadvision\.com\/tx\/0x[0-9a-f]{64}/, step.slice(0, 60));
   // The gift that ran end to end is said for what it is: the author's own, between two of his accounts.

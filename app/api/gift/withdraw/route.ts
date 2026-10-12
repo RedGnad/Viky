@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     const giftId = String(body.giftId ?? "").trim();
     if (!/^\d{1,78}$/.test(giftId)) throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);
     const to = String(body.to ?? auth.account);
-    if (!isAddress(to)) throw new GiftApiError("INVALID_DESTINATION", "The destination is invalid");
+    if (!isAddress(to)) throw new GiftApiError("INVALID_DESTINATION", "That destination is not valid.");
     // Reshaped rather than taken as given: the contract's library refuses a recovery byte outside 27 and 28,
     // and an s in the upper half of the curve, and refuses both with a plain string that reaches the person
     // as "this could not be recorded". Neither reshaping changes who signed (D51).
@@ -73,9 +73,9 @@ export async function POST(request: Request) {
     const escrow = escrowOf(record);
     const gift = await readGift(escrow, giftId);
     if (!gift.recipient || gift.recipient.toLowerCase() !== auth.account.toLowerCase()) {
-      throw new GiftApiError("NOT_YOURS", "Only the person the gift is for can take it", 403);
+      throw new GiftApiError("NOT_YOURS", "Only the person the gift is for can take it.", 403);
     }
-    if (amount <= 0n || amount > gift.earnedBalance) throw new GiftApiError("NOT_ENOUGH_EARNED", "That is more than what is yours so far", 409);
+    if (amount <= 0n || amount > gift.earnedBalance) throw new GiftApiError("NOT_ENOUGH_EARNED", "That is more than what is yours so far.", 409);
     assertNotTooSmall("takeOut", amount, gift.earnedBalance);
     await assertWithdrawStands({ giftId, contract: escrow, recipient: auth.account, to: getAddress(to), amount, nonce, deadline, signature }, gift.withdrawNonce);
 

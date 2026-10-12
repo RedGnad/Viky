@@ -31,7 +31,8 @@ async function person(device: Profile, holdings: Holdings, where: Where, open: O
   const { page, context } = device;
   await answerTheChain(context, holdings);
   await page.route("**/api/gifts/earned", (route) => route.fulfill(json({ gifts: [] })));
-  await page.route("**/api/exit/open", (route) => route.fulfill(json({ open })));
+  // With the smallest amount Viky sends at a time, as the route reads it from its setting: a dollar.
+  await page.route("**/api/exit/open", (route) => route.fulfill(json({ open, sendsAtLeast: "1000000" })));
   await page.route("**/api/rates", (route) => route.fulfill(json({ rates: { ...RATES, readAtMs: Date.now() }, currencies: ["USD", "EUR", "XOF"] })));
   await page.route("**/api/account/preferences", (route) => route.fulfill(json({ country: where.country, displayCurrency: currency })));
   await page.route("**/api/rails/where**", (route) =>
@@ -486,3 +487,71 @@ test.describe("after a card payment by Rampnow, before the gift is made", () => 
   });
 });
 
+
+/**
+ * Sending to another account of one's own (the founder, 12 Oct 2026). He sent to his other account and read "Viky could
+ * not finish this, and nothing was taken." where the route had said why. Held here on the screen itself: the smallest
+ * amount Viky sends is said under the field before the press, in the route's own sentence, and each refusal the send
+ * route gives is read as the route wrote it, one with no code among them.
+ */
+test.describe("a send to another account says the route's own refusal, and the smallest amount before the press", () => {
+  test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each case opens its own window");
+  test.setTimeout(120_000);
+  const FRANCE: Where = { country: "fr", bank: "serves", card: "serves", method: { method: "SEPA", currency: "EUR" } };
+  const OTHER = "0x00000000000000000000000000000000000000aa";
+  const LAST_SENTENCE = "Viky could not finish this, and nothing was taken. Your money is where it was.";
+  const TOO_SMALL = "Viky sends $1.00 or more at a time. Below that, send everything you have at once.";
+  const REFUSALS = [
+    { status: 429, body: { error: "That is as many actions as Viky sends for one account in an hour. Try again in 12 minutes.", code: "RELAY_CEILING" } },
+    { status: 409, body: { error: TOO_SMALL, code: "TOO_SMALL_TO_RELAY" } },
+    // As the send route answers too many attempts: its sentence, and no code.
+    { status: 429, body: { error: "Too many attempts. Try again shortly." } },
+  ] as const;
+
+  for (const size of sizesFor(SHOTS)) {
+    test(`under a dollar the field says so and the press waits; a refusal is read as the route wrote it (${size.name})`, async ({ browser, baseURL }) => {
+      const device = await profile(browser, baseURL, size.viewport);
+      const { page } = device;
+      await person(device, { ausd: 5_000_000n, usdc: 0n, mon: 0n }, FRANCE);
+      let asked = 0;
+      await page.route("**/api/send", (route) => {
+        const refusal = REFUSALS[Math.min(asked, REFUSALS.length - 1)]!;
+        asked += 1;
+        return route.fulfill(json(refusal.body, refusal.status));
+      });
+      await page.goto("/cash-out");
+      await page.getByRole("button", { name: "Send to another Viky account of mine", exact: true }).click();
+      const card = page.locator("section", { has: page.getByRole("heading", { name: "Send to another Viky account of mine" }) });
+      await card.getByLabel("Paste that account's code").fill(OTHER);
+      const amount = card.getByLabel("How much to send");
+      // Everything the account holds is proposed, and nothing is said of a smallest amount.
+      await expect(amount).toHaveValue("5.00");
+      await expect(card.locator("[data-too-small-to-send]")).toHaveCount(0);
+      // Under a dollar, and not everything: the route's own sentence under the field, before the press, which waits.
+      await amount.fill("0.50");
+      await expect(card.locator("[data-too-small-to-send]")).toHaveText(TOO_SMALL);
+      await expect(card.getByRole("button", { name: "Send $0.50", exact: true })).toBeDisabled();
+      await shot(page, size.name, "9-under-a-dollar");
+      await page.emulateMedia({ colorScheme: "dark" });
+      await shot(page, size.name, "9-under-a-dollar-night");
+      await page.emulateMedia({ colorScheme: "light" });
+      await amount.fill("2.00");
+      await expect(card.locator("[data-too-small-to-send]")).toHaveCount(0);
+      for (const [at, refusal] of REFUSALS.entries()) {
+        await card.getByRole("button", { name: "Send $2.00", exact: true }).click();
+        await card.getByRole("button", { name: "Send", exact: true }).click();
+        await expect(card.getByRole("alert")).toHaveText(refusal.body.error);
+        await expect(page.getByText(LAST_SENTENCE)).toHaveCount(0);
+        if (at === 0) {
+          await shot(page, size.name, "9-the-route-s-own-refusal");
+          await page.emulateMedia({ colorScheme: "dark" });
+          await shot(page, size.name, "9-the-route-s-own-refusal-night");
+          await page.emulateMedia({ colorScheme: "light" });
+        }
+        await card.getByRole("button", { name: "Not now", exact: true }).click();
+      }
+      expect(asked).toBe(REFUSALS.length);
+      await device.context.close();
+    });
+  }
+});

@@ -151,11 +151,11 @@ export async function milestoneWithdraw(
 ): Promise<NextResponse> {
   const record = await loadGift(input.giftId);
   if (!record) throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);
-  if (!isAddress(input.to)) throw new GiftApiError("INVALID_DESTINATION", "The destination is invalid");
+  if (!isAddress(input.to)) throw new GiftApiError("INVALID_DESTINATION", "That destination is not valid.");
   const contract = escrowOf(record);
   const state = await readMilestoneGift(contract, input.giftId);
-  if (!state.recipient || state.recipient.toLowerCase() !== input.account.toLowerCase()) throw new GiftApiError("NOT_YOURS", "Only the person the gift is for can take it", 403);
-  if (input.amount <= 0n || input.amount > state.earnedBalance) throw new GiftApiError("NOT_ENOUGH_EARNED", "That is more than what is yours so far", 409);
+  if (!state.recipient || state.recipient.toLowerCase() !== input.account.toLowerCase()) throw new GiftApiError("NOT_YOURS", "Only the person the gift is for can take it.", 403);
+  if (input.amount <= 0n || input.amount > state.earnedBalance) throw new GiftApiError("NOT_ENOUGH_EARNED", "That is more than what is yours so far.", 409);
   assertNotTooSmall("takeOut", input.amount, state.earnedBalance);
   await assertWithdrawStands({ giftId: input.giftId, contract, recipient: input.account, to: getAddress(input.to), amount: input.amount, nonce: input.nonce, deadline: input.deadline, signature: input.signature }, state.withdrawNonce);
   const result = await countedIfSent(await admit(), () => relayMilestoneWithdraw({ ...input, contract, to: getAddress(input.to) }));

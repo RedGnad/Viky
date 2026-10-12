@@ -20,12 +20,14 @@ import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, heldForWit
 import { chainCoinToChange, USDC_ARRIVAL_FLOOR } from "@/src/funding-step";
 import { usdcRouterAddress } from "@/src/usdc-router";
 import { formatAusd } from "@/src/gift-reader";
+import { routeSaysIt } from "@/src/money-refusals";
+import { tooSmallToRelay } from "@/src/relay-ceiling";
 import { LedFigure } from "../kit/LedAmount";
 import { Lines } from "../kit/Lines";
 import { whereTheRailsServe, type RailsWhere } from "@/src/client/rails";
 import { countryInWords } from "@/src/rail-country";
 import { feeUnderItsName, RATE_SOURCE, WAY_OUT_CARD, WAY_OUT_EURO, wayOutFillsIn, wayOutPage, WAYS_OUT, type WayOut } from "@/src/rails";
-import { CASH_OUT as W, KIT, USE_MONEY as U, WHERE_YOU_LIVE as L } from "@/src/sentences";
+import { CASH_OUT as W, KIT, RELAY_CEILING, USE_MONEY as U, WHERE_YOU_LIVE as L } from "@/src/sentences";
 import { useChainCoinWorth } from "../kit/money";
 import { inTheSun, orderUses, usesFor, usesSentence } from "@/src/use-money";
 import { useAccountCountry } from "@/src/client/account-country";
@@ -86,9 +88,15 @@ function sessionClosed(error: unknown): boolean {
  * a screen about money nothing may arrive as a shrug (D80): every branch below ends on what is true here, that nothing
  * was taken, because the router holds nothing between transactions, or, for a send that went out and is not final yet,
  * the route's own sentence that it is being confirmed.
+ *
+ * A refusal that has a sentence of its own is said in that sentence (the founder, 12 Oct 2026; src/money-refusals.ts):
+ * the smallest amount Viky sends, the count of actions for an account, too many attempts, a destination refused. The
+ * last sentence below stands only for a refusal that has none.
  */
 function refusalText(error: unknown, way: WayOut | null): string {
   if (error instanceof ApiError) {
+    // These carry the figures or the fact the route measured, so its sentence is the true one.
+    if (routeSaysIt(error.code)) return error.message;
     switch (error.code) {
       case "NOT_CONFIGURED":
         return W.failures.notConfigured;
@@ -103,17 +111,6 @@ function refusalText(error: unknown, way: WayOut | null): string {
       case "REFUSED":
       case "FAILED":
         return way ? W.failures.notSent(way.name) : W.failures.other;
-      case "NOT_ENOUGH":
-      case "BELOW_PAYOUT_MINIMUM":
-      case "ABOVE_PAYOUT_MAXIMUM":
-      case "PAYOUT_SERVICE_SILENT":
-      case "PAYOUT_ASSET_CLOSED":
-      case "QUOTE_UNAVAILABLE":
-      case "EXCHANGE_REFUSED":
-      case "TOO_SLOW":
-      case "SENT_UNCONFIRMED":
-        // These carry the figures or the fact the route measured, so its sentence is the true one.
-        return error.message;
       default:
         return W.failures.other;
     }
@@ -151,6 +148,8 @@ export function CashOut() {
   const [sent, setSent] = useState<Sent | null>(null);
   const [ownCode, setOwnCode] = useState("");
   const [ownAmount, setOwnAmount] = useState("");
+  /** The smallest amount Viky sends at a time, as the server holds it; nothing until it has said. */
+  const [sendsAtLeast, setSendsAtLeast] = useState<bigint | null>(null);
   // What the coin the card service buys is worth in dollars, asked of the price and never guessed: the same quote
   // the funder screen converts with. "unavailable" when nothing answered, and the screen says so (founder, 17 Sep).
   const [worth, setWorth] = useState<{ units: bigint } | "unavailable" | undefined>(undefined);
@@ -229,13 +228,18 @@ export function CashOut() {
 
   const refresh = useCallback(async (): Promise<Record<string, bigint> | undefined> => {
     if (!address) return undefined;
+    // The smallest amount Viky sends at a time, as the send route holds it: read with the rest, kept when it is known.
+    let least: bigint | undefined;
     const [read, gifts, open] = await Promise.all([
       Promise.all(COINS.map((coin) => readCoinBalance(coin, address))),
       // A read that fails is a way out without the gifts' part, which is what it was before (D208).
       loadEarnedInGifts(),
       // A read that fails leaves it unknown: nothing is said to be ready, and nothing is changed either.
-      getJson<{ open: { coin: string; atLeast: string } | null }>("/api/exit/open").then(
-        (answer) => (answer.open ? { coin: answer.open.coin, atLeast: BigInt(answer.open.atLeast) } : null),
+      getJson<{ open: { coin: string; atLeast: string } | null; sendsAtLeast?: string }>("/api/exit/open").then(
+        (answer) => {
+          if (answer.sendsAtLeast !== undefined) least = BigInt(answer.sendsAtLeast);
+          return answer.open ? { coin: answer.open.coin, atLeast: BigInt(answer.open.atLeast) } : null;
+        },
         () => undefined,
       ),
     ]);
@@ -243,6 +247,7 @@ export function CashOut() {
     setHoldings(next);
     setInGifts(gifts);
     setOpenWithdrawal(open);
+    if (least !== undefined) setSendsAtLeast(least);
     // An account is back, so a session that had closed is closed no longer.
     setClosed(false);
     // Nothing opens by itself any more (the audit of 1 Oct 2026). A way out holding something ready used to open on its
@@ -402,7 +407,9 @@ export function CashOut() {
       return await refresh();
     } catch (error) {
       if (sessionClosed(error)) closeSession();
-      else setProblem({ where: "gather", text: readying ? W.notReadied : W.gatherFailed, code: error instanceof ApiError ? error.code : undefined });
+      // The route's own sentence when it has one (the count of actions, too many attempts, a rate too low); the
+      // step's sentence otherwise, which says where the money still is.
+      else setProblem({ where: "gather", text: error instanceof ApiError && routeSaysIt(error.code) ? error.message : readying ? W.notReadied : W.gatherFailed, code: error instanceof ApiError ? error.code : undefined });
       await refresh().catch(() => undefined);
       setStage("base");
       return undefined;
@@ -611,6 +618,9 @@ export function CashOut() {
   const ownMax = twoDecimalsDown(held(ownCoin), ownCoin.decimals);
   const ownSending = dollarsToChange(ownAmount, held(ownCoin), W.refusals);
   const ownNumber = ownSending.units === undefined ? "" : twoDecimalsDown(ownSending.units, ownCoin.decimals);
+  // Under the smallest amount Viky sends, unless it is everything the account holds: the send route's own rule
+  // (src/relay-ceiling.ts), said under the field before the press, in the route's own sentence (12 Oct 2026).
+  const ownTooSmall = ownSending.units !== undefined && sendsAtLeast !== null && tooSmallToRelay(ownSending.units, held(ownCoin), sendsAtLeast);
   const ownCodeProblem = (): string | null => {
     const typed = ownCode.trim();
     if (typed === "") return null;
@@ -1240,11 +1250,15 @@ export function CashOut() {
                       </button>
                     ) : null}
                   </>
+                ) : ownTooSmall && sendsAtLeast !== null ? (
+                  <p role="alert" className={`${HELP} font-medium`} data-too-small-to-send="">
+                    {RELAY_CEILING.tooSmallToSend(formatAusd(sendsAtLeast))}
+                  </p>
                 ) : (
                   <p className={HELP}>{W.upTo(ownMax, money.about(held(ownCoin)))}</p>
                 )}
                 <div className="flex flex-wrap gap-[var(--tap-gap)]">
-                  <button type="button" onClick={() => setStage("ownConfirm")} disabled={busy || ownCode.trim() === "" || ownProblem !== null || ownSending.units === undefined} className={PRIMARY_BUTTON}>
+                  <button type="button" onClick={() => setStage("ownConfirm")} disabled={busy || ownCode.trim() === "" || ownProblem !== null || ownSending.units === undefined || ownTooSmall} className={PRIMARY_BUTTON}>
                     {W.own.send(ownNumber)}
                   </button>
                   {ownCode.trim() === "" ? <p className={HELP}>{W.own.pasteFirst}</p> : null}
