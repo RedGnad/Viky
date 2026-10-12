@@ -6,7 +6,7 @@ import { MIKA_TIMING_RUNNER } from "./attested-sources";
  * not by the bib, so a reading takes two steps: the search by bib, `?pid=search&search[start_no]=<bib>`, one
  * server-rendered page whose rows carry the event's code (`event-MAR_…`), the bib as printed and the link to the
  * runner's page (`idp=…`); then the runner's page, `?content=detail&idp=<id>`, which is the page the attested read
- * takes (src/attested-sources.ts). The search answers the lettered twin of a bib too ("903166" and "F12345", the women's
+ * takes (src/attested-sources.ts). The search answers the lettered twin of a bib too ("12345" and "F12345", the women's
  * bibs at Frankfurt): the row taken is the one whose bib is exactly the one bound and whose event is the race's.
  * Server only, nothing fetched here: the fetching sits in src/marathon-reading.ts with the rest.
  *

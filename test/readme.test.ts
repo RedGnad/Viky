@@ -508,7 +508,24 @@ test("the README says the passes that run, what the word check reads, and what c
   assert.match(text, /three files of the build and of the checks, which came in that commit too: `foundry\.toml` and `remappings\.txt`,\n  unchanged since/);
   assert.match(text, /`\.github\/workflows\/ci\.yml`, one job\n  then and rewritten since/);
   // The AI that is in the product and is not Viky's.
-  assert.match(text, /A second AI is in the product itself, and is not Viky's: Reclaim's agent\./);
+  assert.match(text, /Another AI is in the product itself, and is not Viky's: Reclaim's agent\./);
+  // Who reviewed, who the roles named in comments are, and the second tool (the founder, 13 Oct 2026): in the README,
+  // where the rules ask for the AI tools, and in the declarations. The founder's own two sentences, word for word.
+  const flat = (said: string) => said.replace(/\s+/g, " ");
+  for (const said of [flat(section("Declarations, environment and licences")), flat(doc("declarations"))]) {
+    assert.ok(said.includes("The contracts were reviewed on 2 and 3 Oct 2026 by a separate session of the same tool, given the contracts alone. Its tests are in `test/review`."));
+    assert.ok(said.includes(`In this repository's comments, pull requests and past documents, "the developer", "the other developer", "the advisor" and "the reviewer" are sessions of that same tool. The founder is the one person.`));
+    assert.ok(said.includes("A second AI tool was used once: `reclaim-portal-agent`, run with free OpenRouter models on 28 Sep 2026 to look up the student portals of twenty universities, each of which was then opened by hand"));
+  }
+  // The review is said as what it was, in the contracts' own document and in the review's tests.
+  const contracts = flat(readFileSync("docs/CONTRACTS.md", "utf8"));
+  assert.doesNotMatch(contracts, /independent review/i);
+  assert.ok(contracts.includes("A review of 2 Oct 2026, made by a separate session of that same tool, given the contracts alone, was read before any deployment"));
+  for (const file of ["ReviewScenarios.t.sol", "ReviewScenariosV3.t.sol", "ReviewerRigV3.sol", "FirstDayAcrossMidnightV3.t.sol", "ReviewInvariants.t.sol", "ReviewInvariantsV3.t.sol"]) {
+    assert.doesNotMatch(readFileSync(`test/review/${file}`, "utf8"), /independent|\b[Hh](e|is|im)\b|by the authors?\b/, file);
+  }
+  // The history is said as it is: what had been found was replaced, and what was found after is still in past commits.
+  assert.ok(flat(doc("declarations")).includes("with the names and identifiers of other people that had been found replaced by invented ones in past commits. A few were found after that, on 12 Oct 2026: they are out of the files since 13 Oct 2026, and past commits still hold them."));
   // Mobile money is not said switched off where the judges page says it is offered.
   assert.doesNotMatch(readFileSync("docs/PAGES-AND-ROUTES.md", "utf8"), /switched off until a first real payout/);
 });

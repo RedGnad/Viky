@@ -11,16 +11,19 @@ import { conditionById, liveConditions } from "../src/conditions";
 import { READ_WITHOUT_A_GIFT } from "../src/judges-ways";
 
 const line = (id: string) => conditionById(id)!;
-/** The real proofs production counted on 12 Oct 2026, read on viky.cash that day. */
-const COUNTS = new Map([["duolingo-daily", 11], ["university-enrollment-shown", 3], ["chess-rating", 7]]);
+/**
+ * The real proofs that paid, as production's rows hold them on 13 Oct 2026: five days credited, three enrolments, two
+ * climbs reached. Until that day the count took first readings too, which pay nothing, and said 11, 3 and 7.
+ */
+const COUNTS = new Map([["duolingo-daily", 5], ["university-enrollment-shown", 3], ["chess-rating", 2]]);
 const WAITING = new Set(["strava-daily"]);
 
 test("four phrases, each said the same on a page and, shorter, in the README", () => {
-  // One real proof or more: paid, with its count where the count is read as the page is served.
+  // One real proof that paid, or more: paid, with its count where the count is read as the page is served.
   const paid = standOf(line("duolingo-daily"), COUNTS, WAITING);
-  assert.deepEqual(paid, { kind: "paid", proofs: 11 });
-  assert.deepEqual(standOnAPage(paid), { state: "Open.", says: "Paid on 11 real proofs." });
-  assert.equal(standInOneLine(paid), "Open. Paid on 11 real proofs.");
+  assert.deepEqual(paid, { kind: "paid", proofs: 5 });
+  assert.deepEqual(standOnAPage(paid), { state: "Open.", says: "Paid on 5 real proofs." });
+  assert.equal(standInOneLine(paid), "Open. Paid on 5 real proofs.");
   assert.equal(standInTheReadme(paid), "Paid with real money");
   assert.equal(standInOneLine(standOf(line("codeforces-rating"), new Map([["codeforces-rating", 1]]), WAITING)), "Open. Paid on 1 real proof.");
   // Read on its real page under attestation with no gift: the day on a page, none in the README, whose table is dated.

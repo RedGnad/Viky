@@ -116,9 +116,9 @@ test("the conditions the README counts are the catalogue's: one sentence of four
   const from = README.indexOf(`\n## ${heading}\n`);
   assert.ok(from >= 0, heading);
   const said = README.slice(from, README.indexOf("\n## ", from + 1));
-  // Where each stood on 12 Oct 2026: the real proofs production counted that day (11, 3 and 7, read on viky.cash),
+  // Where each stood on 12 Oct 2026: the real proofs that had paid by that day (5 days, 3 enrolments and 2 climbs),
   // and Strava offered on request and not opened. The same function the two pages ask, with the counts they read live.
-  const counts = new Map([["duolingo-daily", 11], ["university-enrollment-shown", 3], ["chess-rating", 7]]);
+  const counts = new Map([["duolingo-daily", 5], ["university-enrollment-shown", 3], ["chess-rating", 2]]);
   const toBeOpened = new Set(["strava-daily"]);
   const counted = standsCounted(counts, toBeOpened);
   assert.deepEqual(counted, { paid: 3, read: 10, waiting: 4, onRequest: 1, total: 18 });

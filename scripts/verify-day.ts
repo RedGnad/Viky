@@ -6,6 +6,7 @@ import { claimFingerprint } from "../src/duolingo-public";
 import { giftEscrowAbi } from "../src/gift-escrow-abi";
 import { milestoneGiftAbi } from "../src/milestone-gift-abi";
 import { isMilestoneGiftId } from "../src/milestone-protocol";
+import { proofOfFingerprint } from "../src/published-proof";
 import { PINNED_RECLAIM_WITNESS } from "../src/reclaim-proof-set";
 import { dateOfDay } from "../src/day-record";
 
@@ -63,7 +64,8 @@ async function fromSite(site: string): Promise<Subject> {
     );
   }
   const example = body.example;
-  return { ...example, proof: (Array.isArray(example.proof) ? example.proof[0] : example.proof) as Proof };
+  // A reading can keep several proofs: the one verified is the one the published fingerprint is of (src/published-proof.ts).
+  return { ...example, proof: proofOfFingerprint(example.proof as Proof | Proof[], example.fingerprint) };
 }
 
 function fromFile(file: string): Subject {
@@ -77,12 +79,15 @@ function fromFile(file: string): Subject {
   const content = JSON.parse(readFileSync(file, "utf8")) as { proof?: unknown; fingerprint?: string; escrow?: string; giftId?: string; day?: number };
   // The route hands back { giftId, day or readingId, fingerprint, proof }; a bare proof file works too.
   const raw = content.proof ?? content;
+  const fingerprint = argument("fingerprint") ?? content.fingerprint;
   return {
     giftId,
     ...(asked === undefined ? { day } : { readingId }),
-    fingerprint: argument("fingerprint") ?? content.fingerprint,
+    fingerprint,
     escrow: argument("contract") ?? content.escrow,
-    proof: (Array.isArray(raw) ? raw[0] : raw) as Proof,
+    // A Chess.com climb keeps two proofs and publishes the second's fingerprint: the one verified is the one the
+    // published fingerprint is of, never the first of the file by its place (src/published-proof.ts).
+    proof: proofOfFingerprint(raw as Proof | Proof[], fingerprint),
   };
 }
 

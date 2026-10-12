@@ -41,10 +41,10 @@ contract Coin is ERC20 {
     }
 }
 
-/// @dev The independent reviewer's own rig, written from the contract alone (the re-read of 3 Oct 2026), kept as he
-///      wrote it. Three contracts of his bench are not here: the second version called through the third's ABI,
-///      a copy with a minimum of one day, and a copy carrying the correction of his finding C1, which is now the
-///      contract itself. So his `fix` is `v3`.
+/// @dev The reviewer's own rig, written from the contract alone (the re-read of 3 Oct 2026, by a separate session of
+///      the AI tool this repository was built with), kept as it was written. Three contracts of that bench are not
+///      here: the second version called through the third's ABI, a copy with a minimum of one day, and a copy
+///      carrying the correction of finding C1, which is now the contract itself. So its `fix` is `v3`.
 abstract contract ReviewerRig {
     Vm internal constant vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 

@@ -1,8 +1,9 @@
 # Declarations, environment and licences
 
 This repository carries the project's whole history since 10 Sep 2026. It was republished on 11 Oct 2026 with the names
-and identifiers of other people replaced by invented ones in past commits. The original is available to the organisers
-on request.
+and identifiers of other people that had been found replaced by invented ones in past commits. A few were found after
+that, on 12 Oct 2026: they are out of the files since 13 Oct 2026, and past commits still hold them. The original is
+available to the organisers on request.
 
 ## AI tools
 
@@ -13,7 +14,19 @@ looks, what every screen says, and every decision that touches money. Nothing wa
 payment was made without his explicit decision. People from outside the project have opened gifts, one of them on
 an iPhone, from Instagram: the judges page counts them, under "Who has used Viky".
 
-A second AI is in the product itself, and is not Viky's: Reclaim's agent. The first time a student shows a page of a
+The contracts were reviewed on 2 and 3 Oct 2026 by a separate session of the same tool, given the contracts alone. Its
+tests are in `test/review`.
+
+In this repository's comments, pull requests and past documents, "the developer", "the other developer", "the advisor"
+and "the reviewer" are sessions of that same tool. The founder is the one person. The audits those texts and the judges
+page cite by their day (27 Sep, 1 Oct, 8, 9 and 12 Oct 2026) were made the same way: sessions of that tool reading the
+code.
+
+A second AI tool was used once: `reclaim-portal-agent`, run with free OpenRouter models on 28 Sep 2026 to look up the
+student portals of twenty universities, each of which was then opened by hand
+(`docs/reclaim/directory-universities.md`).
+
+Another AI is in the product itself, and is not Viky's: Reclaim's agent. The first time a student shows a page of a
 university's portal, that agent finds the page in the student's own signed-in session and writes the rule the proof
 is made on. Viky holds that first proof, and its operator reads what the rule read before anything is paid
 ([Verification](VERIFICATION.md)).

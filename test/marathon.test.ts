@@ -553,6 +553,7 @@ test("a cube competition asks its event under itself too, and a competition in s
 /**
  * race result, the third timing platform (the founder, 27 Sep 2026: coverage first), measured on the 42K de Buenos
  * Aires 2026 on 26 Sep 2026: the list's own key order, one row per bib in search mode, an empty time for a DNF.
+ * The rows below are invented whole: names, nation, category, times, and bibs no race gives.
  */
 const RR_CONFIG = JSON.stringify({ key: "bafa4cbc7e8acfb6a08aa821a73310c1", server: "my4.raceresult.com", eventname: "42K de Buenos Aires 2026", contests: { "1": "Maratón", "2": "DIS Maratón" }, TabConfig: { Lists: [{ Name: "Maratón 2026|Resultado General G/CH", Contest: "1" }] } });
 const RR_FIELDS = ["BIB", "ID", "ConEstatus([ClasifGeneral.p])", "correctSpelling([FLNAME])", "NATION.FLAG", "AGEGROUP.NAMESHORT", "SexoMF", "[Final.CHIP]", "[Final.GUN]", "[Final]"];
