@@ -4,6 +4,7 @@ import { useAccount } from "@/src/account/provider";
 import { agreeFirst, signConsent } from "@/src/client/consent";
 import { ApiError, getJson, postJson } from "@/src/client/api";
 import { withTheStartSigned, type StartAsked } from "@/src/client/v2";
+import { closedLineOf } from "@/src/closed-line";
 import { conditionById } from "@/src/conditions";
 import { connectReturnInWords } from "@/src/connect-return";
 import { GIFT_PAGE as W } from "@/src/sentences";
@@ -143,6 +144,25 @@ export function ConnectTheAccount({
   };
 
   const working = busy !== null;
+  // A line its source closed (the register's fourth state, 12 Oct 2026): said in place of the connection, with what
+  // becomes of a gift that never started. A key already given can still be given back from here. The card above
+  // says the line is closed and when the money goes back: here, the register's own reason, and nothing said twice.
+  const closed = closedLineOf(condition);
+  if (closed) {
+    return (
+      <div className={CARD} data-line-closed="">
+        <p className="font-medium">{condition?.beforeItOpens}</p>
+        {status?.bound ? null : <p className={BODY}>{W.lineClosedGift}</p>}
+        {said ? <p className={BODY}>{said}</p> : null}
+        {status?.connected ? (
+          <Button look="secondary" doing={busy === "erasing" ? W.working : null} step={WAITS.erasing} waiting={working && busy !== "erasing"} onPress={() => void erase()}>
+            {words.disconnect}
+          </Button>
+        ) : null}
+        {refusal ? <FieldRefusal id="gift-connect-refused">{refusal}</FieldRefusal> : null}
+      </div>
+    );
+  }
   return (
     <div className={CARD}>
       {/* Connected, the card's own title says so (app/components/GiftPage.tsx): this block's title asked to connect. */}

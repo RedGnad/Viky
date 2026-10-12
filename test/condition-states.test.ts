@@ -16,11 +16,14 @@ import { CATALOGUE } from "../src/sentences";
 
 const page = readFileSync("app/what-viky-can-check/page.tsx", "utf8");
 
-test("the states are the three the founder kept, in words, and there is no fourth", () => {
+test("the states are the three the founder kept and the fourth he added, in words, and there is no fifth", () => {
+  // "Closed" since 12 Oct 2026: a line built and offered, then closed by its source's own rules. Strava is the first.
   assert.deepEqual(
     STATES.map((state) => state.title),
-    ["Open", "Waiting for the source's answer", "No public page exists"],
+    ["Open", "Waiting for the source's answer", "No public page exists", "Closed"],
   );
+  assert.deepEqual(CONDITIONS.filter((condition) => condition.state === "closed").map((condition) => condition.id), ["strava-daily"]);
+  assert.equal(stateOf(conditionById("strava-daily")!).title, "Closed");
   for (const state of STATES) {
     assert.match(state.meaning, /\.$/, `${state.id} says what it means in a sentence`);
     assert.ok(state.meaning.length > 20 && state.meaning.length <= 200, `${state.id} says it in one line`);

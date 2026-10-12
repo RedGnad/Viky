@@ -74,6 +74,8 @@ export type LiveInput = Readonly<{
   connectBy: string | null;
   /** The person connected the source and has not started the counting yet: known in the browser, for their own page. */
   sourceConnected?: boolean;
+  /** The gift's line was closed by its source since the gift was made (src/closed-line.ts): nothing is left to connect. */
+  lineClosed?: boolean;
   nextReadingInWords: string | null;
   /** The hour of the next reading alone, in the reader's clock: "20:30". Drawn as a figure where nothing has gone back. */
   nextReadingAt?: string | null;
@@ -250,6 +252,14 @@ export function liveOf(input: LiveInput): Live {
       };
 
     case "openedNotConnected":
+      // A line closed since: no connection and no start are asked for, and the money's way back is all there is to say.
+      if (input.lineClosed)
+        return {
+          headline: yours ? L.notConnected.closedYours(source) : L.notConnected.closedTheirs(recipientName, source),
+          figure: { label: yours ? L.notConnected.label.yours : L.notConnected.label.theirs, value: input.amountDisplay },
+          next: input.connectBy === null ? null : yours ? L.notConnected.goesBackAfter(input.connectBy, funderName) : voice === "funder" ? L.notConnected.comesBackAfter(input.connectBy) : null,
+          back,
+        };
       return {
         headline: yours ? (input.sourceConnected ? L.notConnected.connected(source) : L.notConnected.yours(source)) : L.notConnected.theirs(recipientName, source),
         figure: { label: yours ? L.notConnected.label.yours : L.notConnected.label.theirs, value: input.amountDisplay },

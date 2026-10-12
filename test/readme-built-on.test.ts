@@ -131,7 +131,6 @@ test("the conditions the README counts are the catalogue's, family by family", (
     "chess-rating": "a Chess.com rating or puzzle record",
     "chess-tactics": "a Chess.com rating or puzzle record",
     "wca-time": "a cube time at a WCA competition",
-    "strava-daily": "daily kilometres on Strava",
     "fitbit-daily": "daily active minutes on Fitbit",
     "marathon-finish": "a race finish read on the timing company's results page",
   };

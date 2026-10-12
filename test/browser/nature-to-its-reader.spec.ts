@@ -39,7 +39,8 @@ async function shotEachCard(page: Page, size: string, name: string) {
   }
 }
 
-const STRAVA = 4;
+// Fitbit's goal on the daily contract: the connected line that is open (Strava's was closed on 12 Oct 2026).
+const FITBIT = 6;
 const DUOLINGO = 1;
 const NAMES = { recipientName: "Boo", funderName: "Mom" };
 type Role = "recipient" | "funder";
@@ -86,11 +87,11 @@ function listedShown(role: Role) {
 
 async function lists(page: Page, role: Role) {
   await page.unroute("**/api/gifts/mine");
-  await page.route("**/api/gifts/mine", (route) => route.fulfill(json({ account: "", gifts: [listedShown(role), listedDaily(CONNECTED, role, STRAVA), listedDaily(READ, role, DUOLINGO)] })));
+  await page.route("**/api/gifts/mine", (route) => route.fulfill(json({ account: "", gifts: [listedShown(role), listedDaily(CONNECTED, role, FITBIT), listedDaily(READ, role, DUOLINGO)] })));
 }
 
 const NATURES = /^(READ FOR YOU|SHOWN BY (YOU|THEM)|CONNECTED BY (YOU|THEM))$/;
-/** What the three cards of a list say under their conditions, in the order shown, enrolment, Strava, Duolingo. */
+/** What the three cards of a list say under their conditions, in the order shown, enrolment, Fitbit, Duolingo. */
 async function saidOnTheList(page: Page): Promise<string[]> {
   const said: string[] = [];
   for (const giftId of [SHOWN, CONNECTED, READ]) {
@@ -100,13 +101,13 @@ async function saidOnTheList(page: Page): Promise<string[]> {
   return said;
 }
 
-/** A Strava gift's own page, counting, as the gift route answers it. */
+/** A Fitbit gift's own page, counting, as the gift route answers it. */
 async function connectedPage(page: Page, role: Role) {
   const today = Math.floor(Date.now() / 86_400_000);
-  const counting = { goalType: STRAVA, dailyTarget: 3, version: 3, connected: true, startDay: today - 2, endDay: today + 4, goalAccount: { username: null, source: "funder", bound: true, code: null, codeExpiresAt: null } };
-  const terms = { reads: "your activities on Strava, each morning, for the day before: whether they add up to the kilometres", funderSees: "for each day, whether it counted", what: "your activities", things: 1 };
+  const counting = { goalType: FITBIT, dailyTarget: 30, version: 3, connected: true, startDay: today - 2, endDay: today + 4, goalAccount: { username: null, source: "funder", bound: true, code: null, codeExpiresAt: null } };
+  const terms = { reads: "your Fitbit's active minutes, each morning, for the day before: whether they reach the target", funderSees: "for each day, whether it counted", what: "your Fitbit", things: 1 };
   await serve(page, CONNECTED, () => daily(CONNECTED, role, counting), terms as never);
-  await page.route("**/api/connect/strava/status*", (route) => route.fulfill(json({ connected: true, since: new Date().toISOString(), bound: true, configured: true })));
+  await page.route("**/api/connect/fitbit/status*", (route) => route.fulfill(json({ connected: true, since: new Date().toISOString(), bound: true, configured: true })));
 }
 
 const pageNature = (page: Page) => page.locator("section.gift-card-placed").getByText(NATURES);

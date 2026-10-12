@@ -264,25 +264,28 @@ test.describe("the screens a person meets", () => {
    * On the narrowest phone held, 360 by 800, two names took two lines and their rows stood taller than the others
    * (the founder, 5 Oct 2026): "Harvard, MIT and more, on edX" is "An edX certificate" with the schools on its grey
    * line, and "Kilometres each day, on Strava" is "Kilometres a day, on Strava". Held here: each of the two is one line
-   * high, with room to spare.
+   * high, with room to spare. Strava's line was closed on 12 Oct 2026 and left the list: the row held in Move is
+   * Fitbit's since, the other connected line.
    *
    * Measured in a browser of its own that places letters at fractions of a pixel, as a phone does. A machine without a
    * screen on Linux snaps each letter to a whole pixel by default, and the half pixel of spacing a row's words carry
    * with it: its lines come out up to a tenth wider than the typeface's own tables say ("A Duolingo lesson each day"
-   * at 231 for 211). The measure asked for here is the typeface's: Strava's name is 209 wide, by its tables, 195.6,
-   * and the 0.5 pixel between its 27 letters.
+   * at 231 for 211). The measure asked for here is the typeface's, taken on Fitbit's name with the 0.5 pixel between its
+   * letters (Strava's was 209 wide: by its tables, 195.6, and the 0.5 pixel between its 27 letters).
    *
    * Not held yet, and said to the founder: "A puzzle record on Chess.com" (229.8 of 230) and "A Duolingo English Test
    * score" (227.6 of 230) hold by less than three pixels. Every row of every family is held here once they have room.
    */
-  test("at 360 pixels the rows of edX and of Strava are one line high, with room to spare", async ({ baseURL, viewport }) => {
+  /** Fitbit's name in the list, as the typeface's own tables place it at 360 pixels, measured on 12 Oct 2026. */
+  const FITBIT_NAME_WIDE = 210.5;
+  test("at 360 pixels the rows of edX and of Fitbit are one line high, with room to spare", async ({ baseURL, viewport }) => {
     test.skip((viewport?.width ?? 0) !== 375, "measured once, in a browser of its own");
     const browser = await chromium.launch({ args: ["--font-render-hinting=none"] });
     const page = await (await browser.newContext({ baseURL, viewport: { width: 360, height: 800 }, deviceScaleFactor: 3, serviceWorkers: "block" })).newPage();
     await page.goto("/");
     await openTheCatalogue(page);
     const sheet = page.locator("dialog.sheet[open]");
-    for (const [family, name] of [[/^School & studies/, "An edX certificate"], [/^Move/, "Kilometres a day, on Strava"]] as const) {
+    for (const [family, name] of [[/^School & studies/, "An edX certificate"], [/^Move/, "Active minutes a day, Fitbit"]] as const) {
       await openTheFamily(page, family);
       const rows = sheet.locator('div[role="group"] > button');
       await expect(rows.filter({ hasText: name })).toHaveCount(1);
@@ -305,7 +308,9 @@ test.describe("the screens a person meets", () => {
       expect(row.height, `${name} is as high as the lowest row of its list: ${said}`).toBe(Math.min(...read.map((one) => one.height)));
       expect(row.room - row.wide, `${name} has room to spare on its line: ${said}`).toBeGreaterThanOrEqual(8);
       // The typeface's own measure, to the pixel: a browser that snaps letters to whole pixels fails here, by its number.
-      if (name === "Kilometres a day, on Strava") expect(Math.abs(row.wide - 209), `Strava's name as the typeface measures it, 209: ${said}`).toBeLessThanOrEqual(2);
+      if (name === "Active minutes a day, Fitbit") {
+        expect(Math.abs(row.wide - FITBIT_NAME_WIDE), `Fitbit's name as the typeface measures it, ${FITBIT_NAME_WIDE}: ${said}`).toBeLessThanOrEqual(2);
+      }
     }
     await browser.close();
   });

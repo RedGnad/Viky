@@ -123,14 +123,15 @@ looks for seven such words at every change (wallet, gas, chain, seed, token, tra
 routes that answer them (its list of files is `scripts/check-consumer-words.ts`) and in what a browser renders
 (`test/browser/screens.spec.ts`).
 
-## Eighteen conditions, four families
+## Seventeen conditions, four families
 
 Learn: a Duolingo lesson each day, a Codeforces rating, a Credly or Accredible credential. School & studies:
 enrolled, the year passed or a grade reached at any of 11,000 universities (the first is read today; each other is
 set up within two days of a first gift), a TOEFL or Duolingo English Test score, an edX, MIT or Coursera
-certificate. Play: a Chess.com rating or puzzle record, a cube time at a WCA competition. Move: daily kilometres
-on Strava, daily active minutes on Fitbit, a race finish read on the timing company's results page. What each one
-proves is on the [judges page](https://viky.cash/judges), condition by condition.
+certificate. Play: a Chess.com rating or puzzle record, a cube time at a WCA competition. Move: daily active
+minutes on Fitbit, a race finish read on the timing company's results page. What each one proves is on the
+[judges page](https://viky.cash/judges), condition by condition. An eighteenth, daily kilometres on Strava, is built
+and closed since 12 Oct 2026: Strava's developer program asks for a paid subscription.
 
 ## Why Monad
 

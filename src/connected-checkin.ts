@@ -4,6 +4,7 @@ import { getAddress, type Hex } from "viem";
 import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
 import { attestedRead, AttestedReadError, reclaimAttestedReadDeps, type AttestedReadDeps } from "./attested-read";
 import { attestedSource, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES } from "./attested-sources";
+import { closedLineOf } from "./closed-line";
 import { conditionById, conditionOfGoal } from "./conditions";
 import { lookAtConnectedSource, type ConnectedLook } from "./connected-look";
 import { noDayForYesterdaysPage } from "./daily-look";
@@ -153,6 +154,8 @@ export type ConnectedCheckInDeps = {
   look?: typeof lookAtConnectedSource;
   /** Tells the operator, once in a day for a source; a test that omits it tells nobody. */
   tell?: (name: string, alert: () => Alert) => Promise<void>;
+  /** Whether the line is closed, in the words a person reads (src/closed-line.ts); a test that omits it reads it as open. */
+  closed?: (line: ConnectedLine) => string | null;
 };
 
 const defaultDeps: ConnectedCheckInDeps = {
@@ -160,6 +163,7 @@ const defaultDeps: ConnectedCheckInDeps = {
   leave: readingLeave,
   look: lookAtConnectedSource,
   tell: (name, alert) => tellOnceToday(name, alert),
+  closed: (line) => closedLineOf(conditionById(line.conditionId)),
   read: async () => reclaimAttestedReadDeps(),
   refresh: (line, tokens, nowSeconds) => line.refresh(tokens, nowSeconds),
   // The source must be in the shared list the reading service runs (the founder's redeploy, OPERATIONS step 3):
@@ -211,6 +215,9 @@ async function readConnected(input: { giftId: string; purpose: PublicCheckInPurp
   if (purpose === "count" && !record.boundAt) return { kind: "already", giftId, reason: "not_bound" };
   const line = connectedLineOf(record.goalType);
   if (!line) return refusal(giftId, "NOT_CONFIGURED", "This gift is not on a connected source.");
+  // A line its source closed is read for nobody: no key is opened, nothing is asked of the source or of Reclaim.
+  const closed = deps.closed?.(line) ?? null;
+  if (closed) return refusal(giftId, "CONDITION_CLOSED", closed);
   if (!deps.configured(line)) return refusal(giftId, "NOT_CONFIGURED", "Counting is not switched on yet.");
   const connection = await loadConnection(giftId);
   if (!connection || connection.source !== line.service) return { kind: "already", giftId, reason: "no_account" };

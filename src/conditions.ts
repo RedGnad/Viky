@@ -102,11 +102,17 @@ export const SECTIONS_FROM = 6;
  * a state to fit a thing is how a catalogue starts promising what nobody built. `open` is the same fact as `live`, so
  * a condition cannot be open on the page and absent from the chooser, or the other way round.
  */
-export type ConditionState = "open" | "asked-the-source" | "no-public-page";
+export type ConditionState = "open" | "asked-the-source" | "no-public-page" | "closed";
 
 /**
  * Three states, since the founder's rule of 23 Sep 2026 (D184): "Being tested" is gone, because nothing is said
  * tested or used without a real proof; the page prints the count of real proofs beside "Open" instead.
+ *
+ * And a fourth since 12 Oct 2026, "Closed", in the founder's words: a line that was built and offered, and that its
+ * source's own rules closed. Strava is the first: its developer program asks the owner of every application for a paid
+ * subscription since June 2026, the first real reading (gift 1002) was refused for it, and the founder does not take
+ * the subscription. It is not "Waiting for the source's answer": nothing was asked of Strava. A closed line says why
+ * in one line of its own (`beforeItOpens`), is not offered, and a gift already made on it is not read.
  */
 export const STATES: readonly Readonly<{ id: ConditionState; title: string; meaning: string }>[] = [
   { id: "open", title: "Open", meaning: "Anybody can offer this today." },
@@ -120,6 +126,7 @@ export const STATES: readonly Readonly<{ id: ConditionState; title: string; mean
     title: "No public page exists",
     meaning: "No public page shows it. The person can show it from their own account, and Viky is building that.",
   },
+  { id: "closed", title: "Closed", meaning: "Built, then closed by its source's own rules, which its line names. Nobody can offer it, and a gift already made on it is not read." },
 ];
 
 /** The words of a state, for the page that prints them. */
@@ -1193,9 +1200,11 @@ export const STRAVA_DAILY: Condition = {
   kind: "daily",
   nature: "connected",
   goalType: GOAL_TYPE_STRAVA_DISTANCE,
-  // Open since the reading service ran its source and the five variables were set (D201).
-  live: true,
-  state: "open",
+  // Open from D201, when the reading service ran its source and the five variables were set, to 12 Oct 2026, and
+  // closed that day by the founder: Strava answers 403 to an application whose owner holds no paid subscription.
+  live: false,
+  state: "closed",
+  beforeItOpens: "Strava's developer program asks for a paid subscription.",
   source: "Strava",
   family: "move",
   // "a day", not "each day": one line on a 360 pixel phone, where the longer name took two (the founder, 5 Oct 2026).

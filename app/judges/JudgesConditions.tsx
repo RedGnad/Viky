@@ -44,7 +44,9 @@ export async function JudgesConditions() {
                 {/* The state is the register's own, in the words the public page prints: "not open yet, so no gift runs on
                     it" stopped being true the day the first real Chess.com gift was funded, on 18 Sep 2026. */}
                 <span className={MUTED}>
-                  {condition.source}, {stateOf(condition).title.toLowerCase()}, {CATALOGUE.realProofs(counts ? (counts.get(condition.id) ?? 0) : null)}
+                  {condition.source}, {stateOf(condition).title.toLowerCase()}
+                  {/* A line its source closed says why, in the register's own line (Strava, 12 Oct 2026). */}
+                  {condition.state === "closed" && condition.beforeItOpens ? `: ${condition.beforeItOpens.replace(/\.$/, "")}` : ""}, {CATALOGUE.realProofs(counts ? (counts.get(condition.id) ?? 0) : null)}
                 </span>
               </h4>
               {/* What the gift waits for, where the thing to show comes at a set time: a year's results (10 Oct 2026). */}

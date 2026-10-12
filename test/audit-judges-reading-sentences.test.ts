@@ -136,7 +136,7 @@ test("how to try it starts with the daily Duolingo path and gives each path's co
     "On Codeforces a reading is one fetch: two, started and reached.",
     "A certificate by its link",
     "A Credly badge: two.",
-    "Strava or Fitbit, by the day: one reading to connect",
+    "Fitbit, by the day: one reading to connect",
     "A document a person shows (a score, an enrolment, a grade): no reading.",
   ].map((sentence) => paths.indexOf(sentence));
   assert.ok(order.every((at, index) => at >= 0 && (index === 0 || at > order[index - 1])), `each path is said, Duolingo first: ${order.join(", ")}`);

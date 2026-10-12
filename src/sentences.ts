@@ -976,6 +976,13 @@ export const GIFT_PAGE = {
   /** A connected condition (D188): the gesture running, the door shut, and a gesture that did not go through. */
   working: "One moment",
   connectNotOpen: "Connecting is not open yet. Nothing was changed.",
+  /**
+   * A gift on a line its source closed (the register's fourth state, 12 Oct 2026): what is true of the line, with the register's own reason,
+   * and what is true of a gift that was opened on it and never started. Where its money goes, and when, is said by
+   * the card above it (`GIFT_LIVE.notConnected.goesBackAfter`), with the day: it is not said twice.
+   */
+  lineClosed: (source: string, why: string) => `Viky no longer reads ${source}. ${why}`,
+  lineClosedGift: "This gift cannot start.",
   connectFailed: "That did not go through, and nothing was changed. Try again.",
   /**
    * Why a source sent the person back with no connection (the audit of 8 Oct 2026), by the reason the return carries
@@ -1194,6 +1201,15 @@ export const GIFT_LIVE = {
     /** Opened and nothing started: it goes back 14 days after it was opened (both contracts), said to each side. */
     connectBy: (date: string, funder: string | null) => `By ${date}, or it goes back to ${funder ?? "the person who offered it"}.`,
     connectByTheirs: (date: string) => `If not by ${date}, it comes back to you.`,
+    /**
+     * Opened on a line its source has closed since (the register's fourth state, 12 Oct 2026): nothing is left to
+     * connect or to start, so the title says the line is closed and the line under it what becomes of the money. It
+     * goes back once fourteen days have passed since it was opened, at the pass that follows, hence "after".
+     */
+    closedYours: (source: string) => `Viky no longer reads ${source}.`,
+    closedTheirs: (recipient: string | null, source: string) => `${recipient ?? "They"} opened it, and Viky no longer reads ${source}.`,
+    goesBackAfter: (date: string, funder: string | null) => `It goes back to ${funder ?? "the person who offered it"} after ${date}, or now if you end it.`,
+    comesBackAfter: (date: string) => `It comes back to you after ${date}.`,
     label: { yours: "In your name", theirs: "In their name" },
   },
   /**

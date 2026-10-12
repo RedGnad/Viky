@@ -19,13 +19,14 @@ test("only a condition a gift can be made on today is live, and every one in the
   // provider id it expects and the having-it-or-not shape. The puzzle record joined on 20 Sep 2026 with goal 12.
   assert.deepEqual(
     liveConditions().map((condition) => condition.id),
-    ["university-enrollment-shown", "university-year-passed-shown", "university-grade-shown", "toefl-mybest-shown", "duolingo-english-test", "edx-certificate", "mitx-online-certificate", "coursera-certificate", "duolingo-daily", "codeforces-rating", "credly-badge", "accredible-credential", "chess-rating", "chess-tactics", "wca-time", "fitbit-daily", "strava-daily", "marathon-finish"],
+    ["university-enrollment-shown", "university-year-passed-shown", "university-grade-shown", "toefl-mybest-shown", "duolingo-english-test", "edx-certificate", "mitx-online-certificate", "coursera-certificate", "duolingo-daily", "codeforces-rating", "credly-badge", "accredible-credential", "chess-rating", "chess-tactics", "wca-time", "fitbit-daily", "marathon-finish"],
     "a live condition needs the whole line behind it: contract deployed, its goal registered, a provider defined, a flow that runs (the TOEFL score since the founder's rule of 23 Sep 2026)",
   );
   assert.equal(DUOLINGO_DAILY.goalType, GOAL_TYPE_DUOLINGO_XP);
   assert.equal(conditionOfGoal(GOAL_TYPE_DUOLINGO_XP)?.id, "duolingo-daily");
-  // Nothing is written in this register that a gift cannot be made on, so nothing here is not live any more (D109).
-  assert.equal(CONDITIONS.every((condition) => condition.live), true, "the register holds only what a gift can be made on today");
+  // Nothing is written in this register that a gift cannot be made on (D109), but the one line its source closed:
+  // Strava stays in the register, closed, so that the public page can say why (12 Oct 2026).
+  assert.deepEqual(CONDITIONS.filter((condition) => !condition.live).map((condition) => condition.id), ["strava-daily"], "the register holds what a gift can be made on today, and the one line that was closed");
 });
 
 test("every condition names a reading that exists, and a milestone has no goal type on the daily contract", () => {

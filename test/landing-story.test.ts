@@ -142,7 +142,9 @@ test("what Viky reads goes by, by name: the chooser's own lines from the registe
   assert.match(story, /const all = readByName\(\)\.map\(/);
   // A pictogram has a name here only while an open condition carries it, and every pictogram of the chooser has one.
   for (const line of lines) assert.ok(live.some((option) => option.icon === line.icon), line.name);
-  assert.deepEqual([...new Set(lines.map((line) => line.icon))].sort(), Object.keys(CONDITION_ICONS).sort(), "each of the eleven pictograms");
+  // Every pictogram but the route's, whose one line was Strava's, closed on 12 Oct 2026: it is drawn for nobody.
+  assert.deepEqual([...new Set(lines.map((line) => line.icon))].sort(), Object.keys(CONDITION_ICONS).filter((icon) => icon !== "route").sort(), "each of the ten pictograms an open line carries");
+  assert.equal(Object.keys(CONDITION_ICONS).length, 11);
   assert.deepEqual(readByName([]), [], "nothing open, nothing named");
   assert.match(story, /<ConditionIcon icon=\{pill\.icon\} \/>\n\s*\{pill\.name\}/, "the chooser's own drawing, then the name");
   // A pill: the outline and the relief of a control, the title's face, and a lean of three degrees at most.

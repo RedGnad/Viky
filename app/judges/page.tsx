@@ -298,7 +298,10 @@ export default async function JudgesPage() {
                 time: one reading, taken only once a plain look has found that the page can pay. A Credly badge: two.
                 A race finished: one.
               </li>
-              <li>Strava or Fitbit, by the day: one reading to connect, then one each morning that has a day to credit.</li>
+              <li>
+                Fitbit, by the day: one reading to connect, then one each morning that has a day to credit. Strava was
+                read the same way, and is closed.
+              </li>
               <li>
                 A document a person shows (a score, an enrolment, a grade): no reading. It is one of the month&apos;s{" "}
                 {RECLAIM_ALLOWANCE.verifications} proofs shown by people.
@@ -607,9 +610,9 @@ export default async function JudgesPage() {
           before its proof, and a climb at its target is given three proofs a day at most. Connecting the account is one more, and a connection by code takes it only once a plain look
           has found the code in the name; a count the person asks for looks first in the same way. No daily ceiling bounds
           those asks, only ten in ten minutes from one IP address, counted in each app server&apos;s memory. A gift on
-          Strava or Fitbit is asked plainly first, with the person&apos;s key, and no proof is taken from a source that
+          Fitbit is asked plainly first, with the person&apos;s key, and no proof is taken from a source that
           refuses or does not answer; that look does not judge the day, so it is read attested each morning that has a
-          day to credit, earned or not. A climb
+          day to credit, earned or not. Strava was read the same way, and is closed. A climb
           is looked at plainly, not through Reclaim, in both of the day&apos;s passes and at each ask, and read attested
           only to connect the account or when that look does not show it below its target. Private sources keep the
           user-proof path through the Reclaim verifier app.
@@ -653,7 +656,7 @@ export default async function JudgesPage() {
           target until one settles it. The operator is told by email when{" "}
           {RECLAIM_ALERT_LEFT.filter((mark) => mark > 0).join(", ")} and none are left of an allowance, the last with the days then waiting for a reading, and
           each morning of the judging (from {utcDayInWords(JUDGING.from)} to {utcDayInWords(JUDGING.until)}) with what the
-          day before spent, by gift and by reason. What is not closed: a gift on Strava or Fitbit takes a proof for a
+          day before spent, by gift and by reason. What is not closed: a gift on Fitbit takes a proof for a
           day that was not earned, a proof whose sending failed is taken again at the next reading, what a person shows has no ceiling of its own
           for a gift, and a reading asked from a developer&apos;s machine reaches the same Reclaim application without
           being written in this journal.
@@ -781,18 +784,22 @@ export default async function JudgesPage() {
             verification and its third party security review (CASA) apply.
           </li>
           <li>
-            <strong>Strava&apos;s API Agreement, and the same risk.</strong> Kilometres a day on Strava is connected by
-            the person once, on Strava&apos;s own page, read each morning the way Fitbit is: yesterday&apos;s
-            activities through the attested fetch with their key as a secret, the distances added, the verdict signed,
-            the list dropped. Strava&apos;s API Agreement (read 23 Sep 2026) asks that Strava Data serve the person who
-            authorised it and nobody else, that it be neither aggregated across people nor shown to others, and that it
-            be deleted when they ask: the consent screen, the verdict-only reading and the erase button that gives the
-            key back first are those three, and the erasing runs by itself once a gift is over, as for Fitbit. Two things it also says are written here rather than settled: a new
-            application is in single-player mode, so until Strava raises the athlete limit only the founder&apos;s own
-            account can connect; and Strava&apos;s brand guidelines ask for &quot;Powered by Strava&quot; where Strava data
-            is shown, and Viky shows none, only a yes or a no, which is the founder&apos;s call to settle with Strava.
-            The risk is Fitbit&apos;s: the funder&apos;s daily yes or no is one bit about the person given to a third party
-            under the consent they gave.
+            <strong data-strava-closed>Strava: closed on 12 Oct 2026.</strong> Kilometres a day on Strava was built
+            the way Fitbit is read: connected by the person once, on Strava&apos;s own page, yesterday&apos;s activities
+            through the attested fetch with their key as a secret, the distances added, the verdict signed, the list
+            dropped. Its first real reading, gift 1002, was refused three times on 12 Oct 2026: Strava answered 403.
+            The size of that answer is the size of the refusal Strava gives an application whose owner holds no paid
+            subscription, which its developer program asks for since June 2026; the answer&apos;s body was not kept.
+            The founder does not take the subscription, so the line is closed: nobody can offer it, nobody is sent to
+            Strava&apos;s page, and nothing is read for it. Gift 1002 never started: its person can end it, and
+            otherwise the contract sends all of it back to the account that paid fourteen days after it was opened.
+            What stays written for the day the line opens again: Strava&apos;s API Agreement (read 23 Sep 2026) asks
+            that Strava Data serve the person who authorised it and nobody else, that it be neither aggregated across
+            people nor shown to others, and that it be deleted when they ask (the consent screen, the verdict-only
+            reading and the erase button that gives the key back first are those three, and the erasing runs by itself
+            once a gift is over, as for Fitbit); a new application is in single-player mode, so only its owner&apos;s
+            account could connect; and Strava&apos;s brand guidelines ask for &quot;Powered by Strava&quot; where Strava
+            data is shown, and Viky showed none, only a yes or a no.
           </li>
           <li>
             <strong>edX&apos;s terms.</strong> An edX verified certificate is read from the public page edX publishes for

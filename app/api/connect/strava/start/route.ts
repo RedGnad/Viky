@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
+import { closedLineOf } from "@/src/closed-line";
+import { STRAVA_DAILY } from "@/src/conditions";
 import { stravaGiftOf, startStravaConnection } from "@/src/connect-strava";
-import { giftErrorResponse, NO_STORE } from "@/src/gift-api";
+import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
 export const runtime = "nodejs";
@@ -21,6 +23,9 @@ export async function POST(request: Request) {
     const body = await readJsonBody<{ giftId?: unknown }>(request, 1_024);
     const giftId = String(body.giftId ?? "");
     await stravaGiftOf(giftId, auth.account);
+    // Nobody is sent to Strava's page for a line Strava's own rules closed (12 Oct 2026): the key it would give opens nothing.
+    const closed = closedLineOf(STRAVA_DAILY);
+    if (closed) throw new GiftApiError("CONDITION_CLOSED", closed, 409);
     const { url, cookie } = startStravaConnection({ giftId, account: auth.account, requestUrl: request.url, nowSeconds: Math.floor(Date.now() / 1_000) });
     return NextResponse.json({ url }, { headers: { ...NO_STORE, "set-cookie": cookie } });
   } catch (error) {
