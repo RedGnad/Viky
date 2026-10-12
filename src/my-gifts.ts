@@ -1,7 +1,9 @@
 import { catchUpSecondsOf } from "./catch-up";
+import { conditionOfGoal } from "./conditions";
 import { formatAusd, readGift, theirsSoFar } from "./gift-reader";
 import { loadGiftsOf, loadSettledDays } from "./gift-store";
 import { isMilestoneGiftId } from "./milestone-protocol";
+import { waitingToBeOpened } from "./on-request";
 import { loadMilestoneStatus } from "./milestone-status";
 import { reachedSeenOf } from "./reached-seen-store";
 import { escrowOf } from "./relayer";
@@ -79,6 +81,8 @@ export async function giftsOf(account: string): Promise<GiftSummary[]> {
         missedDays: gift.drainedDays,
         opened: gift.recipient !== null,
         counting: record.boundAt !== null,
+        // Its line is opened on request and is not open yet (src/on-request.ts): asked only for a gift on such a line.
+        beingOpened: conditionOfGoal(gift.goalType)?.state === "on-request" && (await waitingToBeOpened()).has(conditionOfGoal(gift.goalType)!.id),
         finished: gift.finalised,
         cancelled: gift.cancelled,
         ended: gift.endedAt !== 0,

@@ -17,7 +17,7 @@ import { json, makeAnAccount } from "./gift-kit";
 const shot = photographer(process.env.VIKY_CONNECTED_CAPTURES);
 
 const GIFT = "872";
-// Fitbit's goal on the daily contract: the connected line that is open (Strava's was closed on 12 Oct 2026).
+// Fitbit's goal on the daily contract: the connected line that is open (Strava's is on request since 12 Oct 2026).
 const FITBIT = 6;
 const UTC_DAY = () => Math.floor(Date.now() / 86_400_000);
 const TERMS = { reads: "your Fitbit's active minutes, each morning, for the day before: whether they reach the target", funderSees: "for each day, whether it counted", what: "your Fitbit", things: 1 } as const;
@@ -97,35 +97,61 @@ test.describe("a connected source, and the first day of its gift", () => {
   }
 
   for (const [role, title, under] of [
-    ["recipient", "Viky no longer reads Strava.", /^It goes back to Mom after \d+ \w+ \d{4}, or now if you end it\.$/],
-    ["funder", "Boo opened it, and Viky no longer reads Strava.", /^It comes back to you after \d+ \w+ \d{4}\.$/],
+    ["recipient", "Strava is being opened for you.", /^Ready by \d+ \w+ \d{4}\. The money is already in your name\.$/],
+    ["funder", "Strava is being opened.", /^Ready by \d+ \w+ \d{4}\.$/],
   ] as const) {
-    test(`a gift on a line its source closed says so in place of the connection, to the ${role}`, async ({ browser, baseURL }) => {
+    test(`a gift on a line being opened on request says so and asks for no connection, to the ${role}`, async ({ browser, baseURL }) => {
       const device = await aWindow(browser, baseURL);
       const { page } = device;
-      // Goal 4 is Strava's, closed on 12 Oct 2026: gift 1002 as it stands, opened, connected, never started.
+      // Goal 4 is Strava's, offered on request since 12 Oct 2026 and not opened: a gift made now, opened, never started.
       const terms = { reads: "your activities on Strava, each morning, for the day before: whether they add up to the kilometres", funderSees: "for each day, whether it counted", what: "your Strava", things: 1 };
-      await serve(page, GIFT, () => daily(GIFT, role, { ...NOT_STARTED, goalType: 4, dailyTarget: 1, version: 3 }), terms as never);
-      await page.route("**/api/connect/strava/status*", (route) => route.fulfill(json({ connected: true, since: new Date().toISOString(), bound: false, configured: true })));
+      await serve(page, GIFT, () => daily(GIFT, role, { ...NOT_STARTED, goalType: 4, dailyTarget: 1, version: 3, onRequest: true, createdAtChain: Math.floor(Date.now() / 1_000) }), terms as never);
+      await page.route("**/api/connect/strava/status*", (route) => route.fulfill(json({ connected: false, bound: false, configured: true })));
       await makeAnAccount(device);
       await page.goto(`/g/${GIFT}`);
       await expect(page.getByText(title, { exact: true })).toHaveCount(1);
+      // The day is the gift's day plus two, at this reader's clock, with its year.
       await expect(page.getByText(under)).toBeVisible();
-      // Nothing asks to connect or to start, and nobody is told Strava is connected and waiting.
+      const readyBy = new Date(Date.now() + 2 * 86_400_000).getFullYear();
+      await expect(page.getByText(under)).toContainText(String(readyBy));
+      // Nothing asks to connect or to start, and nothing is drawn where the connection would be.
       await expect(page.getByRole("button", { name: "Connect Strava" })).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Start counting" })).toHaveCount(0);
-      await expect(page.getByText("Strava is connected.")).toHaveCount(0);
       await expect(page.getByText("Connect Strava and it starts.")).toHaveCount(0);
-      if (role === "recipient") {
-        const block = page.locator("[data-line-closed]");
-        // The card says the line is closed and when the money goes back; the block under it, why, and that nothing starts.
-        await expect(block.getByText("Strava's developer program asks for a paid subscription.", { exact: true })).toBeVisible();
-        await expect(block.getByText("This gift cannot start.", { exact: true })).toBeVisible();
-        // The key already given can still be given back.
-        await expect(block.getByRole("button", { name: "Disconnect and erase" })).toBeVisible();
-      } else await expect(page.locator("[data-line-closed]")).toHaveCount(0);
-      await shot(page, `4-line-closed-${role}`);
+      await expect(page.locator("[data-being-opened]")).toHaveCount(0);
+      await shot(page, `4-being-opened-${role}`);
       await device.context.close();
     });
   }
+
+  test("a key given before the line went on request can still be given back, and nothing else is asked", async ({ browser, baseURL }) => {
+    const device = await aWindow(browser, baseURL);
+    const { page } = device;
+    // Gift 1002 as it stands: opened, Strava connected on 12 Oct 2026 before the line went on request, never started.
+    const terms = { reads: "your activities on Strava, each morning, for the day before: whether they add up to the kilometres", funderSees: "for each day, whether it counted", what: "your Strava", things: 1 };
+    await serve(page, GIFT, () => daily(GIFT, "recipient", { ...NOT_STARTED, goalType: 4, dailyTarget: 1, version: 3, onRequest: true, createdAtChain: Math.floor(Date.now() / 1_000) }), terms as never);
+    await page.route("**/api/connect/strava/status*", (route) => route.fulfill(json({ connected: true, since: new Date().toISOString(), bound: false, configured: true })));
+    await makeAnAccount(device);
+    await page.goto(`/g/${GIFT}`);
+    await expect(page.getByText("Strava is being opened for you.", { exact: true })).toHaveCount(1);
+    const block = page.locator("[data-being-opened]");
+    await expect(block.getByRole("button", { name: "Disconnect and erase" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Start counting" })).toHaveCount(0);
+    await expect(page.getByText("Strava is connected.")).toHaveCount(0);
+    await device.context.close();
+  });
+
+  test("once the operator has opened the line, its gift offers to connect like any other", async ({ browser, baseURL }) => {
+    const device = await aWindow(browser, baseURL);
+    const { page } = device;
+    const terms = { reads: "your activities on Strava, each morning, for the day before: whether they add up to the kilometres", funderSees: "for each day, whether it counted", what: "your Strava", things: 1 };
+    await serve(page, GIFT, () => daily(GIFT, "recipient", { ...NOT_STARTED, goalType: 4, dailyTarget: 1, version: 3, onRequest: false }), terms as never);
+    await page.route("**/api/connect/strava/status*", (route) => route.fulfill(json({ connected: false, bound: false, configured: true })));
+    await makeAnAccount(device);
+    await page.goto(`/g/${GIFT}`);
+    await expect(page.getByText("Connect Strava and it starts.", { exact: true })).toHaveCount(1);
+    await expect(page.getByText(/is being opened/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Connect Strava" })).toBeVisible();
+    await device.context.close();
+  });
 });

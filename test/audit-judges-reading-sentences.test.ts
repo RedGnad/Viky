@@ -137,6 +137,7 @@ test("how to try it starts with the daily Duolingo path and gives each path's co
     "A certificate by its link",
     "A Credly badge: two.",
     "Fitbit, by the day: one reading to connect",
+    "Strava is read the same way, once it is opened on request.",
     "A document a person shows (a score, an enrolment, a grade): no reading.",
   ].map((sentence) => paths.indexOf(sentence));
   assert.ok(order.every((at, index) => at >= 0 && (index === 0 || at > order[index - 1])), `each path is said, Duolingo first: ${order.join(", ")}`);

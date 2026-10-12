@@ -316,8 +316,8 @@ export default async function JudgesPage() {
                     A race finished: one.
                   </li>
                   <li>
-                    Fitbit, by the day: one reading to connect, then one each morning that has a day to credit. Strava was
-                    read the same way, and is closed.
+                    Fitbit, by the day: one reading to connect, then one each morning that has a day to credit. Strava is
+                    read the same way, once it is opened on request.
                   </li>
                   <li>
                     A document a person shows (a score, an enrolment, a grade): no reading. It is one of the month&apos;s{" "}
@@ -679,7 +679,7 @@ export default async function JudgesPage() {
               those asks, only ten in ten minutes from one IP address, counted in each app server&apos;s memory. A gift on
               Fitbit is asked plainly first, with the person&apos;s key, and no proof is taken from a source that
               refuses or does not answer; that look does not judge the day, so it is read attested each morning that has a
-              day to credit, earned or not. Strava was read the same way, and is closed. A climb
+              day to credit, earned or not. Strava is read the same way, once it is opened on request. A climb
               is looked at plainly, not through Reclaim, in both of the day&apos;s passes and at each ask, and read attested
               only to connect the account or when that look does not show it below its target. Private sources keep the
               user-proof path through the Reclaim verifier app.
@@ -817,24 +817,30 @@ export default async function JudgesPage() {
             published in production, so a connection does not lapse each week; past a hundred people, Google&apos;s app
             verification and its third party security review (CASA) apply.
           </Row>
-          <Row title={<>Strava: closed on 12 Oct 2026</>}>
-            <div data-strava-closed>
-Kilometres a day on Strava was built
+          <Row title={<>Strava: on request, and no real account read yet</>}>
+            <div data-strava-on-request>
+            Strava has read no real account yet. Strava reviews an application case by case before it serves more than
+            ten athletes (its API FAQ and its page on rate limits, read 12 Oct 2026, which add that &quot;increased access
+            is not a guarantee&quot;). Kilometres a day on Strava is built
             the way Fitbit is read: connected by the person once, on Strava&apos;s own page, yesterday&apos;s activities
             through the attested fetch with their key as a secret, the distances added, the verdict signed, the list
             dropped. Its first real reading, gift 1002, was refused three times on 12 Oct 2026: Strava answered 403.
             The size of that answer is the size of the refusal Strava gives an application whose owner holds no paid
             subscription, which its developer program asks for since June 2026; the answer&apos;s body was not kept.
-            The founder does not take the subscription, so the line is closed: nobody can offer it, nobody is sent to
-            Strava&apos;s page, and nothing is read for it. Gift 1002 never started: its person can end it, and
-            otherwise the contract sends all of it back to the account that paid fourteen days after it was opened.
-            What stays written for the day the line opens again: Strava&apos;s API Agreement (read 23 Sep 2026) asks
+            The founder takes the subscription the day a gift asks for Strava, so the line is offered on request: a
+            gift is made and paid like any other, its two people read a day two days after it, and until the line is
+            opened nobody is sent to Strava&apos;s page and nothing is asked of Strava or of Reclaim for it. Each such
+            gift is told to the operator at once and again each morning while it waits. A gift opened and never started
+            goes back to the account that paid fourteen days after it was opened, as on every line: that holds here
+            too if Strava were not opened in time.
+            What Strava&apos;s terms ask, for the day the line is open: Strava&apos;s API Agreement (read 23 Sep 2026) asks
             that Strava Data serve the person who authorised it and nobody else, that it be neither aggregated across
             people nor shown to others, and that it be deleted when they ask (the consent screen, the verdict-only
             reading and the erase button that gives the key back first are those three, and the erasing runs by itself
             once a gift is over, as for Fitbit); a new application is in single-player mode, so only its owner&apos;s
-            account could connect; and Strava&apos;s brand guidelines ask for &quot;Powered by Strava&quot; where Strava
-            data is shown, and Viky showed none, only a yes or a no.
+            account can connect until it is raised to ten athletes from Strava&apos;s API settings; and Strava&apos;s
+            brand guidelines ask for &quot;Powered by Strava&quot; where Strava data is shown, and Viky shows none, only
+            a yes or a no.
             </div>
           </Row>
           <Row title={<>edX&apos;s terms</>}>

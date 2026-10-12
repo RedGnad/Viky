@@ -31,7 +31,7 @@ export function readStanding(path: string, username: string, cadence: string): P
  * The ids of the conditions this viewer may offer: the live ones, and for an account that runs Viky, the wired ones.
  * And which of the month's reserves are used up (src/reserves.ts); absent from an answer made before that existed.
  */
-export function loadOfferedConditions(): Promise<{ ids: string[]; preview: string[]; reserves?: Reserves }> {
+export function loadOfferedConditions(): Promise<{ ids: string[]; preview: string[]; reserves?: Reserves; onRequest?: string[] }> {
   return getJson("/api/conditions");
 }
 

@@ -97,7 +97,7 @@ export function GiftCard({
       }
       bottom={
         <>
-          <span className={`block ${BODY}`}>{milestone ? milestoneStateInWords(milestone) : stateInWords(gift, condition?.words.connect)}</span>
+          <span className={`block ${BODY}`}>{milestone ? milestoneStateInWords(milestone) : stateInWords(gift, condition?.words.connect, condition?.source)}</span>
           <span className={`block ${HELP} tabular-nums`}>
             {milestone ? W.milestoneAmount(milestone.amountDisplay, milestoneBy(milestone, zone)) : amountsInWords(gift, started)}
           </span>
@@ -189,12 +189,14 @@ export function amountsInWords(gift: GiftSummary, started: boolean): string {
 }
 
 /** One sentence for the state of a gift, the same whichever side of it a person is on. */
-export function stateInWords(gift: GiftSummary, connect: string | undefined): string {
+export function stateInWords(gift: GiftSummary, connect: string | undefined, source?: string): string {
   if (gift.cancelled) return W.takenBack;
   // Ended by the person it is for: said as that, never as a gift that ran out with days missed.
   if (gift.ended) return gift.role === "recipient" ? E.card.yours : E.card.theirs;
   if (gift.finished) return W.finished(gift.creditedDays, gift.durationDays, gift.missedDays);
   if (!gift.opened) return W.notOpened;
+  // Its line is being opened on request: nothing is asked of anybody, and the card says so as the gift's page does.
+  if (!gift.counting && gift.beingOpened && source) return gift.role === "recipient" ? L.notConnected.beingOpenedYours(source) : L.notConnected.beingOpenedTheirs(source);
   if (!gift.counting) return connect ?? "";
   return W.counting(gift.creditedDays, gift.durationDays, gift.missedDays);
 }

@@ -5,6 +5,9 @@ import { payoutsNotFinishedAlert } from "@/src/mobile-money";
 import { payoutsNotFinished } from "@/src/mobile-money-store";
 import { followUnsettledOrders, ordersToTell } from "@/src/phone-order";
 import { sendAlert } from "@/src/provider-alert";
+import { giftOnChain, remindersOfGiftsAsking } from "@/src/on-request-pass";
+import { tellOnceToday } from "@/src/attested-calls";
+import { loadAllGifts } from "@/src/gift-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +40,13 @@ export async function GET(request: Request) {
         return null;
       });
     if (unfinished) await sendAlert(unfinished);
+    // The gifts that still wait for a line offered on request, each morning until the operator opens it
+    // (src/on-request.ts): once in a UTC day for a line, whatever runs this pass again. Its failure stops nothing.
+    await remindersOfGiftsAsking({ gifts: loadAllGifts, onChain: giftOnChain })
+      .then(async (reminders) => {
+        for (const reminder of reminders) await tellOnceToday(`source-asked:${reminder.conditionId}`, () => reminder.alert);
+      })
+      .catch((error: unknown) => console.error(`gifts asking for a line on request not reminded: ${error instanceof Error ? error.message : String(error)}`));
     return NextResponse.json({ ...report, phoneOrders }, { headers: NO_STORE });
   } catch (error) {
     // A pass that stops is told, not only answered: nobody reads the scheduler's answers (the final audit of 9 Oct 2026).

@@ -264,8 +264,8 @@ test.describe("the screens a person meets", () => {
    * On the narrowest phone held, 360 by 800, two names took two lines and their rows stood taller than the others
    * (the founder, 5 Oct 2026): "Harvard, MIT and more, on edX" is "An edX certificate" with the schools on its grey
    * line, and "Kilometres each day, on Strava" is "Kilometres a day, on Strava". Held here: each of the two is one line
-   * high, with room to spare. Strava's line was closed on 12 Oct 2026 and left the list: the row held in Move is
-   * Fitbit's since, the other connected line.
+   * high, with room to spare. The row held in Move is Fitbit's since 12 Oct 2026, the connected line that is
+   * open: Strava's is offered on request and carries one line more, which says so.
    *
    * Measured in a browser of its own that places letters at fractions of a pixel, as a phone does. A machine without a
    * screen on Linux snaps each letter to a whole pixel by default, and the half pixel of spacing a row's words carry

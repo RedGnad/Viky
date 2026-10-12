@@ -4,7 +4,6 @@ import { useAccount } from "@/src/account/provider";
 import { agreeFirst, signConsent } from "@/src/client/consent";
 import { ApiError, getJson, postJson } from "@/src/client/api";
 import { withTheStartSigned, type StartAsked } from "@/src/client/v2";
-import { closedLineOf } from "@/src/closed-line";
 import { conditionById } from "@/src/conditions";
 import { connectReturnInWords } from "@/src/connect-return";
 import { GIFT_PAGE as W } from "@/src/sentences";
@@ -33,6 +32,7 @@ export function ConnectTheAccount({
   giftId,
   conditionId,
   yours,
+  beingOpened = false,
   dayOneIsTheStart = false,
   onConnection,
   onChanged,
@@ -40,6 +40,8 @@ export function ConnectTheAccount({
   giftId: string;
   conditionId: string;
   yours: boolean;
+  /** The line is opened on request and is not open yet (src/on-request.ts): nothing is asked for here until it is. */
+  beingOpened?: boolean;
   /** The gift's first day is the day counting starts, and not the day after (`firstDayIsTheStart`, src/v2.ts). */
   dayOneIsTheStart?: boolean;
   /** Told whether the source is connected, as soon as it is known: the card's own title then says so. */
@@ -144,15 +146,13 @@ export function ConnectTheAccount({
   };
 
   const working = busy !== null;
-  // A line its source closed (the register's fourth state, 12 Oct 2026): said in place of the connection, with what
-  // becomes of a gift that never started. A key already given can still be given back from here. The card above
-  // says the line is closed and when the money goes back: here, the register's own reason, and nothing said twice.
-  const closed = closedLineOf(condition);
-  if (closed) {
+  // A line being opened on request (the register's fourth state, 12 Oct 2026): no connection is asked for, and the
+  // card above says so with the day it is ready by, so nothing is drawn here. A key given before the line went on
+  // request can still be given back from here, and that is all this block then holds.
+  if (beingOpened) {
+    if (!status?.connected) return null;
     return (
-      <div className={CARD} data-line-closed="">
-        <p className="font-medium">{condition?.beforeItOpens}</p>
-        {status?.bound ? null : <p className={BODY}>{W.lineClosedGift}</p>}
+      <div className={CARD} data-being-opened="">
         {said ? <p className={BODY}>{said}</p> : null}
         {status?.connected ? (
           <Button look="secondary" doing={busy === "erasing" ? W.working : null} step={WAITS.erasing} waiting={working && busy !== "erasing"} onPress={() => void erase()}>

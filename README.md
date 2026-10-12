@@ -96,16 +96,39 @@ looks for seven such words at every change (wallet, gas, chain, seed, token, tra
 routes that answer them (its list of files is `scripts/check-consumer-words.ts`) and in what a browser renders
 (`test/browser/screens.spec.ts`).
 
-## Seventeen conditions, three ways of reading
+## Eighteen conditions
 
-| How it is read | Conditions | Where it stands on 12 Oct 2026 |
-|---|---|---|
-| A public page or API, read under attestation | Twelve. A Duolingo lesson a day, a Chess.com rating and puzzle record, a Codeforces rating, Credly, Accredible, the Duolingo English Test, edX, MIT and Coursera certificates, a cube result, a race finish. | Paid with real money: Duolingo and the Chess.com rating. Each of the ten others had its real page read under attestation that day, with no gift yet. |
-| The person's own account, shown by them | Four. Enrolled at university, the year passed, a grade reached, a TOEFL score. Any of 11,000 universities (the first is read today; each other is set up within two days of a first gift). | Paid with real money: enrolment, at Toulouse on 7 and 9 Oct 2026. Nobody has shown one of the three others yet. |
-| An account the person connects | One. Active minutes on Fitbit. | Built, read on no real account yet. An eighteenth, daily kilometres on Strava, is built and closed since 12 Oct 2026: Strava's developer program asks for a paid subscription. |
+**3 paid with real money, 10 read on their real page, 4 open and waiting for their first person, 1 on request.**
+A condition is proven the day the thing happens: a lesson is daily, a race has a date, a university gives its results
+once a year.
 
-What each one proves is on the [judges page](https://viky.cash/judges), condition by condition, with its count of
-real proofs as the page is served.
+| Family | Condition | How it is read | Where it stands, 12 Oct 2026 |
+|---|---|---|---|
+| **Learn** | A Duolingo lesson each day | Read for you | **Paid with real money** |
+|  | Reach a Codeforces rating | Read for you | Read on its real page |
+|  | A certification on Credly | Read for you | Read on its real page |
+|  | A credential on Accredible | Read for you | Read on its real page |
+| **School & studies** | Enrolled at university | Shown by them | **Paid with real money** |
+|  | Passed the year at university | Shown by them | Open. Waits for the year's results. |
+|  | Reached a grade at university | Shown by them | Open. Waits for the year's results. |
+|  | A TOEFL score | Shown by them | Open. Nobody has shown one yet. |
+|  | A Duolingo English Test score | Read for you | Read on its real page |
+|  | An edX certificate | Read for you | Read on its real page |
+|  | An MIT course certificate | Read for you | Read on its real page |
+|  | A Coursera certificate | Read for you | Read on its real page |
+| **Play** | A chess rating on Chess.com | Read for you | **Paid with real money** |
+|  | A puzzle record on Chess.com | Read for you | Read on its real page |
+|  | A cube result in competition | Read for you | Read on its real page |
+| **Move** | Active minutes a day, Fitbit | Connected by them | Open. Takes a Fitbit tracker or a Pixel Watch. |
+|  | Kilometres a day, on Strava | Connected by them | On request. Ready two days after a first gift. |
+|  | Finish a race | Read for you | Read on its real page |
+
+Strava opens on request, within two days of a first gift: its developer program is a paid subscription, taken when a
+gift asks for it, and serves ten athletes before its review, up to 9,999 after it.
+
+At a university, any of 11,000 (the first is read today; each other is set up within two days of a first gift).
+
+Live counts and what each one proves: [the judges page](https://viky.cash/judges).
 
 ## Why Monad
 

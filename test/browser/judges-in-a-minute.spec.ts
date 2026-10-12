@@ -67,15 +67,18 @@ test.describe("the judges page reads in a minute", () => {
     const conditions = page.locator("#conditions");
     await page.evaluate(fold("#conditions", 0, true));
     await expect(conditions.locator(".judges-stand")).toHaveCount(3);
-    await expect(conditions.locator(".judges-stand > p:first-child")).toHaveText([/^A public page or API, read under attestation\s*12 conditions$/, /^The person's own account, shown by them\s*4 conditions$/, /^An account the person connects\s*1 condition$/]);
-    // The three cards count the lines offered, seventeen as every other page says; the line its source closed is not
-    // one of them, and its card still names it, closed, with its reason.
+    await expect(conditions.locator(".judges-stand > p:first-child")).toHaveText([/^A public page or API, read under attestation\s*12 conditions$/, /^The person's own account, shown by them\s*4 conditions$/, /^An account the person connects\s*2 conditions$/]);
+    // The three cards count the lines offered, eighteen as every other page says, the line offered on request among
+    // them; its card says in the founder's sentence that it opens on request, and why.
     const connected = conditions.locator('[data-way-of-reading="connected"]');
-    await expect(connected).toContainText("Active minutes on Fitbit.");
-    await expect(connected).toContainText("Strava is closed: its developer program asks for a paid subscription.");
+    await expect(connected).toContainText("Active minutes on Fitbit, kilometres on Strava.");
+    await expect(connected).toContainText("Strava opens on request, within two days of a first gift: its developer program is a paid subscription, taken when a gift asks for it, and serves ten athletes before its review, up to 9,999 after it.");
     // A row a condition: its name, then its source, its state and its count of real proofs.
     await expect(conditions.locator("details.judges-row")).toHaveCount(18);
-    await expect(conditions.locator("details.judges-row > summary").filter({ hasText: "Kilometres a day, on Strava" })).toContainText("closed: Strava's developer program asks for a paid subscription");
+    // Where each stands, in the one phrase the public page says too: a line on request, and a line whose real page
+    // was read with no gift on 12 Oct 2026.
+    await expect(conditions.locator('[data-condition-stands="strava-daily"]')).toHaveText("On request. Ready two days after a first gift.");
+    await expect(conditions.locator('[data-condition-stands="codeforces-rating"]')).toHaveText("Open. Read on its real page, 12 Oct 2026.");
   });
 
   for (const [name, viewport] of [["390", { width: 390, height: 844 }], ["1440", { width: 1440, height: 900 }]] as const) {

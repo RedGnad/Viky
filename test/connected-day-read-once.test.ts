@@ -164,7 +164,7 @@ test("what is said of the first day is true of the contract the gift is on (the 
   // Connected, the block's own title, which asks to connect, is gone: the card's title says the source is connected.
   assert.match(screen, /\{status\?\.connected \? null : <p className="font-medium">\{words\.title\}<\/p>\}/);
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
-  assert.match(page, /<ConnectTheAccount giftId=\{giftId\} conditionId=\{condition\.id\} yours=\{mine\} dayOneIsTheStart=\{firstDayIsTheStart\(status\.version\)\} onConnection=\{setSourceConnected\} onChanged=\{reloadAll\} \/>/);
+  assert.match(page, /<ConnectTheAccount giftId=\{giftId\} conditionId=\{condition\.id\} yours=\{mine\} beingOpened=\{beingOpened\} dayOneIsTheStart=\{firstDayIsTheStart\(status\.version\)\} onConnection=\{setSourceConnected\} onChanged=\{reloadAll\} \/>/);
   assert.equal(GIFT_LIVE.notConnected.connected("Strava"), "Strava is connected.");
   // The day it goes back still stands under that title, and what is left to do by then is to start.
   assert.equal(GIFT_LIVE.notConnected.startBy("20 Oct 2026", "Mom"), "Start by 20 Oct 2026, or it goes back to Mom.");

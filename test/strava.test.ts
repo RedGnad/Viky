@@ -23,15 +23,15 @@ import { distanceOfDay, exchangeStravaCode, isStravaAthleteId, refreshStravaToke
 const ENV = { STRAVA_CLIENT_ID: "12345", STRAVA_CLIENT_SECRET: "s3cret", CONNECT_TOKEN_KEY: Buffer.alloc(32, 9).toString("base64"), SESSION_SIGNING_SECRET: "test-account-session-secret-that-is-longer-than-32-bytes", IDENTITY_HMAC_KEY: process.env.IDENTITY_HMAC_KEY } as unknown as NodeJS.ProcessEnv;
 const NOW = 1_790_000_000;
 
-test("the line: connected, in Move, on goal 4, built and closed by its source's rules, and its words hold", () => {
+test("the line: connected, in Move, on goal 4, built and offered on request, and its words hold", () => {
   assert.equal(STRAVA_DAILY.nature, "connected");
   assert.equal(STRAVA_DAILY.family, "move");
   assert.equal(STRAVA_DAILY.goalType, GOAL_TYPE_STRAVA_DISTANCE);
-  // Open from D201 to 12 Oct 2026, the day its first real reading was refused; closed by the founder that day.
-  assert.equal(STRAVA_DAILY.live, false);
-  assert.equal(STRAVA_DAILY.state, "closed");
-  assert.ok(!BUILDING.includes(STRAVA_DAILY), "closed is not being built: the line exists whole");
-  assert.equal(STRAVA_DAILY.beforeItOpens, "Strava's developer program asks for a paid subscription.");
+  // Open from D201 to 12 Oct 2026, the day its first real reading was refused; on request since (the founder).
+  assert.equal(STRAVA_DAILY.live, true);
+  assert.equal(STRAVA_DAILY.state, "on-request");
+  assert.ok(!BUILDING.includes(STRAVA_DAILY), "on request is not being built: the line exists whole");
+  assert.equal(STRAVA_DAILY.beforeItOpens, "Ready two days after a first gift.");
   assert.equal(conditionOfGoal(GOAL_TYPE_STRAVA_DISTANCE), STRAVA_DAILY);
   assert.equal(conditionById("strava-daily"), STRAVA_DAILY);
   assert.ok(proofOfCondition("strava-daily"));

@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { conditionsWithProof } from "@/src/condition-proof";
-import { CONDITIONS, FAMILIES, stateOf } from "@/src/conditions";
+import { fourFigures, standInOneLine, standOf, standsCounted } from "@/src/condition-stands";
+import { CONDITIONS, FAMILIES } from "@/src/conditions";
 import { TOULOUSE_PASSES } from "@/src/judges-first-use";
 import { saidOfAWay, waysOfReading, type WayOfReading } from "@/src/judges-ways";
+import { waitingToBeOpened } from "@/src/on-request";
 import { realProofCounts } from "@/src/proof-counts";
 import { CATALOGUE } from "@/src/sentences";
 import { Fold, Row, Rows } from "./Fold";
@@ -16,9 +18,9 @@ const count = (number: number, one: string, many: string) => `${number} ${number
  * One way of reading, as a card: its name, how many lines it holds, what they are, then what was paid with real money
  * and why the rest waits, which src/judges-ways.ts says from the count of real proofs as the page is served.
  */
-function Stand({ way, counts }: Readonly<{ way: WayOfReading; counts: ReadonlyMap<string, number> | null }>) {
+function Stand({ way, counts, toBeOpened }: Readonly<{ way: WayOfReading; counts: ReadonlyMap<string, number> | null; toBeOpened: ReadonlySet<string> }>) {
   const lines = CONDITIONS.filter((condition) => condition.nature === way.nature);
-  const said = saidOfAWay(way, lines, counts, { firstDay: TOULOUSE_PASSES.first.day, nextDay: TOULOUSE_PASSES.onTheFixedRule.day, secondsFromSignIn: TOULOUSE_PASSES.onTheFixedRule.secondsFromSignIn });
+  const said = saidOfAWay(way, lines, counts, { firstDay: TOULOUSE_PASSES.first.day, nextDay: TOULOUSE_PASSES.onTheFixedRule.day, secondsFromSignIn: TOULOUSE_PASSES.onTheFixedRule.secondsFromSignIn }, toBeOpened);
   return (
     <div className="judges-stand" data-way-of-reading={way.nature}>
       <p className="font-semibold">
@@ -48,6 +50,11 @@ export async function JudgesConditions() {
   const families = FAMILIES.map((family) => ({ ...family, rows: rows.filter(({ condition }) => condition.family === family.id) })).filter((family) => family.rows.length > 0);
   // The count of real proofs per condition (D184): a number read from the rows when the page is served, or nothing.
   const counts = await realProofCounts();
+  // The lines offered on request that the operator has not opened yet (src/on-request.ts), read as the page is served.
+  const toBeOpened = await waitingToBeOpened();
+  // Where the conditions stand, in one sentence of four figures counted from the same two readings (the founder,
+  // 12 Oct 2026): the same phrases the README's table and the public page use, and the one each row ends on.
+  const counted = standsCounted(counts, toBeOpened);
   return (
     <Fold id="conditions" title="What each condition proves" space="md">
       <p className={HELP}>
@@ -61,13 +68,20 @@ export async function JudgesConditions() {
         .
       </p>
       <div className="space-y-[var(--space-sm)]">
-        <p className={HELP}>
-          A condition is proven the day the thing happens: a lesson is daily, a race has a date, a university year ends in
-          June. Where each one stands today:
+        <p className={HELP} data-conditions-stand="">
+          {counted ? (
+            <>
+              <strong>
+                {counted.total} conditions: {fourFigures(counted)}
+              </strong>{" "}
+            </>
+          ) : null}
+          A condition is proven the day the thing happens: a lesson is daily, a race has a date, a university gives its
+          results once a year. Where each one stands today:
         </p>
         <div className="judges-stands">
           {waysOfReading().map((way) => (
-            <Stand key={way.nature} way={way} counts={counts} />
+            <Stand key={way.nature} way={way} counts={counts} toBeOpened={toBeOpened} />
           ))}
         </div>
         <p className={MUTED}>Condition by condition, four questions each:</p>
@@ -80,14 +94,9 @@ export async function JudgesConditions() {
               <Row
                 key={condition.id}
                 title={condition.name}
-                // The state is the register's own, in the words the public page prints, and a line its source closed
-                // says why (12 Oct 2026); then the count of real proofs, read as the page is served.
-                meta={
-                  <span>
-                    {condition.source}, {stateOf(condition).title.toLowerCase()}
-                    {condition.state === "closed" && condition.beforeItOpens ? `: ${condition.beforeItOpens.replace(/\.$/, "")}` : ""}, {CATALOGUE.realProofs(counts ? (counts.get(condition.id) ?? 0) : null)}
-                  </span>
-                }
+                // Where it stands, in the one phrase the public page and the README say too (src/condition-stands.ts),
+                // with the count of real proofs read as the page is served.
+                meta={<span data-condition-stands={condition.id}>{standInOneLine(standOf(condition, counts, toBeOpened))}</span>}
               >
                 {/* What the gift waits for, where the thing to show comes at a set time: a year's results (10 Oct 2026). */}
                 {proof.waits ? (

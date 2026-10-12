@@ -1,4 +1,5 @@
 import { catchUpSecondsOf } from "./catch-up";
+import { conditionOfGoal } from "./conditions";
 import { readAsTheDayGoes } from "./daily-count";
 import { countableUntil } from "./days-waiting";
 import { giftLimitFor } from "./gift-limit";
@@ -6,6 +7,7 @@ import { GiftApiError } from "./gift-api";
 import { dailyEnded, dailyEndOffer } from "./gift-ending";
 import { checkInDayIndex, formatAusd, readGift, utcDayOf } from "./gift-reader";
 import { lastRefundAt, loadGift, loadRelayed, loadSettledDays, reconcileClaim } from "./gift-store";
+import { waitsToBeOpened } from "./on-request";
 import { holdsTheLinkOf } from "./v2-opening";
 import { isMilestoneGiftId } from "./milestone-protocol";
 import { milestoneStatusFor } from "./milestone-routes";
@@ -114,6 +116,8 @@ export async function giftStatusFor(id: string, reader: GiftReader): Promise<Any
     version: gift.version,
     // Read as the day goes (src/daily-count.ts): the page looks as it opens, and a lesson is paid the day it is done.
     readLive: readAsTheDayGoes(record),
+    // A line opened on request and not opened yet: the page asks for no connection and says the day it is ready by.
+    onRequest: await waitsToBeOpened(conditionOfGoal(gift.goalType)?.id),
     end: dailyEndOffer(gift, viewerIsRecipient),
     ended: dailyEnded(gift),
     givenBackDays: gift.givenBackDays,

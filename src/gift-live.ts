@@ -74,8 +74,10 @@ export type LiveInput = Readonly<{
   connectBy: string | null;
   /** The person connected the source and has not started the counting yet: known in the browser, for their own page. */
   sourceConnected?: boolean;
-  /** The gift's line was closed by its source since the gift was made (src/closed-line.ts): nothing is left to connect. */
-  lineClosed?: boolean;
+  /** The gift's line is opened on request and is not open yet (src/on-request.ts): nothing is asked of anybody. */
+  beingOpened?: boolean;
+  /** The day that line is ready by, in the reader's clock: the gift's day plus two. Nothing once that day has passed. */
+  readyByInWords?: string | null;
   nextReadingInWords: string | null;
   /** The hour of the next reading alone, in the reader's clock: "20:30". Drawn as a figure where nothing has gone back. */
   nextReadingAt?: string | null;
@@ -252,12 +254,13 @@ export function liveOf(input: LiveInput): Live {
       };
 
     case "openedNotConnected":
-      // A line closed since: no connection and no start are asked for, and the money's way back is all there is to say.
-      if (input.lineClosed)
+      // A line being opened on request: no connection and no start are asked for, and the day it is ready by is all
+      // there is to say. To anybody who is neither of its two people, the title alone.
+      if (input.beingOpened)
         return {
-          headline: yours ? L.notConnected.closedYours(source) : L.notConnected.closedTheirs(recipientName, source),
+          headline: yours ? L.notConnected.beingOpenedYours(source) : L.notConnected.beingOpenedTheirs(source),
           figure: { label: yours ? L.notConnected.label.yours : L.notConnected.label.theirs, value: input.amountDisplay },
-          next: input.connectBy === null ? null : yours ? L.notConnected.goesBackAfter(input.connectBy, funderName) : voice === "funder" ? L.notConnected.comesBackAfter(input.connectBy) : null,
+          next: yours ? L.notConnected.readyByYours(input.readyByInWords ?? null) : voice === "funder" ? L.notConnected.readyByTheirs(input.readyByInWords ?? null) : null,
           back,
         };
       return {

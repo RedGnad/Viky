@@ -7,14 +7,14 @@ import type { Condition } from "./conditions";
  * with the words a card says of it. What was paid, and how many proofs each line has, is never written here: the card
  * counts it from the rows as the page is served (app/judges/JudgesConditions.tsx).
  *
- * A card counts the lines offered today, so the three add up to the number every other page says (seventeen on
- * 12 Oct 2026). A line its source closed is not counted and is not in what the way holds: its card names it apart,
- * closed, with the register's own reason.
+ * A card counts the lines offered today, so the three add up to the number every other page says (eighteen on
+ * 12 Oct 2026). A line offered on request is one of them: its card says, in a sentence of its own, that it opens on
+ * request and why, until the operator has opened it (src/on-request.ts).
  */
 export type WayOfReading = Readonly<{
   nature: Condition["nature"];
   title: string;
-  /** What the way holds today, in one line of plain names: the lines offered, never one its source closed. */
+  /** What the way holds today, in one line of plain names: the lines offered. */
   what: string;
   /** A condition's short name in the card's sentence, by its id. */
   short: Readonly<Record<string, string>>;
@@ -56,11 +56,23 @@ const WAYS: readonly WayOfReading[] = [
   {
     nature: "connected",
     title: "An account the person connects",
-    what: "Active minutes on Fitbit.",
+    what: "Active minutes on Fitbit, kilometres on Strava.",
     short: { "fitbit-daily": "Fitbit", "strava-daily": "Strava" },
     takes: "Fitbit takes a Fitbit tracker or a Pixel Watch.",
   },
 ];
+
+/**
+ * What a card says of a line offered on request while it is not open (the founder, 12 Oct 2026). Strava's figures are
+ * Strava's own, read on 12 Oct 2026: its API FAQ (communityhub.strava.com, topic 12906: "A Strava subscription is a
+ * prerequisite", "up to 10 users without any application review", "The Standard Tier supports apps serving up to 9,999
+ * athletes") and developers.strava.com/docs/rate-limits ("If you want to scale beyond 10 connected athletes you'll need
+ * to submit your app for review").
+ */
+export const OPENS_ON_REQUEST: Readonly<Record<string, string>> = {
+  "strava-daily":
+    "Strava opens on request, within two days of a first gift: its developer program is a paid subscription, taken when a gift asks for it, and serves ten athletes before its review, up to 9,999 after it.",
+};
 
 export function waysOfReading(): readonly WayOfReading[] {
   return WAYS;
@@ -82,7 +94,7 @@ const listed = (words: readonly string[]) => (words.length <= 1 ? words.join("")
 const proofsInWords = (count: number) => (count === 1 ? "1 real proof" : `${count} real proofs`);
 
 export type WaySaid = Readonly<{
-  /** How many lines offered today are read this way: a line its source closed is not one of them. */
+  /** How many lines offered today are read this way, a line on request among them. */
   conditions: number;
   /** The words a card sets in bold, and what it says after them; nothing when the count of proofs was not read. */
   lead: string | null;
@@ -93,35 +105,39 @@ export type WaySaid = Readonly<{
  * What a card says of a way of reading, from the register and from the count of real proofs as the page is served: what
  * was paid with real money, what was read, and why the rest waits. No figure is written here: a line is named as paid
  * only while it has a proof, and the dated facts are the repository's own (the pass at Toulouse, the readings of 12 Oct
- * 2026). When the count cannot be read the card says so and names nothing as paid. A line its source closed is named
- * closed with its reason in both cases: that is the register's, and needs no count.
+ * 2026). When the count cannot be read the card says so and names nothing as paid. A line on request and not opened
+ * yet says so in both cases: that is the register's and the operator's, and needs no count. `waiting` is the lines on
+ * request that are not open (src/on-request.ts).
  */
 export function saidOfAWay(
   way: WayOfReading,
   lines: readonly Pick<Condition, "id" | "name" | "source" | "live" | "state" | "beforeItOpens">[],
   counts: ReadonlyMap<string, number> | null,
   toulouse: Readonly<{ firstDay: string; nextDay: string; secondsFromSignIn: number }>,
+  toBeOpened: ReadonlySet<string> = new Set(),
 ): WaySaid {
   const offered = lines.filter((line) => line.live);
-  // A line its source closed says why, in the register's own line, with the source's name said once.
-  const closed = lines.filter((line) => line.state === "closed").map((line) => `${line.source} is closed: ${(line.beforeItOpens ?? "").replace(/\.$/, "").replace(new RegExp(`^${line.source}'s`), "its")}.`);
-  if (counts === null) return { conditions: offered.length, lead: null, said: ["The count of real proofs could not be read just now, so nothing is said here of what was paid.", ...closed].join(" ") };
+  // A line offered on request and not opened yet says so in its own sentence, and is neither paid nor waited for.
+  const onRequest = offered.filter((line) => line.state === "on-request" && toBeOpened.has(line.id));
+  const opens = onRequest.map((line) => OPENS_ON_REQUEST[line.id] ?? `${line.source} opens on request, within two days of a first gift.`);
+  if (counts === null) return { conditions: offered.length, lead: null, said: ["The count of real proofs could not be read just now, so nothing is said here of what was paid.", ...opens].join(" ") };
   const proofs = (id: string) => counts.get(id) ?? 0;
   const short = (line: Pick<Condition, "id" | "name">) => way.short[line.id] ?? line.name;
-  const paid = offered.filter((line) => proofs(line.id) > 0);
-  const waiting = offered.filter((line) => proofs(line.id) === 0);
+  const read = offered.filter((line) => !onRequest.includes(line));
+  const paid = read.filter((line) => proofs(line.id) > 0);
+  const waiting = read.filter((line) => proofs(line.id) === 0);
   const said: string[] = [];
   if (paid.length > 0) said.push(`${listed(paid.map((line) => `${short(line)}, ${proofsInWords(proofs(line.id))}`))}.`);
   if (way.nature === "read") {
-    const read = waiting.filter((line) => READ_WITHOUT_A_GIFT.conditions.includes(line.id));
-    if (read.length > 0) said.push(`${read.length === waiting.length ? `Each of the ${waiting.length} others` : `${read.length} of the ${waiting.length} others`} had its real page read under attestation on ${READ_WITHOUT_A_GIFT.on}, with no gift yet.`);
+    const onItsPage = waiting.filter((line) => READ_WITHOUT_A_GIFT.conditions.includes(line.id));
+    if (onItsPage.length > 0) said.push(`${onItsPage.length === waiting.length ? `Each of the ${waiting.length} others` : `${onItsPage.length} of the ${waiting.length} others`} had its real page read under attestation on ${READ_WITHOUT_A_GIFT.on}, with no gift yet.`);
   }
   if (way.nature === "shown") {
     if (paid.some((line) => line.id === "university-enrollment-shown")) said.push(`The first enrolment was read by hand (Toulouse, ${toulouse.firstDay}) and the next was paid ${toulouse.secondsFromSignIn} seconds after sign-in (${toulouse.nextDay}).`);
     if (waiting.length > 0) said.push(`Nobody has shown one yet: ${listed(waiting.map(short))}.`);
   }
   if (way.nature === "connected" && way.takes) said.push(way.takes);
-  said.push(...closed);
+  said.push(...opens);
   const lead = paid.length > 0 ? "Paid with real money:" : way.nature === "connected" ? "Built, read on no real account yet." : way.nature === "shown" ? "Built, and nobody has shown one yet." : "Built, with no real proof yet.";
   return { conditions: offered.length, lead, said: said.join(" ") };
 }

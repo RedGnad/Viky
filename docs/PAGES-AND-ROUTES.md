@@ -25,7 +25,8 @@ it is in production since 3 Oct 2026),
 `cron` (the passes and the watch), `health`, `judge` and `judges`, and `dev`.
 
 Operator commands: `pnpm keeper` (the same passes from a terminal), `pnpm zkfetch:worker [port]` (the attested-fetch
-worker, deployed from `Dockerfile`), `pnpm portal:pin` (reviewing a first proof from a university), `pnpm pilot:report`
+worker, deployed from `Dockerfile`), `pnpm portal:pin` (reviewing a first proof from a university), `pnpm source:open` (opening a line offered on request,
+such as Strava, with no deployment), `pnpm pilot:report`
 (the pilot gift by gift, read only), `pnpm relayer:fees`, `pnpm check:signer` (the evidence key of the environment
 against the signer the contracts name, before a deployment), `pnpm check:sources` (every public source Viky reads,
 asked whether it still answers in the shape the readers expect: a few plain GETs each, no secret, to run once a day

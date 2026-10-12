@@ -17,13 +17,13 @@ import { CATALOGUE } from "../src/sentences";
 const page = readFileSync("app/what-viky-can-check/page.tsx", "utf8");
 
 test("the states are the three the founder kept and the fourth he added, in words, and there is no fifth", () => {
-  // "Closed" since 12 Oct 2026: a line built and offered, then closed by its source's own rules. Strava is the first.
+  // "On request" since 12 Oct 2026: a line built, and opened within two days of a first gift. Strava is the first.
   assert.deepEqual(
     STATES.map((state) => state.title),
-    ["Open", "Waiting for the source's answer", "No public page exists", "Closed"],
+    ["Open", "Waiting for the source's answer", "No public page exists", "On request"],
   );
-  assert.deepEqual(CONDITIONS.filter((condition) => condition.state === "closed").map((condition) => condition.id), ["strava-daily"]);
-  assert.equal(stateOf(conditionById("strava-daily")!).title, "Closed");
+  assert.deepEqual(CONDITIONS.filter((condition) => condition.state === "on-request").map((condition) => condition.id), ["strava-daily"]);
+  assert.equal(stateOf(conditionById("strava-daily")!).title, "On request");
   for (const state of STATES) {
     assert.match(state.meaning, /\.$/, `${state.id} says what it means in a sentence`);
     assert.ok(state.meaning.length > 20 && state.meaning.length <= 200, `${state.id} says it in one line`);
@@ -31,12 +31,13 @@ test("the states are the three the founder kept and the fourth he added, in word
   assert.throws(() => stateWords("almost-there" as never), /no such state/);
 });
 
-test("Open is the same fact as live, in both directions", () => {
-  const open = CONDITIONS.filter((condition) => condition.state === "open");
+test("Open or on request is the same fact as live, in both directions", () => {
+  // A line offered on request is offered: the chooser lists it and a gift is made on it, like an open one.
+  const open = CONDITIONS.filter((condition) => condition.state === "open" || condition.state === "on-request");
   assert.deepEqual(
     open.map((condition) => condition.id),
     liveConditions().map((condition) => condition.id),
-    "the page cannot call a condition open that the chooser refuses to offer, nor the other way round",
+    "the page cannot call a condition offered that the chooser refuses to offer, nor the other way round",
   );
   assert.ok(open.length > 0, "at least one condition is open, or the product offers nothing");
 });
@@ -143,8 +144,10 @@ test("it is reachable without an account and from the judges page, and it says t
   assert.match(readFileSync("app/kit/Me.tsx", "utf8"), /href="\/what-viky-can-check"/, "and where a reader with one is");
   assert.match(readFileSync("app/judges/JudgesConditions.tsx", "utf8"), /href="\/what-viky-can-check"/);
   assert.match(CATALOGUE.intro, /only what is open is shown to you/);
-  // The judges page says where each condition stands in the same words as the public page, not in its own.
-  assert.match(readFileSync("app/judges/JudgesConditions.tsx", "utf8"), /stateOf\(condition\)\.title/);
+  // The judges page says where each condition stands in the same words as the public page, not in its own: both
+  // print the one phrase of src/condition-stands.ts (the founder, 12 Oct 2026).
+  assert.match(readFileSync("app/judges/JudgesConditions.tsx", "utf8"), /standInOneLine\(standOf\(condition, counts, toBeOpened\)\)/);
+  assert.match(readFileSync("app/what-viky-can-check/page.tsx", "utf8"), /standOnAPage\(standOf\(condition, counts, toBeOpened\)\)\.state/);
 });
 
 /**

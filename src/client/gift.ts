@@ -244,6 +244,11 @@ export type GiftStatus = {
    * looks as it opens and once a minute, and a lesson is paid the day it is done. Absent or false on any other gift.
    */
   readLive?: boolean;
+  /**
+   * The gift's line is opened on request and the operator has not opened it yet (src/on-request.ts): its page asks for
+   * no connection and says the day it is ready by. Absent or false on any other gift, and once the line is open.
+   */
+  onRequest?: boolean;
   /** The second version only: what ending the gift now would do, for the person it is for (src/gift-ending.ts). */
   end?: EndOffer | null;
   /** The second version only: the ending, once the person it is for has ended it. */
@@ -279,6 +284,8 @@ export type GiftSummary = {
   counting: boolean;
   finished: boolean;
   cancelled: boolean;
+  /** Its line is opened on request and is not open yet (src/on-request.ts): the card says so where it said to connect. */
+  beingOpened?: boolean;
   /** The person it is for ended it (the second version of the contracts). Absent or false on any other gift. */
   ended?: boolean;
   /** The days an ending gave back: settled, and drawn as days that went back (src/day-states.ts). */

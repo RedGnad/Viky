@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { CONDITIONS } from "../src/conditions";
 import { TOULOUSE_PASSES } from "../src/judges-first-use";
-import { READ_WITHOUT_A_GIFT, saidOfAWay, waysOfReading } from "../src/judges-ways";
+import { OPENS_ON_REQUEST, READ_WITHOUT_A_GIFT, saidOfAWay, waysOfReading } from "../src/judges-ways";
 import { BLOCK_TIME, FINALITY_GAP } from "../src/measured";
 
 const read = (file: string) => readFileSync(file, "utf8");
@@ -50,13 +50,12 @@ test("the conditions stand as three ways of reading, which hold every condition 
     assert.match(way.what, /\.$/);
   }
   assert.deepEqual(ways.map((way) => CONDITIONS.filter((condition) => condition.nature === way.nature).length), [12, 4, 2]);
-  // A card counts the lines offered: 12, 4 and 1, the seventeen every other page says (the founder, 12 Oct 2026). The
-  // eighteenth line of the register is the one its source closed, and what its way holds no longer names it.
+  // A card counts the lines offered: 12, 4 and 2, the eighteen every other page says (the founder, 12 Oct 2026),
+  // the line offered on request among them.
   const counted = ways.map((way) => saidOfAWay(way, CONDITIONS.filter((condition) => condition.nature === way.nature), null, { firstDay: "", nextDay: "", secondsFromSignIn: 0 }).conditions);
-  assert.deepEqual(counted, [12, 4, 1]);
+  assert.deepEqual(counted, [12, 4, 2]);
   assert.equal(counted.reduce((sum, one) => sum + one, 0), CONDITIONS.filter((condition) => condition.live).length);
-  assert.equal(ways[2]!.what, "Active minutes on Fitbit.");
-  assert.doesNotMatch(ways.map((way) => way.what).join(" "), /Strava/);
+  assert.equal(ways[2]!.what, "Active minutes on Fitbit, kilometres on Strava.");
   // The ten public lines read under attestation without a gift on 12 Oct 2026: public lines, and not the two paid ones.
   assert.equal(READ_WITHOUT_A_GIFT.on, "12 Oct 2026");
   assert.equal(READ_WITHOUT_A_GIFT.conditions.length, 10);
@@ -65,7 +64,11 @@ test("the conditions stand as three ways of reading, which hold every condition 
   // The cards count from the rows as the page is served, and say nothing of what was paid when the count is not read.
   const cards = read("app/judges/JudgesConditions.tsx");
   assert.match(cards, /const counts = await realProofCounts\(\);/);
-  assert.match(cards, /const said = saidOfAWay\(way, lines, counts, \{ firstDay: TOULOUSE_PASSES\.first\.day, nextDay: TOULOUSE_PASSES\.onTheFixedRule\.day, secondsFromSignIn: TOULOUSE_PASSES\.onTheFixedRule\.secondsFromSignIn \}\);/);
+  assert.match(cards, /const said = saidOfAWay\(way, lines, counts, \{ firstDay: TOULOUSE_PASSES\.first\.day, nextDay: TOULOUSE_PASSES\.onTheFixedRule\.day, secondsFromSignIn: TOULOUSE_PASSES\.onTheFixedRule\.secondsFromSignIn \}, toBeOpened\);/);
+  // The sentence of four figures at the head of the fold, counted from the same two readings, and the same phrase at the end of each row.
+  assert.match(cards, /const counted = standsCounted\(counts, toBeOpened\);/);
+  assert.match(cards, /\{counted\.total\} conditions: \{fourFigures\(counted\)\}/);
+  assert.match(cards, /meta=\{<span data-condition-stands=\{condition\.id\}>\{standInOneLine\(standOf\(condition, counts, toBeOpened\)\)\}<\/span>\}/);
   assert.doesNotMatch(cards + read("src/judges-ways.ts"), /\b(11 (days|real proofs)|3 times|20 seconds|12 conditions)\b/);
   // Then a row a condition, with the four questions under it.
   assert.match(cards, /<Row\s+key=\{condition\.id\}\s+title=\{condition\.name\}/);
@@ -132,18 +135,24 @@ test("a card says what was paid from the count of real proofs, and why the rest 
     lead: "Paid with real money:",
     said: "enrolment, 3 real proofs. The first enrolment was read by hand (Toulouse, 7 Oct 2026) and the next was paid 20 seconds after sign-in (9 Oct 2026). Nobody has shown one yet: the year passed, a grade and a TOEFL score.",
   });
-  assert.deepEqual(saidOfAWay(connected, lines("connected"), counts, toulouse), {
-    conditions: 1,
+  // Strava while it is on request: the founder's sentence, with Strava's own figures (its API FAQ, read 12 Oct 2026).
+  const onRequest = new Set(["strava-daily"]);
+  const opens = "Strava opens on request, within two days of a first gift: its developer program is a paid subscription, taken when a gift asks for it, and serves ten athletes before its review, up to 9,999 after it.";
+  assert.equal(OPENS_ON_REQUEST["strava-daily"], opens);
+  assert.deepEqual(saidOfAWay(connected, lines("connected"), counts, toulouse, onRequest), {
+    conditions: 2,
     lead: "Built, read on no real account yet.",
-    said: "Fitbit takes a Fitbit tracker or a Pixel Watch. Strava is closed: its developer program asks for a paid subscription.",
+    said: `Fitbit takes a Fitbit tracker or a Pixel Watch. ${opens}`,
   });
+  // Once the operator has opened it, it is a line like Fitbit, and the card says no more of it than of any other.
+  assert.deepEqual(saidOfAWay(connected, lines("connected"), counts, toulouse, new Set()), { conditions: 2, lead: "Built, read on no real account yet.", said: "Fitbit takes a Fitbit tracker or a Pixel Watch." });
   // A line that gets its first proof moves from the ones read without a gift to the ones paid, by the count alone.
   const later = new Map([...counts, ["codeforces-rating", 1], ["fitbit-daily", 2]]);
   assert.match(saidOfAWay(page, lines("read"), later, toulouse).said, /^Duolingo, 11 real proofs, Codeforces, 1 real proof and the Chess\.com rating, 7 real proofs\. Each of the 9 others had its real page read/);
-  assert.deepEqual(saidOfAWay(connected, lines("connected"), later, toulouse), { conditions: 1, lead: "Paid with real money:", said: "Fitbit, 2 real proofs. Fitbit takes a Fitbit tracker or a Pixel Watch. Strava is closed: its developer program asks for a paid subscription." });
+  assert.deepEqual(saidOfAWay(connected, lines("connected"), later, toulouse, onRequest), { conditions: 2, lead: "Paid with real money:", said: `Fitbit, 2 real proofs. Fitbit takes a Fitbit tracker or a Pixel Watch. ${opens}` });
   // Nothing is paid, and nothing is said paid; the count not read, and nothing is named at all.
   assert.equal(saidOfAWay(shown, lines("shown"), new Map(), toulouse).lead, "Built, and nobody has shown one yet.");
   assert.deepEqual(saidOfAWay(page, lines("read"), null, toulouse), { conditions: 12, lead: null, said: "The count of real proofs could not be read just now, so nothing is said here of what was paid." });
-  // The line its source closed is named closed with its reason all the same: that is the register's, and needs no count.
-  assert.deepEqual(saidOfAWay(connected, lines("connected"), null, toulouse), { conditions: 1, lead: null, said: "The count of real proofs could not be read just now, so nothing is said here of what was paid. Strava is closed: its developer program asks for a paid subscription." });
+  // The line on request says so all the same: that is the register's and the operator's, and needs no count.
+  assert.deepEqual(saidOfAWay(connected, lines("connected"), null, toulouse, onRequest), { conditions: 2, lead: null, said: `The count of real proofs could not be read just now, so nothing is said here of what was paid. ${opens}` });
 });

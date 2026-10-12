@@ -99,20 +99,26 @@ export const SECTIONS_FROM = 6;
  * the register holds, offered or not, each with its state in words.
  *
  * Four states and no fifth. A condition that fits none of them is not written on that page at all, because inventing
- * a state to fit a thing is how a catalogue starts promising what nobody built. `open` is the same fact as `live`, so
- * a condition cannot be open on the page and absent from the chooser, or the other way round.
+ * a state to fit a thing is how a catalogue starts promising what nobody built. A line offered is `live`, and a live
+ * line is open or on request, so a condition cannot be offered on the page and absent from the chooser, or the other
+ * way round.
  */
-export type ConditionState = "open" | "asked-the-source" | "no-public-page" | "closed";
+export type ConditionState = "open" | "asked-the-source" | "no-public-page" | "on-request";
+
+/** How long after a gift a line offered on request is opened, at the latest: the day its two people read. */
+export const ON_REQUEST_DAYS = 2;
 
 /**
  * Three states, since the founder's rule of 23 Sep 2026 (D184): "Being tested" is gone, because nothing is said
  * tested or used without a real proof; the page prints the count of real proofs beside "Open" instead.
  *
- * And a fourth since 12 Oct 2026, "Closed", in the founder's words: a line that was built and offered, and that its
- * source's own rules closed. Strava is the first: its developer program asks the owner of every application for a paid
- * subscription since June 2026, the first real reading (gift 1002) was refused for it, and the founder does not take
- * the subscription. It is not "Waiting for the source's answer": nothing was asked of Strava. A closed line says why
- * in one line of its own (`beforeItOpens`), is not offered, and a gift already made on it is not read.
+ * And a fourth since 12 Oct 2026, "On request", in the founder's words: a line that is built, and that Viky opens
+ * within two days of a first gift, as a university is set up by its first gift. The gift is the request. Strava is the
+ * first: its developer program asks the owner of every application for a paid subscription since June 2026, the first
+ * real reading (gift 1002) was refused for it, and the founder takes the subscription the day a gift asks for Strava.
+ * (For some hours that day the state was "Closed", with the line off the choice.) A line on request is offered and
+ * paid for like any other, and until the operator opens it (`pnpm source:open`, src/on-request.ts) nothing is asked
+ * of its source or of Reclaim for its gifts. Once opened it is open like the others, with no deployment.
  */
 export const STATES: readonly Readonly<{ id: ConditionState; title: string; meaning: string }>[] = [
   { id: "open", title: "Open", meaning: "Anybody can offer this today." },
@@ -126,7 +132,7 @@ export const STATES: readonly Readonly<{ id: ConditionState; title: string; mean
     title: "No public page exists",
     meaning: "No public page shows it. The person can show it from their own account, and Viky is building that.",
   },
-  { id: "closed", title: "Closed", meaning: "Built, then closed by its source's own rules, which its line names. Nobody can offer it, and a gift already made on it is not read." },
+  { id: "on-request", title: "On request", meaning: "Built, and opened within two days of a first gift: the gift is the request. Anybody can offer it today." },
 ];
 
 /** The words of a state, for the page that prints them. */
@@ -258,10 +264,10 @@ export type Condition = Readonly<{
   nature: ConditionNature;
   /** The contract's goal type for a daily condition; a milestone lives on its own contract and has none. */
   goalType: number | null;
-  /** Wired from end to end. Only these are offered on "What will they do?". */
+  /** Wired from end to end, and open or on request. Only these are offered on "What will they do?". */
   live: boolean;
   /**
-   * Where it stands in the open, said in words on "What Viky can check". Open means the same thing as `live`. A
+   * Where it stands in the open, said in words on "What Viky can check". A live line is open or on request. A
    * condition being built beside the register (`BUILDING`) carries none: the page says "Being built" of it, and
    * "Being tested" is printed only once a real gift runs on it (the founder, 23 Sep 2026, D169). Four states, no fifth.
    */
@@ -1200,11 +1206,12 @@ export const STRAVA_DAILY: Condition = {
   kind: "daily",
   nature: "connected",
   goalType: GOAL_TYPE_STRAVA_DISTANCE,
-  // Open from D201, when the reading service ran its source and the five variables were set, to 12 Oct 2026, and
-  // closed that day by the founder: Strava answers 403 to an application whose owner holds no paid subscription.
-  live: false,
-  state: "closed",
-  beforeItOpens: "Strava's developer program asks for a paid subscription.",
+  // Open from D201, when the reading service ran its source and the five variables were set, to 12 Oct 2026. On
+  // request since that day (the founder): Strava answers 403 to an application whose owner holds no paid subscription,
+  // which Viky takes the day a gift asks for Strava. What the public page says under the state is this line.
+  live: true,
+  state: "on-request",
+  beforeItOpens: "Ready two days after a first gift.",
   source: "Strava",
   family: "move",
   // "a day", not "each day": one line on a 360 pixel phone, where the longer name took two (the founder, 5 Oct 2026).

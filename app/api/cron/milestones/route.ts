@@ -1,6 +1,8 @@
 import { after, NextResponse } from "next/server";
 import { morningSummaryDue } from "@/src/attested-calls";
 import { NO_STORE } from "@/src/gift-api";
+import { loadAllGifts } from "@/src/gift-store";
+import { giftOnChain, tellOfGiftsAsking } from "@/src/on-request-pass";
 import { sendAlert } from "@/src/provider-alert";
 import { claimPass, FREQUENT_DAILY_PASS_EVERY_SECONDS, FREQUENT_PASS_EVERY_SECONDS, frequentDailyPass, frequentMilestonePass } from "@/src/frequent-pass";
 
@@ -42,6 +44,16 @@ export async function GET() {
         }
       });
     }
+    // A gift that asks for a line offered on request is told to the operator once, whichever way it was paid: this
+    // call arrives every five minutes, so the mail leaves within minutes of the gift (src/on-request.ts).
+    after(async () => {
+      try {
+        const told = await tellOfGiftsAsking({ gifts: loadAllGifts, onChain: giftOnChain, send: sendAlert });
+        if (told.length > 0) console.log(`gifts asking for a line on request, told: ${told.join(", ")}`);
+      } catch (error) {
+        console.error(`gifts asking for a line on request not told: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    });
     // The morning's summary of what Reclaim was asked the day before, during the judging (src/attested-calls.ts): this
     // call arrives every five minutes, so it leaves within minutes of six o'clock UTC, once.
     after(async () => {

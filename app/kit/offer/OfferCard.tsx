@@ -13,9 +13,10 @@ import { startingFigure } from "@/src/starting-amount";
 import { dollarsHeld, type Holdings } from "../money";
 import { forgetOnThisScreen, useSeen, writeSeen } from "../seen";
 import { AmountError } from "@/src/money";
+import { useOnRequest } from "@/src/client/on-request";
 import { useReserves } from "@/src/client/reserves";
 import { emptyReserveOf } from "@/src/reserves";
-import { LIMIT, OFFER as W } from "@/src/sentences";
+import { LIMIT, OFFER as W, ON_REQUEST } from "@/src/sentences";
 import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, HELP, PRIMARY_BUTTON, ROW_BUTTON } from "../../components/ui";
 import { CardFace } from "../GiftCard";
 import { Character } from "../Character";
@@ -105,6 +106,8 @@ export function OfferCard({
    * for, by its own source and with the day it starts again. The gift can still be made: it is read from that day.
    */
   const reserves = useReserves();
+  // A line offered on request and not open yet: said under its name, where it is chosen (the founder, 12 Oct 2026).
+  const onRequest = useOnRequest();
   const emptyReserve = emptyReserveOf(condition?.nature, reserves);
   const shape = shapeOf(draft.conditionId);
   const lengthFor = shape === "stamp" || shape === "climb" ? W.lengthFor[shape] : undefined;
@@ -235,6 +238,17 @@ export function OfferCard({
                 <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
+            {/* A line Viky opens on request: three lines under its name, on the model of a university's. The gift is
+                made and paid like any other. */}
+            {condition && onRequest.has(condition.id) ? (
+              <span className={`${HELP} mt-[var(--space-sm)] block w-full`} data-on-request-said="">
+                {ON_REQUEST.forAPayer(condition.source).map((line) => (
+                  <span key={line} className="block">
+                    {line}
+                  </span>
+                ))}
+              </span>
+            ) : null}
             {/* Under what they will do, where it is chosen: quietly, the one sentence the gift's page will say too. */}
             {condition && emptyReserve && reserves ? (
               <span className="limit-said mt-[var(--space-sm)] block w-full" role="status" data-limit-said>

@@ -6,13 +6,14 @@ import { conditionAnswered, durationBounds, unanswered, type GiftDraft, type Una
 import { certificateById, cadenceOf, milestoneById } from "@/src/milestone-conditions";
 import { newDailyGiftsPayTheSameDay } from "@/src/v2";
 import { loadOfferedConditions, readStanding } from "@/src/client/milestone";
+import { useOnRequest } from "@/src/client/on-request";
 import { checkSourceName } from "@/src/client/gift";
 import { searchCertifications, type CertificationFound } from "@/src/client/certificate-gift";
 import { ApiError } from "@/src/client/api";
 import { suggestedTarget } from "@/src/milestone-terms";
 import { helpLine } from "@/src/help-line";
 import { emptyReserveOf, type Reserves } from "@/src/reserves";
-import { FUND, GIFT_LIVE, GRADE_SCALE, LIMIT, MILESTONE_FUND as M, OFFER as W } from "@/src/sentences";
+import { FUND, GIFT_LIVE, GRADE_SCALE, LIMIT, MILESTONE_FUND as M, OFFER as W, ON_REQUEST } from "@/src/sentences";
 import { CARD_LABEL, CHOICE, HELP, META, PRIMARY_BUTTON, ROW_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TILE } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
 import { ConditionIcon } from "../ConditionIcon";
@@ -162,6 +163,8 @@ export function WillSheet({
     };
   }, [open, searchPath, search.words]);
 
+  // The lines offered on request that are not open yet (the founder, 12 Oct 2026): each says so under its nature.
+  const onRequest = useOnRequest();
   const offered: readonly Condition[] = [...liveConditions(), ...preview.map((id) => conditionById(id)).filter((c): c is Condition => Boolean(c) && !c!.live)];
   const sections = chooserSections(offered);
   const condition = conditionById(draft.conditionId);
@@ -408,6 +411,13 @@ export function WillSheet({
                             its questions, where the detail is decided, not in the button, which grew when pressed. */}
                         {/* A line listed while it is being built says so in the meta voice, beside its nature (D311). */}
                         {option.live ? null : <span className={`block ${META}`}>{M.building}</span>}
+                        {/* A line Viky opens on request says so here, in the quiet voice of what a line is: no dot, no
+                            grey, and it is pressed like the others (the founder's mockup of 12 Oct 2026). */}
+                        {onRequest.has(option.id) ? (
+                          <span className={HELP} data-on-request="">
+                            {ON_REQUEST.mark}
+                          </span>
+                        ) : null}
                         {/* Its reserve is used up: when it starts again, in four words and in the labels' quiet colour. It stays offered. */}
                         {emptyReserveOf(option.nature, reserves) && reserves ? (
                           <span className="limit-said block" data-limit-back>

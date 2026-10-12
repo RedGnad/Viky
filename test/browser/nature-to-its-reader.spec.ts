@@ -39,7 +39,7 @@ async function shotEachCard(page: Page, size: string, name: string) {
   }
 }
 
-// Fitbit's goal on the daily contract: the connected line that is open (Strava's was closed on 12 Oct 2026).
+// Fitbit's goal on the daily contract: the connected line that is open (Strava's is on request since 12 Oct 2026).
 const FITBIT = 6;
 const DUOLINGO = 1;
 const NAMES = { recipientName: "Boo", funderName: "Mom" };

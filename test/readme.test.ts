@@ -185,7 +185,7 @@ test("what the rules ask of a README is all there (section 4.1), and the licence
   assert.match(declared("Security"), /\[SECURITY\.md\]\(\.\.\/SECURITY\.md\)/);
   assert.match(doc("declarations"), /This repository carries the project's whole history since 10 Sep 2026\./);
   // The order: the short sections, then how to run it, then the declarations at the foot.
-  const order = ["## What Viky is built on", "## Who it is for, and the problem", "## What we know about the two people", "## What is new", "## No word of crypto", "## Seventeen conditions, three ways of reading", "## Why Monad", "## What has run with real money", "## Path forward: how the next hundred find Viky", "## Architecture", "## Stack", "## Run", "### Deploy", "## Test", "## Declarations, environment and licences"].map((mark) => README.indexOf(mark));
+  const order = ["## What Viky is built on", "## Who it is for, and the problem", "## What we know about the two people", "## What is new", "## No word of crypto", "## Eighteen conditions", "## Why Monad", "## What has run with real money", "## Path forward: how the next hundred find Viky", "## Architecture", "## Stack", "## Run", "### Deploy", "## Test", "## Declarations, environment and licences"].map((mark) => README.indexOf(mark));
   assert.ok(order.every((found) => found >= 0), "every section is there");
   assert.deepEqual(order, [...order].sort((left, right) => left - right));
   // Two folded blocks, each one level under what its section opens on: the step by step of what has run, and the

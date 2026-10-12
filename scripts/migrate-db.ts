@@ -10,6 +10,7 @@ import { ensurePreferencesSchema } from "../src/preferences-store";
 import { ensureRelayCeilingSchema } from "../src/relay-ceiling-store";
 import { ensurePushSchema } from "../src/push-store";
 import { ensureIndexKeptSchema } from "../src/index-kept";
+import { ensureOnRequestSchema } from "../src/on-request";
 import { ensureReachedSeenSchema } from "../src/reached-seen-store";
 import { ensurePassGuardSchema } from "../src/frequent-pass";
 import { ensureSendsSchema } from "../src/send-store";
@@ -42,6 +43,8 @@ async function main() {
   await ensureReachedSeenSchema();
   // The last answer of the index of the contracts' events, kept for the judges page (12 Oct 2026).
   await ensureIndexKeptSchema();
+  // The lines offered on request that the operator has opened, and the gifts told to them (12 Oct 2026).
+  await ensureOnRequestSchema();
   await ensurePassGuardSchema();
   await ensurePassSchema();
   // The phone way out's ledger (D238).

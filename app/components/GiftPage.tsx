@@ -27,7 +27,7 @@ import {
   type PublicOutcome,
 } from "@/src/client/gift";
 import { checkMilestone, requestMilestoneCode, startMilestone, type MilestoneOutcome } from "@/src/client/milestone";
-import { conditionById, conditionOfGoal } from "@/src/conditions";
+import { conditionById, conditionOfGoal, ON_REQUEST_DAYS } from "@/src/conditions";
 import { MarkNotice } from "../kit/MarkNotice";
 import { dayNow, lessonWouldPay } from "@/src/day-now";
 import { stripFromRecord } from "@/src/day-states";
@@ -443,6 +443,11 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
   const lateUntilMs = hadOrNot && hadOrNot.deadlineMs !== null ? hadOrNot.deadlineMs + MILESTONE_LATE_PROOF_SECONDS * 1000 : null;
   // A university whose first proof a person still has to read: the stop is on the gift's path, and the words follow it.
   const firstAtItsUniversity = milestone?.university ? milestone.university.provider === "none" || milestone.university.provider === "unpinned" : false;
+  // A line opened on request and not open yet (src/on-request.ts): the day it is ready by, two days after the gift was
+  // made, in the reader's clock and with its year, as the founder's mockup of 12 Oct 2026 writes it. No day once it has passed.
+  const beingOpened = Boolean(daily?.onRequest);
+  const readyByMs = (status.createdAtChain + ON_REQUEST_DAYS * 86_400) * 1000;
+  const readyBy = !beingOpened || (nowMs !== 0 && onALaterDay(nowMs, readyByMs, zone)) ? null : dateInWords(readyByMs, zone);
   // The day the university's page is read by at the latest: two days after the gift was made, in the reader's clock.
   // Once that day has passed, no day is said: the stop keeps its place and the day goes (the founder, 10 Oct 2026).
   const builtBy = nowMs !== 0 && onALaterDay(nowMs, (status.createdAtChain + 2 * 86_400) * 1000, zone) ? null : dayInWords((status.createdAtChain + 2 * 86_400) * 1000, zone);
@@ -510,7 +515,8 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
     linkHere,
     connectBy,
     sourceConnected,
-    lineClosed: condition?.state === "closed",
+    beingOpened,
+    readyByInWords: readyBy,
     endedOnInWords: milestone?.reachedAtMs ? dateInWords(milestone.reachedAtMs, zone) : daily && daily.finished && daily.endDay > 0 ? contractDayInWords(daily.endDay) : null,
     deadlineInWords: milestone?.deadlineMs ? dateInWords(milestone.deadlineMs, zone) : null,
     nextReadingInWords: moment === "counting" || moment === "climbing" ? nextReading : null,
@@ -817,7 +823,7 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
         );
       case "connect":
         // A condition of the third nature is connected, not named (D189): the source's own page, one gesture.
-        if (condition?.link.kind === "connect") return <ConnectTheAccount giftId={giftId} conditionId={condition.id} yours={mine} dayOneIsTheStart={firstDayIsTheStart(status.version)} onConnection={setSourceConnected} onChanged={reloadAll} />;
+        if (condition?.link.kind === "connect") return <ConnectTheAccount giftId={giftId} conditionId={condition.id} yours={mine} beingOpened={beingOpened} dayOneIsTheStart={firstDayIsTheStart(status.version)} onConnection={setSourceConnected} onChanged={reloadAll} />;
         return connectWords ? (
           <ConnectTheSource
             words={connectWords}

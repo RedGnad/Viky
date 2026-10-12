@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { catalogueSections, FRONTIER_PROGRESS, FRONTIERS, STATES, stateOf, stateWords } from "@/src/conditions";
+import { standOf, standOnAPage } from "@/src/condition-stands";
+import { waitingToBeOpened } from "@/src/on-request";
 import { realProofCounts } from "@/src/proof-counts";
 import { CATALOGUE as W, ME } from "@/src/sentences";
 import { HELP, DISPLAY, TITLE } from "../components/ui";
@@ -23,6 +25,8 @@ export const dynamic = "force-dynamic";
  */
 export default async function Page() {
   const counts = await realProofCounts();
+  // The lines offered on request that the operator has not opened yet (src/on-request.ts).
+  const toBeOpened = await waitingToBeOpened();
   return (
     <Shell kind="document" back="/">
       <header className="space-y-[var(--space-lg)]">
@@ -41,12 +45,19 @@ export default async function Page() {
                 <Nature nature={condition.nature} />
                 <p className={HELP}>{condition.help}</p>
                 {/* The state is a sentence, never a badge: a coloured pill would rank these three, and they are not a scale.
-                    Beside the open state, the truth of the line (D184): nobody yet, said by its nature, until a real
-                    proof has passed; nothing at all when the count cannot be read. */}
-                <p className={HELP}>
-                  <span className="font-medium text-[var(--text)]">{state.title}.</span>{" "}
-                  {state.id === "open" ? (counts && (counts.get(condition.id) ?? 0) === 0 ? W.nobodyYet[condition.nature] : "") : (condition.beforeItOpens ?? state.meaning)}
-                </p>
+                    A line offered says first what it has (the founder, 12 Oct 2026; src/condition-stands.ts): the count
+                    of its real proofs, the day its real page was read with no gift, what it waits for, or that it opens
+                    on request. The same phrase stands in the README's table and on the judges page. */}
+                {condition.live ? (
+                  <p className={HELP} data-stands={condition.id}>
+                    <span className="font-medium text-[var(--text)]">{standOnAPage(standOf(condition, counts, toBeOpened)).state}</span>{" "}
+                    {standOnAPage(standOf(condition, counts, toBeOpened)).says}
+                  </p>
+                ) : (
+                  <p className={HELP}>
+                    <span className="font-medium text-[var(--text)]">{state.title}.</span> {condition.beforeItOpens ?? state.meaning}
+                  </p>
+                )}
               </div>
             );
           })}
