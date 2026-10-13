@@ -118,7 +118,7 @@ test("the judges page asks the index once, says of when its figures are, and say
   // Every other block that prints a figure of the index says of when it is.
   assert.match(readFileSync("app/judges/JudgesWhoUsed.tsx", "utf8"), /Counted from the index of the contracts&apos; events \{whenIndexRead\(index\)\}, at block/);
   const minute = readFileSync("app/judges/JudgesMinute.tsx", "utf8");
-  assert.match(minute, /\{index\?\.keptFrom \? <span data-minute="index-kept">Counted at the index&apos;s last reading, on \{momentInWords\(index\.keptFrom\)\}\. <\/span> : null\}/);
+  assert.match(minute, /\{index\?\.keptFrom \? <span data-minute="index-kept">It was last read on \{momentInWords\(index\.keptFrom\)\}\. <\/span> : null\}/);
   assert.match(minute, /Counted from the index\{" "\}\s+\{index \? whenIndexRead\(index\) : "as this page is served"\}:/);
   assert.match(readFileSync("app/judges/JudgesMera.tsx", "utf8"), /index\.keptFrom \? `At its last reading, on \$\{momentInWords\(index\.keptFrom\)\}, the index counted` : "As this page is served the index counts"/);
   // The table is made the first time it is needed, and by the migration for whoever runs it.
