@@ -185,7 +185,7 @@ test("what the rules ask of a README is all there (section 4.1), and the licence
   assert.match(declared("Third-party licences"), /`gsap` and its `ScrollTrigger` are not under a free licence/);
   assert.match(declared("License"), /\[MIT\]\(\.\.\/LICENSE\)/);
   assert.match(declared("Security"), /\[SECURITY\.md\]\(\.\.\/SECURITY\.md\)/);
-  assert.match(doc("declarations"), /This repository carries the project's whole history since 10 Sep 2026\./);
+  assert.match(doc("declarations"), /This repository preserves Viky's commit history since 10 Sep 2026\./);
   // The order: the short sections, then how to run it, then the declarations at the foot.
   const order = ["## What Viky is built on", "## Who it is for, and the problem", "## What we know about the two people", "## What is new", "## No word of crypto", "## Eighteen conditions", "## Why Monad", "## What has run with real money", "## Path forward: how the next hundred find Viky", "## Architecture", "## Stack", "## Run", "### Deploy", "## Test", "## Declarations, environment and licences"].map((mark) => README.indexOf(mark));
   assert.ok(order.every((found) => found >= 0), "every section is there");
@@ -531,8 +531,9 @@ test("the README says the passes that run, what the word check reads, and what c
   for (const file of ["ReviewScenarios.t.sol", "ReviewScenariosV3.t.sol", "ReviewerRigV3.sol", "FirstDayAcrossMidnightV3.t.sol", "ReviewInvariants.t.sol", "ReviewInvariantsV3.t.sol"]) {
     assert.doesNotMatch(readFileSync(`test/review/${file}`, "utf8"), /independent|\b[Hh](e|is|im)\b|by the authors?\b/, file);
   }
-  // The history is said as it is, including the two examples awaiting the reading service's deployment.
-  assert.ok(flat(doc("declarations")).includes("A few more were found on 12 Oct 2026. The identified files were corrected on 13 Oct, except for two examples in `src/attested-sources.ts` whose removal requires a coordinated reading-service deployment. Past commits still hold the real identifiers."));
+  // The publication copy states what was replaced and how the source fingerprint must be deployed.
+  assert.ok(flat(doc("declarations")).includes("then rebuilt for this submission to replace further identified third-party names and identifiers in earlier examples with invented ones."));
+  assert.ok(flat(doc("declarations")).includes("the app and reading service require matching source fingerprints."));
   // Mobile money is not said switched off where the judges page says it is offered.
   assert.doesNotMatch(readFileSync("docs/PAGES-AND-ROUTES.md", "utf8"), /switched off until a first real payout/);
 });

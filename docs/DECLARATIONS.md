@@ -1,10 +1,10 @@
 # Declarations, environment and licences
 
-This repository carries the project's whole history since 10 Sep 2026. It was republished on 11 Oct 2026 with the names
-and identifiers of other people that had been found replaced by invented ones in past commits. A few more were found
-on 12 Oct 2026. The identified files were corrected on 13 Oct, except for two examples in `src/attested-sources.ts`
-whose removal requires a coordinated reading-service deployment. Past commits still hold the real identifiers. The
-original is available to the organisers on request.
+This repository preserves Viky's commit history since 10 Sep 2026. The public history was republished on 11 Oct 2026,
+then rebuilt for this submission to replace further identified third-party names and identifiers in earlier examples
+with invented ones. The current tree also removes the two race examples from `src/attested-sources.ts`; the app and
+reading service require matching source fingerprints. Rewriting changes commit IDs but preserves authors, dates and
+commit messages except the hash references in two merge messages.
 
 ## AI tools
 
