@@ -181,6 +181,7 @@ test("the two sentences that stood as notes are written, dated, and the studies 
   const peopleSource = readFileSync("docs/THE-TWO-PEOPLE.md", "utf8");
   const people = flat(peopleSource);
   assert.ok(people.includes("By 10 Oct 2026, four people outside the team had used Viky: two funded a gift, three opened one, and one who earned a gift used that money to offer one in turn."));
+  assert.ok(people.includes("The four included a grandma."));
   assert.doesNotMatch(README, /\[N\] people outside the team/);
   // The studies are said as what they are for, then the practical observations get their own heading (the founder,
   // 10 Oct 2026).
