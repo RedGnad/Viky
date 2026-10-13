@@ -545,13 +545,19 @@ export type FollowLine = Readonly<{ orderId: string; state: string }>;
 /**
  * Every order whose money came in and has not ended, moved on with nobody's screen open (the money path audit of
  * 27 Sep 2026): run by the daily settling pass, so a failure after the money arrived is sent back when the order is
- * next read, by the person or at the latest by the next pass. An order whose AUSD arrived and whose payment on Base is
+ * next read, by the person or at the latest by the next pass. A priced order with a sent relay is first read from
+ * that relay's final transaction, as on a person's retry. An order whose AUSD arrived and whose payment on Base is
  * not known is paid only when Bitrefill says it received it; otherwise it waits for an operator, and never pays twice.
  */
 export async function followUnsettledOrders(deps: PhoneDeps = livePhoneDeps()): Promise<readonly FollowLine[]> {
   const lines: FollowLine[] = [];
   for (const order of await deps.store.unsettledOrders()) {
     try {
+      if (order.state === "priced" && order.relayTx?.startsWith("0x")) {
+        const status = await payReceived(await receivedBy(order, order.relayTx as Hex, deps), order, deps);
+        lines.push({ orderId: order.id, state: status.state });
+        continue;
+      }
       if (order.state === "received") {
         const invoice = await deps.readInvoice(order.invoiceId).catch(() => undefined);
         if (!invoice) {
@@ -570,6 +576,10 @@ export async function followUnsettledOrders(deps: PhoneDeps = livePhoneDeps()): 
       }
       lines.push({ orderId: order.id, state: (await followPhoneTopUp({ account: getAddress(order.account), orderId: order.id }, deps)).state });
     } catch (error) {
+      if (order.state === "priced" && error instanceof PhoneOrderError && error.code === "INVALID_AUTHORIZATION") {
+        lines.push({ orderId: order.id, state: "priced, relay reverted; no payment" });
+        continue;
+      }
       lines.push({ orderId: order.id, state: `not followed: ${error instanceof Error ? error.message : String(error)}` });
     }
   }
@@ -588,7 +598,7 @@ export function ordersToTell(lines: readonly FollowLine[]): Readonly<{ subject: 
   return {
     subject: `${waiting.length} phone or gift card ${waiting.length === 1 ? "order waits" : "orders wait"} for somebody`,
     text: [
-      "The settling pass followed the orders whose money came in and has not ended, and left:",
+      "The settling pass followed orders with a sent relay or money recorded as received, and left:",
       ...waiting.map((line) => `- order ${line.orderId}: ${line.state}`),
       "The person reads \"On its way\" meanwhile. An order \"for an operator\" is paid by nobody until its invoice is read by hand; one \"refund_pending\" still owes its money back.",
     ].join("\n"),

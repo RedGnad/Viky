@@ -9,14 +9,14 @@ import { useDisplayCurrency } from "@/src/client/display-currency";
 import { changeArrivedUsdc } from "@/src/client/convert";
 import { fundingQuote } from "@/src/client/funding-quote";
 import { quoteWayOut, takeTheWayOut, type WayOutQuote } from "@/src/client/exit";
-import { loadEarnedInGifts, sendOwnMoney, takeFromGifts } from "@/src/client/gift";
+import { loadEarnedInGifts, sendSigned, signOwnSend, takeFromGifts, type SignedSend } from "@/src/client/gift";
 import { totalEarned, type EarnedInGift } from "@/src/earned-shape";
 import { readCoinBalance, sendMon, sendWithExplicitGas } from "@/src/client/onchain";
 import { isVikyContract } from "@/src/viky-contracts";
 import { AUSD, coinAt, COINS, isNative, MON, USDC, type Coin } from "@/src/coins";
 import { rateDateInWords, spendMoney, spokenAmount, whenInWords, type LedAmount } from "@/src/display-currency";
 import { exitAmount, type ExitAmount } from "@/src/exit-amount";
-import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, heldForWithdrawal, leavingForOwnSend, netOfEverything, readyFor, smallestOnTheCard, toTheCent, twoDecimalsDown, type Ready } from "@/src/exit-steps";
+import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, heldForWithdrawal, leavingForOwnSend, leftAllTheSame, netOfEverything, readyFor, smallestOnTheCard, toTheCent, twoDecimalsDown, type Ready } from "@/src/exit-steps";
 import { chainCoinToChange, USDC_ARRIVAL_FLOOR } from "@/src/funding-step";
 import { usdcRouterAddress } from "@/src/usdc-router";
 import { formatAusd } from "@/src/gift-reader";
@@ -65,7 +65,7 @@ import { Button } from "../kit/Button";
  * figure says by how much. The published figures and their sources are behind a fold under the cards.
  */
 
-type Stage = "base" | "phone" | "mobile" | "giftcard" | "gathering" | "amount" | "review" | "getting" | "ready" | "confirm" | "sending" | "sent" | "own" | "ownConfirm" | "ownSending" | "ownSent";
+type Stage = "base" | "phone" | "mobile" | "giftcard" | "gathering" | "amount" | "review" | "getting" | "ready" | "confirm" | "sending" | "sent" | "gone" | "own" | "ownConfirm" | "ownSending" | "ownSent" | "ownGone";
 
 /** Where a refusal is shown: under the element that caused it, never in a box at the bottom of the page. */
 type Where = "gather" | "amount" | "review" | "code" | "send" | "own";
@@ -149,6 +149,19 @@ export function CashOut() {
   const [copied, setCopied] = useState<"no" | "yes" | "refused">("no");
   const [deposit, setDeposit] = useState("");
   const [sent, setSent] = useState<Sent | null>(null);
+  /**
+   * A send whose answer was lost and that left all the same (the founder, 13 Oct 2026): the balance read again holds
+   * that much less, or the coin has taken the very authorization. Said in the confirmation's place, where a title
+   * stood alone, with nothing left to press a second time.
+   */
+  const [gone, setGone] = useState<Readonly<{ amount: string; exact?: string; name: string }> | null>(null);
+  /**
+   * What was signed on the confirmation in front of the person, kept while it stands (the same day). A second press
+   * asks with the same authorization, which the coin takes once: after a lost answer, "Send" signed a new one at every
+   * press, and each could have sent again. Kept as state and not as a ref: the linter reads a handler that writes a
+   * ref as code of the render, and then refuses the clock the same handler reads.
+   */
+  const [keptSend, setKeptSend] = useState<Readonly<{ key: string; signed: SignedSend }> | null>(null);
   const [ownCode, setOwnCode] = useState("");
   const [ownAmount, setOwnAmount] = useState("");
   /** The smallest amount Viky sends at a time, as the server holds it; nothing until it has said. */
@@ -264,6 +277,25 @@ export function CashOut() {
       .then(() => refresh())
       .catch(() => {});
   }, [refresh]);
+
+  /**
+   * What the account holds, read again once money has moved and its route has said so (the founder, 13 Oct 2026). It
+   * never throws. This read stood inside the try of the movement itself, so when it failed the screen said "nothing
+   * was taken" of a send that was confirmed, or that a gift's part was "still in the gift" once it was in the account.
+   * A read that fails is made again every few seconds until one answers, and nothing is said of it: the figures on
+   * the screen are the old ones until then, and no sentence about the movement depends on them.
+   */
+  const [unread, setUnread] = useState(false);
+  const readAfterMoving = async (): Promise<Record<string, bigint> | undefined> => {
+    const now = await refresh().catch(() => undefined);
+    setUnread(now === undefined);
+    return now;
+  };
+  useEffect(() => {
+    if (!unread) return;
+    const timer = setInterval(() => void refresh().then(() => setUnread(false), () => undefined), 4_000);
+    return () => clearInterval(timer);
+  }, [unread, refresh]);
 
   const held = (coin: Coin): bigint => holdings?.[coin.symbol] ?? 0n;
   const ausd = held(AUSD);
@@ -407,7 +439,6 @@ export function CashOut() {
         const conversion = await fundingQuote(arrivedCoin);
         await sendWithExplicitGas(account, { to: conversion.to, data: conversion.data, value: BigInt(conversion.value) });
       }
-      return await refresh();
     } catch (error) {
       if (sessionClosed(error)) closeSession();
       // The route's own sentence when it has one (the count of actions, too many attempts, a rate too low); the
@@ -415,10 +446,16 @@ export function CashOut() {
       else setProblem({ where: "gather", text: error instanceof ApiError && routeSaysIt(error.code) ? error.message : readying ? W.notReadied : W.gatherFailed, code: error instanceof ApiError ? error.code : undefined });
       await refresh().catch(() => undefined);
       setStage("base");
-      return undefined;
-    } finally {
       setBusy(false);
+      return undefined;
     }
+    // Everything asked for has moved, and each route said so. The step that follows is drawn from what the account
+    // holds now, so that is read here, a second time when the first read fails; a read that still fails leads back to
+    // the first screen, which reads until it answers, and says nothing of money that has moved as it should.
+    const now = (await readAfterMoving()) ?? (await readAfterMoving());
+    if (!now) setStage("base");
+    setBusy(false);
+    return now;
   };
 
   const start = async (way: WayOut) => {
@@ -514,9 +551,11 @@ export function CashOut() {
     setStage("getting");
     try {
       await takeTheWayOut({ account, ticket: quote.ticket });
-      await refresh();
+      // Changed, and the route said so: the next step opens at once. What is ready is drawn from the balances, read
+      // after that by a read that cannot fail this step; until it answers, the step says "One moment".
       setQuote(null);
       setStage("ready");
+      await readAfterMoving();
     } catch (error) {
       if (sessionClosed(error)) {
         closeSession();
@@ -544,6 +583,39 @@ export function CashOut() {
       .catch(() => setCopied("refused"));
   };
 
+  /** The authorization for this send: the one kept for the same account, coin, destination and amount, or a new one. */
+  const signedFor = async (input: Parameters<typeof signOwnSend>[0] & { coin: Coin }): Promise<SignedSend> => {
+    const key = `${input.account.address}:${input.coin.address}:${input.to}:${input.amount}`.toLowerCase();
+    if (keptSend?.key === key) return keptSend.signed;
+    const signed = await signOwnSend(input);
+    setKeptSend({ key, signed });
+    return signed;
+  };
+
+  /**
+   * Whether a send that was refused, or brought nothing back, has left all the same. The coin says so itself when it
+   * has taken the authorization already. When the answer was lost, or the send was not final within the wait, what the
+   * account holds is read again: the figure they are told to check is a fresh one, and when it holds that much less,
+   * the send is said rather than left to be pressed twice.
+   */
+  const leftUnheard = async (error: unknown, was: Readonly<{ coin: Coin; leaving: bigint; heldBefore: bigint }>): Promise<boolean> => {
+    const code = error instanceof ApiError ? error.code : undefined;
+    if (code === "ALREADY_SENT") {
+      setKeptSend(null);
+      await refresh().catch(() => undefined);
+      return true;
+    }
+    if (code === "NO_ANSWER" || code === "SENT_UNCONFIRMED") {
+      const now = await refresh().catch(() => undefined);
+      if (!leftAllTheSame(was.heldBefore, now?.[was.coin.symbol], was.leaving)) return false;
+      setKeptSend(null);
+      return true;
+    }
+    // The coin refused this authorization and has not taken it: it will never pass, and the next press signs another.
+    if (code === "REFUSED" || code === "INVALID_SIGNATURE" || code === "INVALID_REQUEST") setKeptSend(null);
+    return false;
+  };
+
   const codeProblem = (): string | null => {
     const typed = deposit.trim();
     if (!chosen || typed === "") return null;
@@ -569,6 +641,7 @@ export function CashOut() {
     // Exactly the two-decimal number they ordered leaves, never the six-decimal balance: the order at the payout
     // service is for that number and expects that number (D75, flows W7 to W9).
     const leaving = ready.units;
+    const heldBefore = held(coin);
     setBusy(true);
     setProblem(null);
     setStage("sending");
@@ -594,24 +667,31 @@ export function CashOut() {
           // The money moved; the record is for finding it later, and the reference is the same either way.
         }
       } else {
-        const result = await sendOwnMoney({ account, to, amount: leaving, coin });
+        const result = await sendSigned(await signedFor({ account, to, amount: leaving, coin }));
+        setKeptSend(null);
         reference = result.reference;
         atMs = result.sentAtMs;
       }
       const said = amountOf(chosen, ready);
       setSent({ amount: said.lead, exact: said.exact, name: chosen.name, when: whenInWords(atMs), reference, cost });
       setDeposit("");
-      await refresh();
+      // Sent, and said at once: the balances are read after it, by a read whose failure says nothing of the send.
       setStage("sent");
+      await readAfterMoving();
     } catch (error) {
       if (sessionClosed(error)) {
         closeSession();
         return;
       }
+      if (await leftUnheard(error, { coin, leaving, heldBefore })) {
+        const said = amountOf(chosen, ready);
+        setGone({ amount: said.lead, exact: said.exact, name: chosen.name });
+        setDeposit("");
+        setStage("gone");
+        return;
+      }
       setStage("confirm");
       setProblem({ where: "send", text: refusalText(error, chosen), code: error instanceof ApiError ? error.code : undefined });
-      // No answer came back: what the account holds is read again, so the figure they are told to check is a fresh one.
-      if (error instanceof ApiError && error.code === "NO_ANSWER") await refresh().catch(() => undefined);
     } finally {
       setBusy(false);
     }
@@ -647,24 +727,34 @@ export function CashOut() {
       return;
     }
     const leaving = ownLeaving;
+    // Read now: once the balances are read again the coin itself may be another, and the amount typed too much.
+    const coin = ownCoin;
+    const heldBefore = held(coin);
+    const said = twoDecimalsDown(leaving, coin.decimals);
     setBusy(true);
     setProblem(null);
     setStage("ownSending");
     try {
-      const result = await sendOwnMoney({ account, to: getAddress(ownCode.trim()) as Hex, amount: leaving, coin: ownCoin });
-      setSent({ amount: twoDecimalsDown(leaving, ownCoin.decimals), name: "", when: whenInWords(result.sentAtMs), reference: result.reference });
+      const result = await sendSigned(await signedFor({ account, to: getAddress(ownCode.trim()) as Hex, amount: leaving, coin }));
+      setKeptSend(null);
+      setSent({ amount: said, name: "", when: whenInWords(result.sentAtMs), reference: result.reference });
       setOwnCode("");
-      await refresh();
+      // Sent, and said at once: the balances are read after it, by a read whose failure says nothing of the send.
       setStage("ownSent");
+      await readAfterMoving();
     } catch (error) {
       if (sessionClosed(error)) {
         closeSession();
         return;
       }
+      if (await leftUnheard(error, { coin, leaving, heldBefore })) {
+        setGone({ amount: said, name: "" });
+        setOwnCode("");
+        setStage("ownGone");
+        return;
+      }
       setStage("ownConfirm");
       setProblem({ where: "own", text: refusalText(error, null) });
-      // No answer came back: what the account holds is read again, so the figure they are told to check is a fresh one.
-      if (error instanceof ApiError && error.code === "NO_ANSWER") await refresh().catch(() => undefined);
     } finally {
       setBusy(false);
     }
@@ -1080,7 +1170,7 @@ export function CashOut() {
    */
   const balanceInMeta = <p className={META}>{W.yourMoneyNow(formatAusd(dollarsHeld))}</p>;
 
-  if ((stage === "ready" || stage === "confirm" || stage === "sending" || stage === "sent") && chosen) {
+  if ((stage === "ready" || stage === "confirm" || stage === "sending" || stage === "sent" || stage === "gone") && chosen) {
     const ready = readyOf(chosen);
     const coin = coinOf(chosen);
     // What a person reads here, and the exact quantity the service asks for, said once under the action (D104).
@@ -1104,6 +1194,16 @@ export function CashOut() {
             {sent.exact ? <Said className={HELP} text={W.exactQuantity(sent.name, sent.exact)} /> : null}
             <p className={HELP}>{W.sentPays(chosen.name, chosen.pays, !isNative(coin))}</p>
             {sent.cost ? <p className={HELP}>{W.sendingCost(sent.cost.dollars, sent.cost.underACent)}</p> : null}
+            <a href={wayOutPage(chosen)} target="_blank" rel="noopener noreferrer" className={SECONDARY_BUTTON}>
+              {W.follow(chosen.name)}
+            </a>
+          </section>
+        ) : stage === "gone" && gone ? (
+          <section className={CARD} data-sent-unheard="">
+            {/* The answer was lost and the send left: said where the confirmation stood, with nothing to press twice. */}
+            <p className={BODY}>{W.sentUnheard(gone.amount, gone.name)}</p>
+            {gone.exact ? <Said className={HELP} text={W.exactQuantity(gone.name, gone.exact)} /> : null}
+            <p className={HELP}>{W.sentPays(chosen.name, chosen.pays, !isNative(coin))}</p>
             <a href={wayOutPage(chosen)} target="_blank" rel="noopener noreferrer" className={SECONDARY_BUTTON}>
               {W.follow(chosen.name)}
             </a>
@@ -1208,6 +1308,14 @@ export function CashOut() {
               </>
             ) : null}
           </section>
+        ) : problem?.where === "send" ? (
+          <section className={CARD}>
+            {/* Nothing is ready any more and something was said of the send: the sentence stays, never a wait with no end. */}
+            {alert("send")}
+            <button type="button" onClick={() => { setStage("base"); setProblem(null); }} className={`${SMALL_BUTTON} self-start`}>
+              {W.notNow}
+            </button>
+          </section>
         ) : (
           <WaitLine>{W.oneMoment}</WaitLine>
         )}
@@ -1227,6 +1335,10 @@ export function CashOut() {
           <>
             <p className={BODY}>{W.own.sent(sent.amount, sent.when, sent.reference)}</p>
           </>
+        ) : stage === "ownGone" && gone ? (
+          <p className={BODY} data-sent-unheard="">
+            {W.own.sentUnheard(gone.amount)}
+          </p>
         ) : (
           <>
             {stage === "own" ? (
@@ -1294,6 +1406,16 @@ export function CashOut() {
                     </button>
                   ) : null}
                 </div>
+              </>
+            ) : null}
+            {/* The amount typed is no longer one the account holds, so there is no confirmation to draw: whatever was
+                said of the send stays, with the way back, where a title stood alone. */}
+            {stage === "ownConfirm" && ownSending.units === undefined ? (
+              <>
+                {alert("own")}
+                <button type="button" onClick={() => { setStage("own"); setProblem(null); }} className={`${SMALL_BUTTON} self-start`}>
+                  {W.notNow}
+                </button>
               </>
             ) : null}
           </>

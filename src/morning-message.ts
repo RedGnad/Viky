@@ -17,8 +17,12 @@ export type MorningSide = "recipient" | "funder";
 
 /** What happened, as the keeper's own record of it says. */
 export type MorningNews =
-  /** `today`: the day was counted the day it was done, which the third daily contract allows; absent, it was yesterday's. */
-  | Readonly<{ kind: "day"; outcome: DayOutcome; amount: string; today?: boolean }>
+  /**
+   * `today`: the day was counted the day it was done, which the third daily contract allows; absent, it was yesterday's.
+   * `todayCounts`: the gift still has a day running today, which is when a day that went back is followed by "Today
+   * still counts." (the founder, 13 Oct 2026).
+   */
+  | Readonly<{ kind: "day"; outcome: DayOutcome; amount: string; today?: boolean; todayCounts?: boolean }>
   | Readonly<{ kind: "reached"; amount: string }>
   | Readonly<{ kind: "expired"; amount: string }>
   /**
@@ -52,7 +56,7 @@ export function morningSentence(side: MorningSide, news: MorningNews, names: Gif
     if (news.kind === "reached") return MORNING.recipient.reached(news.amount);
     if (news.kind === "expired") return funder ? MORNING.recipient.expiredTo(news.amount, funder) : MORNING.recipient.expired(news.amount);
     if (news.outcome === "earned") return news.today ? MORNING.recipient.earnedToday(news.amount) : MORNING.recipient.earned(news.amount);
-    return funder ? MORNING.recipient.returnedTo(funder) : MORNING.recipient.returned;
+    return funder ? MORNING.recipient.returnedTo(funder, news.todayCounts === true) : MORNING.recipient.returned(news.todayCounts === true);
   }
   if (news.kind === "reached") return them ? MORNING.funder.reachedNamed(them, news.amount) : MORNING.funder.reached(news.amount);
   if (news.kind === "expired") return MORNING.funder.expired(news.amount);

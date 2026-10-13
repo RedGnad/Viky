@@ -164,7 +164,7 @@ test("the amount written before a send to a payout service is exactly the amount
   // relayed for the stablecoin, sent by the person's own account for the chain's own coin (D75, D77, flows W7 to W9).
   const cashOut = readFileSync("app/components/CashOut.tsx", "utf8");
   assert.match(cashOut, /const leaving = ready\.units;/);
-  assert.match(cashOut, /sendOwnMoney\(\{ account, to, amount: leaving, coin \}\)/);
+  assert.match(cashOut, /sendSigned\(await signedFor\(\{ account, to, amount: leaving, coin \}\)\)/);
   assert.match(cashOut, /sendMon\(account, to, leaving\)/);
   // To another account of the person's own, the amount typed leaves, read to the last decimal that coin has.
   assert.match(cashOut, /dollarsToChange\(ownAmount, held\(ownCoin\), W\.refusals\)/, "two decimals, as on step 1 (flows W13)");

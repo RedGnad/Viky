@@ -90,7 +90,9 @@ test("how a condition is checked, on the sheet where it is chosen: where it is r
     // And the help says no more what a reading does not prove.
     assert.doesNotMatch(condition.help, /, not who|not the wearer|not each piece of work|not a place at|is not read/, `${condition.id}: the help`);
   }
-  assert.equal(conditionById("duolingo-daily")?.help, "Read each morning from their public Duolingo profile, with nothing to install: it proves the account did the lesson.");
+  // A gift made today is on the third daily contract, where a lesson is read the day it is done (13 Oct 2026): the
+  // public page and the chooser said "each morning", which the judges page and the gift's own page contradicted.
+  assert.equal(conditionById("duolingo-daily")?.help, "Read from their public Duolingo profile the day the lesson is done, with nothing to install: it proves the account did the lesson.");
   // Two statements about the thing itself stay, said without a negation (the founder, 5 Oct 2026): they say what
   // the giver buys. An MITx Online certificate is an online course, and a TOEFL score held before the gift counts.
   assert.match(String(conditionById("mitx-online-certificate")?.help), /It proves an online course passed on MITx Online\.$/);

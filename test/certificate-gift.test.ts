@@ -155,7 +155,10 @@ test("the recipient's screen says where the link is found, and what is not kept"
   const words = DET_MILESTONE.words;
   assert.match(words.linkHelp, /Get Shareable Link/, "the button that makes the page public is named");
   assert.match(words.whatIsRead, /score, the day of the test, and the name/);
-  assert.match(words.whatIsRead, /date of birth and your photograph are on the same page and are never asked for/);
+  // "Never asked for, received or kept" was false on "received" (the founder, 13 Oct 2026): the page's whole answer
+  // passes through Viky's server when it looks at the link (src/det-reading.ts). What is true is what is kept.
+  assert.match(words.whatIsRead, /date of birth and your photograph are on the same page: Viky keeps neither\.$/);
+  assert.doesNotMatch(words.whatIsRead, /received/);
   const screen = readFileSync("app/kit/CertificateProof.tsx", "utf8");
   assert.match(screen, /words\.whatIsRead/, "and the screen says it before the link is pasted");
   assert.match(screen, /readCertificate\(readPath, typed\)/, "a plain read answers first, before any money");

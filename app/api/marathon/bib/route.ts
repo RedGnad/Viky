@@ -36,8 +36,8 @@ export async function POST(request: Request) {
     const race = marathonEventById(String(milestone.course ?? ""))?.race;
     if (!race) throw new GiftApiError("UNKNOWN_RACE", "This gift names no race Viky reads.", 409);
     if (!isValidBib(bib, race.timer)) throw new GiftApiError("INVALID_BIB", "A bib number is one to six figures.");
-    if (gift.boundAt && !bibStillOpen(race, Date.now())) throw new GiftApiError("BIB_ALREADY_SET", "Your bib is already entered for this gift, and the race has started.", 409);
-    if (!bibStillOpen(race, Date.now()) && !isOperator(auth.account)) throw new GiftApiError("RACE_STARTED", "The race has started, so a bib can no longer be entered for this gift.", 409);
+    if (gift.boundAt && !bibStillOpen(race, Date.now())) throw new GiftApiError("BIB_ALREADY_SET", "Your bib is already entered for this gift, and the day of the race has come.", 409);
+    if (!bibStillOpen(race, Date.now()) && !isOperator(auth.account)) throw new GiftApiError("RACE_STARTED", "The day of the race has come, so a bib can no longer be entered for this gift.", 409);
     const kept = bib.toUpperCase();
     await markConnectedAccount(giftId, kept);
     if (gift.boundAt) await replaceBoundProfile(giftId, kept);

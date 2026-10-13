@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { CONTRACT, TERMS, aWindow, climb, countPasskeyPrompts, daily, endedDaily, photographer, serve } from "./gift-fixtures";
-import { gift, json, makeAnAccount, neverAskedToBeTold } from "./gift-kit";
+import { gift, json, makeAnAccount, neverAskedToBeTold, profile, shot as capture, sizesFor } from "./gift-kit";
 
 /**
  * "You decide" (the founder, 1 Oct 2026, the mockup you-decide.html): the standing controls of the person a gift is
@@ -333,6 +333,67 @@ test.describe("you decide", () => {
     await shot(page, "13-one-thing-ended");
     await device.context.close();
   });
+
+  for (const size of sizesFor(process.env.VIKY_DECIDE_CAPTURES)) {
+    test(`an ending that brought no answer says so, never that nothing was changed, and the gift is read again (${size.name})`, async ({ browser, baseURL }) => {
+      // The founder, 13 Oct 2026: an ending sends money back and cannot be undone. When the connection dropped after
+      // it had left, the sheet said "Something went wrong. Nothing was changed." of a gift that may have ended.
+      test.setTimeout(120_000);
+      const GIFT = "43";
+      const device = await profile(browser, baseURL, size.viewport);
+      const { page } = device;
+      await neverAskedToBeTold(device.context);
+      let ended: number | null = null;
+      let reads = 0;
+      // The first ending leaves and is lost on the way; the second one leaves, ends the gift, and is not heard either.
+      const lands = [false, true];
+      let asked = 0;
+      const served = await serve(
+        page,
+        GIFT,
+        () => {
+          reads += 1;
+          return ended === null ? daily(GIFT, "recipient") : endedDaily(GIFT, "recipient", ended);
+        },
+        TERMS.daily,
+      );
+      await page.route(`**/api/gift/${GIFT}/end`, (route) => {
+        if (lands[asked]) {
+          ended = Date.now();
+          served.finish();
+        }
+        asked += 1;
+        return route.abort("connectionreset");
+      });
+      await makeAnAccount(device);
+      await page.goto(`/g/${GIFT}`);
+      await act(page, "stop").click();
+      await page.locator('[data-option="end"]').click();
+      const end = page.getByRole("dialog", { name: "End the gift?" });
+      const before = reads;
+      await end.getByRole("button", { name: "End the gift" }).click();
+
+      // Not ended: the sheet stays over the same two amounts, with the sentence, and the gift was read again.
+      await expect(end.getByText("Viky got no answer. Look at this gift in a minute before ending it again.", { exact: true })).toBeVisible();
+      await expect(page.getByText(/nothing was changed/i)).toHaveCount(0);
+      await expect(end.locator(".decide-two > div").nth(0)).toHaveText("$2.00Yours");
+      await expect.poll(() => reads, "the gift is read again before anything is offered again").toBeGreaterThan(before);
+      await capture(process.env.VIKY_DECIDE_CAPTURES, page, size.name, "20-ending-no-answer");
+      if (process.env.VIKY_DECIDE_CAPTURES) {
+        await page.emulateMedia({ colorScheme: "dark" });
+        await capture(process.env.VIKY_DECIDE_CAPTURES, page, size.name, "20-ending-no-answer-after-dark");
+        await page.emulateMedia({ colorScheme: "light" });
+      }
+
+      // Ended though nothing was heard: the gift read again says so, in the sheet's place.
+      await end.getByRole("button", { name: "End the gift" }).click();
+      await expect(page.getByText("You ended this gift.", { exact: true })).toBeVisible();
+      await expect(end).toBeHidden();
+      await expect(decide(page)).toHaveCount(0);
+      expect(asked).toBe(2);
+      await device.context.close();
+    });
+  }
 
   test("opened and not yet connected: the round buttons are there already, and the ending is one of them", async ({ browser, baseURL }) => {
     test.setTimeout(120_000);

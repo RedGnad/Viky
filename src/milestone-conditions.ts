@@ -532,7 +532,7 @@ export const DET_MILESTONE: CertificateCondition = {
     linkLabel: "The link to your certificate",
     linkHelp: 'In your Duolingo English Test account, open your certificate and press "Get Shareable Link". That is what makes the page public, and it is the link to paste here.',
     whatIsRead:
-      "Viky reads three things from that page: your score, the day of the test, and the name printed on it. It keeps those with the gift and nothing else. Your date of birth and your photograph are on the same page and are never asked for, received or kept.",
+      "Viky reads three things from that page: your score, the day of the test, and the name printed on it. It keeps those with the gift and nothing else. Your date of birth and your photograph are on the same page: Viky keeps neither.",
     check: "Check my certificate",
     checking: "Reading your certificate",
     goal: (target) => `Reach ${target} on the test`,
@@ -709,7 +709,7 @@ export const MITX_ONLINE_MILESTONE: CertificateCondition = {
 /**
  * "Finish a marathon" (D273): the certificate shape, with the runner's name asked, the race chosen from the register
  * in a sheet (its chooser comes with the screens), and the target typed as hours, or 0 for "finish". The link the
- * person gives is their bib, on the gift's page, before the race starts.
+ * person gives is their bib, on the gift's page, before the day of the race.
  */
 export const MARATHON_MILESTONE: CertificateCondition = {
   ...COURSERA_MILESTONE,
@@ -738,7 +738,7 @@ export const MARATHON_MILESTONE: CertificateCondition = {
       const found = marathonEventById(course);
       if (!found) return { code: "UNKNOWN_RACE", message: "That race is not one Viky reads." };
       if (!timerOpen(found.race.timer)) return { code: "NOT_OPEN", message: "That race's timing company is not open on Viky yet." };
-      if (!operator && (found.race.operatorOnly || !bibStillOpen(found.race, Date.now()))) return { code: "RACE_RUN", message: "That race has been run. Choose one still to come." };
+      if (!operator && (found.race.operatorOnly || !bibStillOpen(found.race, Date.now()))) return { code: "RACE_RUN", message: "That race is today or already run. Choose one still to come." };
       return undefined;
     },
     search: { path: "/api/marathon/races", placeholder: "Choose the race", nothing: "Viky reads no race by that name yet.", listed: true, races: true },
@@ -764,7 +764,7 @@ export const MARATHON_MILESTONE: CertificateCondition = {
     nameLabel: "Their name, as the race will print it",
     nameHelp: "Their full name as they registered for the race. Case, accents and the order of the names do not matter; the name itself must match.",
     linkLabel: "Your bib number",
-    linkHelp: "The number on your bib, entered before the race starts. After the finish, Viky reads your line on the timing company's results page.",
+    linkHelp: "The number on your bib, entered before the day of the race. After the finish, Viky reads your line on the timing company's results page.",
     whatIsRead: "Viky reads three things from the timing company's page: the name on your line, your bib and your official time. It keeps those with the gift and nothing else.",
     check: "Read my result",
     checking: "Reading the results page",
@@ -892,7 +892,7 @@ export const CREDLY_MILESTONE: CertificateCondition = {
     linkLabel: "The link to your badge",
     linkHelp: "In Credly, open the badge and choose Share, then paste the link here. It looks like credly.com/badges/ followed by a code.",
     whatIsRead:
-      "Viky reads three things about that badge: which certification it is, the day it was issued, and the name on its public page. It keeps those with the gift and nothing else. The badge's record also carries your email, hashed; nothing here reads it, receives it or keeps it.",
+      "Viky reads three things about that badge: which certification it is, the day it was issued, and the name on its public page. It keeps those with the gift and nothing else. The badge's record also carries your email, hashed: Viky keeps nothing of it.",
     check: "Check my badge",
     checking: "Reading your badge",
     goal: () => "Get that certification",
@@ -1231,7 +1231,7 @@ export const UNIVERSITY_GRADE_MILESTONE: CertificateCondition = {
     nameHelp: "",
     linkLabel: "",
     linkHelp: "",
-    whatIsRead: "Viky keeps the grade the results page carries, on the university's own scale, and the day it was shown, and nothing else. Your portal password never reaches Viky.",
+    whatIsRead: "Viky keeps whether the grade reached the target, and the day it was shown, and nothing else: the grade itself is kept nowhere. Your portal password never reaches Viky.",
     check: "",
     checking: "",
     goal: (target, scale) => `Reach ${gradeTargetInWords(target, scale)} at their university`,

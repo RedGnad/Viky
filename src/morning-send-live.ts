@@ -38,7 +38,9 @@ export async function liveFacts(giftId: string): Promise<GiftFacts | null> {
   const words = { yesterday: said?.yesterday, today: said?.today };
   try {
     const gift = await readGift(escrowOf(record), giftId);
-    return { funder: record.funder, names, words, perDayDisplay: formatAusd(gift.perDay), amountDisplay: formatAusd(gift.amount), perDayUnits: gift.perDay, amountUnits: gift.amount };
+    // The last day it runs through, while it runs: what "Today still counts." is said from (src/morning-send.ts).
+    const runs = gift.finalised || gift.cancelled || gift.endDay === 0 ? {} : { runsThroughDay: gift.endDay };
+    return { funder: record.funder, names, words, perDayDisplay: formatAusd(gift.perDay), amountDisplay: formatAusd(gift.amount), perDayUnits: gift.perDay, amountUnits: gift.amount, ...runs };
   } catch {
     // A milestone gift lives on another contract, and a gift of a deployment we do not serve cannot be read at all.
     // The record's own amount is what the funder paid, so the whole-gift sentences stay true; a day's share does not

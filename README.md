@@ -75,8 +75,8 @@ phone credit, as a gift card, or on to another Viky account.
 ## What we know about the two people
 
 The one who pays funds another person's studies or training from a distance; the one who is read asked for nothing.
-So the whole amount is in their name from the first minute, the funder sees yes or no for a day or the number a goal
-has and nothing else that was read, and the recipient agrees with a signature of their own and can stop being read.
+So the whole amount is in their name from the first minute; the funder sees yes or no, a number only where a public
+page shows it and nothing else that was read; the recipient agrees with their own signature and can stop being read.
 
 [The studies behind each screen, and the four things that changed when people used it](docs/THE-TWO-PEOPLE.md).
 
@@ -135,8 +135,9 @@ Live counts and what each one proves: [the judges page](https://viky.cash/judges
 
 Only what was measured, or what Monad's own documentation states.
 
-- **Nobody but Viky pays a fee, and it is small enough to be Viky's.** Every step of a gift is submitted and paid for
-  by one relayer, so neither person ever holds MON or reads a fee. Read from the chain on 2 Oct 2026 at 12:11 UTC
+- **On a gift's usual path nobody but Viky pays a fee, and it is small enough to be Viky's.** On a gift's usual path
+  neither person holds MON or reads a fee: Viky's relayer sends and pays each step. Three steps leave that path, listed
+  under this section. Read from the chain on 2 Oct 2026 at 12:11 UTC
   with `pnpm relayer:fees`: 120 transactions sent since the first one, 2.196190 MON of fees in all, 0.0183 MON a
   transaction on average. A credited day costs 0.017544 MON (transaction
   `0x55f9eafa857ee9897be5a7e092e055a3c75d2003d11a087dd9a0244e64726fab`: a limit of 172,000 at 102 gwei).
@@ -152,6 +153,18 @@ Only what was measured, or what Monad's own documentation states.
   ([docs](https://docs.monad.xyz/developer-essentials/reserve-balance)), so the relayer refuses to send below 12 MON
   (`src/relayer.ts`).
 
+<details>
+<summary><b>The three steps a person's own account sends</b></summary>
+
+- Taking back a gift nobody has opened: the contract asks for the funder in person, so the relayer sends that account
+  what its transaction costs, and the account sends it.
+- Paying by card through Mercuryo: it delivers MON, which the funder's account changes for AUSD in a transaction it
+  sends and pays for.
+- A payout onto a card: the account's dollars are changed for MON, which the account sends to the card service itself,
+  and what that cost is said in dollars afterwards.
+
+</details>
+
 ## What has run with real money
 
 Only what has a transaction on Monad mainnet. How many people have used Viky is counted on the judges page, from the
@@ -160,7 +173,7 @@ index, and the testers' figures come with the submission.
 | What happened | Date | Amount | Transaction |
 |---|---|---|---|
 | **A gift between two people who are not the author**, paid on the proof a student showed from their university's portal, at Toulouse. It was that university's first proof: held, then paid once the operator had read what it had read. | 7 Oct 2026 | 8.98 AUSD | [`0x9c55…c4fd`](https://monadvision.com/tx/0x9c5508e83b0dd20668bb6a8c683faa047820734d6938387f8b6f516c3467c4fd) |
-| **The same student's next gift, paid 20 seconds after they signed in** to that portal, on the rule fixed ahead of the pass, with no review. | 9 Oct 2026 | 5.02 AUSD | [`0xd950…77e2`](https://monadvision.com/tx/0xd950295c4c3d51480496003fd6547b0fc6c3546ac0c5747d377e6259cd3277e2) |
+| **The same student's next gift, funded by the author, paid 20 seconds after they signed in** to that portal, on the rule fixed ahead of the pass, with no review. | 9 Oct 2026 | 5.02 AUSD | [`0xd950…77e2`](https://monadvision.com/tx/0xd950295c4c3d51480496003fd6547b0fc6c3546ac0c5747d377e6259cd3277e2) |
 | **A daily gift from its funding to its end, on the contract in service**, made by the author between two of his own accounts: one day credited, 0.187 AUSD, and the 29 others, 5.423 AUSD, back to the funder. | 3 and 4 Oct 2026 | 5.61 AUSD | [`0xa6db…de72`](https://monadvision.com/tx/0xa6db35d9f3716d238c7f55770a8853612fab90a19e059c14706959f0dbafde72) |
 | **A card payment converted**: the USDC a card service delivered to the funder's own account, changed into AUSD on one signature. | 3 Oct 2026 | 7.914524 AUSD | [`0x533e…1616`](https://monadvision.com/tx/0x533ec0746493e0670029b917887b8e15376380a4a9c7bb82706b2de910ed1616) |
 | **A gift card bought with the account's own dollars**, by the author from his own account: the AUSD sent to Viky's treasury on one signature. | 12 Oct 2026 | 11.769118 AUSD | [`0x346c…21ae`](https://monadvision.com/tx/0x346cef5586d129fbe16b405140a443aef943954a30a920db60959186623321ae) |
@@ -191,8 +204,8 @@ What has not run on the third daily contract yet: a missed day going back, and a
   ([`0x346c…21ae`](https://monadvision.com/tx/0x346cef5586d129fbe16b405140a443aef943954a30a920db60959186623321ae)).
 - **Toulouse, 9 Oct 2026: a student showed their enrolment, and the gift paid 20 seconds after they signed in to
   their university's portal, with no review.**
-  Gift 1000008 on the second `MilestoneGift`, 5.02 AUSD for staying enrolled, made out to the same account as the
-  gift below. The verification opened at 12:54:27 UTC, on the rule fixed ahead of the pass, the portal's sign-in form
+  Gift 1000008 on the second `MilestoneGift`, 5.02 AUSD for staying enrolled, funded by the author and made out to
+  the same account as the gift below. The verification opened at 12:54:27 UTC, on the rule fixed ahead of the pass, the portal's sign-in form
   was gone from the page at 12:55:09, and the gift paid in the block of 12:55:27
   ([`0xd950…77e2`](https://monadvision.com/tx/0xd950295c4c3d51480496003fd6547b0fc6c3546ac0c5747d377e6259cd3277e2)).
   Nobody read the proof first: it fitted the rule, so it was paid at once.
@@ -207,8 +220,8 @@ What has not run on the third daily contract yet: a missed day going back, and a
 
   What that proof read is narrow, and is said as it is: signed in to his own file, the answer to one click carried the
   academic year 2026-2027. The rule was written by Reclaim's agent during his pass: it names no person, no number and
-  no faculty, and it was pinned on 7 Oct 2026; since 9 Oct the rule in force is one fixed ahead, which the judges page
-  prints.
+  no faculty, and it was pinned on 7 Oct 2026; since 8 Oct 2026 the rule in force is one fixed ahead of any proof, as
+  the judges page says, and the version the pass of 9 Oct ran on was pinned that day at 00:36 UTC.
 
 </details>
 
@@ -235,7 +248,7 @@ flowchart LR
   end
   subgraph Viky["Viky, on Vercel (Paris)"]
     APP[Next.js PWA and routes]
-    REL[Relayer: submits and pays every step]
+    REL[Relayer: submits and pays each step of a gift's usual path]
     SIG[Evidence signer: EIP-712 attestations]
     CRON[Passes: 00:30, 03:30 and 07:00 UTC, and one called every hour]
   end

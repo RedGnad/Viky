@@ -60,7 +60,8 @@ for (const size of sizesFor(SHOTS)) {
       await change.click();
       // One line under the field, and the rest folded (the founder's rule 4 of 1 Oct 2026).
       await expect(page.getByText("The number on your bib for the Example City Marathon 2026.", { exact: true })).toBeVisible();
-      await expect(page.locator(".said-fold").getByText("It can be changed until the start.", { exact: true })).toHaveCount(1);
+      // "Until the day of the race": the field closes at 00:00 that day, not at the start (the founder, 13 Oct 2026).
+      await expect(page.locator(".said-fold").getByText("It can be changed until the day of the race.", { exact: true })).toHaveCount(1);
       await page.getByLabel("Your bib number").fill("374");
       await shot(page, size.name, "2-entering-it-again");
       await page.getByRole("button", { name: "Keep my bib number" }).click();

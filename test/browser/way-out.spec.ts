@@ -560,9 +560,9 @@ test.describe("a send to another account says the route's own refusal, and the s
       // Three days of a dollar over seven, as a gift pays them: $0.428571, shown and proposed as 0.42.
       await person(device, { ausd: 428_571n, usdc: 0n, mon: 0n }, FRANCE);
       const NO_ANSWER = "Viky got no answer. Check your balance in a minute before sending again.";
-      const asked: Array<{ value?: string }> = [];
+      const asked: Array<{ value?: string; nonce?: string }> = [];
       await page.route("**/api/send", (route) => {
-        asked.push(JSON.parse(route.request().postData() ?? "{}") as { value?: string });
+        asked.push(JSON.parse(route.request().postData() ?? "{}") as { value?: string; nonce?: string });
         // The connection drops on the first; a gateway answers in the route's place on the second; then the route does.
         if (asked.length === 1) return route.abort("connectionreset");
         if (asked.length === 2) return route.fulfill({ status: 504, contentType: "text/html", body: "<html>504 Gateway Timeout</html>" });
@@ -598,6 +598,139 @@ test.describe("a send to another account says the route's own refusal, and the s
       await expect(card).toContainText("Reference: S-428.");
       // Each time the whole balance was asked to move, the fraction of a cent with it.
       expect(asked.map((one) => one.value)).toEqual(["428571", "428571", "428571"]);
+      // And each time with the one authorization signed at the first press (13 Oct 2026): had the first passed, the
+      // coin would have refused the two that followed.
+      expect(asked[0]!.nonce).toMatch(/^0x[0-9a-f]{64}$/);
+      expect(new Set(asked.map((one) => one.nonce)).size).toBe(1);
+      await device.context.close();
+    });
+
+    test(`a send whose answer was lost and that left is said as sent, where a title stood alone, with nothing to press twice (${size.name})`, async ({ browser, baseURL }) => {
+      // The founder, 13 Oct 2026. The balance read again after "no answer" made the amount typed too much, so the
+      // confirmation that carried the sentence was not drawn; and its "Send" signed a new authorization at each press.
+      const NO_ANSWER = "Viky got no answer. Check your balance in a minute before sending again.";
+      const SENT_UNHEARD = "Sent $2.00 to your other account. No answer came back, so there is no reference to show.";
+      const device = await profile(browser, baseURL, size.viewport);
+      const { page } = device;
+      const holds = { ausd: 5_000_000n, usdc: 0n, mon: 0n };
+      await person(device, holds, FRANCE);
+      const asked: Array<{ nonce?: string }> = [];
+      // The first send passes and its answer is lost. The second is in flight when the balance is read again, and
+      // the same authorization asked once more is answered as the coin answers it: taken already.
+      let scene: "it left at once" | "it left a moment later" = "it left at once";
+      await page.route("**/api/send", (route) => {
+        asked.push(JSON.parse(route.request().postData() ?? "{}") as { nonce?: string });
+        if (scene === "it left at once") {
+          holds.ausd -= 2_000_000n;
+          return route.abort("connectionreset");
+        }
+        if (asked.length === 2) return route.abort("connectionreset");
+        holds.ausd -= 2_000_000n;
+        return route.fulfill(json({ error: "That was sent the first time. Nothing more left your account.", code: "ALREADY_SENT" }, 409));
+      });
+      const card = page.locator("section", { has: page.getByRole("heading", { name: "Send to another Viky account of mine" }) });
+      const open = async () => {
+        await page.goto("/cash-out");
+        await page.getByRole("button", { name: "Send to another Viky account of mine", exact: true }).click();
+        await card.getByLabel("Paste that account's code").fill(OTHER);
+        await card.getByLabel("How much to send").fill("2.00");
+        await card.getByRole("button", { name: "Send $2.00", exact: true }).click();
+      };
+
+      // The balance read again shows it: said as sent, in the confirmation's place, and no "Send" is left.
+      await open();
+      await card.getByRole("button", { name: "Send", exact: true }).click();
+      await expect(card.locator("[data-sent-unheard]")).toHaveText(SENT_UNHEARD);
+      await expect(card.getByRole("button", { name: "Send", exact: true })).toHaveCount(0);
+      await expect(card.getByRole("alert")).toHaveCount(0);
+      await expect(page.getByText(/nothing was taken|more than you have/i)).toHaveCount(0);
+      await shot(page, size.name, "11-sent-though-unheard");
+      await page.emulateMedia({ colorScheme: "dark" });
+      await shot(page, size.name, "11-sent-though-unheard-night");
+      await page.emulateMedia({ colorScheme: "light" });
+
+      // The balance has not moved yet: the sentence stays over the confirmation, and the next press asks with the
+      // same authorization, which the coin has taken by then. Said as sent, and nothing left twice.
+      scene = "it left a moment later";
+      await open();
+      await card.getByRole("button", { name: "Send", exact: true }).click();
+      await expect(card.getByRole("alert")).toHaveText(NO_ANSWER);
+      await expect(card.getByRole("button", { name: "Send", exact: true })).toBeEnabled();
+      await card.getByRole("button", { name: "Send", exact: true }).click();
+      await expect(card.locator("[data-sent-unheard]")).toHaveText(SENT_UNHEARD);
+      await expect(card.getByRole("button", { name: "Send", exact: true })).toHaveCount(0);
+      expect(asked.length).toBe(3);
+      expect(asked[1]!.nonce).toMatch(/^0x[0-9a-f]{64}$/);
+      expect(asked[2]!.nonce, "the same authorization, asked again as it was signed").toBe(asked[1]!.nonce);
+      expect(asked[1]!.nonce, "and another one than the send that was settled").not.toBe(asked[0]!.nonce);
+      await device.context.close();
+    });
+
+    test(`a send the route confirmed is said as sent even when the balance cannot be read after it (${size.name})`, async ({ browser, baseURL }) => {
+      // The founder, 13 Oct 2026: the read of the balances stood in the same try as the send, so when it failed the
+      // screen said "Viky could not finish this, and nothing was taken." of a send that was confirmed.
+      const device = await profile(browser, baseURL, size.viewport);
+      const { page, context } = device;
+      const holds = { ausd: 5_000_000n, usdc: 0n, mon: 0n };
+      await person(device, holds, FRANCE);
+      // Asked before the chain's own stand-in: while it is down, no call to the chain is answered.
+      let chainDown = false;
+      await context.route(
+        (url) => url.hostname !== "localhost" && url.hostname !== "127.0.0.1",
+        (route) => (chainDown ? route.abort("connectionreset") : route.fallback()),
+      );
+      await page.route("**/api/send", (route) => {
+        holds.ausd -= 2_000_000n;
+        chainDown = true;
+        return route.fulfill(json({ sent: true, reference: "S-200", sentAtMs: Date.now() }));
+      });
+      await page.goto("/cash-out");
+      await page.getByRole("button", { name: "Send to another Viky account of mine", exact: true }).click();
+      const card = page.locator("section", { has: page.getByRole("heading", { name: "Send to another Viky account of mine" }) });
+      await card.getByLabel("Paste that account's code").fill(OTHER);
+      await card.getByLabel("How much to send").fill("2.00");
+      await card.getByRole("button", { name: "Send $2.00", exact: true }).click();
+      await card.getByRole("button", { name: "Send", exact: true }).click();
+      // Said as sent, with its reference, whatever the read that follows does.
+      await expect(card).toContainText("Sent $2.00 to your other account on");
+      await expect(card).toContainText("Reference: S-200.");
+      await expect(page.getByText(/nothing was taken|could not finish|no answer/i)).toHaveCount(0);
+      await shot(page, size.name, "13-sent-while-the-balance-is-unread");
+      await page.emulateMedia({ colorScheme: "dark" });
+      await shot(page, size.name, "13-sent-while-the-balance-is-unread-night");
+      await page.emulateMedia({ colorScheme: "light" });
+      // The read is made again until it answers: the figure above is then what the account holds.
+      chainDown = false;
+      await expect(page.locator("main")).toContainText("$3.00", { timeout: 20_000 });
+      await expect(card).toContainText("Reference: S-200.");
+      await device.context.close();
+    });
+
+    test(`a send to the bank service whose answer was lost and that left is said as sent, never a wait with no end (${size.name})`, async ({ browser, baseURL }) => {
+      const device = await profile(browser, baseURL, size.viewport);
+      const { page } = device;
+      // Fifteen dollars of what a gift holds, and 9.99 made ready for the bank service: a withdrawal is open.
+      const holds = { ausd: 15_000_000n, usdc: 9_990_000n, mon: 0n };
+      await person(device, holds, FRANCE, { coin: USDC_COIN, atLeast: "9990000", sinceMs: Date.now() - 60_000 });
+      await page.route("**/api/send", (route) => {
+        holds.usdc = 0n;
+        return route.abort("connectionreset");
+      });
+      await page.goto("/cash-out");
+      await page.getByRole("button", { name: "Continue with Ramp" }).click();
+      await page.getByLabel("Paste the code Ramp gives you to send to").fill(OTHER);
+      await page.getByRole("button", { name: "Send $9.99 to Ramp", exact: true }).click();
+      await page.getByRole("button", { name: "Send", exact: true }).click();
+      const said = page.locator("[data-sent-unheard]");
+      await expect(said).toContainText("Sent $9.99 to Ramp. No answer came back, so there is no reference to show.");
+      await expect(said.getByRole("link", { name: "Open Ramp to follow it" })).toBeVisible();
+      await expect(page.getByText("One moment", { exact: true })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Send", exact: true })).toHaveCount(0);
+      await expect(page.getByText(/nothing (was taken|left your account)/i)).toHaveCount(0);
+      await shot(page, size.name, "12-sent-to-the-bank-though-unheard");
+      await page.emulateMedia({ colorScheme: "dark" });
+      await shot(page, size.name, "12-sent-to-the-bank-though-unheard-night");
+      await page.emulateMedia({ colorScheme: "light" });
       await device.context.close();
     });
   }

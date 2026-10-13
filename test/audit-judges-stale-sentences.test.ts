@@ -240,7 +240,11 @@ test("the judges' path names the button as Me draws it, and says what each path 
   assert.doesNotMatch(page, /then Use another account/);
   assert.equal(ME.otherAccount, "Other account");
   assert.ok(read("app/kit/Me.tsx").includes("name={W.otherAccount}"));
-  assert.ok(page.includes("Each path asks something of you: Duolingo, an account there, and a lesson done after you connect it; Chess.com, an account there, and one rating point won."));
+  // The Chess.com path asks for a settled rating (the founder, 13 Oct 2026): the sheet refuses one still settling, in
+  // the condition's own sentence, and "it settles in one sitting" is said of a settled rating alone.
+  assert.ok(page.includes("Each path asks something of you: Duolingo, an account there, and a lesson done after you connect it; Chess.com, an account there with a settled rating, and one rating point won."));
+  assert.match(page, /The rating offered has to be a settled one, an RD\s+under \{CHESS_SETTLED_RD_BELOW\} on Chess\.com/);
+  assert.match(page, /on any other the sheet answers &quot;\{CHESS_MILESTONE\.words\.refusals\.settling\}&quot;, and another of\s+the four ratings can be chosen\. With a settled rating, it settles in one sitting:/);
   // With no account of a source, the short path (the audit of 9 Oct 2026): open the gift, "Stop", "End the gift". The
   // page sent that judge to a link the portal's instructions might give.
   assert.ok(page.includes("With no account of a source, the short path is the next step: open the gift, then end it."));

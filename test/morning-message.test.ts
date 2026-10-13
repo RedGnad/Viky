@@ -16,11 +16,15 @@ const BOTH = { recipientName: "Léa", funderName: "Mom" };
 const NEITHER = { recipientName: null, funderName: null };
 const WORDS = { yesterday: "yesterday's lesson" };
 
-test("the recipient hears what happened to yesterday, and that today still counts", () => {
+test("the recipient hears what happened to yesterday, and that today still counts while the gift runs", () => {
   assert.equal(morningSentence("recipient", { kind: "day", outcome: "earned", amount: "$3.57" }, BOTH), "Yesterday counted. $3.57 is yours.");
-  assert.equal(morningSentence("recipient", { kind: "day", outcome: "returned", amount: "$3.57" }, BOTH), "Yesterday went back to Mom. Today still counts.");
+  // A day that went back is never yesterday: its window closed thirty hours after it ended, so the sentence names no
+  // day (the founder, 13 Oct 2026). "Today still counts." is said only while the gift still has a day running.
+  assert.equal(morningSentence("recipient", { kind: "day", outcome: "returned", amount: "$3.57", todayCounts: true }, BOTH), "A missed day went back to Mom. Today still counts.");
+  assert.equal(morningSentence("recipient", { kind: "day", outcome: "returned", amount: "$3.57" }, BOTH), "A missed day went back to Mom.");
   // A gift made before the names existed says the same thing without inventing one.
-  assert.equal(morningSentence("recipient", { kind: "day", outcome: "returned", amount: "$3.57" }, NEITHER), "Yesterday went back. Today still counts.");
+  assert.equal(morningSentence("recipient", { kind: "day", outcome: "returned", amount: "$3.57", todayCounts: true }, NEITHER), "A missed day went back. Today still counts.");
+  assert.equal(morningSentence("recipient", { kind: "day", outcome: "returned", amount: "$3.57" }, NEITHER), "A missed day went back.");
 });
 
 test("the funder hears what the person did, in the register's words, never in a named source", () => {
@@ -28,7 +32,7 @@ test("the funder hears what the person did, in the register's words, never in a 
   // Without the register's word the sentence still stands, and still names nothing.
   assert.equal(morningSentence("funder", { kind: "day", outcome: "earned", amount: "$3.57" }, BOTH), "Léa counted yesterday. $3.57 is theirs.");
   assert.equal(morningSentence("funder", { kind: "day", outcome: "earned", amount: "$3.57" }, NEITHER), "Yesterday counted. $3.57 is theirs.");
-  assert.equal(morningSentence("funder", { kind: "day", outcome: "returned", amount: "$3.57" }, BOTH, WORDS), "Yesterday came back to you: $3.57.");
+  assert.equal(morningSentence("funder", { kind: "day", outcome: "returned", amount: "$3.57" }, BOTH, WORDS), "A missed day came back to you: $3.57.");
 });
 
 test("a milestone reached and a milestone expired are one sentence each, on both sides", () => {

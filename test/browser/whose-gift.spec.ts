@@ -171,5 +171,53 @@ test.describe("whose gift a card says it is", () => {
       await shot(funder.page, size.name, "7-gifts-as-the-funder-reads-it");
       await funder.context.close();
     });
+
+    test(`a gift nobody has opened, met without its link, is read in the third person and offers nothing to open (${size.name})`, async ({ browser, baseURL }) => {
+      // The founder, 13 Oct 2026. Anybody who typed the number of a gift nobody had opened read "This is in your
+      // name." and "Open my gift"; the press made an account and ended on "This link is missing its key.".
+      test.setTimeout(180_000);
+      const MISSING = "This link is missing its key. Ask for the link again.";
+      const device = await profile(browser, baseURL, size.viewport);
+      const { page } = device;
+      await neverAskedToBeTold(device.context);
+      // As the server answers somebody who is neither of the two people and carries nothing of the link: no names.
+      const nobodys = (over: Record<string, unknown> = {}) => ({ ...unopened(SIGNED), names: null, ...over });
+      let status: () => unknown = () => nobodys();
+      await answer(page, () => status());
+
+      for (const version of [1, 2]) {
+        status = () => nobodys({ version });
+        await page.goto(`/g/${GIFT}`);
+        await expect(head(page)).toHaveText("A gift");
+        await expect(who(page)).toHaveText("For somebody");
+        await expect(page.getByText("Somebody put this in somebody's name.", { exact: true })).toBeVisible();
+        await expect(page.getByText("Theirs with the proof", { exact: true })).toBeVisible();
+        await expect(page.locator("[data-no-key]")).toHaveText(MISSING);
+        await expect(page.getByRole("button", { name: "Sign in if this gift is yours.", exact: true })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Open my gift", exact: true })).toHaveCount(0);
+        await expect(page.getByText(/in your name|For you|Yours with the proof/)).toHaveCount(0);
+      }
+      await shot(page, size.name, "8-unopened-without-the-link");
+      await page.emulateMedia({ colorScheme: "dark" });
+      await shot(page, size.name, "8-unopened-without-the-link-after-dark");
+      await page.emulateMedia({ colorScheme: "light" });
+
+      // Signed in, and still without the link: the same true line, never "This gift is not yours.".
+      await makeAnAccount(device);
+      await page.goto(`/g/${GIFT}`);
+      await expect(page.locator("[data-no-key]")).toHaveText(MISSING);
+      await expect(page.getByText(/This gift is not yours/)).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Open my gift", exact: true })).toHaveCount(0);
+      await expect(who(page)).toHaveText("For somebody");
+      await shot(page, size.name, "9-unopened-without-the-link-signed-in");
+
+      // With what the link carries, the page speaks to the person it is for, as it always did.
+      status = () => unopened(SIGNED);
+      await page.goto(`/g/${GIFT}?t=${KEY}`);
+      await expect(page.getByRole("button", { name: "Open my gift", exact: true })).toBeVisible();
+      await expect(who(page)).toHaveText("For you");
+      await expect(page.locator("[data-no-key]")).toHaveCount(0);
+      await device.context.close();
+    });
   }
 });
