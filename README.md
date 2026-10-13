@@ -8,7 +8,7 @@ Viky is a conditional payment on Monad. Someone puts money behind another person
 allocated in the recipient's name from day one, becomes theirs as verified progress accrues, and
 returns to the funder for whatever is not accomplished. Nobody ever profits from a missed day.
 
-**[The app](https://viky.cash)** · **3-minute video** (its link comes with the submission) · **[The judges page](https://viky.cash/judges)**
+**[The app](https://viky.cash)** · **3-minute video** (https://youtu.be/asIQgaaS2As) · **[The judges page](https://viky.cash/judges)**
 
 Built for Monad Metropolis, track Consumer Products & Payments.
 
