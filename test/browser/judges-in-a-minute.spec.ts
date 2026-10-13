@@ -29,7 +29,7 @@ test.describe("the judges page reads in a minute", () => {
   test("the first block is seven lines, and every fold opens on a few lines or a table", async ({ page }) => {
     await page.goto("/judges");
     const minute = page.locator("#minute");
-    await expect(minute.locator("dl > dt")).toHaveText(["What it is", "Who it is for", "Who has used it", "Proven", "Why Monad", "Where it runs", "One command"]);
+    await expect(minute.locator("dl > dt")).toHaveText(["What it is", "Who it is for", "Pilot activity", "Proven", "Why Monad", "Where it runs", "One command"]);
     const read = Number(await page.evaluate(wordsShown("#minute")));
     expect(read, `the first block shows ${read} words`).toBeLessThanOrEqual(MINUTE_AT_MOST);
     // What the block said at length is whole, one level down.

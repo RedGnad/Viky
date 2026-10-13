@@ -37,10 +37,9 @@ These studies are why the design is what it is.
 
 ## What using it with people showed us
 
-By 10 Oct 2026, four people outside the team had used Viky: two funded a
-gift, three opened one, and one who earned a gift used that money to offer one in turn. The judges page counts who
-funded a gift and who opened one, by account, from the index. The four included a grandma. Four things changed because
-of what happened:
+By 10 Oct 2026, four people outside the team had used Viky. Two funded a gift, and one who earned a gift used that
+money to offer one in turn. The judges page records events and accounts from the contracts; it does not infer a count
+of people from them. The four included a grandma. Four things changed because of what happened:
 
 - A link opened inside Instagram could not create an account. The page now has a button that opens it in the phone's
   own browser: shipped within two hours, on 1 Oct 2026.

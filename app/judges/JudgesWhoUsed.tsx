@@ -34,10 +34,9 @@ function Account({ account, founders, credited }: Readonly<{ account: string; fo
 }
 
 /**
- * Who has used Viky (the audit of 1 Oct 2026, D-08; the founder, 2 Oct 2026): the gifts, who funded them and who
- * opened them, what was earned and what went back, counted from the index of the contracts' events as this page is
- * served. The founder's own test accounts are named as his (src/pilot-accounts.ts), so his tries are never read as
- * other people's use.
+ * Pilot activity on-chain (the audit of 1 Oct 2026, D-08; the founder, 2 Oct 2026): the gifts, accounts and amounts
+ * counted from the contracts' events as this page is served. The founder's own test accounts are named as his
+ * (src/pilot-accounts.ts), so his tries are never read as other people's use.
  *
  * When the index cannot be read the block says so in a sentence and shows no figure: nothing here is a number typed
  * in, and an error of the index is never printed.
@@ -49,24 +48,23 @@ function Account({ account, founders, credited }: Readonly<{ account: string; fo
 export function JudgesWhoUsed({ index, credited }: Readonly<{ index: IndexRead | null; credited: ReadonlySet<string> | null }>) {
   if (!index) {
     return (
-      <Fold id="who" title="Who has used Viky">
+      <Fold id="who" title="Pilot activity on-chain">
         <p className={HELP} data-who-used="unread">
-          The gifts, who funded them and who opened them are counted from the index of the contracts&apos; events, and
-          the index could not be read just now and no earlier reading of it is kept, or no endpoint is set for this
-          deployment. So no count is shown here. The gifts themselves are on the contracts listed under Network, where
-          anybody can read them.
+          The contract events cannot be read just now and no earlier reading of them is kept, or no endpoint is set
+          for this deployment. So no activity record is shown here. The gifts themselves are on the contracts listed
+          under Network, where anybody can read them.
         </p>
       </Fold>
     );
   }
   if (!credited) {
     return (
-      <Fold id="who" title="Who has used Viky">
+      <Fold id="who" title="Pilot activity on-chain">
         <p className={HELP} data-who-used="credits-unread">
-          A gift paid from a judge credit is counted apart from who has used Viky, and the journal of judge credits
-          could not be read just now. So no count is shown here rather than one that would take a judge&apos;s try
-          for somebody&apos;s use. The gifts themselves are on the contracts listed under Network, where anybody can
-          read them.
+          A gift paid from a judge credit is kept apart from pilot activity, and the journal of judge credits could
+          not be read just now. So no activity record is shown here rather than one that would take a judge&apos;s try for
+          somebody else&apos;s use. The gifts themselves are on the contracts listed under Network, where anybody can read
+          them.
         </p>
       </Fold>
     );
@@ -75,12 +73,12 @@ export function JudgesWhoUsed({ index, credited }: Readonly<{ index: IndexRead |
   const usage = usageOf(index.gifts, founders, credited);
   const others = (side: { all: number; founders: number }) => side.all - side.founders;
   return (
-    <Fold id="who" title="Who has used Viky">
+    <Fold id="who" title="Pilot activity on-chain">
       <p className={HELP}>
         Counted from the index of the contracts&apos; events {whenIndexRead(index)}, at block{" "}
-        {index.block.toLocaleString("en-US")}.{index.keptFrom ? " The index did not answer just now." : ""} The founder&apos;s own test accounts are named as his: they are the{" "}
-        {countOfFounderAccounts()} listed in <code>src/pilot-accounts.ts</code>. Every other account is somebody
-        else&apos;s, and nothing more is said here of whose.
+        {index.block.toLocaleString("en-US")}.{index.keptFrom ? " The index did not answer just now." : ""} This is an event and account record, not a count of individual people. The founder&apos;s own test accounts are named as his: they are the{" "}
+        {countOfFounderAccounts()} listed in <code>src/pilot-accounts.ts</code>. Every other account is called
+        &quot;not the founder&apos;s&quot;; nothing here establishes who it belongs to.
         {usage.fromJudgeCredit > 0 ? (
           <span data-who-used="judge-credit">
             {" "}
@@ -90,7 +88,7 @@ export function JudgesWhoUsed({ index, credited }: Readonly<{ index: IndexRead |
         ) : null}
       </p>
       <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] [@media(min-width:600px)]:grid-cols-[14rem_1fr]">
-        <dt className={MUTED}>Gifts</dt>
+        <dt className={MUTED}>Gifts on-chain</dt>
         <dd className={HELP} data-who-used="gifts">
           {count(usage.gifts, "gift", "gifts")} made, {formatAusd(usage.funded)} put into them in all, {usage.opened} opened.{" "}
           {usage.onSecondVersion === 0 && usage.onThirdVersion === 0
@@ -110,12 +108,12 @@ export function JudgesWhoUsed({ index, credited }: Readonly<{ index: IndexRead |
             </span>
           ) : null}
         </dd>
-        <dt className={MUTED}>Who funded them</dt>
+        <dt className={MUTED}>Funding accounts, excluding judge-credit trials</dt>
         <dd className={HELP} data-who-used="funders">
           {count(usage.funders.all, "account", "accounts")}: {usage.funders.founders} the founder&apos;s test{" "}
           {usage.funders.founders === 1 ? "account" : "accounts"}, {others(usage.funders)} not his.
         </dd>
-        <dt className={MUTED}>Who opened them</dt>
+        <dt className={MUTED}>Recipient accounts, excluding judge-credit trials</dt>
         <dd className={HELP} data-who-used="recipients">
           {count(usage.recipients.all, "account", "accounts")}: {usage.recipients.founders} the founder&apos;s test{" "}
           {usage.recipients.founders === 1 ? "account" : "accounts"}, {others(usage.recipients)} not his.

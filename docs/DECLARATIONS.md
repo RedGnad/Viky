@@ -13,7 +13,7 @@ documentation in this repository from the author's written briefs, and it ran th
 lint, the policy tests, the build and the browser tests. The author directed all of it: what the product is, how it
 looks, what every screen says, and every decision that touches money. Nothing was deployed to mainnet and no real
 payment was made without his explicit decision. People from outside the project have opened gifts, one of them on
-an iPhone, from Instagram: the judges page counts them, under "Who has used Viky".
+an iPhone, from Instagram: the judges page records the related contract events and accounts under "Pilot activity on-chain".
 
 The contracts were reviewed on 2 and 3 Oct 2026 by a separate session of the same tool, given the contracts alone. Its
 tests are in `test/review`.

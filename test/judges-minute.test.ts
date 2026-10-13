@@ -62,9 +62,9 @@ test("a fold is a plain details under the section's own heading, so it opens wit
   assert.match(contents, /const named = decodeURIComponent\(window\.location\.hash\.slice\(1\)\);/);
 });
 
-test("the minute says what Viky is, for whom, who used it, where it runs, why Monad in three lines and one command, and adds no figure of its own", () => {
+test("the minute says what Viky is, for whom, its pilot activity, where it runs, why Monad in three lines and one command, and adds no figure of its own", () => {
   const minute = read("app/judges/JudgesMinute.tsx").replace(/\s+/g, " ");
-  for (const label of ["What it is", "Who it is for", "Who has used it", "Where it runs", "Why Monad", "One command"]) assert.ok(minute.includes(`<dt className={MUTED}>${label}</dt>`), label);
+  for (const label of ["What it is", "Who it is for", "Pilot activity", "Where it runs", "Why Monad", "One command"]) assert.ok(minute.includes(`<dt className={MUTED}>${label}</dt>`), label);
   // Who it is for is the README's own sentence, so the two never say two things.
   const readme = read("README.md").replace(/\s+/g, " ");
   assert.ok(readme.includes("the person who pays for somebody else's effort from a distance and cannot check it themselves"));

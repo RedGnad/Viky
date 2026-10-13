@@ -38,7 +38,7 @@ const dayOf = (iso: string) => dateInWords(new Date(iso).getTime(), "UTC");
  * beside what the token says it holds. The last one is the check a stranger can make without reading an event.
  *
  * No movement of money depends on the index, and the app reads it on this page only (once, in page.tsx, for this
- * block and for "Who has used Viky"). When it does not answer, the block shows the last answer the page kept, and
+ * block and for "Pilot activity on-chain"). When it does not answer, the block shows the last answer the page kept, and
  * says so with the block it had reached and the moment it was read (the founder, 12 Oct 2026; src/index-kept.ts).
  * When none is kept, or no endpoint is set for this deployment, the block says so in a sentence and shows no figure:
  * the reading answers nothing rather than an error (src/envio-index.ts).

@@ -6,9 +6,9 @@ import { creditedAccountsOf } from "../src/judge-credit";
 import { between, countOfFounderAccounts, FOUNDER_TEST_ACCOUNTS, founderAccounts, shortOf, usageOf } from "../src/pilot-accounts";
 
 /**
- * "Who has used Viky" on the judges page (the audit of 1 Oct 2026, D-08; the founder, 2 Oct 2026): the count is made
- * from the index's gifts and tells the founder's own test accounts from everybody else's, so one person testing is
- * never read as people using it.
+ * "Pilot activity on-chain" on the judges page (the audit of 1 Oct 2026, D-08; the founder, 2 Oct 2026): the record
+ * comes from the index's gifts and tells the founder's own test accounts from everybody else's, so one person testing
+ * is never read as people using it.
  */
 
 const FOUNDER = FOUNDER_TEST_ACCOUNTS[0];
@@ -129,23 +129,23 @@ test("a gift paid by an account the judge code credited is counted apart, and it
   assert.equal(Object.values(usage.between).reduce((sum, one) => sum + one, 0), usage.gifts, "each gift in exactly one class");
 });
 
-test("the judges page reads the journal of credits once, shows no count when it cannot, and prints the list's length", () => {
+test("the judges page reads the journal of credits once, shows no activity record when it cannot, and prints the list's length", () => {
   const page = readFileSync("app/judges/page.tsx", "utf8");
   assert.equal(page.match(/creditedByTheJudgeCode\(\)/g)?.length, 1, "read once, for the two blocks");
   assert.match(page, /const credited = judgeCredit \? await creditedByTheJudgeCode\(\)\.catch\(\(\) => null\) : new Set<string>\(\);/);
   assert.match(readFileSync("src/judge-credit.ts", "utf8"), /return creditedAccountsOf\(await loadJudgeCredits\(\)\);/);
   assert.match(page, /<JudgesWhoUsed index=\{index\} credited=\{credited\} \/>/);
   const who = readFileSync("app/judges/JudgesWhoUsed.tsx", "utf8");
-  // No journal, no count: who was credited is not known, and a judge's try would be read as somebody's use.
-  assert.match(who, /if \(!credited\) \{[\s\S]*?data-who-used="credits-unread"[\s\S]*?So no count is shown here rather than one that would take a judge&apos;s try\s+for somebody&apos;s use\./);
+  // No journal, no activity record: who was credited is not known, and a judge's try would be read as somebody's use.
+  assert.match(who, /if \(!credited\) \{[\s\S]*?data-who-used="credits-unread"[\s\S]*?So no activity record is shown here rather than one that would take a judge&apos;s try for\s+somebody else&apos;s use\./);
   assert.match(who, /Paid from a judge credit: \{usage\.between\["paid from a judge credit"\]\}\./);
   assert.match(who, /credited\.has\(one\) \? "credited by the judge code" : "not the founder's"/);
   const minute = readFileSync("app/judges/JudgesMinute.tsx", "utf8");
-  assert.match(minute, /\{usage\.fromJudgeCredit === 1 \? "was" : "were"\} paid from a judge credit and\{" "\}\s+\{usage\.fromJudgeCredit === 1 \? "is" : "are"\} counted apart\. \{others === 1 \? "The other was" : `The \$\{others\} others were`\} funded by/);
-  assert.match(minute, /"The journal of judge credits could not be read just now, so no count is given here: "/);
-  // Each count carries its own share that is not the founder's, in the founder's words of 10 Oct 2026.
+  assert.match(minute, /\{usage\.fromJudgeCredit === 1 \? "was" : "were"\} paid from a judge credit and kept apart\. The\{" "\}\s+\{others\} other \{others === 1 \? "gift was" : "gifts were"\} funded by/);
+  assert.match(minute, /"The journal of judge credits could not be read just now, so no activity record is given here: "/);
+  // Each account count carries its own share that is not the founder's.
   const said = minute.replace(/\s+/g, " ");
-  assert.ok(said.includes(`{count(usage.funders.all, "account", "accounts")}, {usage.funders.all - usage.funders.founders} of them not the founder&apos;s, and opened by {usage.recipients.all}, {usage.recipients.all - usage.recipients.founders} of them not his. {formatAusd(usage.earned)} earned, {formatAusd(usage.sentBack)} gone back. Counted from the index{" "} {index ? whenIndexRead(index) : "as this page is served"}:`));
+  assert.ok(said.includes(`{count(usage.funders.all, "account", "accounts")}, {usage.funders.all - usage.funders.founders} outside the founder&apos;s accounts; opened by {usage.recipients.all} accounts, {usage.recipients.all - usage.recipients.founders} outside his. {formatAusd(usage.earned)} earned, {formatAusd(usage.sentBack)} gone back. Counted from the index{" "} {index ? whenIndexRead(index) : "as this page is served"}:`));
   assert.doesNotMatch(said, /of which/);
   // "the seven listed" is the list's own length, never a word typed beside it.
   assert.equal(countOfFounderAccounts(), "seven");
