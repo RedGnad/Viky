@@ -125,9 +125,9 @@ test("the judges page shows the index beside the chain, and says so when it cann
     assert.doesNotMatch(source, /error\.message|catch \(error\)/, `${file} prints nothing of a failure`);
   }
   const who = readFileSync("app/judges/JudgesWhoUsed.tsx", "utf8");
-  assert.match(who, /if \(!index\) \{[\s\S]*?data-who-used="unread"[\s\S]*?no earlier reading of it is kept, or no endpoint is set for this\s+deployment\. So no count is shown here\./);
+  assert.match(who, /if \(!index\) \{[\s\S]*?data-who-used="unread"[\s\S]*?no earlier reading of them is kept, or no endpoint is set\s+for this deployment\. So no activity record is shown here\./);
   assert.match(readFileSync("app/judges/JudgesMera.tsx", "utf8"), /How many are written there could not be read from the index just now\./);
-  assert.match(readFileSync("app/judges/JudgesMinute.tsx", "utf8"), /The index of the contracts' events could not be read just now, so no count is given here: /);
+  assert.match(readFileSync("app/judges/JudgesMinute.tsx", "utf8"), /The index of the contracts' events could not be read just now, so the record is not shown here\. /);
   assert.match(readFileSync("src/envio-index.ts", "utf8"), /\} catch \{\s*return null;\s*\}\s*\}/, "the reading answers nothing, it never throws");
 });
 

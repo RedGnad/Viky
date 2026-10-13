@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 export const JUDGES_CONTENTS: ReadonlyArray<Readonly<{ id: string; says: string }>> = [
   { id: "try", says: "How to try it" },
   { id: "universities", says: "Universities" },
-  { id: "who", says: "Who has used Viky" },
+  { id: "who", says: "Pilot activity on-chain" },
   { id: "network", says: "Network and addresses" },
   { id: "verify", says: "Verify a credited day yourself" },
   { id: "conditions", says: "What each condition proves" },
@@ -36,7 +36,7 @@ function openSection(id: string): void {
  * contract that is not set) has no link.
  *
  * Any other link of the page that names a section opens it as well (the final audit of 9 Oct 2026): the four links of
- * the first block led to a fold that stayed shut, so "who has used Viky" showed a title and nothing under it. The page
+ * the first block led to a fold that stayed shut, so "pilot activity on-chain" showed a title and nothing under it. The page
  * listens to the address changing, which every such link does.
  */
 export function JudgesContents() {

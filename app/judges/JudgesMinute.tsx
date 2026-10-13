@@ -28,7 +28,7 @@ function Address({ address }: Readonly<{ address: string }>) {
 
 /**
  * The judges page in one minute (the audit of 1 Oct 2026, D-11; the founder, 2 Oct 2026): what Viky is, who it is
- * for, who has used it in one line, where it runs, why Monad in three lines, and one command. Everything here is said
+ * for, pilot activity in one line, where it runs, why Monad in three lines, and one command. Everything here is said
  * again, at length and with its source, in a section below; this block adds no claim of its own.
  *
  * The universities are two paths (the founder's mockup of 11 Oct 2026): the first gift at a university, with the two
@@ -37,9 +37,10 @@ function Address({ address }: Readonly<{ address: string }>) {
  * how many more are listed, counted from the list as the page is served. What a first proof meets exactly, held and
  * read or paid on a rule fixed ahead, is said under "Providers read through a witness".
  *
- * The figures of use are counted from the index as the page is served, the same count as "Who has used Viky"; when
- * the index does not answer the line says so and gives no figure. The figures of "Why Monad" are the measured ones
- * (src/measured.ts), each with its date in the section that states it in full.
+ * Pilot activity is counted from the index as the page is served. It is a record of events and accounts, rather than
+ * a count of people: founder and judge-credit trials are separated in its detail. When the index does not answer the
+ * line says so and gives no figure. The figures of "Why Monad" are the measured ones (src/measured.ts), each with
+ * its date in the section that states it in full.
  */
 export function JudgesMinute({
   index,
@@ -47,7 +48,7 @@ export function JudgesMinute({
   contracts,
 }: Readonly<{
   index: IndexRead | null;
-  /** The accounts the judge code credited, or nothing when its journal could not be read: no count is then given. */
+  /** The accounts the judge code credited, or nothing when its journal could not be read: no activity record is then given. */
   credited: ReadonlySet<string> | null;
   contracts: Readonly<{ daily: string | null; milestone: string | null; anchor: string | null; version: 1 | 2 | 3 }>;
 }>) {
@@ -67,23 +68,20 @@ export function JudgesMinute({
           The person who pays for someone else&apos;s effort from a distance and cannot check it: a year of studies, a
           language, a certificate, a race.
         </dd>
-        <dt className={MUTED}>Who has used it</dt>
+        <dt className={MUTED}>Pilot activity</dt>
         <dd className={HELP} data-minute="use">
           {usage ? (
             <>
-              <strong>{count(usage.gifts, "gift", "gifts")}</strong>, <strong>{formatAusd(usage.funded)}</strong> put into them. Outside the
-              founder&apos;s own tries: {count(usage.funders.all - usage.funders.founders, "account", "accounts")} funded a gift and{" "}
-              {usage.recipients.all - usage.recipients.founders} opened one.{" "}
-              {/* The index did not answer: the count is the last one kept, and the line says of when. */}
-              {index?.keptFrom ? <span data-minute="index-kept">Counted at the index&apos;s last reading, on {momentInWords(index.keptFrom)}. </span> : null}
+              The on-chain record separates founder and judge-credit trials from other activity; it is not a count of
+              people. {index?.keptFrom ? <span data-minute="index-kept">It was last read on {momentInWords(index.keptFrom)}. </span> : null}
             </>
           ) : index ? (
-            "The journal of judge credits could not be read just now, so no count is given here. "
+            "The journal of judge credits could not be read just now, so the record is not shown here. "
           ) : (
-            "The index of the contracts' events could not be read just now, so no count is given here. "
+            "The index of the contracts' events could not be read just now, so the record is not shown here. "
           )}
           <a className="underline" href="#who">
-            Who has used Viky
+            Pilot activity on-chain
           </a>
           .
         </dd>
@@ -170,29 +168,30 @@ export function JudgesMinute({
           <p data-minute-at-length="use">
             {usage ? (
               <>
-                {count(usage.gifts, "gift", "gifts")} made, {formatAusd(usage.funded)} put into them
+                The contracts record {count(usage.gifts, "gift", "gifts")} and {formatAusd(usage.funded)} put into
+                them. This is activity by event and account, not a count of individual people.
                 {/* A gift paid from a judge credit is a try of this page's own path: said, and counted apart. */}
                 {usage.fromJudgeCredit > 0 ? (
                   <span data-minute="judge-credit">
-                    . {usage.fromJudgeCredit} {usage.fromJudgeCredit === 1 ? "was" : "were"} paid from a judge credit and{" "}
-                    {usage.fromJudgeCredit === 1 ? "is" : "are"} counted apart. {others === 1 ? "The other was" : `The ${others} others were`} funded by{" "}
+                    {" "}{usage.fromJudgeCredit} {usage.fromJudgeCredit === 1 ? "was" : "were"} paid from a judge credit and kept apart. The{" "}
+                    {others} other {others === 1 ? "gift was" : "gifts were"} funded by{" "}
                   </span>
                 ) : (
-                  ": funded by "
+                  " Funded by "
                 )}
-                {/* Each count with its own share that is not the founder's (the founder's words, 10 Oct 2026). */}
-                {count(usage.funders.all, "account", "accounts")}, {usage.funders.all - usage.funders.founders} of them not the
-                founder&apos;s, and opened by {usage.recipients.all}, {usage.recipients.all - usage.recipients.founders} of them not
+                {/* Each account count carries its own share that is not the founder's. */}
+                {count(usage.funders.all, "account", "accounts")}, {usage.funders.all - usage.funders.founders} outside the
+                founder&apos;s accounts; opened by {usage.recipients.all} accounts, {usage.recipients.all - usage.recipients.founders} outside
                 his. {formatAusd(usage.earned)} earned, {formatAusd(usage.sentBack)} gone back. Counted from the index{" "}
                 {index ? whenIndexRead(index) : "as this page is served"}:{" "}
               </>
             ) : index ? (
-              "The journal of judge credits could not be read just now, so no count is given here: "
+              "The journal of judge credits could not be read just now, so no activity record is given here: "
             ) : (
-              "The index of the contracts' events could not be read just now, so no count is given here: "
+              "The index of the contracts' events could not be read just now, so no activity record is given here: "
             )}
             <a className="underline" href="#who">
-              who has used Viky
+              pilot activity on-chain
             </a>
             .
           </p>

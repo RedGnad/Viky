@@ -23,7 +23,7 @@ const rowTitles = (source: string) => [...source.matchAll(/<Row (?:key=\{[^}]+\}
 
 test("the first block says the page in seven lines, and what it said at length is whole, one level down", () => {
   const minute = read("app/judges/JudgesMinute.tsx");
-  assert.deepEqual([...minute.matchAll(/<dt className=\{MUTED\}>([^<]+)<\/dt>/g)].map((found) => found[1]), ["What it is", "Who it is for", "Who has used it", "Proven", "Why Monad", "Where it runs", "One command"]);
+  assert.deepEqual([...minute.matchAll(/<dt className=\{MUTED\}>([^<]+)<\/dt>/g)].map((found) => found[1]), ["What it is", "Who it is for", "Pilot activity", "Proven", "Why Monad", "Where it runs", "One command"]);
   // "Final in under a second" is the measure's own: the most blocks a step waits, at the measured block time.
   // True of a gift's usual path, and said of it (the founder, 13 Oct 2026): three steps are sent by a person's own
   // account, and they are written one level down, in the same words on the page's Monad fold and in the README.
@@ -37,11 +37,11 @@ test("the first block says the page in seven lines, and what it said at length i
   // The pass it points at is the register's, never a figure typed beside it.
   assert.match(minute, /<strong>\{TOULOUSE_PASSES\.onTheFixedRule\.secondsFromSignIn\} seconds<\/strong> after they signed in, with no review \(Toulouse,\{" "\}\s+\{TOULOUSE_PASSES\.onTheFixedRule\.day\}\)/);
   assert.doesNotMatch(minute, /\b(20|21) (seconds|gifts)/);
-  // The counts are the index's, with the founder's own tries taken out.
-  assert.match(minute, /\{count\(usage\.funders\.all - usage\.funders\.founders, "account", "accounts"\)\} funded a gift and\{" "\}\s+\{usage\.recipients\.all - usage\.recipients\.founders\} opened one\./);
+  // The pilot record is kept distinct from a claim about how many people used the product.
+  assert.match(minute, /The on-chain record separates founder and judge-credit trials from other activity; it is not a count of\s+people\./);
   // Nothing removed: the four answers as they stood, under one row.
   const atLength = minute.slice(minute.indexOf('<Row title="The same, at length">'), minute.indexOf("</Row>"));
-  for (const kept of ["Nobody profits from a missed day.", "a parent", 'data-minute="judge-credit"', "gone back. Counted from the index", "AUSD is on Monad with EIP-3009", "{FINALITY_GAP.fewestBlocks} or {FINALITY_GAP.mostBlocks} blocks after its own"]) assert.ok(atLength.includes(kept), kept);
+  for (const kept of ["Nobody profits from a missed day.", "a parent", 'data-minute="judge-credit"', "This is activity by event and account, not a count of individual people.", "gone back. Counted from the index", "AUSD is on Monad with EIP-3009", "{FINALITY_GAP.fewestBlocks} or {FINALITY_GAP.mostBlocks} blocks after its own"]) assert.ok(atLength.includes(kept), kept);
   // The universities are a fold of their own, and the first block leads to it.
   assert.ok(minute.includes('href="#universities"') && !minute.includes("<UniversityPath"));
   assert.match(read("app/judges/JudgesUniversities.tsx"), /<Fold id="universities" title="Universities: set up once, then paid on sign-in">/);

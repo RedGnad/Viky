@@ -547,10 +547,10 @@ test("the README's measured figures are src/measured.ts's own, and the documents
   // this. The version the second pass ran on was pinned on 9 Oct at 00:36 UTC, read on the provider's row on 13 Oct.
   assert.ok(readme.includes("it was pinned on 7 Oct 2026; since 8 Oct 2026 the rule in force is one fixed ahead of any proof, as the judges page says, and the version the pass of 9 Oct ran on was pinned that day at 00:36 UTC."));
   assert.ok(readFileSync("app/judges/page.tsx", "utf8").includes("The second case, since 8 Oct"));
-  // People are counted where they are counted, on the judges page: the README gave a number that was two days old.
-  assert.ok(readme.includes('People from outside the project have opened gifts, one of them on an iPhone, from Instagram: the judges page counts them, under "Who has used Viky".'));
+  // The judges page holds the live contract record; the README does not repeat a stale count of people.
+  assert.ok(readme.includes('People from outside the project have opened gifts, one of them on an iPhone, from Instagram: the judges page records the related contract events and accounts under "Pilot activity on-chain".'));
   assert.doesNotMatch(readme, /Two people from outside the project/);
-  assert.match(readFileSync("app/judges/JudgesWhoUsed.tsx", "utf8"), /<Fold id="who" title="Who has used Viky">/);
+  assert.match(readFileSync("app/judges/JudgesWhoUsed.tsx", "utf8"), /<Fold id="who" title="Pilot activity on-chain">/);
   assert.doesNotMatch(readme, /it is the one pinned on 7 Oct 2026/);
   // The one dev page that opens to anybody is said to.
   assert.match(readFileSync("docs/PAGES-AND-ROUTES.md", "utf8"), /One exception, `\/dev\/rampnow`, opens to anybody, in production too/);
