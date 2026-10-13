@@ -432,7 +432,7 @@ export const DUOLINGO_DAILY: Condition = {
   family: "learn",
   name: "A Duolingo lesson each day",
   under: "Languages, math, music or chess",
-  help: "Read each morning from their public Duolingo profile, with nothing to install: it proves the account did the lesson.",
+  help: "Read from their public Duolingo profile the day the lesson is done, with nothing to install: it proves the account did the lesson.",
   checked: { from: "their public Duolingo profile", when: "every day, for the day before", counts: "a lesson the account did that day", they: "connect Duolingo once" },
   link: {
     kind: "username",
@@ -1169,7 +1169,7 @@ export const WCA_TIME_LINE: Condition = {
 /**
  * "Finish a marathon" (D273): a milestone of the Move family, read for the person from the timing company's own
  * public results page, as an examination result is read from its board. The funder writes the runner's name and
- * chooses the race; the person enters their bib before the start; the reading service reads the runner's own line.
+ * chooses the race; the person enters their bib before the day of the race; the reading service reads the runner's own line.
  * Being built until goal 30 is signed and the reading service runs the Breizh Chrono source.
  */
 export const MARATHON_FINISH_LINE: Condition = {
@@ -1188,13 +1188,13 @@ export const MARATHON_FINISH_LINE: Condition = {
   name: "Finish a race",
   under: "A marathon, a half or a 10 km",
   help: "Their line on the timing company's results page, read for them: the name, the bib and the official time. It proves the result.",
-  checked: { from: "the timing company's results page", when: "after the finish", counts: "the line with their bib and name", they: "enter their bib before the start" },
-  link: { kind: "link", label: "Your bib number", help: "Enter the number on your bib on your gift's page before the race starts. After the finish, Viky reads your line on the results page." },
+  checked: { from: "the timing company's results page", when: "after the finish", counts: "the line with their bib and name", they: "enter their bib before race day" },
+  link: { kind: "link", label: "Your bib number", help: "Enter the number on your bib on your gift's page before the day of the race. After the finish, Viky reads your line on the results page." },
   reading: "breizh-chrono-runner",
   words: {
     earnedDay: "When they finish, all of this becomes theirs",
-    connect: "Opened. Enter your bib number before the race starts; after the finish, Viky reads your line from the race's timing company.",
-    doIt: "Enter your bib number here before the start, then run. After the finish, Viky reads your line on the timing company's results page.",
+    connect: "Opened. Enter your bib number before the day of the race; after the finish, Viky reads your line from the race's timing company.",
+    doIt: "Enter your bib number here before the day of the race, then run. After the finish, Viky reads your line on the timing company's results page.",
     eachDay: "the day the result is read",
     preview: "Finish your race: the gift is yours when the results page says you did.",
   },
@@ -1521,7 +1521,9 @@ export const FRONTIERS: readonly Frontier[] = [
     name: "Being enrolled at a university",
     state: "no-public-page",
     why: "Enrolment lives in the university's own student portal, which opens for the student and for nobody else. Nothing Viky could read without the student signing in says who is enrolled.",
-    building: "staying enrolled, shown by the person from their own student portal, with the two words SHOWN BY THEM on it.",
+    // Staying enrolled at a university is open and has paid (the founder, 13 Oct 2026): what is still being built on
+    // this frontier is enrolment in China, read from the Ministry's own register, which prints under its own family.
+    building: "enrolment in China, shown by the person from their own CHSI report, with the two words SHOWN BY THEM on it; staying enrolled at a university is open, under School & studies.",
     conditionId: "university-enrollment-shown",
   },
   {

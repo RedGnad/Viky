@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test, { after, before, beforeEach } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import { tellAboutDays, tellAboutMilestone, tellAboutSetUp, type GiftFacts, type PushRefusal, type PushSent, type TellingDeps } from "../src/morning-send";
@@ -83,8 +84,30 @@ test("a returned day tells both sides too, because that is the day nobody would 
   assert.equal(await tellAboutDays("2", [{ day: 20_709, outcome: "returned" }], deps(sent)), 2);
   assert.deepEqual(
     sent.map((entry) => entry.message).sort(),
-    ["Yesterday came back to you: $3.57.", "Yesterday went back to Mom. Today still counts."].sort(),
+    ["A missed day came back to you: $3.57.", "A missed day went back to Mom."].sort(),
+    "no day is named, and nothing is said of today where the gift's last day is not known",
   );
+});
+
+test("after a day that went back, today still counts only while the gift has a day running", async () => {
+  const DAY = 86_400_000;
+  const through = (runsThroughDay: number | undefined, sent: Sent[]): TellingDeps => ({ ...deps(sent), facts: async () => ({ ...FACTS, runsThroughDay }) });
+  // The gift runs through day 20,712, and the day sent back is told on day 20,711: today is a day of the gift.
+  await bothSides("12");
+  let sent: Sent[] = [];
+  assert.equal(await tellAboutDays("12", [{ day: 20_709, outcome: "returned" }], through(20_712, sent), 20_711 * DAY + 7 * 3_600_000), 2);
+  assert.deepEqual(sent.map((entry) => entry.message).sort(), ["A missed day came back to you: $3.57.", "A missed day went back to Mom. Today still counts."].sort());
+  // Its last day has passed when its last day goes back: nothing is said of today.
+  await bothSides("13");
+  sent = [];
+  assert.equal(await tellAboutDays("13", [{ day: 20_712, outcome: "returned" }], through(20_712, sent), 20_714 * DAY + 7 * 3_600_000), 2);
+  assert.deepEqual(sent.map((entry) => entry.message).sort(), ["A missed day came back to you: $3.57.", "A missed day went back to Mom."].sort());
+  // A gift finalised or cancelled carries no last day (src/morning-send-live.ts), and says nothing of today either.
+  await bothSides("14");
+  sent = [];
+  assert.equal(await tellAboutDays("14", [{ day: 20_709, outcome: "returned" }], through(undefined, sent), 20_711 * DAY), 2);
+  assert.ok(sent.every((entry) => !entry.message.includes("Today")));
+  assert.match(readFileSync("src/morning-send-live.ts", "utf8"), /const runs = gift\.finalised \|\| gift\.cancelled \|\| gift\.endDay === 0 \? \{\} : \{ runsThroughDay: gift\.endDay \};/);
 });
 
 test("several days settled at once speak of the last of them, once", async () => {

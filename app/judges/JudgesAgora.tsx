@@ -76,12 +76,27 @@ export async function JudgesAgora() {
       <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] [@media(min-width:600px)]:grid-cols-[14rem_1fr]">
         <dt className={MUTED}>The network, paid by Viky</dt>
         <dd className={HELP} data-cost="network">
-          Every step of a gift is sent and paid for by Viky&apos;s relayer (<span className="[overflow-wrap:anywhere]">{RELAYER_FEES.account}</span>):
-          neither person ever holds MON. Read from the chain on {RELAYER_FEES.readAt} with <code>{RELAYER_FEES.command}</code>, as the limit
+          On a gift&apos;s usual path neither person holds MON or reads a fee: Viky&apos;s relayer (<span className="[overflow-wrap:anywhere]">{RELAYER_FEES.account}</span>)
+          sends and pays each step. Read from the chain on {RELAYER_FEES.readAt} with <code>{RELAYER_FEES.command}</code>, as the limit
           each transaction declared times the price it paid, which is what Monad charges: {RELAYER_FEES.transactions} transactions,{" "}
           {RELAYER_FEES.totalMon} MON in all. By step, on average:{" "}
           {RELAYER_FEES.steps.map((step) => `${step.says}, ${step.averageMon} MON (${step.sent} sent)`).join("; ")}. All of them on the
           first version of the contracts: no gift had run on the second when this was read.
+        </dd>
+        <dt className={MUTED}>Three steps a person&apos;s own account sends</dt>
+        <dd className={HELP} data-cost="own-sends">
+          <span className="block">
+            Taking back a gift nobody has opened: the contract asks for the funder in person, so the relayer sends that account what
+            its transaction costs, and the account sends it.
+          </span>
+          <span className="block">
+            Paying by card through Mercuryo: it delivers MON, which the funder&apos;s account changes for AUSD in a transaction it sends
+            and pays for.
+          </span>
+          <span className="block">
+            A payout onto a card: the account&apos;s dollars are changed for MON, which the account sends to the card service itself, and
+            what that cost is said in dollars afterwards.
+          </span>
         </dd>
         <dt className={MUTED}>The same, in dollars</dt>
         <dd className={HELP} data-cost="dollars">

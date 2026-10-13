@@ -87,8 +87,8 @@ ended from the recipient's account at 03:44 UTC: 0.187 AUSD went to that account
 missed went back to the funder (5.423 AUSD), and the contract holds nothing. Its six transactions are listed in the
 [README](../README.md#what-has-run-with-real-money).
 `cast call 0x591d76863177E70FfcA2C793212d4715A367Ec70 "nextGiftId()(uint256)" --rpc-url https://rpc.monad.xyz` answers
-1001 while that gift is the only one. What has not run on it yet: a missed day going back, and a gift reaching its
-last day.
+1003 on 13 Oct 2026: gift 1000 above, and gifts 1001 and 1002, two tries the author made on 12 Oct 2026 between his
+own accounts, both ended since. What has not run on it yet: a missed day going back, and a gift reaching its last day.
 
 An independent review of 2 Oct 2026 was read before any deployment, and the contracts were corrected from it. A
 pause cannot be sent again while it runs, nor for seven days after it ended, so it cannot hold a funder's unearned

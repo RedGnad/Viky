@@ -141,7 +141,7 @@ test("a message sent outside the app speaks the currency of the account it is se
     { account: "0x000000000000000000000000000000000000B0B0", message: "Yesterday counted. $3.57 is yours." },
   ]);
   // An amount that opens its sentence takes a capital; one inside a sentence does not.
-  assert.equal(morningSentence("funder", { kind: "day", outcome: "returned", amount: "about €2.86" }, { recipientName: null, funderName: null }), "Yesterday came back to you: about €2.86.");
+  assert.equal(morningSentence("funder", { kind: "day", outcome: "returned", amount: "about €2.86" }, { recipientName: null, funderName: null }), "A missed day came back to you: about €2.86.");
   // The real thing reads the account's own currency and the day's rate.
   const live = readFileSync("src/morning-send-live.ts", "utf8");
   assert.match(live, /speak: spokenFor,/);

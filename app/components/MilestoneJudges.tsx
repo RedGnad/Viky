@@ -47,7 +47,7 @@ export function MilestoneJudges() {
               </>
             ) : null}
             . Owned by the same Safe as the other contracts, two signatures of three, read from the chain at the head of this page
-            and in the contracts section, and never by the key that deployed it. Gift numbers start at 1,000,000, so no number can mean a daily gift
+            and in the contracts section. Gift numbers start at 1,000,000, so no number can mean a daily gift
             and a milestone gift at once.
             {second
               ? ` This is the first version, where the first real milestone gifts ran: it takes no new gift since 2 Oct 2026. A milestone gift made today is on the second version, ${second}, which keeps the rule below and continues the numbers.`

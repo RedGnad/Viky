@@ -100,16 +100,21 @@ test("a climb leads with what is left, and where they stand is the figure", () =
 
 test("a day counted is said in the morning message's own words, without its money", () => {
   assert.equal(liveOf(input({ lastJudged: "earned" })).headline, "Yesterday counted.");
-  assert.equal(liveOf(input({ lastJudged: "returned" })).headline, "Yesterday went back to Mom. Today still counts.");
-  assert.equal(liveOf(input({ lastJudged: "returned", voice: "funder" })).headline, "Yesterday came back to you. Today still counts.");
+  // A day that went back is the day before yesterday at the soonest, so no day is named, and "Today still counts."
+  // is said only while the gift still has a day running (the founder, 13 Oct 2026).
+  assert.equal(liveOf(input({ lastJudged: "returned", todayCounts: true })).headline, "A missed day went back to Mom. Today still counts.");
+  assert.equal(liveOf(input({ lastJudged: "returned", voice: "funder", todayCounts: true })).headline, "A missed day came back to you. Today still counts.");
+  assert.equal(liveOf(input({ lastJudged: "returned" })).headline, "A missed day went back to Mom.");
+  assert.equal(liveOf(input({ lastJudged: "returned", voice: "funder" })).headline, "A missed day came back to you.");
+  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /todayCounts: Boolean\(daily && daily\.daysLeft > 0 && !gift\.finished && !gift\.cancelled\),/);
   assert.equal(liveOf(input({ started: false })).headline, "Nothing has been counted yet.");
   // A gift settled before Viky kept a record of each day: the totals are true, the last day is not known.
   assert.equal(liveOf(input({ lastJudged: null })).headline, "It is counting.");
-  // Yesterday went back to the funder: "to you" is true of the funder alone, never of a reader of the link.
-  assert.equal(liveOf(input({ lastJudged: "returned", voice: "funder" })).headline, "Yesterday came back to you. Today still counts.");
-  assert.equal(liveOf(input({ lastJudged: "returned", voice: "reader" })).headline, "Yesterday went back to Mom. Today still counts.");
-  assert.equal(liveOf(input({ lastJudged: "returned", voice: "recipient" })).headline, "Yesterday went back to Mom. Today still counts.");
-  assert.equal(liveOf(input({ lastJudged: "returned", voice: "reader", funderName: null })).headline, "Yesterday went back to the person who offered it. Today still counts.", "never 'them', which could be either of the two");
+  // A day went back to the funder: "to you" is true of the funder alone, never of a reader of the link.
+  assert.equal(liveOf(input({ lastJudged: "returned", voice: "funder", todayCounts: true })).headline, "A missed day came back to you. Today still counts.");
+  assert.equal(liveOf(input({ lastJudged: "returned", voice: "reader", todayCounts: true })).headline, "A missed day went back to Mom. Today still counts.");
+  assert.equal(liveOf(input({ lastJudged: "returned", voice: "recipient", todayCounts: true })).headline, "A missed day went back to Mom. Today still counts.");
+  assert.equal(liveOf(input({ lastJudged: "returned", voice: "reader", funderName: null, todayCounts: true })).headline, "A missed day went back to the person who offered it. Today still counts.", "never 'them', which could be either of the two");
   // A proof shown from the person's own account is shown, never shared (D162).
   assert.equal(liveOf(input({ moment: "awaitingProof", shown: true, source: "ETS" })).headline, "Show it from your own ETS account, and it is yours.");
   assert.equal(liveOf(input({ moment: "awaitingProof", shown: true, voice: "funder" })).headline, "Léa has not shown it yet.");

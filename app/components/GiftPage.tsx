@@ -508,6 +508,8 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
     target: milestone?.target ?? null,
     started: milestone ? milestone.connected : Boolean(daily && daily.creditedDays + daily.missedDays > 0),
     lastJudged,
+    // The server's own count of the days left, so no clock of this device decides it: a day is still running.
+    todayCounts: Boolean(daily && daily.daysLeft > 0 && !gift.finished && !gift.cancelled),
     shown: condition?.nature === "shown",
     waitsForResults: resultsWait,
     shape: milestone ? (milestone.shape === "certificate" ? "stamp" : "climb") : "days",

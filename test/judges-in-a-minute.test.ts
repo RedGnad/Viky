@@ -25,7 +25,14 @@ test("the first block says the page in seven lines, and what it said at length i
   const minute = read("app/judges/JudgesMinute.tsx");
   assert.deepEqual([...minute.matchAll(/<dt className=\{MUTED\}>([^<]+)<\/dt>/g)].map((found) => found[1]), ["What it is", "Who it is for", "Who has used it", "Proven", "Why Monad", "Where it runs", "One command"]);
   // "Final in under a second" is the measure's own: the most blocks a step waits, at the measured block time.
-  assert.ok(minute.includes("Neither person holds MON or reads a fee. A step is final in under a second. One signature funds a gift."));
+  // True of a gift's usual path, and said of it (the founder, 13 Oct 2026): three steps are sent by a person's own
+  // account, and they are written one level down, in the same words on the page's Monad fold and in the README.
+  assert.match(minute, /On a gift&apos;s usual path neither person holds MON or reads a fee: Viky&apos;s relayer sends and pays each step\. A step is\s+final in under a second\. One signature funds a gift\./);
+  assert.doesNotMatch(minute + read("app/judges/JudgesAgora.tsx") + read("README.md"), /pays every step|Every step of a gift|ever holds MON|Nobody but Viky pays a fee, and/);
+  for (const text of [minute, read("app/judges/JudgesAgora.tsx"), read("README.md")]) {
+    const said = text.replace(/&apos;/g, "'").replace(/\s+/g, " ");
+    for (const step of ["a gift nobody has opened: the contract asks for the funder in person", "through Mercuryo: it delivers MON, which the funder's account changes for AUSD", "the account's dollars are changed for MON, which the account sends to the card service itself"]) assert.ok(said.toLowerCase().includes(step.toLowerCase()), step);
+  }
   assert.ok(FINALITY_GAP.mostBlocks * BLOCK_TIME.seconds < 1, `${FINALITY_GAP.mostBlocks} blocks of ${BLOCK_TIME.seconds} s`);
   // The pass it points at is the register's, never a figure typed beside it.
   assert.match(minute, /<strong>\{TOULOUSE_PASSES\.onTheFixedRule\.secondsFromSignIn\} seconds<\/strong> after they signed in, with no review \(Toulouse,\{" "\}\s+\{TOULOUSE_PASSES\.onTheFixedRule\.day\}\)/);
