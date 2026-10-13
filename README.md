@@ -72,6 +72,14 @@ pool, not another user.
 Money earned leaves the way the person's country allows: to a bank account, to a card, to a mobile money number, as
 phone credit, as a gift card, or on to another Viky account.
 
+**Pay in.** Viky first offers Rampnow where it serves the payer: a card payment delivers USDC on Monad and Viky's
+converter changes it into AUSD for the gift. Ramp can deliver AUSD directly; Mercuryo is the final fallback, delivering
+MON that the funder's account changes to AUSD.
+
+**Spend or withdraw.** Earned money can go to a bank through Ramp or to a card through Mercuryo. Where they are
+offered, it can also go to mobile money through Switch Labs, or to phone credit, data or a gift card through Bitrefill.
+The country, available operator or service, and price are checked before any money moves.
+
 ## What we know about the two people
 
 The one who pays funds another person's studies or training from a distance; the one who is read asked for nothing.
