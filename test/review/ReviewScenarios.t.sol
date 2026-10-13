@@ -7,8 +7,10 @@ import {MilestoneGiftV2} from "../../contracts/MilestoneGiftV2.sol";
 import {MockAUSD} from "../mocks/MockAUSD.sol";
 import {V2Kit} from "../kit/V2Kit.sol";
 
-/// @notice The independent review of 2 Oct 2026: scenarios written by the reviewer, not by the authors.
-/// @dev    Kept as the reviewer wrote them (annex A of the review), with two changes by the authors once the
+/// @notice The review of 2 Oct 2026, made by a separate session of the AI tool this repository was built with, given
+///         the contracts alone: scenarios written by that session, "the reviewer", and not by the sessions that
+///         wrote the contracts.
+/// @dev    Kept as the reviewer wrote them (annex A of the review), with two changes made once the
 ///         contracts were corrected, and no other:
 ///
 ///         1. Seven scenarios passed because a defect was there, and the reviewer wrote that they must fail once
@@ -654,7 +656,7 @@ contract ReviewScenarios is V2Kit {
         daily.withdrawEarnedWithIntent(id, w);
     }
 
-    // --- added by the authors: the seven scenarios above that proved a defect now fail, each as named here -----
+    // --- added after the corrections: the seven scenarios above that proved a defect now fail, each as named here -
 
     /// @dev Runs a scenario as its own call, and requires that it stops on exactly this refusal.
     function _nowFailsWith(bytes4 scenario, bytes4 refusal, string memory what) private {

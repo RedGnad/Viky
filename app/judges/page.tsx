@@ -720,7 +720,7 @@ export default async function JudgesPage() {
                 ? ` Of this cycle's fetches, ${BEFORE_THE_JOURNAL.started} were started before the journal began and each gave a proof, counted on 3 Oct 2026 from the reading service's logs: two on 1 Oct, two on 2 Oct, one on 3 Oct.`
                 : ""}
               {reclaimUse?.from === OUTSIDE_THE_JOURNAL.cycleFrom
-                ? ` ${OUTSIDE_THE_JOURNAL.started} more were asked on 12 Oct 2026 from a developer's machine, outside the journal and counted here: one attested read, without a gift, of each public source that had never passed a real one, and one of a race run the day before, the Chicago Marathon. ${OUTSIDE_THE_JOURNAL.proved} gave a proof, and one met a redirect.`
+                ? ` ${OUTSIDE_THE_JOURNAL.started} more were asked on 12 Oct 2026 from the author's machine, outside the journal and counted here: one attested read, without a gift, of each public source that had never passed a real one, and one of a race run the day before, the Chicago Marathon. ${OUTSIDE_THE_JOURNAL.proved} gave a proof, and one met a redirect.`
                 : ""}
               {reclaimUse ? <span data-cycle-left> {readingsLeftInWords(reclaimUse)}</span> : null}{" "}
               <span data-september-fault>
@@ -1020,7 +1020,7 @@ export default async function JudgesPage() {
             lost between two readings never settles.
           </Row>
         </RowGroup>
-        <RowGroup title="Viky&apos;s own keys and steps" about="What our keys can do, and what happens when a step fails.">
+        <RowGroup title="Viky&apos;s own keys and steps" about="What our keys can do, and what happens when a step fails. The audit named here was made by sessions of the AI tool Viky was built with, reading the code.">
           <Row title={<>The relayer&apos;s one key, found by the audit of 27 Sep 2026</>}>
             Every relayed step is sent by one
             key, and the servers that send them do not share a count of its transactions. Two steps sent at the same moment

@@ -4,17 +4,18 @@ pragma solidity 0.8.30;
 import {GiftEscrowV3} from "../../contracts/GiftEscrowV3.sol";
 import {ReviewerRig} from "./ReviewerRigV3.sol";
 
-/// @notice The first day of a gift when its first reading passes midnight (the independent re-read of 3 Oct 2026,
-///         finding C1, and the founder's decision the same day: corrected in the contract).
+/// @notice The first day of a gift when its first reading passes midnight (the re-read of 3 Oct 2026 by a separate
+///         session of the AI tool this repository was built with, finding C1, and the founder's decision the same
+///         day: corrected in the contract).
 ///
 ///         The first day was the day the reading was observed. Observed at 23:50 UTC and carried by a block of 00:10,
 ///         it opened a first day already over: no money was lost, the catch-up window paid it the day after, but a
 ///         person at one lesson a day was then paid a day late for the whole gift, which is what the third version
 ///         exists to end. The first day is now the day of the block that carries the reading.
 ///
-///         The first four tests are the reviewer's own, as he wrote them on a copy of the contract carrying the
+///         The first four tests are the reviewer's own, as written on a copy of the contract carrying the
 ///         one line (`GiftEscrowV3Fix`), run here on the contract itself. The first of them failed on the contract
-///         as it stood before this correction. The last two are what the correction costs, said by him and tested here: the
+///         as it stood before this correction. The last two are what the correction costs, said by the reviewer and tested here: the
 ///         first day now depends on the block and not on a signed figure, so whoever sends the transaction can,
 ///         by holding it a few minutes around midnight, move the first day a day later. That is to the recipient's
 ///         advantage and costs the funder nothing.
@@ -29,13 +30,13 @@ contract FirstDayAcrossMidnightV3Test is ReviewerRig {
         first(e, id, BASE, observed);
     }
 
-    /// @dev His `test_F1_FAILS_onV3_theFirstDayIsOverBeforeTheGiftStarts`: expected 20001, the contract gave 20000.
+    /// @dev The reviewer's `test_F1_FAILS_onV3_theFirstDayIsOverBeforeTheGiftStarts`: expected 20001, the contract gave 20000.
     function test_F1_theFirstDayIsTheDayTheGiftStartsOn() public {
         uint256 id = acrossMidnight(v3);
         eq(v3.getGift(id).startDay, today(), "the first day is the day the gift starts on");
     }
 
-    /// @dev His `test_F1_passes_onTheCorrection`.
+    /// @dev The reviewer's `test_F1_passes_onTheCorrection`.
     function test_F1_passes_onTheCorrection() public {
         uint256 id = acrossMidnight(v3);
         eq(v3.getGift(id).startDay, today(), "the first day is the day the gift starts on");
@@ -46,7 +47,7 @@ contract FirstDayAcrossMidnightV3Test is ReviewerRig {
         eq(v3.getGift(id).settledThroughDay, D0 + 1, "the first day");
     }
 
-    /// @dev The correction keeps every guarantee of his point 1, and no reading panics on it.
+    /// @dev The correction keeps every guarantee of the reviewer's point 1, and no reading panics on it.
     function testFuzz_F1_correction_walk(uint256 seed) public {
         walk(v3, seed);
     }
@@ -55,7 +56,7 @@ contract FirstDayAcrossMidnightV3Test is ReviewerRig {
         laterReading(v3, seed, false);
     }
 
-    // --- what the correction costs: the counterpart, written by the author from the reviewer's own words -------
+    // --- what the correction costs: the counterpart, written from the reviewer's own words ----------------------
 
     /// @dev The same reading, observed at 23:59:00. Sent at once it opens the day it was observed; held for a
     ///      minute and a half, past midnight, it opens the next. Nothing else of the gift differs.

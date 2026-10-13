@@ -7,14 +7,14 @@ import {MilestoneGiftV2} from "../../contracts/MilestoneGiftV2.sol";
 import {MockAUSD} from "../mocks/MockAUSD.sol";
 import {V3Kit} from "../kit/V3Kit.sol";
 
-/// @notice The scenarios of the independent review of 2 Oct 2026 (test/review/ReviewScenarios.t.sol), run again with
+/// @notice The scenarios of the review of 2 Oct 2026 (test/review/ReviewScenarios.t.sol), run again with
 ///         the third daily contract in the daily contract's place. The reviewer wrote them for the second version;
 ///         the third changes one rule, the day a reading credits, and nothing a scenario attacks. So each daily
 ///         scenario is here under the name `V3`, with its dates a day earlier where it counted days from the day
 ///         after the connection, and each says so. Two refusals are added to the scenario of signatures: an opening
 ///         and a withdrawal signed under the second version's domain are not signatures here. The milestone
 ///         scenarios run as they are, against the milestone contract the third version does not touch.
-/// @dev    What the first file says of itself still holds: kept as the reviewer wrote them (annex A of the review), with two changes by the authors once the
+/// @dev    What the first file says of itself still holds: kept as the reviewer wrote them (annex A of the review), with two changes made once the
 ///         contracts were corrected, and no other:
 ///
 ///         1. Seven scenarios passed because a defect was there, and the reviewer wrote that they must fail once
@@ -671,7 +671,7 @@ contract ReviewScenariosV3 is V3Kit {
         daily.withdrawEarnedWithIntent(id, w);
     }
 
-    // --- added by the authors: the seven scenarios above that proved a defect now fail, each as named here -----
+    // --- added after the corrections: the seven scenarios above that proved a defect now fail, each as named here -
 
     /// @dev Runs a scenario as its own call, and requires that it stops on exactly this refusal.
     function _nowFailsWith(bytes4 scenario, bytes4 refusal, string memory what) private {

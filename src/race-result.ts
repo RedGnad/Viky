@@ -134,14 +134,14 @@ export async function readRaceResultRow(race: MarathonRace, chosen: MarathonEven
   return { account: raceResultAccount(config, race, chosen, bib, columns), row: { runner: (row[columns.name] ?? "").trim(), official: (row[columns.time] ?? "").trim() } };
 }
 
-/** "2:08:24", "12:29.14", "1:05:32.5": seconds under a day, rounded down to the second; nothing for an empty cell or a status. */
+/** "2:58:41", "12:29.14", "1:05:32.5": seconds under a day, rounded down to the second; nothing for an empty cell or a status. */
 export function raceResultSeconds(printed: string): number | undefined {
   const match = /^(?:(\d{1,2}):)?(\d{1,2}):(\d{2})(?:[.,](\d{1,3}))?$/.exec(printed.trim());
   if (!match) return undefined;
   const hours = match[1] !== undefined ? Number(match[1]) : 0;
   const minutes = Number(match[2]);
   const seconds = Number(match[3]);
-  // "12:29.14" is minutes, seconds and hundredths; "2:08:24" is hours, minutes and seconds.
+  // "12:29.14" is minutes, seconds and hundredths; "2:58:41" is hours, minutes and seconds.
   const total = match[1] !== undefined ? hours * 3600 + minutes * 60 + seconds : minutes * 60 + seconds;
   return total > 0 && total < 24 * 3600 ? total : undefined;
 }

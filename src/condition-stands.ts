@@ -8,7 +8,8 @@ import { CATALOGUE } from "./sentences";
  * the public page "What Viky can check" and the judges page. Four phrases, read from the register and from the count
  * of real proofs:
  *
- * - one real proof or more: paid with real money, with its count where the count is read as the page is served;
+ * - one real proof that paid, or more: paid with real money, with its count where the count is read as the page is
+ *   served (a first reading pays nothing and is not one, src/proof-counts.ts);
  * - read on its real page under attestation with no gift, on the day the register names: said read, with that day;
  * - nothing yet: what the line waits for when it waits for something (a year's results, a device), and otherwise that
  *   nobody has shown, connected or been read on one yet;
@@ -34,7 +35,7 @@ export const READY_ON_REQUEST = "Ready two days after a first gift.";
 type Line = Pick<Condition, "id" | "nature" | "state">;
 
 /**
- * Where a line stands. `counts` is the count of real proofs a line, or nothing when it could not be read; `waiting` is
+ * Where a line stands. `counts` is the count of real proofs that paid a line, or nothing when it could not be read; `waiting` is
  * the lines on request that the operator has not opened yet (src/on-request.ts).
  */
 export function standOf(condition: Line, counts: ReadonlyMap<string, number> | null, waiting: ReadonlySet<string>): Stand {

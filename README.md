@@ -351,7 +351,15 @@ with `MONAD_RPC_URL` set it also runs the mainnet fork tests against the real AU
 ## Declarations, environment and licences
 
 - **AI tools.** Viky was built with an AI coding tool, Claude Code (Anthropic): it wrote most of the code, the tests
-  and the documentation from the author's written briefs, and the author directed all of it.
+  and the documentation from the author's written briefs, and the author directed all of it. The contracts were
+  reviewed on 2 and 3 Oct 2026 by a separate session of the same tool, given the contracts alone. Its tests are in
+  `test/review`. In this repository's comments, pull requests and past documents, "the developer", "the other
+  developer", "the advisor" and "the reviewer" are sessions of that same tool. The founder is the one person. The
+  audits those texts and the judges page cite by their day (27 Sep, 1 Oct, 8, 9 and 12 Oct 2026) were made the same
+  way: sessions of that tool reading the code. A second AI tool was used once: `reclaim-portal-agent`, run with free
+  OpenRouter models on 28 Sep 2026 to look up the student portals of twenty universities, each of which was then opened
+  by hand (`docs/reclaim/directory-universities.md`). A third is in the product and is not Viky's: Reclaim's own agent,
+  which writes the first rule a university's portal is read by.
 - **Pre-existing code.** The verification plumbing was ported from Lock-in, an earlier project by the same author
   (37 files, about 7,200 of the 109,700 lines), and the app started from Monad's PWA template,
   `monad-developers/next-serwist-privy-embedded-wallet`. Everything else was written between 10 Sep 2026 and the
