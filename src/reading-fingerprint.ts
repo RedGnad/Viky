@@ -29,6 +29,6 @@ export function fingerprintOfContents(contents: readonly string[]): string {
 /**
  * What this build of the app reads with. `test/reading-fingerprint.test.ts` works it out from the two files and
  * fails if this line is not it, so the number cannot quietly fall behind the code: a commit that touches either file
- * has to change this line, which is the moment to redeploy the worker (docs/OPERATIONS.md).
+ * has to change this line, which is the moment to redeploy the worker (README.md, Deploy).
  */
-export const READING_FINGERPRINT = "0x8c6d3bc7e0205f33affb72b42dcca29649d106348661a3b972ae0457f548af85";
+export const READING_FINGERPRINT = "0xec908fc3bbc640fb57f20084cb2834ce9da4d3b55bb70eb74256e8af09266755";
