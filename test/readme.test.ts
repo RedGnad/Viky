@@ -14,6 +14,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import test from "node:test";
 import { toFunctionSelector } from "viem";
+import { verdictOnly } from "../src/condition-privacy";
 import { consentTermsFor } from "../src/consent-terms";
 import { HOME } from "../src/sentences";
 import { EXAMPLE_FOR_JUDGES_TX } from "../src/proof-journal";
@@ -189,10 +190,12 @@ test("what the rules ask of a README is all there (section 4.1), and the licence
   const order = ["## What Viky is built on", "## Who it is for, and the problem", "## What we know about the two people", "## What is new", "## No word of crypto", "## Eighteen conditions", "## Why Monad", "## What has run with real money", "## Path forward: how the next hundred find Viky", "## Architecture", "## Stack", "## Run", "### Deploy", "## Test", "## Declarations, environment and licences"].map((mark) => README.indexOf(mark));
   assert.ok(order.every((found) => found >= 0), "every section is there");
   assert.deepEqual(order, [...order].sort((left, right) => left - right));
-  // Two folded blocks, each one level under what its section opens on: the step by step of what has run, and the
-  // pre-existing code file by file.
-  assert.deepEqual([...README.matchAll(/<details>\n<summary><b>([^<]+)<\/b><\/summary>/g)].map((found) => found[1]), ["Each of them step by step, with its transactions", "The pre-existing code, file by file"]);
-  assert.equal(README.match(/<\/details>/g)?.length, 2);
+  // Three folded blocks, each one level under what its section opens on: the three steps a person's own account
+  // sends, which "Why Monad" says leave a gift's usual path (the founder, 13 Oct 2026), the step by step of what has
+  // run, and the pre-existing code file by file.
+  assert.deepEqual([...README.matchAll(/<details>\n<summary><b>([^<]+)<\/b><\/summary>/g)].map((found) => found[1]), ["The three steps a person's own account sends", "Each of them step by step, with its transactions", "The pre-existing code, file by file"]);
+  assert.equal(README.match(/<\/details>/g)?.length, 3);
+  assert.match(section("Why Monad"), /Three steps leave that path, listed\s+under this section\./);
   assert.deepEqual([...doc("declarations").matchAll(/^## (.+)$/gm)].map((found) => found[1]), ["AI tools", "Pre-existing code", "Environment", "Third-party licences", "Security", "License"]);
 });
 
@@ -299,12 +302,16 @@ test("the two people and the path forward say of the product what the code does"
   const people = doc("people").replace(/\s+/g, " ");
   const path = doc("path").replace(/\s+/g, " ");
   // The three lines the README keeps of them say the same, shorter.
-  assert.match(section("What we know about the two people").replace(/\s+/g, " "), /the whole amount is in their name from the first minute, the funder sees yes or no for a day or the number a goal has and nothing else that was read, and the recipient agrees with a signature of their own and can stop being read\./);
-  // What the funder sees is what the agreement says they see (src/consent-terms.ts): yes or no for a day, and the
-  // figure read for a goal that has one. "Never the detail" was said of both, and a rating is a detail.
+  assert.match(section("What we know about the two people").replace(/\s+/g, " "), /the whole amount is in their name from the first minute; the funder sees yes or no, a number only where a public page shows it and nothing else that was read; the recipient agrees with their own signature and can stop being read\./);
+  // What the funder sees: yes or no for a day, and the figure read for a goal whose number a public page shows. "Never
+  // the detail" was said of both, and a rating is a detail. A score or a grade the person shows from their own account
+  // is under the verdict rule (src/condition-privacy.ts): the number is kept nowhere, the target is attested in its
+  // place, and the funder is told that it was reached and no more (the founder, 13 Oct 2026). The agreement the person
+  // signs (src/consent-terms.ts) still says "and the score" and "and the grade" of those two: more than is shown.
   assert.equal(consentTermsFor("duolingo-daily")?.things, 1);
-  for (const withAFigure of ["chess-rating", "toefl-mybest-shown", "university-grade-shown", "wca-time"]) assert.equal(consentTermsFor(withAFigure)?.things, 2, withAFigure);
-  assert.ok(people.includes("The funder sees yes or no for a day and, for a goal with a number (a rating, a score, a grade, a time), that number and whether it reaches the target."));
+  for (const withAFigure of ["chess-rating", "wca-time"]) assert.equal(consentTermsFor(withAFigure)?.things, 2, withAFigure);
+  for (const verdictAlone of ["toefl-mybest-shown", "university-grade-shown"]) assert.ok(verdictOnly(verdictAlone), verdictAlone);
+  assert.ok(people.includes("The funder sees yes or no for a day; for a rating, a time or a score read from a public page, that number and whether it reaches the target; for a score or a grade the person shows from their own account, only whether the target was reached."));
   // A gift's page answers to its number, so what is kept to the two people and the link is the names, not the page.
   assert.ok(people.includes("the names and the account read are shown only to its two people and to whoever holds its link"));
   assert.doesNotMatch(people, /opens only from its link/);
@@ -508,7 +515,24 @@ test("the README says the passes that run, what the word check reads, and what c
   assert.match(text, /three files of the build and of the checks, which came in that commit too: `foundry\.toml` and `remappings\.txt`,\n  unchanged since/);
   assert.match(text, /`\.github\/workflows\/ci\.yml`, one job\n  then and rewritten since/);
   // The AI that is in the product and is not Viky's.
-  assert.match(text, /A second AI is in the product itself, and is not Viky's: Reclaim's agent\./);
+  assert.match(text, /Another AI is in the product itself, and is not Viky's: Reclaim's agent\./);
+  // Who reviewed, who the roles named in comments are, and the second tool (the founder, 13 Oct 2026): in the README,
+  // where the rules ask for the AI tools, and in the declarations. The founder's own two sentences, word for word.
+  const flat = (said: string) => said.replace(/\s+/g, " ");
+  for (const said of [flat(section("Declarations, environment and licences")), flat(doc("declarations"))]) {
+    assert.ok(said.includes("The contracts were reviewed on 2 and 3 Oct 2026 by a separate session of the same tool, given the contracts alone. Its tests are in `test/review`."));
+    assert.ok(said.includes(`In this repository's comments, pull requests and past documents, "the developer", "the other developer", "the advisor" and "the reviewer" are sessions of that same tool. The founder is the one person.`));
+    assert.ok(said.includes("A second AI tool was used once: `reclaim-portal-agent`, run with free OpenRouter models on 28 Sep 2026 to look up the student portals of twenty universities, each of which was then opened by hand"));
+  }
+  // The review is said as what it was, in the contracts' own document and in the review's tests.
+  const contracts = flat(readFileSync("docs/CONTRACTS.md", "utf8"));
+  assert.doesNotMatch(contracts, /independent review/i);
+  assert.ok(contracts.includes("A review of 2 Oct 2026, made by a separate session of that same tool, given the contracts alone, was read before any deployment"));
+  for (const file of ["ReviewScenarios.t.sol", "ReviewScenariosV3.t.sol", "ReviewerRigV3.sol", "FirstDayAcrossMidnightV3.t.sol", "ReviewInvariants.t.sol", "ReviewInvariantsV3.t.sol"]) {
+    assert.doesNotMatch(readFileSync(`test/review/${file}`, "utf8"), /independent|\b[Hh](e|is|im)\b|by the authors?\b/, file);
+  }
+  // The history is said as it is, including the two examples awaiting the reading service's deployment.
+  assert.ok(flat(doc("declarations")).includes("A few more were found on 12 Oct 2026. The identified files were corrected on 13 Oct, except for two examples in `src/attested-sources.ts` whose removal requires a coordinated reading-service deployment. Past commits still hold the real identifiers."));
   // Mobile money is not said switched off where the judges page says it is offered.
   assert.doesNotMatch(readFileSync("docs/PAGES-AND-ROUTES.md", "utf8"), /switched off until a first real payout/);
 });
@@ -519,7 +543,10 @@ test("the README's measured figures are src/measured.ts's own, and the documents
   assert.ok(readme.includes(`Read from the chain on ${RELAYER_FEES.readAt.replace(", ", " at ")} with \`${RELAYER_FEES.command}\`: ${RELAYER_FEES.transactions} transactions sent since the first one, ${RELAYER_FEES.totalMon} MON of fees in all, ${average} MON a transaction on average.`));
   assert.ok(readme.includes(`A block every ${BLOCK_TIME.seconds * 1_000} ms, measured over ${BLOCK_TIME.blocks.toLocaleString("en-US")} blocks on ${BLOCK_TIME.readOn}`));
   // The rule in force at Toulouse is no longer the one its first proof was read by.
-  assert.ok(readme.includes("it was pinned on 7 Oct 2026; since 9 Oct the rule in force is one fixed ahead, which the judges page prints."));
+  // One date for the rule fixed ahead (the founder, 13 Oct 2026): the judges page says "since 8 Oct 2026", and so does
+  // this. The version the second pass ran on was pinned on 9 Oct at 00:36 UTC, read on the provider's row on 13 Oct.
+  assert.ok(readme.includes("it was pinned on 7 Oct 2026; since 8 Oct 2026 the rule in force is one fixed ahead of any proof, as the judges page says, and the version the pass of 9 Oct ran on was pinned that day at 00:36 UTC."));
+  assert.ok(readFileSync("app/judges/page.tsx", "utf8").includes("The second case, since 8 Oct"));
   // People are counted where they are counted, on the judges page: the README gave a number that was two days old.
   assert.ok(readme.includes('People from outside the project have opened gifts, one of them on an iPhone, from Instagram: the judges page counts them, under "Who has used Viky".'));
   assert.doesNotMatch(readme, /Two people from outside the project/);

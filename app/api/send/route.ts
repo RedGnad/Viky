@@ -34,7 +34,16 @@ const TRANSFER_ABI = [
     ],
     outputs: [],
   },
+  // Whether the coin has taken an authorization, by its owner and its number (EIP-3009).
+  { type: "function", name: "authorizationState", stateMutability: "view", inputs: [{ name: "authorizer", type: "address" }, { name: "nonce", type: "bytes32" }], outputs: [{ type: "bool" }] },
 ] as const satisfies Abi;
+
+/**
+ * Said when the very authorization asked for has been taken by the coin already (the founder, 13 Oct 2026): the send
+ * passed the first time, and its answer was lost on the way. The screen keeps what was signed while its confirmation
+ * stands and asks with it again, so a second press can only end here, never in a second send.
+ */
+const ALREADY_SENT = "That was sent the first time. Nothing more left your account.";
 
 /**
  * Moves someone's own money where they asked, from an authorization they signed. Viky's relayer submits it
@@ -97,14 +106,24 @@ export async function POST(request: Request) {
     const clients = relayerClients();
     await relayerPreflight(clients);
 
+    // An authorization the coin has taken is a send that passed: asked before any refusal that would say it did not.
+    // A read that fails throws, and the route answers its plain failure rather than a refusal it cannot vouch for.
+    const refuseIfAlreadySent = async (): Promise<void> => {
+      const taken = (await clients.publicClient.readContract({ address: coin.address, abi: TRANSFER_ABI, functionName: "authorizationState", args: [from, nonce as Hex] })) as boolean;
+      if (taken) throw new GiftApiError("ALREADY_SENT", ALREADY_SENT, 409);
+    };
     const held = (await clients.publicClient.readContract({ address: coin.address, abi: erc20Abi, functionName: "balanceOf", args: [from] })) as bigint;
-    if (held < value) throw new GiftApiError("NOT_ENOUGH", "That is more than you have.", 409);
+    if (held < value) {
+      await refuseIfAlreadySent();
+      throw new GiftApiError("NOT_ENOUGH", "That is more than you have.", 409);
+    }
     assertNotTooSmall("send", value, held);
 
     const args = [from, getAddress(to), value, validAfter, validBefore, nonce as Hex, signature] as const;
     try {
       await clients.publicClient.simulateContract({ address: coin.address, abi: TRANSFER_ABI, functionName: "transferWithAuthorization", args, account: clients.address });
     } catch {
+      await refuseIfAlreadySent();
       throw new GiftApiError("REFUSED", "That could not be sent. Please try again.", 409);
     }
     // Counted against the account's and the connection's ceilings once everything that costs nothing has passed, the
@@ -130,7 +149,11 @@ export async function POST(request: Request) {
       console.error(JSON.stringify({ at: new Date().toISOString(), sendUnconfirmed: hash, from, error: error instanceof Error ? error.message : String(error) }));
       throw new GiftApiError("SENT_UNCONFIRMED", "It was sent and is being confirmed. Check your balance in a minute before sending again.", 409);
     }
-    if (receipt.status !== "success") throw new RelayerError("REVERTED", "That could not be sent. Nothing was taken.");
+    if (receipt.status !== "success") {
+      // Reverted because an earlier pass of the same authorization landed in between: that one sent it.
+      await refuseIfAlreadySent();
+      throw new RelayerError("REVERTED", "That could not be sent. Nothing was taken.");
+    }
     // Written down once it is final, so the confirmation has a reference to print (decision 7). The money moved
     // whether or not this row lands, so a store that refuses is logged rather than turned into a refusal.
     let reference = sendReference(hash);

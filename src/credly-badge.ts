@@ -8,7 +8,8 @@ import { normaliseCertificateName } from "./duolingo-english-test";
  *
  * 1. **The assertion**, `credly.com/api/v1/obi/v2/badge_assertions/<badge id>`, JSON. It carries `issuedOn` as an
  *    ISO moment, and a `badge` URL that pins the issuer's id and the badge class's id in one string. It carries no
- *    name at all: the holder is a hashed email, which nothing here matches, receives or keeps.
+ *    name at all: the holder is a hashed email, which nothing here matches or keeps (the answer that carries it
+ *    passes through Viky's server whole, at the plain look).
  * 2. **The public page**, `credly.com/badges/<badge id>/public_url`, HTML. Its `og:title` has one fixed shape,
  *    "<title> was issued by <issuer> to <holder>.", and it is the only place the holder's name is published.
  *

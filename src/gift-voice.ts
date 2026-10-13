@@ -14,16 +14,20 @@ export type Voice = "funder" | "recipient" | "reader";
 
 /**
  * Before a gift is opened, whoever holds its link is the person it is for: the link is the key, and opening it is how
- * they become the recipient. So a reader is only ever somebody meeting a gift that is already opened.
+ * they become the recipient. A reader is somebody meeting a gift that is already opened, or, since 13 Oct 2026, one
+ * nobody has opened whose link they do not hold: the page said "This is in your name." and "Open my gift" to anybody
+ * who typed the gift's number, which is false of them, and the press ended on a link missing its key.
+ * `holdsTheLink` is what the page knows of that (app/components/GiftPage.tsx); not said, the link is taken as held.
  *
  * A person with no account here is read as a reader too, for the words alone: the page cannot know who they are, and
  * the third person is the only thing true of both a judge and the recipient coming back to sign in. Telling them the
  * gift is not theirs is a different question, answered by `notTheirs`, which needs an account to be sure.
  */
-export function voiceOf(gift: Readonly<{ youAreTheFunder: boolean; youAreTheRecipient: boolean; opened: boolean }>): Voice {
+export function voiceOf(gift: Readonly<{ youAreTheFunder: boolean; youAreTheRecipient: boolean; opened: boolean; holdsTheLink?: boolean }>): Voice {
   if (gift.youAreTheFunder) return "funder";
   if (gift.youAreTheRecipient) return "recipient";
-  return gift.opened ? "reader" : "recipient";
+  if (gift.opened) return "reader";
+  return gift.holdsTheLink === false ? "reader" : "recipient";
 }
 
 /** Signed in, and neither of the two: the one case where the page can say "this gift is not yours" and be right. */

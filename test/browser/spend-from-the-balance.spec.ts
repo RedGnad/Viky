@@ -36,7 +36,7 @@ const main = (page: Page) => page.locator("main");
 type Asked = { price: Array<Record<string, unknown>>; pay: number };
 
 /** Somebody signed in in France, reading in euros, with 17.36 dollars, and Bitrefill answered for. */
-async function person(device: Profile, asked: Asked, pays: Array<"lapsed" | "delivered">): Promise<void> {
+async function person(device: Profile, asked: Asked, pays: Array<"lapsed" | "delivered" | "silent" | "failed">): Promise<void> {
   const { page, context } = device;
   // What the account holds is read again after a payment: it holds that much less once a thing is paid.
   const holds = { ausd: 17_360_000n, mon: 0n, usdc: 0n };
@@ -74,6 +74,9 @@ async function person(device: Profile, asked: Asked, pays: Array<"lapsed" | "del
     asked.pay += 1;
     await new Promise((done) => setTimeout(done, 900));
     if (outcome === "lapsed") return route.fulfill(json({ code: "PRICE_EXPIRED", error: "That price has run out. Start again: nothing was taken." }, 409));
+    // The connection drops once the payment has left, and the route's plain failure, which says nothing of the money.
+    if (outcome === "silent") return route.abort("connectionreset");
+    if (outcome === "failed") return route.fulfill(json({ error: "Something went wrong. Nothing was changed.", code: "FAILED" }, 500));
     holds.ausd -= BigInt(taken(10).ausdUnits);
     kept = [{ orderId: "ph_test_000002", name: "Amazon.fr", localAmount: "10", localCurrency: "EUR", amount: "$11.70", at: new Date().toISOString(), code: { code: "AQ7K-M2XP-9TLD", link: "https://www.amazon.fr/gc/redeem", expires: "10 Oct 2036" } }];
     return route.fulfill(json({ orderId: "ph_test_000002", state: "delivered", amount: "$12.05", units: taken(10).ausdUnits, operatorName: "Amazon.fr", kind: "gift_card", code: { code: "AQ7K-M2XP-9TLD", link: "https://www.amazon.fr/gc/redeem", expires: "10 Oct 2036" } }));
@@ -162,6 +165,48 @@ test.describe("spending from the balance", () => {
       await expect(main(page)).not.toContainText("€15.29");
       await noDollars(page, "the code");
       await shot(page, size.name, "6-the-code-in-its-place");
+      await device.context.close();
+    });
+  }
+
+  for (const size of sizesFor(SHOTS)) {
+    test(`a payment that brought no answer says so and never that nothing was taken, and the next press buys (${size.name})`, async ({ browser, baseURL }) => {
+      // The founder, 13 Oct 2026: the payment is a request that moves money. The screen said "That did not work.
+      // Nothing was taken." when the connection dropped after the person's dollars had left.
+      const NO_ANSWER = "Viky got no answer. Check your balance in a minute before sending again.";
+      const device = await profile(browser, baseURL, size.viewport);
+      const { page } = device;
+      const asked: Asked = { price: [], pay: 0 };
+      await person(device, asked, ["silent", "failed", "delivered"]);
+      await page.goto("/cash-out");
+      await page.getByRole("button", { name: "Choose a card", exact: true }).click();
+      await page.getByRole("dialog").getByText("Amazon.fr", { exact: true }).click();
+      await page.locator("[data-spend-amounts] button").nth(0).click();
+      const buy = page.locator("[data-spend-pay]");
+      await expect(buy).toBeEnabled();
+
+      // The connection drops: no answer, under the button, and no word that nothing was taken.
+      await buy.click();
+      const refused = page.locator("#spend-refused");
+      await expect(refused).toHaveText(NO_ANSWER);
+      await expect(main(page).getByText(/nothing was (taken|changed)/i)).toHaveCount(0);
+      await expect(buy).toBeEnabled();
+      await shot(page, size.name, "9-no-answer-after-paying");
+      await page.emulateMedia({ colorScheme: "dark" });
+      await shot(page, size.name, "9-no-answer-after-paying-after-dark");
+      await page.emulateMedia({ colorScheme: "light" });
+
+      // The route's plain failure cannot vouch that nothing moved either: the same sentence, not its "Nothing was changed.".
+      await buy.click();
+      await expect(buy).toHaveText("Buy the card");
+      await expect(refused).toHaveText(NO_ANSWER);
+      await expect(main(page).getByText(/nothing was (taken|changed)/i)).toHaveCount(0);
+
+      // The order is the same one, and its payment is asked again: the code stands in the card's place.
+      await buy.click();
+      await expect(page.getByRole("heading", { name: "Your card" })).toBeVisible();
+      expect(asked.pay).toBe(3);
+      expect(asked.price.length, "one order, priced once").toBe(1);
       await device.context.close();
     });
   }

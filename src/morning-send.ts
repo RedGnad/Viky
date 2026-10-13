@@ -31,6 +31,11 @@ export type GiftFacts = Readonly<{
   perDayUnits?: bigint;
   amountUnits?: bigint;
   words: MorningWords;
+  /**
+   * The gift's last day, as the contract numbers days, while the gift still runs: nothing once it is finalised or
+   * cancelled, or where the gift cannot be read. "Today still counts." is said from it and from nothing else.
+   */
+  runsThroughDay?: number;
 }>;
 
 export type TellingDeps = Readonly<{
@@ -61,7 +66,7 @@ export async function tellAboutDays(giftId: string, days: readonly SettledDay[],
   if (!last) return 0;
   // A day counted the day it was done says "today": the third daily contract pays a day by a reading of that day.
   const today = last.outcome === "earned" && last.day === Math.floor(nowMs / 86_400_000);
-  return await tell(giftId, { kind: "day", outcome: last.outcome, amount: "", ...(today ? { today } : {}) }, deps, last.day);
+  return await tell(giftId, { kind: "day", outcome: last.outcome, amount: "", ...(today ? { today } : {}) }, deps, last.day, nowMs);
 }
 
 /**
@@ -88,7 +93,7 @@ function refusalInWords(refusal: PushRefusal): string {
   return refusal.status ? `the push service answered ${refusal.status}` : "the push service did not answer";
 }
 
-async function tell(giftId: string, news: MorningNews, deps: TellingDeps, day?: number): Promise<number> {
+async function tell(giftId: string, news: MorningNews, deps: TellingDeps, day?: number, nowMs: number = Date.now()): Promise<number> {
   // Every refusal is a line in the logs and a note in the pass under way (src/pass-notes.ts): a message that did not
   // leave used to leave nothing behind unless the sending itself threw (the audit of 1 Oct 2026).
   const say = deps.log ?? ((line: string) => console.error(line));
@@ -107,11 +112,13 @@ async function tell(giftId: string, news: MorningNews, deps: TellingDeps, day?: 
     // A day is worth a day's share; a milestone reached or expired moves the whole gift.
     const amount = news.kind === "day" ? facts.perDayDisplay : facts.amountDisplay;
     const units = news.kind === "day" ? facts.perDayUnits : facts.amountUnits;
+    // After a day that went back, "Today still counts." is true only while the gift has a day running today.
+    const todayCounts = news.kind === "day" && news.outcome === "returned" && facts.runsThroughDay !== undefined && Math.floor(nowMs / 86_400_000) <= facts.runsThroughDay;
     let sent = 0;
     for (const subscription of subscriptions) {
       // Each person is told in the currency their own account reads in; the exact dollars when that cannot be said.
       const spoken = deps.speak && units !== undefined ? await deps.speak(subscription.account, units).catch(() => amount) : amount;
-      const told = { ...news, amount: spoken } as MorningNews;
+      const told = { ...news, amount: spoken, ...(todayCounts ? { todayCounts } : {}) } as MorningNews;
       const payload = morningPayload(giftId, sideOf(subscription.account, facts.funder), told, facts.names, facts.words);
       let result: PushSent | PushRefusal;
       try {

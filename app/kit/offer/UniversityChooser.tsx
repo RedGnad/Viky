@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { listAllUniversities } from "@/src/client/certificate-gift";
 import type { GiftDraft } from "@/src/gift-draft";
@@ -77,7 +76,8 @@ const READY_MARK =
  * weigh on a phone, and nothing is held back. Once a university is chosen the list folds into it, with a way to change
  * it, so what comes after (a grade) is in reach; and under its name one line says when its students can show their
  * page, today or within two days of the gift, the only place the two days are said to a payer. A search that finds
- * nothing, and it alone, leads to the page where a university is asked for (D264): it stood at the foot of every list.
+ * nothing says so and what to try (the founder, 13 Oct 2026). It led to the page a student adds a university from
+ * (D264), whose first lines say to offer the gift anyway: nobody can, on a university the list does not hold.
  */
 export function UniversityChooser({
   open,
@@ -227,16 +227,12 @@ export function UniversityChooser({
         <>
           {listed.length > 0 ? <ChoiceList name="university" legend={W.list} legendHidden shape="lines" value={value} onChange={pick(listed)} options={listed.slice(0, count).map(line)} /> : null}
           {listed.length > count ? <MoreWhenNear onNear={() => setDrawn({ key: listKey, count: count + PAGE })} /> : null}
-          {/* A search that found nothing, and it alone, leads to the page where a university is asked for (D264): its
-              first lines say to offer the gift anyway. Nothing about how a university is checked, which the gift's
-              page says where the proof is shown. */}
+          {/* A search that found nothing says so, and what to try: another word, and every country when the list is
+              narrowed to one. No link from here: a gift cannot be offered on a university the list does not hold. */}
           {listed.length === 0 ? (
-            <>
-              <p className={HELP}>{W.nothing}</p>
-              <Link href="/add-your-university" className={`${SMALL_BUTTON} self-start no-underline`}>
-                {W.askForIt}
-              </Link>
-            </>
+            <p className={HELP} data-nothing-found="">
+              {country ? W.nothingIn(countryInWords(country) ?? country) : W.nothing}
+            </p>
           ) : null}
         </>
       )}

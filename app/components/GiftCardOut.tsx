@@ -128,7 +128,14 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
       props.onSessionClosed();
       return;
     }
-    const next = await payPhone({ account, price, nonce: randomNonce() });
+    let next: PhoneStatus;
+    try {
+      next = await payPhone({ account, price, nonce: randomNonce() });
+    } catch (error) {
+      // No answer came back: what the account holds is read again, so the figure they are told to check is a fresh one.
+      if (error instanceof ApiError && error.code === "NO_ANSWER") await Promise.resolve(props.onChanged()).catch(() => undefined);
+      throw error;
+    }
     setBought(W.card(face(price.localAmount, price.localCurrency), chosen.name));
     setStatus(next);
     await props.onChanged();

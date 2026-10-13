@@ -12,7 +12,7 @@ import type { SqlExecutor } from "./proof-session-store";
  * The phone number is kept for the order and no longer: it is written when the invoice is made and erased when the
  * order ends, delivered or refunded (the founder, 25 Sep 2026). What stays is the operator, the amounts and the hashes.
  *
- * States, in order: `priced` (Bitrefill's invoice exists, nothing moved), `received` (the person's AUSD is in the
+ * States, in order: `priced` (Bitrefill's invoice exists; a recorded relay hash may still need checking), `received` (the person's AUSD is in the
  * treasury), `paid` (the treasury paid the invoice on Base), then `delivered`, or `failed` and `refunded`.
  */
 
@@ -244,11 +244,11 @@ export async function usesDelivered(): Promise<Readonly<Record<"phone" | "data" 
 }
 
 /**
- * The reconciliation, in one read: every order whose AUSD came in must end paid and delivered, or refunded. What is
- * listed here is money the treasury holds for somebody, with the order that says why.
+ * The reconciliation, in one read: every order whose AUSD came in must end paid and delivered, or refunded. A priced
+ * order with a sent relay also needs checking: its AUSD may have arrived before the request could record it.
  */
 export async function unsettledOrders(): Promise<readonly PhoneOrder[]> {
-  const rows = await sql()`SELECT * FROM viky_phone_orders WHERE state IN ('received', 'paid', 'failed') AND ausd_tx IS NOT NULL ORDER BY created_at`;
+  const rows = await sql()`SELECT * FROM viky_phone_orders WHERE (state IN ('received', 'paid', 'failed') AND ausd_tx IS NOT NULL) OR (state = 'priced' AND relay_tx LIKE '0x%') ORDER BY created_at`;
   return rows.map(rowOf);
 }
 

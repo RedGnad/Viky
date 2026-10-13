@@ -259,6 +259,11 @@ export const PAY = {
    * "I already have an account", which declares a state: a button says what its press does (the founder, 4 Oct 2026).
    */
   alreadyHaveAccount: "Sign in",
+  /**
+   * The sheet's one button on a device that remembers a passkey, with nobody signed in (the founder, 13 Oct 2026): it
+   * signs in and the sheet stays, so what the account holds is read before any way to pay is named.
+   */
+  signInFirst: "Sign in",
   /** The sheet the card is paid in, and what its frame is called when read aloud. */
   card: { title: "Pay by card", frame: "Card payment" },
   /**
@@ -1214,8 +1219,13 @@ export const GIFT_LIVE = {
    */
   counting: {
     counted: "Yesterday counted.",
-    wentBack: (funder: string | null) => `Yesterday went back to ${funder ?? "the person who offered it"}. Today still counts.`,
-    wentBackToYou: "Yesterday came back to you. Today still counts.",
+    /**
+     * A day that went back is never yesterday (the founder, 13 Oct 2026): a day stays open thirty hours after it ends,
+     * so the day sent back is the day before yesterday at the soonest, and the sentence names no day. "Today still
+     * counts." is true only while the gift has a day running, and is said only then.
+     */
+    wentBack: (funder: string | null, todayCounts: boolean) => `A missed day went back to ${funder ?? "the person who offered it"}.${todayCounts ? " Today still counts." : ""}`,
+    wentBackToYou: (todayCounts: boolean) => `A missed day came back to you.${todayCounts ? " Today still counts." : ""}`,
     /** A gift settled before Viky kept a record of each day: the totals are true, the last day is not known. */
     running: "It is counting.",
     nothingYet: "Nothing has been counted yet.",
@@ -1615,6 +1625,11 @@ export const CONSENT = {
 export const END_GIFT = {
   working: "One moment",
   failed: "The gift could not be ended. Nothing was changed. Try again.",
+  /**
+   * The ending left and no answer came back (the founder, 13 Oct 2026): whether the gift is ended is not known, so
+   * neither "ended" nor "nothing was changed" is said. The page reads the gift again as this is shown.
+   */
+  noAnswer: "Viky got no answer. Look at this gift in a minute before ending it again.",
   /** The funder's side, in the fold "What was agreed", before as after. */
   /**
    * The gift's page once it is ended (the founder's mockup you-decide.html of 1 Oct 2026, fourth frame): the day as a
@@ -1781,8 +1796,9 @@ export const MORNING = {
     earned: (amount: string) => `Yesterday counted. ${opening(amount)} is yours.`,
     /** A day counted the day it was done (the third daily contract): told within the hour. */
     earnedToday: (amount: string) => `Today counted. ${opening(amount)} is yours.`,
-    returnedTo: (funder: string) => `Yesterday went back to ${funder}. Today still counts.`,
-    returned: "Yesterday went back. Today still counts.",
+    /** A day that went back names no day, and "Today still counts." is said only while the gift still runs (13 Oct 2026). */
+    returnedTo: (funder: string, todayCounts: boolean) => `A missed day went back to ${funder}.${todayCounts ? " Today still counts." : ""}`,
+    returned: (todayCounts: boolean) => `A missed day went back.${todayCounts ? " Today still counts." : ""}`,
     reached: (amount: string) => `You reached it. ${opening(amount)} is yours.`,
     expiredTo: (amount: string, funder: string) => `The time is up. ${opening(amount)} went back to ${funder}.`,
     expired: (amount: string) => `The time is up. ${opening(amount)} went back.`,
@@ -1802,7 +1818,7 @@ export const MORNING = {
     counted: (amount: string) => `Yesterday counted. ${opening(amount)} is theirs.`,
     countedTodayNamed: (name: string, amount: string) => `${name} counted today. ${opening(amount)} is theirs.`,
     countedToday: (amount: string) => `Today counted. ${opening(amount)} is theirs.`,
-    returned: (amount: string) => `Yesterday came back to you: ${amount}.`,
+    returned: (amount: string) => `A missed day came back to you: ${amount}.`,
     reachedNamed: (name: string, amount: string) => `${name} reached it. ${opening(amount)} is theirs.`,
     reached: (amount: string) => `It is reached. ${opening(amount)} is theirs.`,
     expired: (amount: string) => `The time is up. ${opening(amount)} came back to you.`,
@@ -1895,7 +1911,14 @@ export const UNIVERSITY_CHOICE = {
   /** Read aloud while the list is read; the eye sees empty lines instead of a sentence (the founder, 29 Sep 2026). */
   reading: "Reading the list",
   unreadable: "The list could not be read right now. Close this and try again in a moment.",
-  nothing: "No university by that name in the list yet.",
+  /**
+   * Under a search that found nothing (the founder, 13 Oct 2026): what is true in every case, and what to try. Every
+   * word typed must be in the name, so one word fewer or another finds more; within one country the sentence names it
+   * and the other place to look. A link to the page a student adds a university from stood here ("Ask for it", 10 Oct
+   * 2026): that page opens on "Offer the gift anyway.", and no gift can be offered on a university the list lacks.
+   */
+  nothing: "No university by those words. Try another word of its name.",
+  nothingIn: (country: string) => `No university by those words in ${country}. Try another word of its name, or all countries.`,
   /**
    * The mark on the line of a university whose students can show their page today, for what the gift asks. Such a
    * university comes first in the list; the others carry nothing, no "on request" and no "more".
@@ -1924,8 +1947,6 @@ export const UNIVERSITY_CHOICE = {
    */
   firstProof: "First student from this university: the next ones skip the small stop. The money waits in their name meanwhile.",
   waitsMeanwhile: "The money waits in their name meanwhile.",
-  /** Under a search that found nothing, and nowhere else: the way to the page where a university is asked for. */
-  askForIt: "Ask for it",
 } as const;
 
 export const SHOW_PROOF = {
@@ -2140,11 +2161,13 @@ export const HELP = {
   questions: [
     {
       q: "Where is my money?",
-      a: "In your account, on Home, under the amount. What a gift earns lands there the moment you take it, and stays yours from one gift to the next. Use it from Home whenever the account holds anything.",
+      // "The moment you take it" described a button a gift's page lost on 4 Oct 2026: what a gift has paid is counted
+      // in Home's one amount at once, and leaves the gift only when the money is used (the founder, 13 Oct 2026).
+      a: "On Home, under Yours: what your account holds and what your gifts have already paid you, in one amount. What a gift earns is counted there at once, and stays yours from one gift to the next. Spend or withdraw, on Home, uses it.",
     },
     {
       q: "How does a gift work?",
-      a: "Money is put in someone's name, tied to what they do, for a number of days. Each day they do it, that day's share becomes theirs. A day they miss can still be caught up the next day; if it is not, it comes back to whoever paid, by itself, the morning after.",
+      a: "Money is put in someone's name, tied to what they do. On a gift for a number of days, each day they do it, that day's share becomes theirs. A day they miss can still be caught up the next day; if it is not, it comes back to whoever paid, by itself, the morning after. A gift for one result pays all at once, the day the result is read or shown; a result that is not there in time sends the money back.",
     },
     {
       q: "My session closed. Did anything move?",
@@ -2161,7 +2184,7 @@ export const HELP = {
     },
     {
       q: "A payout service asks for a code.",
-      a: 'It asks where the money is sent from. Your code is on this page, under "Need your code for a payout service?", with a button that copies it.',
+      a: 'It asks where the money is sent from. Your code is on Me, under "Need your code for a payout service?", with a button that copies it.',
     },
   ],
 } as const;
@@ -2432,6 +2455,12 @@ export const CASH_OUT = {
   sending: (amount: string, name: string) => `Sending ${amount} to ${name}`,
 
   sent: (amount: string, name: string, when: string, reference: string) => `Sent ${amount} to ${name} on ${when}. Reference: ${reference}.`,
+  /**
+   * A send whose answer was lost, and that the account's own balance read again, or the coin's own record of what was
+   * signed, shows as gone (the founder, 13 Oct 2026). Said in the confirmation's place, with nothing left to press a
+   * second time. No day and no reference: the lost answer carried both.
+   */
+  sentUnheard: (amount: string, name: string) => `Sent ${amount} to ${name}. No answer came back, so there is no reference to show.`,
   sentPays: (name: string, pays: string, bank: boolean) => (bank ? `${name} pays your bank ${pays}.` : `${name} pays ${pays}.`),
   pasteFirst: (name: string) => `Paste the code from ${name} to send it.`,
   /** In dollars, with "about" (the audit of 1 Oct 2026): it used to be said in the coin it was paid in. */
@@ -2452,6 +2481,8 @@ export const CASH_OUT = {
     pasteFirst: "Paste that account's code to send it.",
     confirm: (amount: string) => `Send $${amount} to your other account. This cannot be undone.`,
     sent: (amount: string, when: string, reference: string) => `Sent $${amount} to your other account on ${when}. Reference: ${reference}.`,
+    /** The same send, when its answer was lost and the balance or the coin shows it left (13 Oct 2026). */
+    sentUnheard: (amount: string) => `Sent $${amount} to your other account. No answer came back, so there is no reference to show.`,
     send: (amount: string) => `Send $${amount}`,
     refusals: {
       shape: "That is not a Viky code. It starts with 0x and is 42 characters long.",
@@ -2704,7 +2735,8 @@ export const GIFT_CARD_OUT = {
 } as const;
 
 /**
- * "Finish a marathon" on the gift's page and in the sheet (D273): the race chosen, the bib before the start, the
+ * "Finish a marathon" on the gift's page and in the sheet (D273): the race chosen, the bib before the day of the race
+ * (the field closes at 00:00 that day, where the race is run: the register gives a race a day and no hour), the
  * result read after the finish, and the one line the page shows, the name, the bib and the time.
  */
 export const WCA_PROOF = {
@@ -2746,8 +2778,8 @@ export const MARATHON_PROOF = {
   distanceAll: "Distance · all",
   distanceFilter: "Distance",
   bibLabel: "Your bib number",
-  bibHelp: (race: string) => `The number on your bib for the ${race}, before the start. After the finish, Viky reads your line on the timing company's results page.`,
-  bibClosed: (race: string) => `The ${race} has started and no bib was entered before it, so this gift cannot be read. What was put in it goes back at the deadline.`,
+  bibHelp: (race: string) => `The number on your bib for the ${race}, before the day of the race. After the finish, Viky reads your line on the timing company's results page.`,
+  bibClosed: (race: string) => `The day of the ${race} has come and no bib was entered before it, so this gift cannot be read. What was put in it goes back at the deadline.`,
   bibShape: "A bib number is one to six figures.",
   saveBib: "Keep my bib number",
   saving: "Keeping it",
@@ -2761,10 +2793,11 @@ export const MARATHON_PROOF = {
     noBib: "not entered yet",
   },
   beforeTheRace: "Run. After the finish, come back here to read your result.",
-  /** Until the start, a bib typed wrong can be entered again (the audit of 1 Oct 2026). */
+  /** Until the day of the race, a bib typed wrong can be entered again (the audit of 1 Oct 2026). */
   changeBib: "Change my bib number",
-  bibChangeHelp: (race: string) => `The number on your bib for the ${race}. It can be changed until the start.`,
-  afterTheRace: "The race has been run. Read your line on the timing company's results page.",
+  bibChangeHelp: (race: string) => `The number on your bib for the ${race}. It can be changed until the day of the race.`,
+  /** Shown from 00:00 on the day of the race, so it does not say the race is run (the founder, 13 Oct 2026). */
+  afterTheRace: "Once the race is run, read your line on the timing company's results page.",
   readMyResult: "Read my result",
   reading: "Reading the results page",
   line: (runner: string, bib: string, time: string) => `Read on the timing company's page: ${runner}, bib ${bib}, ${time}.`,

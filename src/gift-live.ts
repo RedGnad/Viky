@@ -63,6 +63,8 @@ export type LiveInput = Readonly<{
   shape?: "days" | "climb" | "stamp";
   /** What the last day Viky judged did, when a record of it exists. Nothing when the gift predates the record. */
   lastJudged: "earned" | "returned" | null;
+  /** The gift still has a day running: after a day that went back, "Today still counts." is said only then. */
+  todayCounts?: boolean;
   /**
    * Dates already in words, in the reader's own clock: the page knows the clock, this module does not. The day an
    * unopened gift goes back (14 days after it was funded, on both contracts), and the day an opened gift that nothing
@@ -291,8 +293,8 @@ export function liveOf(input: LiveInput): Live {
             ? L.counting.counted
             : input.lastJudged === "returned"
               ? voice === "funder"
-                ? L.counting.wentBackToYou
-                : L.counting.wentBack(funderName)
+                ? L.counting.wentBackToYou(input.todayCounts === true)
+                : L.counting.wentBack(funderName, input.todayCounts === true)
               : L.counting.running,
         figure: { label: yours ? W.yoursSoFar : W.theirsSoFar, value: input.theirsDisplay },
         // The next reading is the hour beside the money while that column is free, and the dated sentence once what

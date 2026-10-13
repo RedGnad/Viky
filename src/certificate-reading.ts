@@ -3,22 +3,22 @@ import { CEILING, LIMIT } from "./sentences";
 import type { Hex } from "viem";
 import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
 import { signedSubjectOf } from "./subject-key";
-import { COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraProviderId } from "./coursera-certificate";
+import { COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraCodeOf, courseraProviderId } from "./coursera-certificate";
 import { attestCourseraCertificate, CourseraReadError, readCourseraCertificate } from "./coursera-reading";
-import { EDX_GOAL_TYPE, EDX_HAS_IT, edxProviderId } from "./edx-certificate";
-import { ACCREDIBLE_GOAL_TYPE, ACCREDIBLE_HAS_IT, accredibleProviderId } from "./accredible-credential";
+import { EDX_GOAL_TYPE, EDX_HAS_IT, edxCertificateIdOf, edxProviderId } from "./edx-certificate";
+import { ACCREDIBLE_GOAL_TYPE, ACCREDIBLE_HAS_IT, accredibleIdOf, accredibleProviderId } from "./accredible-credential";
 import { AccredibleReadError, attestAccredibleCredential, readAccredibleCredential } from "./accredible-reading";
 import { attestEdxCertificate, EdxReadError, readEdxCertificate } from "./edx-reading";
-import { MITX_ONLINE_GOAL_TYPE, MITX_ONLINE_HAS_IT, mitxOnlineProviderId } from "./mitx-online-certificate";
+import { MITX_ONLINE_GOAL_TYPE, MITX_ONLINE_HAS_IT, mitxOnlineKeyOf, mitxOnlineProviderId } from "./mitx-online-certificate";
 import { attestMitxOnlineCertificate, MitxOnlineReadError, readMitxOnlineCertificate } from "./mitx-online-reading";
 import { finishInWords, MARATHON_TIMERS, marathonGoalTypeOf, marathonProviderIdOf } from "./marathon";
 import { attestMarathonResult, MarathonReadError, readMarathonResult } from "./marathon-reading";
 import { WCA_GOAL_TYPE, wcaProviderId } from "./wca";
 import { attestWcaResult, readWcaResult, WcaReadError } from "./wca-reading";
-import { CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyProviderId } from "./credly-badge";
+import { CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyBadgeIdOf, credlyProviderId } from "./credly-badge";
 import { attestCredlyBadge, CredlyReadError, readCredlyBadge } from "./credly-reading";
 import { attestDetCertificate, DetReadError, readDetCertificate, type AttestedDetReading } from "./det-reading";
-import { detProviderId } from "./duolingo-english-test";
+import { detAliasOf, detProviderId } from "./duolingo-english-test";
 import { loadGift, type GiftRecord } from "./gift-store";
 import { certificateOfGoal } from "./milestone-conditions";
 import { loadMilestoneGift, recordReading } from "./milestone-store";
@@ -122,11 +122,29 @@ export function liveCertificateReadingDeps(): CertificateReadingDeps {
 }
 
 /**
+ * The code inside what the person pasted, by the goal's own extractor (the founder, 13 Oct 2026). The screen asks for
+ * the certificate's link and each reader below takes the bare code: given the whole link, six conditions answered
+ * "That is not a certificate link" to the very link the first reading had just read, after the person had agreed. A
+ * code alone comes back as it is. Nothing when the goal's extractor finds none, and the reader then refuses it in its
+ * own words. A race and a WCA time have no link: their account is built from the gift's record, and is not touched.
+ */
+export function certificateCodeOf(goalType: number, pasted: string): string | undefined {
+  if (goalType === ACCREDIBLE_GOAL_TYPE) return accredibleIdOf(pasted);
+  if (goalType === CREDLY_GOAL_TYPE) return credlyBadgeIdOf(pasted);
+  if (goalType === MITX_ONLINE_GOAL_TYPE) return mitxOnlineKeyOf(pasted);
+  if (goalType === EDX_GOAL_TYPE) return edxCertificateIdOf(pasted);
+  if (goalType === COURSERA_GOAL_TYPE) return courseraCodeOf(pasted);
+  if (goalType === WCA_GOAL_TYPE || Object.values(MARATHON_TIMERS).some((timer) => timer.goalType === goalType)) return pasted;
+  return detAliasOf(pasted);
+}
+
+/**
  * The reading a goal is settled by. The goal type is the contract's own, signed by the funder, so a Coursera proof
  * can never be offered to a gift made on the test, nor the other way round: each carries its own provider id and the
  * contract checks it again.
  */
-export async function attestByGoal(goalType: number, link: string, signedSubject?: Hex, subjectKey?: string | null): Promise<ReadCertificate> {
+export async function attestByGoal(goalType: number, pasted: string, signedSubject?: Hex, subjectKey?: string | null): Promise<ReadCertificate> {
+  const link = certificateCodeOf(goalType, pasted) ?? pasted;
   if (goalType === ACCREDIBLE_GOAL_TYPE) {
     const reading = await attestAccredibleCredential(link);
     // The issuer's site can sit under several domains; the one the funder named is the subject they signed.
@@ -183,7 +201,8 @@ export function fetchesOfGoal(goalType: number): number {
  * The same reading, taken plainly: what the page says, with no proof. Each source is read by the function the
  * funder's side already reads it with, and gives the same subject, score and day the attested reading would.
  */
-export async function lookByGoal(goalType: number, link: string, signedSubject: Hex | undefined, subjectKey: string | null | undefined, nowSeconds: number): Promise<LookedCertificate> {
+export async function lookByGoal(goalType: number, pasted: string, signedSubject: Hex | undefined, subjectKey: string | null | undefined, nowSeconds: number): Promise<LookedCertificate> {
+  const link = certificateCodeOf(goalType, pasted) ?? pasted;
   if (goalType === ACCREDIBLE_GOAL_TYPE) {
     const reading = await readAccredibleCredential(link);
     const subject = reading.subjects.find((candidate) => signedSubject && signedSubjectOf(candidate, subjectKey).toLowerCase() === signedSubject.toLowerCase()) ?? reading.subjects[0];

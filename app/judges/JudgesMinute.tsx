@@ -100,7 +100,8 @@ export function JudgesMinute({
         </dd>
         <dt className={MUTED}>Why Monad</dt>
         <dd className={HELP} data-minute="monad">
-          Neither person holds MON or reads a fee. A step is final in under a second. One signature funds a gift.{" "}
+          On a gift&apos;s usual path neither person holds MON or reads a fee: Viky&apos;s relayer sends and pays each step. A step is
+          final in under a second. One signature funds a gift.{" "}
           <a className="underline" href="#agora">
             In full
           </a>
@@ -197,8 +198,17 @@ export function JudgesMinute({
           </p>
           <div data-minute-at-length="monad">
             <span className="block">
-              Neither person holds MON or reads a fee: Viky&apos;s relayer pays every step, {monWords(creditedDayMon())} for a
-              credited day, about {dollarsOf(creditedDayMon())} ({RELAYER_FEES.readAt}).
+              On a gift&apos;s usual path neither person holds MON or reads a fee: Viky&apos;s relayer sends and pays each step,{" "}
+              {monWords(creditedDayMon())} for a credited day, about {dollarsOf(creditedDayMon())} ({RELAYER_FEES.readAt}).
+            </span>
+            {/* The three steps that leave that path (the founder, 13 Oct 2026), each sent by a person's own account:
+                app/api/gift/[id]/cancel/route.ts, app/components/PayGift.tsx and src/client/onchain.ts say why. */}
+            <span className="block" data-minute-at-length="own-sends">
+              Three steps leave that path, each sent by a person&apos;s own account. Taking back a gift nobody has opened: the
+              contract asks for the funder in person, so the relayer sends that account what its transaction costs, and the
+              account sends it. Paying by card through Mercuryo: it delivers MON, which the funder&apos;s account changes for AUSD
+              in a transaction it sends and pays for. A payout onto a card: the account&apos;s dollars are changed for MON, which
+              the account sends to the card service itself, and what that cost is said in dollars afterwards.
             </span>
             <span className="block">
               A step is final {FINALITY_GAP.fewestBlocks} or {FINALITY_GAP.mostBlocks} blocks after its own, at a block every{" "}

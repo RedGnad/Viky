@@ -25,7 +25,14 @@ test("the first block says the page in seven lines, and what it said at length i
   const minute = read("app/judges/JudgesMinute.tsx");
   assert.deepEqual([...minute.matchAll(/<dt className=\{MUTED\}>([^<]+)<\/dt>/g)].map((found) => found[1]), ["What it is", "Who it is for", "Who has used it", "Proven", "Why Monad", "Where it runs", "One command"]);
   // "Final in under a second" is the measure's own: the most blocks a step waits, at the measured block time.
-  assert.ok(minute.includes("Neither person holds MON or reads a fee. A step is final in under a second. One signature funds a gift."));
+  // True of a gift's usual path, and said of it (the founder, 13 Oct 2026): three steps are sent by a person's own
+  // account, and they are written one level down, in the same words on the page's Monad fold and in the README.
+  assert.match(minute, /On a gift&apos;s usual path neither person holds MON or reads a fee: Viky&apos;s relayer sends and pays each step\. A step is\s+final in under a second\. One signature funds a gift\./);
+  assert.doesNotMatch(minute + read("app/judges/JudgesAgora.tsx") + read("README.md"), /pays every step|Every step of a gift|ever holds MON|Nobody but Viky pays a fee, and/);
+  for (const text of [minute, read("app/judges/JudgesAgora.tsx"), read("README.md")]) {
+    const said = text.replace(/&apos;/g, "'").replace(/\s+/g, " ");
+    for (const step of ["a gift nobody has opened: the contract asks for the funder in person", "through Mercuryo: it delivers MON, which the funder's account changes for AUSD", "the account's dollars are changed for MON, which the account sends to the card service itself"]) assert.ok(said.toLowerCase().includes(step.toLowerCase()), step);
+  }
   assert.ok(FINALITY_GAP.mostBlocks * BLOCK_TIME.seconds < 1, `${FINALITY_GAP.mostBlocks} blocks of ${BLOCK_TIME.seconds} s`);
   // The pass it points at is the register's, never a figure typed beside it.
   assert.match(minute, /<strong>\{TOULOUSE_PASSES\.onTheFixedRule\.secondsFromSignIn\} seconds<\/strong> after they signed in, with no review \(Toulouse,\{" "\}\s+\{TOULOUSE_PASSES\.onTheFixedRule\.day\}\)/);
@@ -123,12 +130,12 @@ test("a card says what was paid from the count of real proofs, and why the rest 
   const [page, shown, connected] = waysOfReading();
   const lines = (nature: string) => CONDITIONS.filter((condition) => condition.nature === nature);
   const toulouse = { firstDay: TOULOUSE_PASSES.first.day, nextDay: TOULOUSE_PASSES.onTheFixedRule.day, secondsFromSignIn: TOULOUSE_PASSES.onTheFixedRule.secondsFromSignIn };
-  // The counts as production holds them on 12 Oct 2026: a daily lesson paid, a climb, three enrolments.
-  const counts = new Map([["duolingo-daily", 11], ["chess-rating", 7], ["university-enrollment-shown", 3]]);
+  // The proofs that paid, as production holds them on 13 Oct 2026: five days of lessons, two climbs, three enrolments.
+  const counts = new Map([["duolingo-daily", 5], ["chess-rating", 2], ["university-enrollment-shown", 3]]);
   assert.deepEqual(saidOfAWay(page, lines("read"), counts, toulouse), {
     conditions: 12,
     lead: "Paid with real money:",
-    said: "Duolingo, 11 real proofs and the Chess.com rating, 7 real proofs. Each of the 10 others had its real page read under attestation on 12 Oct 2026, with no gift yet.",
+    said: "Duolingo, 5 real proofs and the Chess.com rating, 2 real proofs. Each of the 10 others had its real page read under attestation on 12 Oct 2026, with no gift yet.",
   });
   assert.deepEqual(saidOfAWay(shown, lines("shown"), counts, toulouse), {
     conditions: 4,
@@ -148,7 +155,7 @@ test("a card says what was paid from the count of real proofs, and why the rest 
   assert.deepEqual(saidOfAWay(connected, lines("connected"), counts, toulouse, new Set()), { conditions: 2, lead: "Built, read on no real account yet.", said: "Fitbit takes a Fitbit tracker or a Pixel Watch." });
   // A line that gets its first proof moves from the ones read without a gift to the ones paid, by the count alone.
   const later = new Map([...counts, ["codeforces-rating", 1], ["fitbit-daily", 2]]);
-  assert.match(saidOfAWay(page, lines("read"), later, toulouse).said, /^Duolingo, 11 real proofs, Codeforces, 1 real proof and the Chess\.com rating, 7 real proofs\. Each of the 9 others had its real page read/);
+  assert.match(saidOfAWay(page, lines("read"), later, toulouse).said, /^Duolingo, 5 real proofs, Codeforces, 1 real proof and the Chess\.com rating, 2 real proofs\. Each of the 9 others had its real page read/);
   assert.deepEqual(saidOfAWay(connected, lines("connected"), later, toulouse, onRequest), { conditions: 2, lead: "Paid with real money:", said: `Fitbit, 2 real proofs. Fitbit takes a Fitbit tracker or a Pixel Watch. ${opens}` });
   // Nothing is paid, and nothing is said paid; the count not read, and nothing is named at all.
   assert.equal(saidOfAWay(shown, lines("shown"), new Map(), toulouse).lead, "Built, and nobody has shown one yet.");

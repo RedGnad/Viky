@@ -47,8 +47,10 @@ test("the screen sends what that rule says, checks the smallest amount against i
   const screen = read("app/components/CashOut.tsx");
   assert.match(screen, /const ownLeaving = ownSending\.units === undefined \? undefined : leavingForOwnSend\(ownSending\.units, held\(ownCoin\), ownCoin\.decimals\);/);
   assert.match(screen, /const ownTooSmall = ownLeaving !== undefined && sendsAtLeast !== null && tooSmallToRelay\(ownLeaving, held\(ownCoin\), sendsAtLeast\);/);
-  assert.match(screen, /const leaving = ownLeaving;\s+setBusy\(true\);\s+setProblem\(null\);\s+setStage\("ownSending"\);/);
-  assert.match(screen, /await sendOwnMoney\(\{ account, to: getAddress\(ownCode\.trim\(\)\) as Hex, amount: leaving, coin: ownCoin \}\);/);
+  assert.match(screen, /const leaving = ownLeaving;[\s\S]{0,360}setBusy\(true\);\s+setProblem\(null\);\s+setStage\("ownSending"\);/);
+  // Signed, then sent, in two halves since 13 Oct 2026 (test/send-unheard.test.ts): the same amount and the same coin.
+  assert.match(screen, /const coin = ownCoin;/);
+  assert.match(screen, /await sendSigned\(await signedFor\(\{ account, to: getAddress\(ownCode\.trim\(\)\) as Hex, amount: leaving, coin \}\)\);/);
   // A send to a payout service is another thing: its order is for an exact number, and exactly that number leaves.
   assert.match(screen, /Exactly the two-decimal number they ordered leaves, never the six-decimal balance/);
   // The sentence under the field is the one that existed, and it no longer stands over a field that holds everything.
@@ -110,7 +112,10 @@ test("before the request leaves, the screen's own sentence stays; after it, no a
   assert.equal(routeSaysIt("NO_ANSWER"), false);
   const screen = read("app/components/CashOut.tsx");
   assert.match(screen, /case "NO_ANSWER":[\s\S]{0,160}return W\.failures\.noAnswer;/);
-  assert.equal((screen.match(/if \(error instanceof ApiError && error\.code === "NO_ANSWER"\) await refresh\(\)\.catch\(\(\) => undefined\);/g) ?? []).length, 2, "on the send to another account and on the send to a payout service");
+  // The balance read again, on the send to another account and on the send to a payout service: one place for both
+  // since 13 Oct 2026, which also says the send when the balance shows it left (test/send-unheard.test.ts).
+  assert.match(screen, /if \(code === "NO_ANSWER" \|\| code === "SENT_UNCONFIRMED"\) \{\s+const now = await refresh\(\)\.catch\(\(\) => undefined\);/);
+  assert.equal((screen.match(/if \(await leftUnheard\(error, \{ coin, leaving, heldBefore \}\)\) \{/g) ?? []).length, 2, "on the send to another account and on the send to a payout service");
   assert.match(screen, /default:\s+return W\.failures\.other;\s+\}\s+\}\s+return W\.failures\.other;/, "what is not an answer of a route, before the request, keeps the sentence it had");
   assert.match(CASH_OUT.failures.other, /^Viky could not finish this, and nothing was taken\./);
 });

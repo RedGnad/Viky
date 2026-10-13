@@ -133,7 +133,7 @@ test("the screens: the server says on the page whether quotes are asked, the quo
   assert.match(hook, /getJson<QuoteSaid>\(`\/api\/rails\/card-quote\?currency=\$\{encodeURIComponent\(code\)\}&units=\$\{need\}`\)/);
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   assert.match(sheet, /const quoteAwaited = cardInPlay && asked\.state === "asking";/);
-  assert.match(sheet, /<Button waiting=\{!ready \|\| !settled \|\| quoteAwaited \|\| status === "busy"\}/, "the button does not go while the price is asked");
+  assert.match(sheet, /waiting=\{pays === "signIn" \? status === "busy" : !ready \|\| !settled \|\| quoteAwaited \|\| status === "busy"\}/, "the payment button does not go while the price is asked");
   assert.match(sheet, /\{quoteAwaited \? <WaitLine>\{W\.workingOutTotal\}<\/WaitLine> : null\}/);
   assert.match(sheet, /\) : quoteAwaited \? \(\s+\/\/[^\n]+\n\s+\/\/[^\n]+\n\s+<div aria-hidden="true" data-pay-total-awaited="">/, "the total's place is kept, with nothing in it");
   // A card charged in the sheet's own money is said exactly; in another, the total is said about, the button says

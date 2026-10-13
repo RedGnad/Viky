@@ -177,7 +177,7 @@ test("the readings of 12 Oct 2026 made outside the journal are counted with thei
   assert.deepEqual({ started: journal.fetches.started, proved: journal.fetches.proved }, { started: 0, proved: 0 });
   // The judges page says them, for that cycle alone, beside the count they are in.
   const page = readFileSync("app/judges/page.tsx", "utf8");
-  assert.match(page, /\{reclaimUse\?\.from === OUTSIDE_THE_JOURNAL\.cycleFrom\s+\? ` \$\{OUTSIDE_THE_JOURNAL\.started\} more were asked on 12 Oct 2026 from a developer's machine, outside the journal and counted here: one attested read, without a gift, of each public source that had never passed a real one, and one of a race run the day before, the Chicago Marathon\. \$\{OUTSIDE_THE_JOURNAL\.proved\} gave a proof, and one met a redirect\.`\s+: ""\}/);
+  assert.match(page, /\{reclaimUse\?\.from === OUTSIDE_THE_JOURNAL\.cycleFrom\s+\? ` \$\{OUTSIDE_THE_JOURNAL\.started\} more were asked on 12 Oct 2026 from the author's machine, outside the journal and counted here: one attested read, without a gift, of each public source that had never passed a real one, and one of a race run the day before, the Chicago Marathon\. \$\{OUTSIDE_THE_JOURNAL\.proved\} gave a proof, and one met a redirect\.`\s+: ""\}/);
   assert.equal(OUTSIDE_THE_JOURNAL.started - OUTSIDE_THE_JOURNAL.proved, 1, "one met a redirect");
 });
 

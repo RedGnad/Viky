@@ -322,11 +322,25 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
   const names = status.names ?? null;
   const funderName = names?.funderName ?? null;
 
+  // What opens the gift: on the first version the key the link carries in `?t=`, which the server compares; on the
+  // second the secret after the link's `#`, which no server is sent and which signs the opening here.
+  const linkOpened = opensByItsLink(status.version);
+  const openingKey = linkOpened ? openingSecret : linkKey;
+  /**
+   * Whether this reader holds the gift's link (the founder, 13 Oct 2026): the server gave the two names, which it
+   * gives for what the link carries in `?t=` and to the gift's two people, or the key that opens the gift is on this
+   * page. Without either, a gift nobody has opened is read in the third person, and nothing offers to open it.
+   */
+  const holdsTheLink = names !== null || Boolean(openingKey);
+
   const voice: Voice = voiceOf({
     youAreTheFunder: status.youAreTheFunder,
     youAreTheRecipient: status.youAreTheRecipient,
     opened: status.opened,
+    holdsTheLink,
   });
+  /** A gift nobody has opened, met without its link: the one thing true of this reader is that the key is not here. */
+  const withoutTheLink = !status.opened && voice === "reader";
   const mine = voice === "recipient";
   const readerIsFunder = voice === "funder";
   const outsider = notTheirs(voice, Boolean(address));
@@ -508,6 +522,8 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
     target: milestone?.target ?? null,
     started: milestone ? milestone.connected : Boolean(daily && daily.creditedDays + daily.missedDays > 0),
     lastJudged,
+    // The server's own count of the days left, so no clock of this device decides it: a day is still running.
+    todayCounts: Boolean(daily && daily.daysLeft > 0 && !gift.finished && !gift.cancelled),
     shown: condition?.nature === "shown",
     waitsForResults: resultsWait,
     shape: milestone ? (milestone.shape === "certificate" ? "stamp" : "climb") : "days",
@@ -628,10 +644,6 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
     }
   };
 
-  // What opens the gift: on the first version the key the link carries in `?t=`, which the server compares; on the
-  // second the secret after the link's `#`, which no server is sent and which signs the opening here.
-  const linkOpened = opensByItsLink(status.version);
-  const openingKey = linkOpened ? openingSecret : linkKey;
   /** Opens the gift for an account: the one signed in on this page, or the one a press just brought in. */
   const openFor = (recipient: typeof address) =>
     run(
@@ -777,8 +789,9 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
   /** The one action of this moment, and nothing of the same weight beside it (document J). */
   const action = ((): ReactNode => {
     if (!address && !gift.cancelled) {
-      // Before it is opened, the account is the way in: making it IS opening the gift, the moment's one action.
-      if (!status.opened) {
+      // Before it is opened, the account is the way in for whoever holds the link: making it IS opening the gift, the
+      // moment's one action. Without the link nothing is offered to open (13 Oct 2026): the lines below stand instead.
+      if (!status.opened && !withoutTheLink) {
         return (
           <div className="flex flex-col gap-[var(--space-md)]">
             {/* Inside another app's page no account is made here: the line says where to go, as the button under it
@@ -796,10 +809,27 @@ function LiveGift({ status, linkKey, reload, refresh, openProof, cameBackShown, 
       return signingIn ? (
         <AccountPanel returning signInOnly />
       ) : (
-        <button type="button" onClick={() => setSigningIn(true)} className={`${SMALL_BUTTON} self-start`}>
-          {W.signInToSee}
-        </button>
+        <div className="flex flex-col items-start gap-[var(--space-sm)]">
+          {/* Said once the link was read, never before: a link not read yet (`undefined`) is no missing key. */}
+          {withoutTheLink && openingKey === null ? (
+            <p className={HELP} data-no-key="">
+              {W.missingKey}
+            </p>
+          ) : null}
+          <button type="button" onClick={() => setSigningIn(true)} className={SMALL_BUTTON}>
+            {W.signInToSee}
+          </button>
+        </div>
       );
+    }
+    // Signed in, on a gift nobody has opened, without its link: not "this gift is not yours", which the page cannot
+    // know of somebody whose link lost its key on the way. What is true of every such reader is said.
+    if (withoutTheLink) {
+      return openingKey === null ? (
+        <p className={HELP} data-no-key="">
+          {W.missingKey}
+        </p>
+      ) : null;
     }
     if (outsider) {
       return (

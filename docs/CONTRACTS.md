@@ -61,7 +61,7 @@ real amounts: gift 1000006, 8.98 AUSD between two people who are not the author,
 7 Oct, and paid in full the same day on a proof shown from a university's portal
 (`0x9c5508e83b0dd20668bb6a8c683faa047820734d6938387f8b6f516c3467c4fd`); on 7 Oct 2026 its money had not been taken
 out. They are the second version of the two gift
-contracts, from the audit of 1 Oct 2026. Opening a gift takes the signature of a key made from the secret its link carries, whose address
+contracts, from the audit of 1 Oct 2026 (sessions of that same tool, reading the code). Opening a gift takes the signature of a key made from the secret its link carries, whose address
 is in the terms the funder signed, so the evidence signer opens nothing (on the contracts above, that one key could
 open an unopened gift and prove it). The person a gift is for can end it: what was counted stays theirs and the rest
 goes back in the same transaction. The owner is bounded: ownership moves in two steps and cannot be given up, a new
@@ -76,7 +76,8 @@ so a lesson was paid the morning after. Here the first day is the day the accoun
 the open days up to its own day, the oldest first, and never a day that has not begun. A cumulative figure cannot say
 when the progress was made: a lesson taken after its day was paid is counted by the first reading of the next day. So
 one lesson never pays two days, no more days are paid than lessons were taken, and a day can be paid on which no
-lesson was taken. The change was read by an independent reviewer on 3 Oct 2026 before the deployment, and the
+lesson was taken. The change was read on 3 Oct 2026, before the deployment, by a separate session of the AI tool this
+repository was built with, given the contract alone, and the
 correction that reading asked for (which day is the first when an account is connected across midnight) is in the
 deployed code. A daily gift made since is made there, numbered from 1000; a gift made on the second version stays
 there, under its rule.
@@ -87,16 +88,17 @@ ended from the recipient's account at 03:44 UTC: 0.187 AUSD went to that account
 missed went back to the funder (5.423 AUSD), and the contract holds nothing. Its six transactions are listed in the
 [README](../README.md#what-has-run-with-real-money).
 `cast call 0x591d76863177E70FfcA2C793212d4715A367Ec70 "nextGiftId()(uint256)" --rpc-url https://rpc.monad.xyz` answers
-1001 while that gift is the only one. What has not run on it yet: a missed day going back, and a gift reaching its
-last day.
+1003 on 13 Oct 2026: gift 1000 above, and gifts 1001 and 1002, two tries the author made on 12 Oct 2026 between his
+own accounts, both ended since. What has not run on it yet: a missed day going back, and a gift reaching its last day.
 
-An independent review of 2 Oct 2026 was read before any deployment, and the contracts were corrected from it. A
+A review of 2 Oct 2026, made by a separate session of that same tool, given the contracts alone, was read before any
+deployment, and the contracts were corrected from it. A
 pause cannot be sent again while it runs, nor for seven days after it ended, so it cannot hold a funder's unearned
 money or stop the clock of missed days. On the milestone contract a pause sent after a window closed reopens
 nothing, a window that was open has after the pause the time it had left, and a climb whose deadline fell inside a
 pause is judged on a reading taken until the pause ended. The first reading of a gift, which binds an identity for
 good, is signed by the recipient's own account beside the evidence signer. And a signer announced before ownership
-changes hands never stands after it. The reviewer's own tests are in `test/review`: those that proved a defect are
+changes hands never stands after it. That session's own tests are in `test/review`: those that proved a defect are
 kept, each with a test that requires it to fail now. What the review left as declared, not corrected: once a gift is
 under way, the evidence signer alone can still attest a reading that never happened, in the recipient's favour or
 against them.

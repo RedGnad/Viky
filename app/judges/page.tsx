@@ -3,6 +3,9 @@ import { formatEther } from "viem";
 import { RACE_RESULT_RACES } from "@/src/race-result-races";
 import { GIFT_PAGE, LIMIT } from "@/src/sentences";
 import { PROOF_EVERY_SECONDS } from "@/src/milestone-reading";
+import { LAST_RESORT_WITHIN_SECONDS } from "@/src/daily-look";
+import { CHESS_SETTLED_RD_BELOW } from "@/src/chess-com";
+import { CHESS_MILESTONE } from "@/src/milestone-conditions";
 import { formatAusd } from "@/src/gift-reader";
 import { creditedByTheJudgeCode, JUDGE_CREDIT_ENDS, judgeCreditConfig, judgeCreditsStanding, standingInWords } from "@/src/judge-credit";
 import { rampHostApiKey, rampnowWayIn, WAY_OUT_CARD, WAY_OUT_EURO, waysIn } from "@/src/rails";
@@ -299,7 +302,7 @@ export default async function JudgesPage() {
             <Rows>
               <Row title="What each path asks, and what it costs in readings">
                 What to offer. Each path asks something of you: Duolingo, an account there, and a lesson done after you
-                connect it; Chess.com, an account there, and one rating point won. For Duolingo, type your own Duolingo name
+                connect it; Chess.com, an account there with a settled rating, and one rating point won. For Duolingo, type your own Duolingo name
                 on the card, under &quot;Their Duolingo name&quot;, and connecting is one press. With no account of a source,
                 the short path is the next step: open the gift, then end it. And what each costs of the month&apos;s attested
                 readings, which are few and counted under &quot;How a day is read&quot;, below.
@@ -316,7 +319,10 @@ export default async function JudgesPage() {
                   </li>
                   <li>
                     A climb on Chess.com: four readings, started and reached. Each reading is two fetches, the profile and
-                    the ratings: two at the start, two at the target. It settles in one sitting: offer a rating one point
+                    the ratings: two at the start, two at the target. The rating offered has to be a settled one, an RD
+                    under {CHESS_SETTLED_RD_BELOW} on Chess.com, which an account that plays that kind of game often has;
+                    on any other the sheet answers &quot;{CHESS_MILESTONE.words.refusals.settling}&quot;, and another of
+                    the four ratings can be chosen. With a settled rating, it settles in one sitting: offer a rating one point
                     above the account&apos;s own, and once it is reached open the gift&apos;s page: a climb is read as its page
                     opens, and has no button for it. On
                     Codeforces a reading is one fetch: two, started and reached.
@@ -678,8 +684,10 @@ export default async function JudgesPage() {
               price starts at $0.10 per verification). Reads are counted per gift, never per person: the morning pass looks
               at each daily gift once, takes an attested read only for one whose look shows a day to credit, and skips one
               already counted that day, so two gifts on one Duolingo account are two reads on a morning both earned a day. A
-              look that failed takes no read: the gift is looked at again at 03:30 UTC, and only then, if a day of it closes
-              at 06:00 that morning, is one read taken without a look, once. And a breaker holds every paid read
+              look that failed takes no read: on the first two versions of the daily contract the gift is looked at again
+              at 03:30 UTC, and only then, if a day of it closes at 06:00 that morning, is one read taken without a look,
+              once. On the third contract, where a daily gift is made today, that read is taken by the hourly pass, in the
+              last {LAST_RESORT_WITHIN_SECONDS.frequent / 60} minutes before 06:00 UTC, once. And a breaker holds every paid read
               (<code>src/attested-calls.ts</code>): {dailyCeilings().perGift} for one gift in a UTC day and {dailyCeilings().all} for
               all gifts, counted on the proofs given. Past it nothing is asked of Reclaim until the next day, and the
               gift&apos;s page says when reading resumes and until when its open day can still be counted. The ceiling holds
@@ -691,7 +699,8 @@ export default async function JudgesPage() {
               Fitbit is asked plainly first, with the person&apos;s key, and no proof is taken from a source that
               refuses or does not answer; that look does not judge the day, so it is read attested each morning that has a
               day to credit, earned or not. Strava is read the same way, once it is opened on request. A climb
-              is looked at plainly, not through Reclaim, in both of the day&apos;s passes and at each ask, and read attested
+              is looked at plainly, not through Reclaim, every hour by the pass a scheduler calls, in both of the day&apos;s
+              passes and at each ask, and read attested
               only to connect the account or when that look does not show it below its target. Private sources keep the
               user-proof path through the Reclaim verifier app.
             </p>
@@ -720,7 +729,7 @@ export default async function JudgesPage() {
                 ? ` Of this cycle's fetches, ${BEFORE_THE_JOURNAL.started} were started before the journal began and each gave a proof, counted on 3 Oct 2026 from the reading service's logs: two on 1 Oct, two on 2 Oct, one on 3 Oct.`
                 : ""}
               {reclaimUse?.from === OUTSIDE_THE_JOURNAL.cycleFrom
-                ? ` ${OUTSIDE_THE_JOURNAL.started} more were asked on 12 Oct 2026 from a developer's machine, outside the journal and counted here: one attested read, without a gift, of each public source that had never passed a real one, and one of a race run the day before, the Chicago Marathon. ${OUTSIDE_THE_JOURNAL.proved} gave a proof, and one met a redirect.`
+                ? ` ${OUTSIDE_THE_JOURNAL.started} more were asked on 12 Oct 2026 from the author's machine, outside the journal and counted here: one attested read, without a gift, of each public source that had never passed a real one, and one of a race run the day before, the Chicago Marathon. ${OUTSIDE_THE_JOURNAL.proved} gave a proof, and one met a redirect.`
                 : ""}
               {reclaimUse ? <span data-cycle-left> {readingsLeftInWords(reclaimUse)}</span> : null}{" "}
               <span data-september-fault>
@@ -842,7 +851,7 @@ export default async function JudgesPage() {
             gift is made and paid like any other, its two people read a day two days after it, and until the line is
             opened nobody is sent to Strava&apos;s page and nothing is asked of Strava or of Reclaim for it. Each such
             gift is told to the operator within the hour and again each morning while it waits. A gift opened and never started
-            goes back to the account that paid fourteen days after it was opened, as on every line: that holds here
+            goes back to the account that paid fourteen days after it was opened, as on every daily gift and every climb: that holds here
             too if Strava were not opened in time.
             What Strava&apos;s terms ask, for the day the line is open: Strava&apos;s API Agreement (read 23 Sep 2026) asks
             that Strava Data serve the person who authorised it and nobody else, that it be neither aggregated across
@@ -892,9 +901,9 @@ export default async function JudgesPage() {
             without written consent, and count the use of robots among the reasons to close a member&apos;s account;
             the same notice says results are published for everybody to consult, and that a runner can ask the
             federation to be removed from them. Viky reads one runner&apos;s page per gift and keeps three fields, written
-            here with the risk assumed as for edX. The race&apos;s date is the register&apos;s; the bib entered before the
-            start ties the reading to the race, and the day the result is read is the day the gift is judged by. One
-            door stays open for the operator&apos;s accounts alone: a bib entered after the start, which is how a test
+            here with the risk assumed as for edX. The race&apos;s date is the register&apos;s, a day and no hour; the bib entered before
+            that day ties the reading to the race, and the day the result is read is the day the gift is judged by. One
+            door stays open for the operator&apos;s accounts alone: a bib entered from that day on, which is how a test
             gift can run on the 2023 result. No proof of this line is shown on this page.
           </Row>
           <Row title={<>MikaTiming&apos;s results sites</>}>
@@ -919,12 +928,15 @@ export default async function JudgesPage() {
             for MikaTiming. Open since goal 32 was signed on 26 Sep 2026.
           </Row>
           <Row title={<>Codeforces&apos; public API</>}>
-            A Codeforces rating is read every day from
+            A Codeforces rating is read from
             <code>codeforces.com/api/user.info</code>, anonymous public data, one request every two seconds (the API
             help, read 26 Sep 2026): the handle, the rating and the best rating ever, and once, when the person binds the
             account with Viky&apos;s code, the last name of their profile. Its terms forbid commercial use of the site&apos;s
-            material and any use that harms it or impacts access; Viky reads one account&apos;s line a day, at the
-            person&apos;s request, naming itself. Codeforces polices itself: plagiarism is punished with a rating rollback
+            material and any use that harms it or impacts access; Viky looks at one account&apos;s line every hour while a
+            gift is climbing on it, in the day&apos;s two passes, and once a minute while that gift&apos;s page is open, for an
+            account its holder bound with Viky&apos;s code, naming itself. An attested reading asks for the same line once
+            more: when the account is bound, when the climb starts, at the target, and after a look that failed.
+            Codeforces polices itself: plagiarism is punished with a rating rollback
             and a round that fails is made unrated. Open since goal 33 was signed on 26 Sep 2026.
           </Row>
           <Row title={<>race result&apos;s lists</>}>
@@ -1020,7 +1032,7 @@ export default async function JudgesPage() {
             lost between two readings never settles.
           </Row>
         </RowGroup>
-        <RowGroup title="Viky&apos;s own keys and steps" about="What our keys can do, and what happens when a step fails.">
+        <RowGroup title="Viky&apos;s own keys and steps" about="What our keys can do, and what happens when a step fails. The audit named here was made by sessions of the AI tool Viky was built with, reading the code.">
           <Row title={<>The relayer&apos;s one key, found by the audit of 27 Sep 2026</>}>
             Every relayed step is sent by one
             key, and the servers that send them do not share a count of its transactions. Two steps sent at the same moment

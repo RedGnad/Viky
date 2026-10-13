@@ -21,8 +21,16 @@ test("until the account is read nothing is named, and a reading that failed is n
   // What is not read counts for nothing on the lines either: no "from your account" is said of it.
   assert.equal(heldForTheLines(true, { state: "reading" }), 0n);
   assert.equal(heldForTheLines(true, { state: "unread" }), 0n);
-  // Nobody signed in holds nothing here: the card, and the press makes the account.
+  // Nobody signed in, on a device that knows no account, holds nothing here: the card, and the press makes the account.
   assert.equal(payWith({ signedIn: false, held: { state: "reading" }, wanted: WANTED }), "card");
+  assert.equal(payWith({ signedIn: false, knownHere: false, held: { state: "reading" }, wanted: WANTED }), "card");
+  // On a device that remembers a passkey the account may hold the whole gift: no way is named until it has signed in
+  // and been read (the founder, 13 Oct 2026). The sheet said "by card" there, and the press paid from the account.
+  assert.equal(payWith({ signedIn: false, knownHere: true, held: { state: "reading" }, wanted: WANTED }), "signIn");
+  assert.equal(payWith({ signedIn: false, knownHere: true, held: read({ ausd: dollars(50) }), wanted: undefined }), "signIn");
+  // Signed in, what the device remembers changes nothing: the account as it is read decides.
+  assert.equal(payWith({ signedIn: true, knownHere: true, held: read({ ausd: dollars(50) }), wanted: WANTED }), "account");
+  assert.equal(payWith({ signedIn: true, knownHere: true, held: read(), wanted: WANTED }), "card");
   assert.equal(heldForTheLines(false, read({ ausd: dollars(50) })), 0n);
 });
 
@@ -71,7 +79,8 @@ test("the sheet: one reading that fails whole, a button that does not go while n
   assert.doesNotMatch(sheet, /held \?\? 0n/);
   // The button does not go, and the press does nothing, while what pays is not settled.
   // Nor while the card service is asked its price (9 Oct 2026): no figure is named, so there is none to press on.
-  assert.match(sheet, /<Button waiting=\{!ready \|\| !settled \|\| quoteAwaited \|\| status === "busy"\} doing=\{busy \? W\.paying : null\}/);
+  assert.match(sheet, /waiting=\{pays === "signIn" \? status === "busy" : !ready \|\| !settled \|\| quoteAwaited \|\| status === "busy"\}/);
+  assert.match(sheet, /doing=\{busy \? W\.paying : null\}/);
   assert.match(sheet, /if \(!ready \|\| units === undefined \|\| !settled\) return;/);
   // The card's lines, its figure and its line of terms are drawn for the card alone.
   // And not in the moment a judge's credit, just given, is being read (9 Oct 2026), nor under the card service's

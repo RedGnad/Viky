@@ -36,15 +36,18 @@ export function unitsHeld(parts: HeldParts): bigint {
 /**
  * What pays for the gift: the account, the card, or nothing that can be named yet.
  *
- * - Nobody signed in holds nothing here: the card, and the press makes the account.
+ * - Nobody signed in, on a device that knows no account, holds nothing here: the card, and the press makes the account.
+ * - "signIn": nobody signed in, on a device that remembers a passkey (the founder, 13 Oct 2026). Its account may hold
+ *   the whole gift, so no way to pay is named before it is read: the press signs in and the sheet stays. The sheet
+ *   said "Pay … by card" with the card's fee there, and the same press then paid with the account's own money.
  * - "reading": the account has not been read. The button names no way and does not go.
  * - "unread": the reading failed, or the chain's coin is what the gift needs and its quote did not answer. It is said,
  *   with a way to read again. Never the card by default.
  */
-export type PayWith = "account" | "card" | "reading" | "unread";
+export type PayWith = "account" | "card" | "signIn" | "reading" | "unread";
 
-export function payWith(input: Readonly<{ signedIn: boolean; held: HeldReading; wanted: bigint | undefined }>): PayWith {
-  if (!input.signedIn) return "card";
+export function payWith(input: Readonly<{ signedIn: boolean; knownHere?: boolean; held: HeldReading; wanted: bigint | undefined }>): PayWith {
+  if (!input.signedIn) return input.knownHere ? "signIn" : "card";
   if (input.held.state !== "read") return input.held.state;
   // A gift not filled in yet has no amount to cover: the button waits on the card's fields, as it did.
   if (input.wanted === undefined) return "card";

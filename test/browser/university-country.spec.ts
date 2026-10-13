@@ -8,8 +8,8 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
  * handler. The list is answered here, so the screen is measured and not the table.
  *
  * One list since 10 Oct 2026 (the founder's mockup): the field says how many it searches, a university whose students
- * show their page today comes first with a mark on its line, and a search that found nothing, alone, leads to the page
- * a university is asked from. Since 11 Oct 2026 every other line of an enrolment gift says "Ready in 2 days", a gift on
+ * show their page today comes first with a mark on its line, and a search that found nothing says so and what to try
+ * (it led to the page a university is asked from until 13 Oct 2026). Since 11 Oct 2026 every other line of an enrolment gift says "Ready in 2 days", a gift on
  * results says no time on any line, and under the university chosen stands the gift's path, stop by stop.
  */
 const sheet = (page: Page) => page.locator("dialog.sheet[open]");
@@ -82,13 +82,15 @@ test("one list opens on every country, the field says how many it searches, and 
   await expect(lines(page)).toHaveText(["Université Cheikh Anta DiopSenegalReady today"]);
   await search.fill("lagos");
   await expect(lines(page)).toHaveText(["University of LagosNigeriaReady in 2 days"]);
-  // A search that finds nothing says so, and there alone leads to the page a university is asked from.
+  // A search that finds nothing says so and what to try, and leads nowhere (the founder, 13 Oct 2026): no gift can be
+  // offered on a university the list does not hold.
   await search.fill("sorbonne");
-  await expect(sheet(page).getByText("No university by that name in the list yet.")).toBeVisible();
-  await expect(sheet(page).getByRole("link", { name: "Ask for it" })).toHaveAttribute("href", "/add-your-university");
+  await expect(sheet(page).getByText("No university by those words. Try another word of its name.", { exact: true })).toBeVisible();
+  await expect(sheet(page).locator('a[href="/add-your-university"]')).toHaveCount(0);
+  await expect(sheet(page).getByText(/Ask for it|in the list yet/)).toHaveCount(0);
   await expect(list(page)).toHaveCount(0);
   await search.fill("lagos");
-  await expect(sheet(page).getByRole("link", { name: "Ask for it" })).toHaveCount(0);
+  await expect(sheet(page).locator("[data-nothing-found]")).toHaveCount(0);
   // Choosing folds the list into the one chosen, with the gift's path under it, and Change opens it again.
   await list(page).getByText("University of Lagos").click();
   const chosen = sheet(page).locator("[data-university-chosen]");
@@ -135,6 +137,10 @@ test("a country chosen in the chip's sheet narrows the list, closes that sheet o
   await expect(sheet(page).getByLabel("Search 1 university")).toBeVisible();
   await expect(sheet(page).getByText("Université Gaston Berger")).toHaveCount(0);
   await expect(all.getByText("Nigeria", { exact: true })).toHaveCount(0, { timeout: 1000 });
+  // Nothing found inside one country names it, and the other place to look.
+  await sheet(page).getByLabel(SEARCH).fill("cheikh");
+  await expect(sheet(page).getByText("No university by those words in Nigeria. Try another word of its name, or all countries.", { exact: true })).toBeVisible();
+  await sheet(page).getByLabel(SEARCH).fill("");
   await sheet(page).getByRole("button", { name: /In Nigeria/ }).click();
   await sheet(page).last().getByText("All countries", { exact: true }).click();
   await expect(sheet(page).getByText("Université Gaston Berger")).toBeVisible();

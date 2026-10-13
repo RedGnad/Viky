@@ -12,7 +12,7 @@ import { keccak256, stringToHex, type Hex } from "viem";
  * with the score, the name, the day of the test and the sub-scores, and also a date of birth and a link to the
  * taker's photograph. **Three fields are attested and nothing else is kept**: the score, the day, and the name. The
  * date of birth and the photograph are matched by no pattern, stored nowhere, and named on the privacy page for what
- * they are: part of an answer the attestor fetches.
+ * they are: part of an answer the attestor fetches, and that Viky's own server fetches too when it looks at the link.
  *
  * The same reading also says when a certificate has stopped being public: 403 once the taker takes it private again,
  * 400 once it has expired, both measured the same day.
