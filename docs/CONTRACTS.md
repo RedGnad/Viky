@@ -1,10 +1,18 @@
 # Contracts
 
-The contracts Viky runs on Monad mainnet, what each does, what its owner can and cannot do, and what the reviews
-found. The short table of the ones in service is in the [README](../README.md).
+Viky runs immutable contracts on Monad mainnet for daily gifts, milestone gifts and the route money takes out. This
+page says what they do, what their Safe owner can and cannot do, and where to inspect the deployed code. The short
+list of contracts in service is in the [README](../README.md).
 
-Three kinds of contract hold or move money, and none can be upgraded. On the two kinds that hold gifts, no function of
-the owner moves a gift's money: the owner registers a goal, replaces the evidence signer, or pauses.
+## What protects a gift
+
+- **No upgrade path.** The contracts that hold or move money cannot be upgraded.
+- **No owner withdrawal from a gift.** On the two gift contracts, no owner function moves a gift's money. The owner
+  can register a goal, replace the evidence signer or pause the relevant action under the limits described below.
+- **A verifiable deployment.** Every address and its exact source match are listed below, alongside the Safe that owns
+  the configuration.
+
+## What each contract does
 
 `contracts/GiftEscrow.sol` holds a gift for a habit, a day at a time: creation and funding in one transaction through
 the funder's EIP-3009 authorization, the claim by the recipient's account, daily check-ins attested by the evidence
@@ -26,6 +34,8 @@ behind (`sweep`). A second copy of it, deployed on 3 Oct 2026 and set on USDC, i
 card service delivers USDC to the funder's own account, and the converter changes it into AUSD on one signature. It ran
 with real amounts that day, in `0x533ec0746493e0670029b917887b8e15376380a4a9c7bb82706b2de910ed1616`: 7.914524 AUSD
 reached the funder's account.
+
+## Addresses and source verification
 
 | Contract | On Monad mainnet (chain 143) |
 |---|---|
@@ -51,6 +61,8 @@ server does not hold them. Each address opens on the explorer at `https://monadv
 `contracts/verifiers` is not deployed. It holds the direct verifiers ported from Lock-in with their real-proof tests,
 kept fail-closed (`LIVE_SCHEMA_CONFIRMED = false`). The path in production is the evidence signer ([Verification path](VERIFICATION.md)).
 
+## Deployment history and governance
+
 `contracts/GiftEscrowV2.sol`, `contracts/MilestoneGiftV2.sol` and `contracts/ConsentAnchor.sol` were deployed on
 2 Oct 2026 at the addresses above, their sources verified on MonadVision through its Sourcify instance, and handed to
 the Safe the same day. A gift
@@ -68,6 +80,8 @@ goes back in the same transaction. The owner is bounded: ownership moves in two 
 evidence signer stands a day after it is announced, a goal is added and never changed, and a pause ends by itself
 after seven days and holds the open days rather than taking them. `ConsentAnchor` holds no money: it records which
 consent key an account agrees with, bound by the account's own signature, and every yes and stop in order.
+
+### The current daily contract
 
 `contracts/GiftEscrowV3.sol` is the third version of the daily contract. It was deployed on 3 Oct 2026 at the address
 above, its source verified the same way, and handed to the Safe the same evening. It is the second version with
@@ -90,6 +104,8 @@ missed went back to the funder (5.423 AUSD), and the contract holds nothing. Its
 `cast call 0x591d76863177E70FfcA2C793212d4715A367Ec70 "nextGiftId()(uint256)" --rpc-url https://rpc.monad.xyz` answers
 1003 on 13 Oct 2026: gift 1000 above, and gifts 1001 and 1002, two tries the author made on 12 Oct 2026 between his
 own accounts, both ended since. What has not run on it yet: a missed day going back, and a gift reaching its last day.
+
+## Review, known limits and consent audit
 
 A review of 2 Oct 2026, made by a separate session of that same tool, given the contracts alone, was read before any
 deployment, and the contracts were corrected from it. A

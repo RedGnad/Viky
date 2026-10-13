@@ -17,6 +17,15 @@ Built for Monad Metropolis, track Consumer Products & Payments.
 Three of the app's own screens, photographed by the test suite with example data: the card a gift is filled in on, a
 gift's page with its days, and "Spend or withdraw".
 
+**How it works.**
+
+1. A funder puts a fixed amount behind a goal for somebody else.
+2. The recipient opens the link, agrees to the reading, and connects or shows the account that can establish progress.
+3. Confirmed progress becomes theirs. Money that is not earned returns to the funder automatically.
+
+**Proofs that can be checked.** The live contracts, an independently repeatable credited day, and an enforced refusal
+are all below. The product explanation comes first; the technical evidence stays close enough to inspect.
+
 | On Monad mainnet (chain 143) | Where | Verified by |
 |---|---|---|
 | `GiftEscrowV3`: a gift for a habit, a day at a time | [`0x591d76863177E70FfcA2C793212d4715A367Ec70`](https://monadvision.com/address/0x591d76863177E70FfcA2C793212d4715A367Ec70) | its source, an [exact match](https://sourcify-api-monad.blockvision.org/v2/contract/143/0x591d76863177E70FfcA2C793212d4715A367Ec70) |
@@ -37,11 +46,11 @@ cast call 0x591d76863177E70FfcA2C793212d4715A367Ec70 "withdrawEarned(uint256,add
   1000 0x000000000000000000000000000000000000dEaD 1 --rpc-url https://rpc.monad.xyz
 ```
 
-`pnpm verify:day` proves that the source's own servers answered and that the contract settled that day against that
-one claim, which can never be used again. It does not prove whose account it is, nor that a human did the work:
+`pnpm verify:day` independently matches Reclaim's signed response to the on-chain settlement of that one claim, which
+can never be used again. It does not prove whose account it is, nor that a human did the work:
 [what it checks, and its limits](docs/VERIFICATION.md#check-a-credited-day-yourself). The sources are verified on
-MonadVision, the explorer, through its Sourcify instance. The nine deployments, the earlier versions that still run
-the gifts they hold among them, are in [Contracts](docs/CONTRACTS.md).
+MonadVision, the explorer, through its Sourcify instance. The nine deployments, including the earlier versions that
+still run the gifts they hold, are in [Contracts](docs/CONTRACTS.md).
 
 [![CI](https://github.com/RedGnad/Viky/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/RedGnad/Viky/actions/workflows/ci.yml?query=branch%3Amain)
 the last run of the checks on `main`: types, lint, the policy tests, the contracts' tests and the screens in a browser.
@@ -69,16 +78,20 @@ the thing was done: the lesson, the rating, the certificate, the enrolment. Each
 and whatever is not earned comes back to the funder by itself. Nobody profits from a missed day: not Viky, not a
 pool, not another user.
 
+## Pay in, spend and withdraw
+
+People choose the familiar option available in their country. Viky checks the available service, operator where one
+is needed, and price before money moves.
+
 Money earned leaves the way the person's country allows: to a bank account, to a card, to a mobile money number, as
 phone credit, as a gift card, or on to another Viky account.
 
-**Pay in.** Viky first offers Rampnow where it serves the payer: a card payment delivers USDC on Monad and Viky's
-converter changes it into AUSD for the gift. Ramp can deliver AUSD directly; Mercuryo is the final fallback, delivering
-MON that the funder's account changes to AUSD.
-
-**Spend or withdraw.** Earned money can go to a bank through Ramp or to a card through Mercuryo. Where they are
-offered, it can also go to mobile money through Switch Labs, or to phone credit, data or a gift card through Bitrefill.
-The country, available operator or service, and price are checked before any money moves.
+| What someone wants to do | Current path |
+|---|---|
+| **Fund a gift** | Rampnow is offered first where it serves the payer: a card payment delivers USDC on Monad, which Viky's converter changes into AUSD for the gift. Ramp can deliver AUSD directly. Mercuryo is the final fallback, delivering MON that the funder's account changes into AUSD. |
+| **Withdraw to a bank or card** | Ramp serves bank withdrawals. Mercuryo serves card withdrawals. |
+| **Use money locally** | Where offered, Switch Labs sends to mobile money. Bitrefill provides phone credit, data, and gift cards. |
+| **Keep it in Viky** | Money earned can fund another Viky gift. |
 
 ## What we know about the two people
 
@@ -141,25 +154,34 @@ Live counts and what each one proves: [the judges page](https://viky.cash/judges
 
 ## Why Monad
 
+Viky uses Monad to make a conditional payment feel like a consumer payment: quick to settle, with the usual network
+cost covered by Viky, and with the exact terms carried by the payment itself.
 Only what was measured, or what Monad's own documentation states.
 
-- **On a gift's usual path nobody but Viky pays a fee, and it is small enough to be Viky's.** On a gift's usual path
-  neither person holds MON or reads a fee: Viky's relayer sends and pays each step. Three steps leave that path, listed
-  under this section. Read from the chain on 2 Oct 2026 at 12:11 UTC
-  with `pnpm relayer:fees`: 120 transactions sent since the first one, 2.196190 MON of fees in all, 0.0183 MON a
-  transaction on average. A credited day costs 0.017544 MON (transaction
-  `0x55f9eafa857ee9897be5a7e092e055a3c75d2003d11a087dd9a0244e64726fab`: a limit of 172,000 at 102 gwei).
-- **A person waits about a second.** A block every 302 ms, measured over 10,000 blocks on 2 Oct 2026, and a
-  block is final after two ([docs](https://docs.monad.xyz/developer-essentials/summary)). Nothing is shown as done
-  before the block that holds it is at or below the `finalized` tag (`waitForFinality`, `src/monad/chain.ts`).
-- **One signature funds a gift.** AUSD is on Monad with EIP-3009: the funder signs once, and that signature is both
-  the payment and the acceptance of the gift's exact terms, because the authorization's nonce is the hash of the terms.
-  The relayer submits it; `receiveWithAuthorization` can only land in the contract.
-- **Monad's own rules, followed.** The fee is the declared limit times the price, not the gas used
-  ([docs](https://docs.monad.xyz/developer-essentials/gas-pricing)), so every relayed step is estimated and given a
-  margin of 7.5 % and no more (`src/monad-gas.ts`). The chain reserves 10 MON per account
-  ([docs](https://docs.monad.xyz/developer-essentials/reserve-balance)), so the relayer refuses to send below 12 MON
-  (`src/relayer.ts`).
+- **No network-fee experience on the usual path.** Neither person holds MON or reads a fee: Viky's relayer sends and
+  pays each usual step. Three steps leave that path, listed under this section.
+- **Finality fast enough for the flow.** A block every 302 ms, measured over 10,000 blocks on 2 Oct 2026, and a block
+  is final after two ([docs](https://docs.monad.xyz/developer-essentials/summary)). Nothing is shown as done before the
+  block that holds it is at or below the `finalized` tag (`waitForFinality`, `src/monad/chain.ts`).
+- **One signature funds the exact gift.** AUSD is on Monad with EIP-3009: the funder signs once, and that signature is
+  both the payment and acceptance of the gift's exact terms, because the authorization's nonce is the hash of the
+  terms. The relayer submits it; `receiveWithAuthorization` can only land in the contract.
+
+<details>
+<summary><b>Measured relayer costs and safeguards</b></summary>
+
+On a gift's usual path, Viky pays the fee. Read from the chain on 2 Oct 2026 at 12:11 UTC with
+`pnpm relayer:fees`: 120 transactions sent since the first one, 2.196190 MON of fees in all, 0.0183 MON a transaction
+on average. A credited day costs 0.017544 MON (transaction
+`0x55f9eafa857ee9897be5a7e092e055a3c75d2003d11a087dd9a0244e64726fab`: a limit of 172,000 at 102 gwei).
+
+Monad charges the declared limit times the price, rather than gas used
+([docs](https://docs.monad.xyz/developer-essentials/gas-pricing)). Every relayed step is therefore estimated and given
+a margin of 7.5 % and no more (`src/monad-gas.ts`). The chain reserves 10 MON per account
+([docs](https://docs.monad.xyz/developer-essentials/reserve-balance)), so the relayer refuses to send below 12 MON
+(`src/relayer.ts`).
+
+</details>
 
 <details>
 <summary><b>The three steps a person's own account sends</b></summary>

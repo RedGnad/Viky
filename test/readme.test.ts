@@ -77,15 +77,15 @@ test("the first screen: the name, the landing's promise, the two sentences, the 
   };
   const order = [at("Viky is a conditional payment on Monad."), at("[The app](https://viky.cash)"), at("![The card a gift is filled in on"), at("| On Monad mainnet (chain 143) |"), at("pnpm verify:day\n"), at("[![CI]")];
   assert.deepEqual(order, [...order].sort((left, right) => left - right));
-  // The three links: the app, the judges page, and the video, which has no address until the submission and says so.
-  assert.match(FIRST_SCREEN, /\*\*\[The app\]\(https:\/\/viky\.cash\)\*\* · \*\*3-minute video\*\* \(its link comes with the submission\) · \*\*\[The judges page\]\(https:\/\/viky\.cash\/judges\)\*\*/);
+  // The three links: the app, the published video, and the judges page.
+  assert.match(FIRST_SCREEN, /\*\*\[The app\]\(https:\/\/viky\.cash\)\*\* · \*\*\[Demo video\] https:\/\/youtu\.be\/asIQgaaS2As\*\* · \*\*\[The judges page\]\(https:\/\/viky\.cash\/judges\)\*\*/);
   // One image, of the product in use, which is in the tree; and the sentence under it says what it is.
   const images = [...README.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((found) => found[1]).filter((path) => !path.startsWith("http"));
   assert.deepEqual(images, ["docs/readme/in-use.png"]);
   assert.ok(statSync("docs/readme/in-use.png").size > 50_000 && statSync("docs/readme/in-use.png").size < 700_000);
   assert.match(FIRST_SCREEN, /Three of the app's own screens, photographed by the test suite with example data/);
-  // Short enough to be a first screen: what verifies Viky, and nothing that explains it at length.
-  assert.ok(lines.length <= 36, `${lines.length} lines before the first section`);
+  // Short enough to be a first screen: the product path and what verifies it, without a long explanation.
+  assert.ok(lines.length <= 45, `${lines.length} lines before the first section`);
 });
 
 test("the contracts in service are named with their address, the explorer and their verified source", () => {
@@ -190,11 +190,10 @@ test("what the rules ask of a README is all there (section 4.1), and the licence
   const order = ["## What Viky is built on", "## Who it is for, and the problem", "## What we know about the two people", "## What is new", "## No word of crypto", "## Eighteen conditions", "## Why Monad", "## What has run with real money", "## Path forward: how the next hundred find Viky", "## Architecture", "## Stack", "## Run", "### Deploy", "## Test", "## Declarations, environment and licences"].map((mark) => README.indexOf(mark));
   assert.ok(order.every((found) => found >= 0), "every section is there");
   assert.deepEqual(order, [...order].sort((left, right) => left - right));
-  // Three folded blocks, each one level under what its section opens on: the three steps a person's own account
-  // sends, which "Why Monad" says leave a gift's usual path (the founder, 13 Oct 2026), the step by step of what has
-  // run, and the pre-existing code file by file.
-  assert.deepEqual([...README.matchAll(/<details>\n<summary><b>([^<]+)<\/b><\/summary>/g)].map((found) => found[1]), ["The three steps a person's own account sends", "Each of them step by step, with its transactions", "The pre-existing code, file by file"]);
-  assert.equal(README.match(/<\/details>/g)?.length, 3);
+  // Four folded blocks: operating detail after Monad's consumer value, then the three exceptional account steps,
+  // transaction-by-transaction evidence, and pre-existing code file by file.
+  assert.deepEqual([...README.matchAll(/<details>\n<summary><b>([^<]+)<\/b><\/summary>/g)].map((found) => found[1]), ["Measured relayer costs and safeguards", "The three steps a person's own account sends", "Each of them step by step, with its transactions", "The pre-existing code, file by file"]);
+  assert.equal(README.match(/<\/details>/g)?.length, 4);
   assert.match(section("Why Monad"), /Three steps leave that path, listed\s+under this section\./);
   assert.deepEqual([...doc("declarations").matchAll(/^## (.+)$/gm)].map((found) => found[1]), ["AI tools", "Pre-existing code", "Environment", "Third-party licences", "Security", "License"]);
 });

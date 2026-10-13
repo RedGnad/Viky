@@ -154,11 +154,15 @@ test("the conditions the README counts are the catalogue's: one sentence of four
   assert.doesNotMatch(README, /Seventeen conditions|is built and closed/);
 });
 
-test("how money leaves is the register's six ways, and the word check is said in its own section", () => {
+test("how money leaves is the register's six ways, its routes are named, and the word check is said in its own section", () => {
   // The five ways out the screen names, and the send to another account.
   assert.deepEqual(Object.keys(USE_MONEY.ways).sort(), ["bank", "bankOrCard", "card", "giftcard", "mobile", "phone"]);
   assert.match(readFileSync("app/judges/JudgesAgora.tsx", "utf8"), /Send to another Viky account of mine/);
-  assert.ok(section("Who it is for, and the problem").includes("Money earned leaves the way the person's country allows: to a bank account, to a card, to a mobile money number, as phone credit, as a gift card, or on to another Viky account."));
+  const money = section("Pay in, spend and withdraw");
+  assert.ok(money.includes("Money earned leaves the way the person's country allows: to a bank account, to a card, to a mobile money number, as phone credit, as a gift card, or on to another Viky account."));
+  assert.ok(money.includes("Rampnow is offered first where it serves the payer"));
+  assert.ok(money.includes("Ramp serves bank withdrawals. Mercuryo serves card withdrawals."));
+  assert.ok(money.includes("Switch Labs sends to mobile money. Bitrefill provides phone credit, data, and gift cards."));
   // No word of crypto: a coin is named on a service's own page, and in the lines of Viky that say what to pick there.
   const words = section("No word of crypto");
   assert.ok(words.includes("Where it does not, Viky says what to pick there in the service's own two words, quoted as its page prints them."));
@@ -174,11 +178,13 @@ test("how money leaves is the register's six ways, and the word check is said in
 });
 
 test("the two sentences that stood as notes are written, dated, and the studies are said in one sentence", () => {
-  const people = flat(readFileSync("docs/THE-TWO-PEOPLE.md", "utf8"));
+  const peopleSource = readFileSync("docs/THE-TWO-PEOPLE.md", "utf8");
+  const people = flat(peopleSource);
   assert.ok(people.includes("By 10 Oct 2026, four people outside the team had used Viky: two funded a gift, three opened one, and one who earned a gift used that money to offer one in turn."));
   assert.doesNotMatch(README, /\[N\] people outside the team/);
-  // The studies are said as what they are for, in one sentence, with nothing after it (the founder, 10 Oct 2026).
-  assert.ok(people.includes("These studies are why the design is what it is. **What using it with people showed us.**"));
+  // The studies are said as what they are for, then the practical observations get their own heading (the founder,
+  // 10 Oct 2026).
+  assert.match(peopleSource, /These studies are why the design is what it is\.\n\n## What using it with people showed us/);
   assert.doesNotMatch(README, /These studies have their limits|not proof that Viky works/);
   const path = flat(readFileSync("docs/PATH-FORWARD.md", "utf8"));
   assert.ok(path.includes("The student channel is open. On 7 Oct 2026 a student in Toulouse showed his enrolment from his university's own portal and the gift paid. On 9 Oct 2026 a second gift paid 20 seconds after he signed in to that portal, with nobody reviewing it."));
