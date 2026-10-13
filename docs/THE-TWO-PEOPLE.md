@@ -1,5 +1,19 @@
 # What we know about the two people
 
+Viky is built for a relationship where one person wants to support another person's effort without becoming their
+monitor. The product makes the money meaningful, keeps the proof narrow, and leaves control with the person whose
+progress is read.
+
+## The product choices
+
+- **Money is allocated first.** A fixed amount is in the recipient's name from the start; verified progress releases
+  it, and what is not earned returns to the funder.
+- **The funder sees only the result needed for the gift.** They get a clear outcome, not the underlying account data.
+- **The recipient controls the reading.** They agree before a reading can move money, can stop it, and can end the
+  gift while keeping what was earned.
+
+## Why those choices exist
+
 **The one who pays** pays for another person's studies or training from a distance. One measure of how common that
 is: nearly 7.3 million students study abroad
 ([UNESCO](https://www.unesco.org/en/articles/number-students-higher-education-more-doubled-20-years-inequalities-remain),
@@ -21,9 +35,12 @@ money tied to effort, and on being watched, points the same way. Each line is wh
 
 These studies are why the design is what it is.
 
-**What using it with people showed us.** By 10 Oct 2026, four people outside the team had used Viky: two funded a
+## What using it with people showed us
+
+By 10 Oct 2026, four people outside the team had used Viky: two funded a
 gift, three opened one, and one who earned a gift used that money to offer one in turn. The judges page counts who
-funded a gift and who opened one, by account, from the index. Four things changed because of what happened:
+funded a gift and who opened one, by account, from the index. The four included a grandma. Four things changed because
+of what happened:
 
 - A link opened inside Instagram could not create an account. The page now has a button that opens it in the phone's
   own browser: shipped within two hours, on 1 Oct 2026.

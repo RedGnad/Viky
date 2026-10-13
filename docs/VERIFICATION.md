@@ -1,63 +1,11 @@
 # Verification
 
-How a reading becomes a payment, and how anybody checks afterwards that a credited day had a proof behind it.
-
-## Verification path
-
-Three kinds of proof reach the evidence signer, and they are not checked the same way. What is true in production
-today (`PROOF_VERIFIER` unset):
-
-1. **A proof the person shows from their own account, with a TEE attestation** (a Reclaim session: `app/api/proof/session`,
-   `app/api/proof/verify`). It is verified server side with js-sdk `verifyProof` and the application secret: the
-   attestor's signature and the attestation of the TEE it ran in, both required. A proof without a TEE attestation
-   (the AI fallback) is refused before anything else is read.
-2. **A proof the person shows through a witness provider, with no TEE** (a university's own portal, read by a
-   provider made for that portal). There is no TEE to require, so the proof is verified by the pinned witness's
-   signature on the portal's own domain (`src/shown-verification.ts`). The first proof from a portal is held, nothing
-   is relayed, and an operator reads what the pattern read before pinning it (`pnpm portal:pin`); once pinned, a proof
-   must match the pin exactly. Before the pin a page read with GET or with POST is held, since the provider chooses
-   how it reads (Toulouse's portal answers its pages to POST); the pin then fixes the method with the rest. A
-   university is pinned again the same way, from a real proof: the operator sets the version of the provider its
-   sessions run on (`pnpm portal:pin --portal <id> --run <version>`), which takes the pin off, and the next proof is
-   held and read as a first one is. A provider can also be pinned ahead of any proof, from the request its version
-   publishes at Reclaim (`--ahead <version>`): the first proof that fits that pin is paid at once and bears it out;
-   one that does not is held, never refused. Under a pin, every session asks for the pinned version, whatever an
-   earlier session came to, and a rule written by hand runs with no agent (`ruleAsked` in `src/witness-portal.ts`):
-   Reclaim's agent writes a rule only for the first proof of a university that has none yet. A results page is pinned
-   on the academic year under way and on no other (the operator's rule, 10 Oct 2026): `--year` is asked for, and a page
-   of another year than the pin names pays nothing (`wrongTerm`, `src/university-shown.ts`). Pinned on a year already
-   over, a university would pay at once every gift made since on results that were out before the gift. So until the
-   year's results are published its results provider carries no pin, every proof of it is held, and the operator
-   refuses by hand a page of an earlier year. The gift itself names no year yet. A session of a pinned
-   rule that Reclaim ended with no proof is said to the operator by email when the gift's page asks about it, in one
-   line: the university, the gift and the state it ended in. The judges
-   page prints what each pinned provider reads, from the pin itself, and says of a pin made ahead that no proof has
-   been shown on it yet.
-   A proof held is never left: the operator is emailed when it is held, then every morning by the settling pass with
-   the time the contract can still pay it (a gift had or not takes a proof until its last day plus fourteen days).
-   Past that moment no review can pay it, so the pass closes the review as never made, both people read that Viky
-   did not check the proof in time, and the whole gift goes back to the person who paid (`src/milestone-pass.ts`).
-3. **A reading Viky makes itself** (zkFetch: the daily Duolingo lesson, the Chess.com ratings, the certificates, a race,
-   and a connected source's reading with the person's key). It is fetched through Reclaim's TEE client and verified
-   server side by the attestor's signature only: js-sdk `verifyProof` checks it against the attestor list it fetches
-   from Reclaim at that moment, then Viky's own pin (`RECLAIM_ATTESTOR_ADDRESSES`). The proof carries no attestation of
-   the attestor's TEE, so the TEE itself is not verified on this path.
-
-**Behind the switch** (`PROOF_VERIFIER=local`, not set in production): a reading is verified offline, by Viky alone,
-the way `pnpm verify:day` does it by hand: the claim's identifier recomputed, the signers recovered, every signer one
-of Viky's pinned attestors, and the witnesses exactly those signers; with `RECLAIM_ATTESTOR_IMAGE_DIGESTS` set, every
-witness must also carry the attestation of the TEE holding its key, verified offline and pinned by image digest
-(`src/proof-verification.ts`).
-
-Either way, what is accepted is then attested to the contract by the evidence signer (EIP-712 `CheckIn`, or the
-milestone contract's `Proof`), and no reading that could move money is taken without the recipient's signed yes (a
-gift funded before 30 Sep 2026, when agreements began, is read as before until its recipient answers). Session rows
-are held server side; the browser never chooses the account, the phase, the day or the profile.
+Viky publishes a reproducible path from an attested source response to the on-chain settlement it caused. This page
+separates the public check from the production safeguards that create the evidence.
 
 ## Check a credited day yourself
 
-Anybody can check that a day Viky credited really had a proof behind it. It needs no key, no account, no environment
-variable and no permission from us:
+Anybody can check a credited day without a Viky account, key, environment variable or permission:
 
 ```bash
 git clone https://github.com/RedGnad/Viky.git
@@ -66,17 +14,97 @@ pnpm install
 pnpm verify:day
 ```
 
-It takes the one example published with its account holder's agreement (`/api/judges/example` on viky.cash),
-recomputes the claim's identifier from the signed claim, recovers the attestor that signed it, recomputes the
-fingerprint, asks the gift contract whether that fingerprint is recorded against replay, and reads the transaction
-back to see it credit that day. Every answer is printed beside what it was compared against.
+The command takes the example that its account holder agreed to publish (`/api/judges/example` on viky.cash). It
+answers five questions, showing the value it compared for each one:
 
-The two people a gift is between can do the same with any day of their own: the gift's page hands over that day's
-proof, then `pnpm verify:day --file day.json --gift <number> --day <day>`. A milestone gift settles on a reading, so
-it takes `--reading <number>` instead.
+1. Is the signed claim internally consistent?
+2. Did the pinned Reclaim attestor sign it?
+3. Is the published fingerprint the fingerprint of that claim?
+4. Did the gift contract record that fingerprint exactly once, so it cannot be replayed?
+5. Did the published transaction credit that day of that gift?
 
-**What it proves**: the source's own servers answered that, and the contract settled that day against that one claim,
-which can never be replayed. **What it does not prove**: that the account belongs to the person the gift is for, or
-that a human rather than a script did the work. The account is tied to the person once, separately, by a code in its
-display name or by the funder naming it. The key that signs is ours and the owner can replace it, which is why this
-check exists: a signed reading with no claim behind it cannot be re-verified by anybody.
+The two people in a gift can check any day of their own in the same way. The gift page hands over its proof, then run
+`pnpm verify:day --file day.json --gift <number> --day <day>`. A milestone gift settles on a reading, so it takes
+`--reading <number>` instead.
+
+### What this establishes
+
+The command establishes that a Reclaim-attested response has a consistent signed claim, that the pinned attestor
+signed it, and that Monad settled the cited day or reading against that exact claim. The fingerprint is recorded by
+the contract, so that claim cannot settle another time.
+
+### Scope of this check
+
+The check is about the account response and the settlement. It does not independently establish the civil identity of
+the account holder or whether a human rather than a script performed the activity. Viky binds an account once,
+separately, by a code in its display name or by the funder naming it.
+
+The contracts accept attestations from Viky's evidence signer. Their Safe owner can replace that signer under the
+contract rules; it cannot move money held by a gift. The public check exists so a reading cannot be presented as a
+settled result without its signed claim and the corresponding on-chain record. The owner powers and their bounds are
+in [Contracts](CONTRACTS.md).
+
+## Verification path in production
+
+Production runs with `PROOF_VERIFIER` unset. Three kinds of proof reach the evidence signer. Each has safeguards that
+match the way the source is read.
+
+### 1. A person shows their own account
+
+A Reclaim session (`app/api/proof/session`, `app/api/proof/verify`) is verified server-side with js-sdk `verifyProof`
+and Viky's application secret. Both the attestor signature and the attestation of the TEE it ran in are required. A
+proof without a TEE attestation, including the AI fallback, is refused before Viky reads it.
+
+### 2. A university portal is read by a witness provider
+
+A university's own portal is read through a provider made for that portal. It has no TEE attestation to require, so
+Viky verifies the pinned witness signature on the portal's own domain (`src/shown-verification.ts`). The first proof
+from a portal is held: nothing is relayed until an operator has read what the pattern read and pinned it with
+`pnpm portal:pin`. Once pinned, a proof must match the pin exactly.
+
+#### University portal safeguards
+
+- Before a pin, a page read with GET or POST is held. The provider chooses the method; Toulouse's portal, for example,
+  answers its pages to POST. The pin fixes the method with the rest of the request.
+- A university is pinned again from a real proof when the operator sets the version its sessions run on with
+  `pnpm portal:pin --portal <id> --run <version>`. The next proof is held and read as a first one.
+- A provider can be pinned before its first proof from the request its version publishes at Reclaim
+  (`--ahead <version>`). The first proof that fits pays at once and demonstrates the pin; one that does not fit is
+  held, never refused.
+- Under a pin, every session asks for the pinned version. A hand-written rule runs with no agent (`ruleAsked` in
+  `src/witness-portal.ts`); Reclaim's agent writes a rule only for a university's first proof when it has no rule yet.
+- A results page is pinned on the academic year under way and on no other. The operator supplies `--year`; a page for a
+  different year pays nothing (`wrongTerm`, `src/university-shown.ts`). Until that year's results are published, its
+  provider carries no pin, every proof is held, and an operator refuses an earlier year's page by hand. The gift does
+  not name a year.
+- If a pinned session ends at Reclaim with no proof, the operator receives one email when the gift page asks about it:
+  the university, gift and final state. A held proof is emailed to the operator when held, then every morning with the
+  time left for the contract to pay it. A proof can be shown until the gift's last day plus fourteen days. After that,
+  the settling pass closes the review as never made and the whole gift returns to the funder (`src/milestone-pass.ts`).
+
+The judges page prints what each pinned provider reads from the pin itself, and says when a pin was made ahead of any
+proof.
+
+### 3. Viky reads a source itself
+
+This covers zkFetch readings: the daily Duolingo lesson, Chess.com ratings, certificates, a race, and a connected
+source read with the person's key. Reclaim's TEE client fetches the source. Server-side, js-sdk `verifyProof` verifies
+the attestor signature against the attestor list it fetches from Reclaim at that moment, then Viky's own pin
+(`RECLAIM_ATTESTOR_ADDRESSES`). The proof carries no attestation of the attestor's TEE on this path, so Viky does not
+verify that TEE itself here.
+
+## Local verification mode
+
+`PROOF_VERIFIER=local` is not set in production. In that mode, Viky verifies a reading offline in the same form as
+`pnpm verify:day`: it recomputes the claim identifier, recovers the signers, requires every signer to be one of
+Viky’s pinned attestors, and requires the witnesses to be exactly those signers. When
+`RECLAIM_ATTESTOR_IMAGE_DIGESTS` is set, every witness must also carry the TEE attestation of the key it holds,
+verified offline and pinned by image digest (`src/proof-verification.ts`).
+
+## Consent and settlement
+
+An accepted reading is attested to the contract by the evidence signer: an EIP-712 `CheckIn` for a daily gift or a
+milestone contract `Proof`. No reading that could move money is taken without the recipient's signed agreement. A gift
+funded before 30 Sep 2026, when agreements began, is read as before until its recipient answers.
+
+Session rows stay server-side. The browser never chooses the account, phase, day or profile that a reading applies to.

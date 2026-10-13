@@ -53,15 +53,15 @@ test("both halves of the answer are on the page: what it proves and what it does
 test("the check is documented where somebody cloning the repository would look", () => {
   // The command is on the README's first screen, with both halves of what it says in a sentence each.
   assert.match(readme, /git clone https:\/\/github\.com\/RedGnad\/Viky\.git && cd Viky && pnpm install && pnpm verify:day/);
-  assert.match(readme, /`pnpm verify:day` proves that the source's own servers answered/);
+  assert.match(readme, /`pnpm verify:day` independently matches Reclaim's signed response to the on-chain settlement/);
   assert.match(readme, /It does not prove whose account it is, nor that a human did the work/);
   assert.match(readme, /\]\(docs\/VERIFICATION\.md#check-a-credited-day-yourself\)/);
   // And the whole of it is one link away.
   assert.match(verification, /## Check a credited day yourself/);
   assert.match(verification, /git clone https:\/\/github\.com\/RedGnad\/Viky\.git/);
-  assert.match(verification, /\*\*What it proves\*\*/);
-  assert.match(verification, /\*\*What it does not prove\*\*/);
-  assert.match(verification, /The key that signs is ours and the owner can replace it/);
+  assert.match(verification, /### What this establishes/);
+  assert.match(verification, /### Scope of this check/);
+  assert.match(verification, /Their Safe owner can replace that signer under the\s+contract rules/);
 });
 
 test("it is the first thing on the judges page, before anything we ask to be believed", () => {
