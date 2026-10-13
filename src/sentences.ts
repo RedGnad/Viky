@@ -259,6 +259,11 @@ export const PAY = {
    * "I already have an account", which declares a state: a button says what its press does (the founder, 4 Oct 2026).
    */
   alreadyHaveAccount: "Sign in",
+  /**
+   * The sheet's one button on a device that remembers a passkey, with nobody signed in (the founder, 13 Oct 2026): it
+   * signs in and the sheet stays, so what the account holds is read before any way to pay is named.
+   */
+  signInFirst: "Sign in",
   /** The sheet the card is paid in, and what its frame is called when read aloud. */
   card: { title: "Pay by card", frame: "Card payment" },
   /**

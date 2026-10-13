@@ -368,7 +368,9 @@ test("under the card service's smallest payment no card is offered: the floor is
   assert.match(sheet, /const floorRate = floor \? across\(floor\.currency, code, money\.rates\) : undefined;/);
   assert.match(sheet, /floor\.currency === code \|\| floorRate === undefined \? moneyIn\(floor\.amount, floor\.currency\) : `\$\{W\.about\} \$\{say\(toDecimals\(floor\.amount \* floorRate, code\)\)\}`;/);
   assert.equal(PAY.cardStartsAt(`${PAY.about} £4.55`), "Card payments start at about £4.55.");
-  assert.match(sheet, /onPress=\{\(\) => \(underTheFloor \? raiseTheGift\(\) : void pay\(\)\)\} data-pays=\{underTheFloor \? "floor" : pays\}>\s+\{underTheFloor \? \(floorGift === undefined \? W\.pay : W\.makeTheGift\(say\(floorGift\)\)\) : enough \?/);
+  assert.match(sheet, /onPress=\{\(\) => \(pays === "signIn" \? void signInFirst\(\) : underTheFloor \? raiseTheGift\(\) : void pay\(\)\)\}/);
+  assert.match(sheet, /data-pays=\{underTheFloor \? "floor" : pays\}/);
+  assert.match(sheet, /underTheFloor \? \(floorGift === undefined \? W\.pay : W\.makeTheGift\(say\(floorGift\)\)\) : enough \?/);
   assert.match(sheet, /\{floorSaid \? \(\s+<p className=\{BODY\} data-card-floor="">\s+\{W\.cardStartsAt\(floorSaid\)\}/);
   // The gift is changed as if it had been typed, in the sheet's own money, and the card under the sheet follows.
   assert.match(sheet, /const typed = String\(floorGift\);\s+onChange\(\{ \.\.\.draft, dollars: formatAusd\(unitsFromTyped\(typed, code, money\.rates\)\)\.slice\(1\), typedAmount: typed, typedIn: code \}\);/);
@@ -380,7 +382,7 @@ test("one way in, one action, and no button to another (D239)", () => {
   // One action in the sun, and every other button of the sheet a small key (the code's copy, D294), never a second one.
   const body = sheet.slice(sheet.indexOf("<Sheet "), sheet.indexOf("</Sheet>"));
   // The action is the one button (app/kit/Button.tsx), whose look is the sun unless it names another.
-  assert.equal((body.match(/<Button [^>]*>/g) ?? []).filter((button) => !/look="/.test(button)).length, 1, "the one action");
+  assert.equal((body.match(/<Button\b/g) ?? []).length, 1, "the one action");
   assert.doesNotMatch(body, /PRIMARY_BUTTON/);
   for (const button of body.match(/<button[^>]*>/g) ?? []) assert.match(button, /SMALL_BUTTON/, button);
   // "Have a code?" stays (D297): since 9 Oct 2026 a small key above the card's button, where it was last and folded.

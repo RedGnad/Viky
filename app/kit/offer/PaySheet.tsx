@@ -200,7 +200,8 @@ export function PaySheet({
   const certificate = certificateById(draft.conditionId);
   const ready = isComplete(draft) && units !== undefined && condition !== undefined;
   // What pays: the account, the card, or nothing that can be named while the account is unread (src/pay-held.ts).
-  const pays = payWith({ signedIn: Boolean(address), held, wanted: units });
+  // Nor while nobody is signed in on a device that remembers a passkey: the press signs in first, and names nothing.
+  const pays = payWith({ signedIn: Boolean(address), knownHere: hasCredential, held, wanted: units });
   const settled = pays === "account" || pays === "card";
   // "From your Viky money": everything the account can pay with, one figure, the one Home says.
   const inAccount = heldForTheLines(Boolean(address), held);
@@ -501,8 +502,16 @@ export function PaySheet({
                   {W.cardStartsAt(floorSaid)}
                 </p>
               ) : null}
-              <Button waiting={!ready || !settled || quoteAwaited || status === "busy"} doing={busy ? W.paying : null} step={WAITS.account} onPress={() => (underTheFloor ? raiseTheGift() : void pay())} data-pays={underTheFloor ? "floor" : pays}>
-                {underTheFloor ? (floorGift === undefined ? W.pay : W.makeTheGift(say(floorGift))) : enough ? (paidFromCredit ? W.code.payWithCredit(giftRead) : W.payFromAccount(giftRead, recipient)) : sum ? W.payByCard(moneyIn(sum.charged.amount, sum.charged.currency)) : W.pay}
+              <Button
+                waiting={pays === "signIn" ? status === "busy" : !ready || !settled || quoteAwaited || status === "busy"}
+                doing={busy ? W.paying : null}
+                step={WAITS.account}
+                // A passkey this device remembers, and nobody signed in: the press signs in and writes nothing, so the
+                // account is read before a card or its fee is named (13 Oct 2026).
+                onPress={() => (pays === "signIn" ? void signInFirst() : underTheFloor ? raiseTheGift() : void pay())}
+                data-pays={underTheFloor ? "floor" : pays}
+              >
+                {pays === "signIn" ? W.signInFirst : underTheFloor ? (floorGift === undefined ? W.pay : W.makeTheGift(say(floorGift))) : enough ? (paidFromCredit ? W.code.payWithCredit(giftRead) : W.payFromAccount(giftRead, recipient)) : sum ? W.payByCard(moneyIn(sum.charged.amount, sum.charged.currency)) : W.pay}
               </Button>
               {pays === "reading" ? <WaitLine>{W.readingAccount}</WaitLine> : null}
               {/* The card service is being asked its price: said, and no figure is named meanwhile. */}
