@@ -103,6 +103,55 @@ test("an order whose AUSD arrived is paid only when Bitrefill says it received t
   assert.equal(w.refunds.length, 0);
 });
 
+test("a sent relay left on a priced order is completed by the pass without another payment", async () => {
+  const w = world();
+  const priced = await pricePhoneTopUp({ account: PERSON, phoneNumber: "+221771234567", operatorId: "orange-senegal", value: 2000 }, w.deps);
+  const invoiceId = (await store.loadPhoneOrder(priced.orderId))!.invoiceId;
+  const deps: PhoneDeps = {
+    ...w.deps,
+    payInvoiceOnBase: async (input) => {
+      const paid = await w.deps.payInvoiceOnBase(input);
+      w.invoices.set(invoiceId, { ...w.invoices.get(invoiceId)!, status: "complete", orders: [{ id: "o", status: "delivered" }] });
+      return paid;
+    },
+  };
+  const nonce = `0x${"12".repeat(32)}`;
+  assert.ok(await store.claimRelay(priced.orderId, nonce));
+  assert.ok(await store.noteRelay(priced.orderId, "0x1234"));
+  assert.deepEqual(await followUnsettledOrders(deps), [{ orderId: priced.orderId, state: "delivered" }]);
+  assert.equal((await store.loadPhoneOrder(priced.orderId))?.state, "delivered");
+  assert.equal(w.paid(), 1);
+  assert.equal(w.refunds.length, 0);
+  await followUnsettledOrders(deps);
+  assert.equal(w.paid(), 1, "the invoice is never paid twice");
+});
+
+test("an unconfirmed relay stays priced and is never treated as received", async () => {
+  const w = world();
+  const priced = await pricePhoneTopUp({ account: PERSON, phoneNumber: "+221771234567", operatorId: "orange-senegal", value: 2000 }, w.deps);
+  assert.ok(await store.claimRelay(priced.orderId, `0x${"34".repeat(32)}`));
+  assert.ok(await store.noteRelay(priced.orderId, "0x5678"));
+  const deps: PhoneDeps = { ...w.deps, relayLanded: async () => "unknown" };
+  assert.match((await followUnsettledOrders(deps))[0].state, /not followed/);
+  assert.equal((await store.loadPhoneOrder(priced.orderId))?.state, "priced");
+  assert.equal(w.paid(), 0);
+  assert.equal(w.refunds.length, 0);
+});
+
+test("a reverted relay frees its claim without paying or refunding", async () => {
+  const w = world();
+  const priced = await pricePhoneTopUp({ account: PERSON, phoneNumber: "+221771234567", operatorId: "orange-senegal", value: 2000 }, w.deps);
+  assert.ok(await store.claimRelay(priced.orderId, `0x${"56".repeat(32)}`));
+  assert.ok(await store.noteRelay(priced.orderId, "0x9abc"));
+  const deps: PhoneDeps = { ...w.deps, relayLanded: async () => "reverted" };
+  assert.deepEqual(await followUnsettledOrders(deps), [{ orderId: priced.orderId, state: "priced, relay reverted; no payment" }]);
+  assert.equal((await store.loadPhoneOrder(priced.orderId))?.relayTx, null);
+  assert.equal((await store.loadPhoneOrder(priced.orderId))?.state, "priced");
+  assert.equal(w.paid(), 0);
+  assert.equal(w.refunds.length, 0);
+  assert.deepEqual(await followUnsettledOrders(deps), []);
+});
+
 test("the settling pass runs the follow, and its failure does not stop the gifts' pass", () => {
   const route = readFileSync(new URL("../app/api/cron/settle/route.ts", import.meta.url), "utf8");
   assert.match(route, /followUnsettledOrders\(\)\.catch\(/);
