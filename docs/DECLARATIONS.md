@@ -1,9 +1,10 @@
 # Declarations, environment and licences
 
 This repository carries the project's whole history since 10 Sep 2026. It was republished on 11 Oct 2026 with the names
-and identifiers of other people that had been found replaced by invented ones in past commits. A few were found after
-that, on 12 Oct 2026: they are out of the files since 13 Oct 2026, and past commits still hold them. The original is
-available to the organisers on request.
+and identifiers of other people that had been found replaced by invented ones in past commits. A few more were found
+on 12 Oct 2026. The identified files were corrected on 13 Oct, except for two examples in `src/attested-sources.ts`
+whose removal requires a coordinated reading-service deployment. Past commits still hold the real identifiers. The
+original is available to the organisers on request.
 
 ## AI tools
 
