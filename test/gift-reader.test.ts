@@ -24,8 +24,16 @@ test("a reader is whoever meets an opened gift that is neither theirs to fund no
   assert.equal(voiceOf({ ...OPENED, youAreTheFunder: true }), "funder");
   assert.equal(voiceOf({ ...OPENED, youAreTheRecipient: true }), "recipient");
   // Before it is opened, whoever holds the link is the person it is for: the link is the key, and opening is how they
-  // become that person. A reader can only ever meet a gift somebody has already opened.
+  // become that person.
   assert.equal(voiceOf({ ...OPENED, opened: false }), "recipient");
+  assert.equal(voiceOf({ ...OPENED, opened: false, holdsTheLink: true }), "recipient");
+  // "A reader can only ever meet a gift somebody has already opened" stood here until 13 Oct 2026 (the founder, after
+  // the final audit). It is reversed for one reader: somebody on the page of a gift nobody has opened, without its
+  // link, read "This is in your name." and "Open my gift", and the press ended on a link missing its key.
+  assert.equal(voiceOf({ ...OPENED, opened: false, holdsTheLink: false }), "reader");
+  // The gift's two people are who they are, link or no link, and an opened gift asks nothing of the link.
+  assert.equal(voiceOf({ ...OPENED, opened: false, holdsTheLink: false, youAreTheFunder: true }), "funder");
+  assert.equal(voiceOf({ ...OPENED, holdsTheLink: true }), "reader");
 });
 
 test("only a reader signed in as somebody else is told the gift is not theirs", () => {
